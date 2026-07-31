@@ -47,7 +47,7 @@ function Sidebar() {
       <Link to="/" className="flex items-center gap-2.5 px-1">
         <span className="grid h-8 w-8 place-items-center rounded-xl" style={{ background: C.orange }}>🏀</span>
         <span className="leading-none">
-          <span className="block text-[15px] font-extrabold tracking-tight">Feuille de match</span>
+          <span className="block text-[15px] font-extrabold tracking-tight">Swish</span>
           <span className="block text-[11px]" style={{ color: C.faint }}>Basket · table de marque</span>
         </span>
       </Link>

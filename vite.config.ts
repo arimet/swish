@@ -11,11 +11,12 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Feuille de match',
-        short_name: 'Feuille match',
+        name: 'Swish — Feuille de match basket',
+        short_name: 'Swish',
+        description: 'Table de marque basket : score, chrono, fautes, stats et export e-marque.',
         display: 'standalone',
-        background_color: '#ffffff',
-        theme_color: '#ffffff',
+        background_color: '#0d0d0f',
+        theme_color: '#ff4d6d',
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
