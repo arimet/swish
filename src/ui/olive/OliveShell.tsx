@@ -15,26 +15,50 @@ const TITLES: Record<string, string> = { '/': 'Rencontres', '/calendrier': 'Cale
 
 export function OliveShell() {
   const { pathname } = useLocation()
+  const { isAdmin, lock, guard } = useAdmin()
   const title = TITLES[pathname] ?? (pathname.startsWith('/teams') ? 'Équipes' : pathname.startsWith('/match') ? 'Rencontre' : 'Rencontres')
   return (
     <div className="min-h-dvh lg:p-4" style={{ background: C.page }}>
-      <div className="mx-auto flex h-[calc(100dvh-2rem)] w-full max-w-[1680px] overflow-hidden rounded-[26px] shadow-2xl ring-black/20" style={{ background: C.frame, color: C.text }}>
+      <div className="mx-auto flex h-dvh w-full max-w-[1680px] overflow-hidden lg:h-[calc(100dvh-2rem)] lg:rounded-[26px] lg:shadow-2xl" style={{ background: C.frame, color: C.text }}>
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex shrink-0 items-center gap-4 px-6 py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
-            <div className="flex items-center gap-2 text-lg font-extrabold"><span>🏀</span><span style={{ color: C.orange }}>{title}</span></div>
-            <div className="ml-auto flex items-center gap-2.5">
-              <Link to="/match/new" className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.orange }}>
-                <Ic d={ICON.plus} className="h-4 w-4" /> Nouvelle rencontre
+          <header className="flex shrink-0 items-center gap-3 px-4 py-3 sm:px-6 sm:py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
+            <div className="flex items-center gap-2 text-base font-extrabold sm:text-lg"><span>🏀</span><span style={{ color: C.orange }}>{title}</span></div>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => (isAdmin ? lock() : guard(() => {}))}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm lg:hidden"
+                style={{ background: C.card, border: bd, color: isAdmin ? C.green : C.muted }}
+                title={isAdmin ? 'Admin déverrouillé' : 'Accès admin'}
+              >{isAdmin ? '🔓' : '🔒'}</button>
+              <Link to="/match/new" className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-white sm:px-4" style={{ background: C.orange }}>
+                <Ic d={ICON.plus} className="h-4 w-4" /> <span className="hidden sm:inline">Nouvelle rencontre</span>
               </Link>
             </div>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <Outlet />
           </div>
+          <MobileNav />
         </div>
       </div>
     </div>
+  )
+}
+
+/** Barre de navigation basse (mobile) : le menu latéral étant masqué < lg. */
+function MobileNav() {
+  return (
+    <nav className="flex shrink-0 items-stretch justify-around gap-1 border-t px-1 pb-[env(safe-area-inset-bottom)] pt-1 lg:hidden" style={{ borderColor: C.border, background: C.panel }}>
+      {NAV.map((n) => (
+        <NavLink key={n.label} to={n.to} end={n.end}
+          className="flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] font-bold transition"
+          style={({ isActive }) => ({ color: isActive ? C.orange : C.muted, background: isActive ? C.card2 : 'transparent' })}>
+          <Ic d={n.icon} className="h-5 w-5" />
+          {n.label}
+        </NavLink>
+      ))}
+    </nav>
   )
 }
 

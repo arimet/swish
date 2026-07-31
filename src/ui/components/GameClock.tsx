@@ -10,7 +10,7 @@ export function GameClock({ running, seconds, onToggle }: {
   return (
     <div className="flex flex-col items-center gap-2">
       <div
-        className={`nums font-mono text-6xl font-bold leading-none tabular-nums sm:text-7xl ${
+        className={`nums font-mono text-[2.75rem] font-bold leading-none tabular-nums sm:text-7xl ${
           low ? 'text-red-400' : 'text-[var(--scoreboard-fg)]'
         }`}
       >
@@ -18,7 +18,7 @@ export function GameClock({ running, seconds, onToggle }: {
       </div>
       <button
         onClick={onToggle}
-        className={`min-w-32 rounded-full px-6 py-2.5 text-sm font-bold uppercase tracking-wide shadow-lg transition active:scale-95 ${
+        className={`min-w-28 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide shadow-lg transition active:scale-95 sm:min-w-32 sm:px-6 sm:py-2.5 sm:text-sm ${
           running
             ? 'bg-red-500 text-white hover:bg-red-600'
             : 'bg-emerald-500 text-white hover:bg-emerald-600'

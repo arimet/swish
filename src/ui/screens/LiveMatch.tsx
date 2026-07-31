@@ -237,11 +237,11 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
           </div>
         </div>
 
-        <div className="mx-auto mt-3 grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-6">
+        <div className="mx-auto mt-3 grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-1 overflow-hidden sm:gap-6">
           <ScoreSide align="right" color="var(--sb-team-a)" name={teamName('A')} score={ls.score.a} lead={ls.score.a > ls.score.b} />
           <div className="flex flex-col items-center gap-2">
             <GameClock running={ls.clockRunning} seconds={seconds} onToggle={toggleClock} />
-            <div className="flex items-center gap-1" title="Corriger le chrono (buzzer)">
+            <div className="flex flex-wrap items-center justify-center gap-1" title="Corriger le chrono (buzzer)">
               <ClockAdjust onClick={() => adjustClock(-10)}>−10s</ClockAdjust>
               <ClockAdjust onClick={() => adjustClock(-1)}>−1s</ClockAdjust>
               <ClockAdjust onClick={() => adjustClock(1)}>+1s</ClockAdjust>
@@ -258,7 +258,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
       )}
 
       {/* TEAM COLUMNS */}
-      <div className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-4">
+      <div className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-2 gap-2 p-2 sm:gap-4 sm:p-4">
         <TeamPanel
           title="LOCAUX" color={TEAM_A} players={onCourtFor('A')}
           statsByPlayer={statsByPlayer('A')} teamFouls={ls.teamFoulsThisPeriod.A}
@@ -313,12 +313,12 @@ function ScoreSide({ align, color, name, score, lead }: {
 }) {
   return (
     <div className={`flex min-w-0 flex-col ${align === 'right' ? 'items-end text-right' : 'items-start text-left'}`}>
-      <span className="flex items-center gap-2">
-        <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-        <span className="truncate text-sm font-bold text-white/85 sm:text-base">{name}</span>
+      <span className="flex min-w-0 max-w-full items-center gap-1.5">
+        <span className="h-2 w-2 shrink-0 rounded-full sm:h-2.5 sm:w-2.5" style={{ background: color }} />
+        <span className="truncate text-[11px] font-bold text-white/85 sm:text-base">{name}</span>
       </span>
       <span
-        className="nums text-6xl font-black leading-none tabular-nums sm:text-8xl"
+        className="nums text-[2.75rem] font-black leading-none tabular-nums sm:text-8xl"
         style={{ color, opacity: lead ? 1 : 0.85 }}
       >
         {score}

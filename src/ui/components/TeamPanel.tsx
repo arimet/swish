@@ -24,11 +24,11 @@ export function TeamPanel({
   onUndoTimeout: () => void
 }) {
   return (
-    <section className="flex min-h-0 flex-col rounded-3xl border border-border/60 bg-card/50 p-3 sm:p-4" style={{ boxShadow: `inset 0 3px 0 0 ${color}` }}>
-      <header className="mb-3 flex items-center justify-between gap-2 pt-1">
+    <section className="flex min-h-0 flex-col rounded-3xl border border-border/60 bg-card/50 p-2.5 sm:p-4" style={{ boxShadow: `inset 0 3px 0 0 ${color}` }}>
+      <header className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-2 pt-1">
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: color }} />
-          <h3 className="truncate text-lg font-extrabold tracking-tight">{title}</h3>
+          <h3 className="truncate text-base font-extrabold tracking-tight sm:text-lg">{title}</h3>
           {bonus && <span className="rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-black uppercase text-white">Bonus</span>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -72,7 +72,7 @@ export function TeamPanel({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-bold leading-tight">{p.lastName}</span>
                   <span className="mt-0.5 flex items-center gap-1.5">
-                    <span className="nums text-xs font-black" style={{ color }}>{st.points} pts</span>
+                    <span className="nums whitespace-nowrap text-xs font-black" style={{ color }}>{st.points} pts</span>
                     <span className="flex items-center gap-0.5">
                       {[0, 1, 2, 3, 4].map((i) => <span key={i} className={`h-1.5 w-1.5 rounded-full ${i < st.fouls ? 'bg-red-500' : 'bg-muted-foreground/25'}`} />)}
                     </span>
