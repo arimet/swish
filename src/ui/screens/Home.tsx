@@ -59,9 +59,9 @@ export function Home() {
         <div className="mb-3 mt-7 flex flex-wrap items-center gap-3">
           <div className="flex gap-1 rounded-2xl p-1" style={{ background: C.card, border: bd }}>
             {tabs.map((t) => (
-              <button key={t.k} onClick={() => setTab(t.k)} className="flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-sm font-bold transition"
+              <button key={t.k} onClick={() => setTab(t.k)} className="flex items-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-1 text-xs font-bold transition sm:gap-2 sm:px-3.5 sm:py-1.5 sm:text-sm"
                 style={tab === t.k ? { background: C.orange, color: '#151515' } : { color: C.muted }}>
-                {t.l}<span className="rounded-full px-1.5 text-xs" style={{ background: tab === t.k ? 'rgba(0,0,0,0.15)' : C.card2 }}>{t.n}</span>
+                {t.l}<span className="rounded-full px-1.5 text-[10px] sm:text-xs" style={{ background: tab === t.k ? 'rgba(0,0,0,0.15)' : C.card2 }}>{t.n}</span>
               </button>
             ))}
           </div>
@@ -72,9 +72,9 @@ export function Home() {
           {dates.map((iso) => {
             const f = fmtDate(iso); const active = date === iso
             return (
-              <button key={iso} onClick={() => setDate(active ? null : iso)} className="shrink-0 rounded-2xl px-4 py-3 text-center"
+              <button key={iso} onClick={() => setDate(active ? null : iso)} className="shrink-0 rounded-2xl px-3 py-2 text-center sm:px-4 sm:py-3"
                 style={active ? { background: 'linear-gradient(135deg,#ffe07a,#ff9d3d)', border: '1px solid transparent', color: '#3a2600' } : { background: C.card, border: bd }}>
-                <div className="text-lg font-black leading-none">{f.day}</div>
+                <div className="text-base font-black leading-none sm:text-lg">{f.day}</div>
                 <div className="mt-1 text-[10px] font-bold" style={{ color: active ? '#6b4a00' : C.muted }}>{f.wd}</div>
               </button>
             )

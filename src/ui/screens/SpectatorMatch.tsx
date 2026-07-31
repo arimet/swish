@@ -5,7 +5,9 @@ import { syncEnabled, fetchBundle, subscribeBundle, type SyncBundle } from '../.
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
 import { teamTotals } from '../../domain/totals'
-import { C, TeamBadge, teamColor, displayClock, champLabel } from '../olive/kit'
+import { periodLength } from '../../domain/ids'
+import { fmt } from '../components/GameClock'
+import { C, TeamBadge, teamColor, champLabel } from '../olive/kit'
 import type { Match, Player, TeamSide } from '../../domain/types'
 
 /** Page de suivi en direct pour les spectateurs (lecture seule, plein écran).
@@ -14,6 +16,7 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
   const [match, setMatch] = useState<Match | null | undefined>(undefined)
   const [players, setPlayers] = useState<Record<string, Player>>({})
   const [names, setNames] = useState<Record<TeamSide, string>>({ A: 'Locaux', B: 'Visiteurs' })
+  const [nowMs, setNowMs] = useState(() => Date.now())
 
   // Mode distant (multi-appareils) : flux temps réel SSE + repli polling.
   useEffect(() => {
@@ -39,6 +42,13 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
     return () => { stop = true; clearInterval(iv) }
   }, [matchId])
 
+  // Tick du chrono simulé (tant que le chrono tourne).
+  useEffect(() => {
+    if (!match || match.status !== 'live' || !liveState(match).clockRunning) return
+    const iv = window.setInterval(() => setNowMs(Date.now()), 500)
+    return () => clearInterval(iv)
+  }, [match])
+
   useEffect(() => {
     if (syncEnabled() || !match) return
     Promise.all([listPlayers(match.meta.teamAId), listPlayers(match.meta.teamBId), listTeams()]).then(([pa, pb, teams]) => {
@@ -56,14 +66,22 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
   if (match === null) return <Screen><p style={{ color: C.muted }}>Rencontre introuvable.</p></Screen>
 
   const ls = liveState(match)
-  const dc = displayClock(match)
   const live = match.status === 'live'
   const finished = match.status === 'finished'
 
+  // Chrono simulé : on repart du dernier évènement (chrono + horodatage réel) et
+  // on décompte en local tant que le chrono tourne (wallClock réel requis, pas le seed).
+  const lastEv = match.events[match.events.length - 1]
+  const anchorClock = lastEv?.gameClock ?? periodLength(ls.period)
+  const anchorWall = lastEv?.wallClock ?? 0
+  const canSimulate = ls.clockRunning && anchorWall > 1e12
+  const displaySec = canSimulate ? Math.max(0, Math.round(anchorClock - (nowMs - anchorWall) / 1000)) : anchorClock
+  const periodLabel = ls.period <= 4 ? `Q${ls.period}` : `P${ls.period - 4}`
+
   return (
     <Screen>
-      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:py-10">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:py-10">
+        <div className="mb-5 flex items-center justify-between">
           <Link to="/" className="text-sm font-semibold" style={{ color: C.faint }}>← Swish</Link>
           <span className="flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide"
             style={live ? { background: C.greenBg, color: C.green } : finished ? { background: 'rgba(255,255,255,0.08)', color: C.muted } : { background: C.amberBg, color: C.amber }}>
@@ -74,20 +92,18 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
 
         <p className="text-center text-[12px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{champLabel(match.meta)}</p>
 
-        {/* SCOREBOARD */}
-        <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-8">
-          <SideHead id={match.meta.teamAId} name={names.A} align="right" />
-          <div className="flex flex-col items-center">
-            <div className="flex items-baseline gap-3 sm:gap-5">
-              <span className="nums text-6xl font-black tabular-nums sm:text-8xl" style={{ color: teamColor(match.meta.teamAId) }}>{ls.score.a}</span>
-              <span className="text-2xl font-black" style={{ color: C.faint }}>:</span>
-              <span className="nums text-6xl font-black tabular-nums sm:text-8xl" style={{ color: teamColor(match.meta.teamBId) }}>{ls.score.b}</span>
-            </div>
-            <span className="mt-2 rounded-lg px-3 py-1 text-sm font-black tabular-nums" style={{ background: C.card, color: C.text, border: `1px solid ${C.border}` }}>
-              {finished ? 'FINAL' : `${dc.label} · ${dc.clock}`}
-            </span>
-          </div>
-          <SideHead id={match.meta.teamBId} name={names.B} align="left" />
+        {/* SCOREBOARD (blocs équipe : lisible sur mobile) */}
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-6">
+          <TeamScore id={match.meta.teamAId} name={names.A} score={ls.score.a} />
+          <TeamScore id={match.meta.teamBId} name={names.B} score={ls.score.b} />
+        </div>
+        <div className="mt-3 flex flex-col items-center gap-1">
+          <span className="nums rounded-lg px-3.5 py-1.5 text-base font-black tabular-nums" style={{ background: C.card, color: finished ? C.muted : C.text, border: `1px solid ${C.border}` }}>
+            {finished ? 'FINAL' : `${periodLabel} · ${fmt(displaySec)}`}
+          </span>
+          {!finished && ls.clockRunning && !canSimulate && (
+            <span className="text-[10px] font-semibold" style={{ color: C.faint }}>chrono mis à jour à chaque action</span>
+          )}
         </div>
 
         {/* BANDEAU FAUTES / TM */}
@@ -112,11 +128,12 @@ function Screen({ children }: { children: ReactNode }) {
   return <div className="min-h-dvh" style={{ background: C.frame, color: C.text }}>{children}</div>
 }
 
-function SideHead({ id, name, align }: { id: string; name: string; align: 'left' | 'right' }) {
+function TeamScore({ id, name, score }: { id: string; name: string; score: number }) {
   return (
-    <div className={`flex min-w-0 items-center gap-3 ${align === 'right' ? 'flex-row-reverse text-right' : 'text-left'}`}>
-      <TeamBadge id={id} name={name} size="h-12 w-12 text-sm" />
-      <span className="min-w-0 truncate text-base font-extrabold sm:text-xl">{name}</span>
+    <div className="flex min-w-0 flex-col items-center gap-1.5 text-center">
+      <TeamBadge id={id} name={name} size="h-10 w-10 text-xs sm:h-14 sm:w-14 sm:text-sm" />
+      <span className="line-clamp-2 min-h-[2.4em] w-full text-sm font-extrabold leading-tight sm:min-h-0 sm:text-lg">{name}</span>
+      <span className="nums text-5xl font-black leading-none tabular-nums sm:text-7xl" style={{ color: teamColor(id) }}>{score}</span>
     </div>
   )
 }
