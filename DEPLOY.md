@@ -28,6 +28,12 @@ Pour une démo (déploiement avec équipes/championnat/matchs déjà remplis) :
 ajouter **`VITE_SEED=1`** et redéployer. Chaque appareil qui ouvre l'app est
 alors amorcé avec un jeu de données. Retirer la variable pour un usage réel.
 
+➡️ Une fois `VITE_SYNC_URL=/api` + KV en place, les **données sont partagées
+entre toutes les machines** : équipes, joueurs et calendrier créés sur un
+appareil apparaissent sur les autres. L'app reste **local-first** (IndexedDB en
+cache) : elle fonctionne hors-ligne et se resynchronise au retour du réseau.
+Sans `VITE_SYNC_URL`, tout reste purement local à chaque appareil.
+
 ## Comment ça marche
 
 - La **table de marque** (écran live) publie l'état complet du match

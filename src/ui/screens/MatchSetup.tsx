@@ -6,6 +6,7 @@ import type { Match, Team } from '../../domain/types'
 import { C, bd, PageTitle, TeamBadge } from '../olive/kit'
 import { useAdmin } from '../../app/admin'
 import { publishBundle } from '../../app/sync'
+import { refresh } from '../../persistence/remote'
 
 const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
@@ -16,7 +17,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   const [teamAId, setA] = useState(''); const [teamBId, setB] = useState('')
   const [matchNumber, setNum] = useState(''); const [venue, setVenue] = useState('')
   const [date, setDate] = useState(''); const [time, setTime] = useState('')
-  useEffect(() => { listTeams().then((ts) => { setTeams(ts); setA(ts[0]?.id ?? ''); setB(ts[1]?.id ?? '') }) }, [])
+  useEffect(() => { refresh().then(() => listTeams()).then((ts) => { setTeams(ts); setA(ts[0]?.id ?? ''); setB(ts[1]?.id ?? '') }) }, [])
 
   const create = async () => {
     const [pa, pb] = await Promise.all([listPlayers(teamAId), listPlayers(teamBId)])

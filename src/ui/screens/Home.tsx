@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listMatches, listTeams, listPlayers } from '../../persistence/repositories'
+import { refresh } from '../../persistence/remote'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
 import type { Match, Player, Team } from '../../domain/types'
@@ -17,7 +18,7 @@ export function Home() {
 
   useEffect(() => {
     let cancel = false
-    Promise.all([listMatches(), listTeams()]).then(async ([matches, teams]) => {
+    refresh().then(() => Promise.all([listMatches(), listTeams()])).then(async ([matches, teams]) => {
       const players = (await Promise.all(teams.map((t) => listPlayers(t.id)))).flat()
       if (cancel) return
       setData({ matches, teams: Object.fromEntries(teams.map((t) => [t.id, t])), players: Object.fromEntries(players.map((p) => [p.id, p])) })

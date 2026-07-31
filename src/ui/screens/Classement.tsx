@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { listMatches, listTeams } from '../../persistence/repositories'
+import { refresh } from '../../persistence/remote'
 import { liveState } from '../../rules/ffbb'
 import type { Match, Team } from '../../domain/types'
 import { C, bd, PageTitle, TeamBadge, champLabel } from '../olive/kit'
@@ -34,7 +35,7 @@ export function Classement() {
   const [teams, setTeams] = useState<Record<string, Team>>({})
   useEffect(() => {
     let cancel = false
-    Promise.all([listMatches(), listTeams()]).then(([m, t]) => {
+    refresh().then(() => Promise.all([listMatches(), listTeams()])).then(([m, t]) => {
       if (cancel) return
       setTeams(Object.fromEntries(t.map((x) => [x.id, x]))); setMatches(m)
     })

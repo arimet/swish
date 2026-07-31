@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { listMatches, listTeams } from '../../persistence/repositories'
+import { refresh } from '../../persistence/remote'
 import type { Match, Team } from '../../domain/types'
 import { C, MatchCard, PageTitle, fmtDate } from '../olive/kit'
 
@@ -9,7 +10,7 @@ export function Calendrier() {
 
   useEffect(() => {
     let cancel = false
-    Promise.all([listMatches(), listTeams()]).then(([m, t]) => {
+    refresh().then(() => Promise.all([listMatches(), listTeams()])).then(([m, t]) => {
       if (cancel) return
       setTeams(Object.fromEntries(t.map((x) => [x.id, x])))
       setMatches(m)

@@ -6,6 +6,7 @@ import { teamRecord, teamMatches, teamScorers } from '../../domain/teamRecord'
 import type { Match, Player, Team } from '../../domain/types'
 import { C, bd, TeamBadge, fmtDate } from '../olive/kit'
 import { useAdmin } from '../../app/admin'
+import { refresh as refreshRemote } from '../../persistence/remote'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
@@ -25,9 +26,10 @@ export function TeamDetail() {
   const refresh = () => { if (id) listPlayers(id).then(setPlayers) }
   useEffect(() => {
     if (!id) return
-    getTeam(id).then((t) => { setTeam(t ?? null); setCoach(t?.coach ?? '') })
-    refresh()
-    Promise.all([listMatches(), listTeams()])
+    refreshRemote()
+      .then(() => getTeam(id).then((t) => { setTeam(t ?? null); setCoach(t?.coach ?? '') }))
+      .then(refresh)
+      .then(() => Promise.all([listMatches(), listTeams()]))
       .then(([ms, ts]) => { setMatches(ms); setTeamsById(Object.fromEntries(ts.map((x) => [x.id, x]))) })
   }, [id])
 

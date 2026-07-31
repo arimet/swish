@@ -1,19 +1,32 @@
 import { db } from './db'
+import { enqueuePut, enqueueDel, remoteEnabled, hydrate } from './remote'
 import type { Team, Player, Match } from '../domain/types'
 
-export const saveTeam = (t: Team) => db.teams.put(t)
+// Écritures : cache local (immédiat, offline-ok) + mise en file pour le serveur.
+export const saveTeam = async (t: Team) => { await db.teams.put(t); await enqueuePut('team', t.id, t) }
 export const getTeam = (id: string) => db.teams.get(id)
 export const listTeams = () => db.teams.toArray()
 /** Supprime une équipe et tous ses joueurs. */
-export const deleteTeam = (id: string) =>
-  db.transaction('rw', db.teams, db.players, async () => {
+export const deleteTeam = async (id: string) => {
+  const players = await db.players.where('teamId').equals(id).toArray()
+  await db.transaction('rw', db.teams, db.players, async () => {
     await db.players.where('teamId').equals(id).delete()
     await db.teams.delete(id)
   })
-export const savePlayer = (p: Player) => db.players.put(p)
+  for (const p of players) await enqueueDel('player', p.id)
+  await enqueueDel('team', id)
+}
+
+export const savePlayer = async (p: Player) => { await db.players.put(p); await enqueuePut('player', p.id, p) }
 export const listPlayers = (teamId: string) => db.players.where('teamId').equals(teamId).toArray()
-export const deletePlayer = (id: string) => db.players.delete(id)
-export const saveMatch = (m: Match) => db.matches.put(m)
-export const getMatch = (id: string) => db.matches.get(id)
+export const deletePlayer = async (id: string) => { await db.players.delete(id); await enqueueDel('player', id) }
+
+export const saveMatch = async (m: Match) => { await db.matches.put(m); await enqueuePut('match', m.id, m) }
+/** Match local ; à défaut, tente une hydratation depuis le serveur (autre machine). */
+export const getMatch = async (id: string): Promise<Match | undefined> => {
+  let m = await db.matches.get(id)
+  if (!m && remoteEnabled()) { await hydrate(); m = await db.matches.get(id) }
+  return m
+}
 export const listMatches = () => db.matches.toArray()
-export const deleteMatch = (id: string) => db.matches.delete(id)
+export const deleteMatch = async (id: string) => { await db.matches.delete(id); await enqueueDel('match', id) }

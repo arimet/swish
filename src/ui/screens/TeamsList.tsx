@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listTeams, listPlayers } from '../../persistence/repositories'
+import { refresh } from '../../persistence/remote'
 import type { Team } from '../../domain/types'
 import { C, bd, PageTitle, TeamBadge } from '../olive/kit'
 
@@ -10,7 +11,7 @@ export function TeamsList() {
 
   useEffect(() => {
     let cancelled = false
-    listTeams().then(async (ts) => {
+    refresh().then(() => listTeams()).then(async (ts) => {
       if (cancelled) return
       setTeams(ts)
       const entries = await Promise.all(ts.map(async (t) => [t.id, (await listPlayers(t.id)).length] as const))
