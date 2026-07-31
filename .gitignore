@@ -22,3 +22,6 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Superpowers planning docs (kept out of the repo)
+docs/superpowers/
