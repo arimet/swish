@@ -4,9 +4,12 @@ import { PrintableSummary } from '../../export/PrintableSummary'
 import { ProgressionChart } from '../../export/ProgressionChart'
 import { printSummary } from '../../export/print'
 import { MatchMetaDialog } from '../components/MatchMetaDialog'
+import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { useAdmin } from '../../app/admin'
 import { publishBundle } from '../../app/sync'
 import { getMatch, listPlayers, listTeams, saveMatch } from '../../persistence/repositories'
+import { removeLastEvent } from '../../domain/reducer'
+import { newId } from '../../domain/ids'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
 import { playingTimes } from '../../domain/playingtime'
@@ -14,7 +17,10 @@ import { teamTotals } from '../../domain/totals'
 import { matchRatios, scoreProgression } from '../../domain/progression'
 import { fmt } from '../components/GameClock'
 import { C, bd, TeamBadge, teamColor, fmtDate, champLabel } from '../olive/kit'
-import type { Match, Player, TeamSide } from '../../domain/types'
+import type { GameEvent, Match, Player, ScoreKind, StatKind, TeamSide } from '../../domain/types'
+
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
+type EventInput = DistributiveOmit<GameEvent, 'id' | 'wallClock'>
 
 export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: () => void }) {
   const { guard } = useAdmin()
@@ -22,6 +28,8 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const [players, setPlayers] = useState<Record<string, Player>>({})
   const [teamNames, setTeamNames] = useState<Record<TeamSide, string>>({ A: '', B: '' })
   const [showEdit, setShowEdit] = useState(false)
+  const [editStats, setEditStats] = useState(false)
+  const [pick, setPick] = useState<{ side: TeamSide; id: string; name: string } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -45,17 +53,44 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   if (match === undefined) return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
   if (match === null) return <div className="p-6"><p className="py-16 text-center text-sm" style={{ color: C.muted }}>Rencontre introuvable.</p></div>
 
-  const { score } = liveState(match)
+  const ls = liveState(match)
+  const score = ls.score
   const ratios = matchRatios(match)
   const f = fmtDate(match.meta.date)
   const meta = match.meta
 
-  const saveMeta = async (patch: Partial<Match['meta']>) => {
-    const next = { ...match, meta: { ...match.meta, ...patch } }
-    await saveMatch(next)
+  const persist = (next: Match) => {
     setMatch(next)
+    saveMatch(next)
     publishBundle({ match: next, players: Object.values(players), teamNames })
   }
+  const saveMeta = async (patch: Partial<Match['meta']>) => persist({ ...match, meta: { ...match.meta, ...patch } })
+
+  // Correction des stats après le match (réservé admin) : on ajoute/retire des évènements.
+  const addEvent = (e: EventInput) =>
+    persist({ ...match, events: [...match.events, { ...e, id: newId(), wallClock: Date.now() } as GameEvent] })
+  const removeLast = (pred: (e: GameEvent) => boolean) => {
+    const next = removeLastEvent(match, pred)
+    if (next !== match) persist(next)
+  }
+  const addScore = (side: TeamSide, playerId: string, kind: ScoreKind) => addEvent({ type: 'SCORE', team: side, playerId, kind, period: ls.period, gameClock: 0 })
+  const addFoul = (side: TeamSide, playerId: string) => addEvent({ type: 'FOUL', team: side, target: { kind: 'player', playerId }, foulType: 'personal', period: ls.period, gameClock: 0 })
+  const addStat = (side: TeamSide, playerId: string, stat: StatKind) => addEvent({ type: 'STAT', team: side, playerId, stat, period: ls.period, gameClock: 0 })
+  const removeScoreKind = (side: TeamSide, id: string, kind: ScoreKind) => removeLast((e) => e.type === 'SCORE' && e.team === side && e.playerId === id && e.kind === kind)
+  const removeFoul = (side: TeamSide, id: string) => removeLast((e) => e.type === 'FOUL' && e.team === side && e.target.kind === 'player' && e.target.playerId === id)
+  const removeStatKind = (side: TeamSide, id: string, stat: StatKind) => removeLast((e) => e.type === 'STAT' && e.team === side && e.playerId === id && e.stat === stat)
+  const scoreCountsOf = (side: TeamSide, id: string): Record<ScoreKind, number> => {
+    const c: Record<ScoreKind, number> = { '2int': 0, '2ext': 0, '3': 0, lf: 0 }
+    for (const e of match.events) if (e.type === 'SCORE' && e.team === side && e.playerId === id) c[e.kind]++
+    return c
+  }
+  const statCountsOf = (side: TeamSide, id: string): Record<StatKind, number> => {
+    const c: Record<StatKind, number> = { assist: 0, reb_off: 0, reb_def: 0, block: 0 }
+    for (const e of match.events) if (e.type === 'STAT' && e.team === side && e.playerId === id) c[e.stat]++
+    return c
+  }
+  const foulsOf = (side: TeamSide, id: string) => playerStats(match, side).find((s) => s.playerId === id)?.fouls ?? 0
+  const pickTeamId = pick ? (pick.side === 'A' ? meta.teamAId : meta.teamBId) : ''
 
   return (
     <div className="p-6">
@@ -63,11 +98,33 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         <button onClick={onHome} className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>← Accueil</button>
         <div className="flex flex-wrap items-center gap-2.5">
           <Link to={`/match/${match.id}/watch`} target="_blank" className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.muted }}>👁 Suivi</Link>
-          <button onClick={() => guard(() => setShowEdit(true))} className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>✎ Modifier</button>
+          <button onClick={() => guard(() => setShowEdit(true))} className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>✎ Infos</button>
+          <button onClick={() => (editStats ? setEditStats(false) : guard(() => setEditStats(true)))}
+            className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={editStats ? { background: C.accent, color: '#fff' } : { border: bd, color: C.text }}>
+            {editStats ? '✓ Terminer' : '✎ Corriger stats'}
+          </button>
           <button onClick={printSummary} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>⬇ Exporter en PDF</button>
         </div>
       </div>
+      {editStats && (
+        <div className="mb-4 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accent}44` }}>
+          Mode correction — cliquez un joueur dans un tableau pour ajuster ses points, fautes ou stats.
+        </div>
+      )}
       <MatchMetaDialog open={showEdit} meta={match.meta} onClose={() => setShowEdit(false)} onSave={saveMeta} />
+      <PlayerActionDialog
+        open={!!pick} playerName={pick?.name ?? ''} color={pickTeamId ? teamColor(pickTeamId) : '#ffffff'}
+        scoreCounts={pick ? scoreCountsOf(pick.side, pick.id) : undefined}
+        statCounts={pick ? statCountsOf(pick.side, pick.id) : undefined}
+        fouls={pick ? foulsOf(pick.side, pick.id) : 0}
+        onClose={() => setPick(null)}
+        onScore={(k) => pick && addScore(pick.side, pick.id, k)}
+        onFoul={() => pick && addFoul(pick.side, pick.id)}
+        onStat={(k) => pick && addStat(pick.side, pick.id, k)}
+        onRemoveScore={(k) => pick && removeScoreKind(pick.side, pick.id, k)}
+        onRemoveFoul={() => pick && removeFoul(pick.side, pick.id)}
+        onRemoveStat={(k) => pick && removeStatKind(pick.side, pick.id, k)}
+      />
 
       {/* SCOREBOARD FINAL */}
       <div className="overflow-hidden rounded-3xl" style={{ background: C.frame, border: bd }}>
@@ -91,7 +148,8 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       {/* TABLEAUX PAR ÉQUIPE */}
       <div className="mt-6 space-y-6">
         {(['A', 'B'] as TeamSide[]).map((side) => (
-          <TeamTable key={side} match={match} side={side} players={players} name={teamNames[side]} teamId={side === 'A' ? meta.teamAId : meta.teamBId} />
+          <TeamTable key={side} match={match} side={side} players={players} name={teamNames[side]} teamId={side === 'A' ? meta.teamAId : meta.teamBId}
+            onPick={editStats ? (id, label) => setPick({ side, id, name: label }) : undefined} />
         ))}
       </div>
 
@@ -150,15 +208,16 @@ function Stat({ label, a, b }: { label: string; a: ReactNode; b: ReactNode }) {
   )
 }
 
-function TeamTable({ match, side, players, name, teamId }: { match: Match; side: TeamSide; players: Record<string, Player>; name: string; teamId: string }) {
+function TeamTable({ match, side, players, name, teamId, onPick }: { match: Match; side: TeamSide; players: Record<string, Player>; name: string; teamId: string; onPick?: (playerId: string, label: string) => void }) {
   const stats = playerStats(match, side)
   const times = playingTimes(match, side)
   const totals = teamTotals(match, side)
   return (
-    <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: bd }}>
+    <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: bd, ...(onPick ? { boxShadow: `0 0 0 1px ${C.accent}55` } : {}) }}>
       <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: `1px solid ${C.border}` }}>
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: teamColor(teamId) }} />
         <h3 className="text-sm font-extrabold uppercase tracking-wide">{side === 'A' ? 'Locaux' : 'Visiteurs'} · {name}</h3>
+        {onPick && <span className="ml-auto text-[11px] font-bold" style={{ color: C.accent }}>✎ cliquez une ligne</span>}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -172,7 +231,9 @@ function TeamTable({ match, side, players, name, teamId }: { match: Match; side:
               const p = players[s.playerId]
               const dnp = (times.get(s.playerId) ?? 0) === 0 && s.points === 0 && s.fouls === 0
               return (
-                <tr key={s.playerId} style={{ borderTop: `1px solid ${C.border}`, opacity: dnp ? 0.5 : 1 }}>
+                <tr key={s.playerId} onClick={onPick ? () => onPick(s.playerId, `${p?.number ?? ''} ${p?.lastName ?? ''}`.trim()) : undefined}
+                  className={onPick ? 'cursor-pointer transition hover:bg-white/[0.04]' : ''}
+                  style={{ borderTop: `1px solid ${C.border}`, opacity: dnp && !onPick ? 0.5 : 1 }}>
                   <Td left><span className="font-black">{p?.number ?? '—'}</span></Td>
                   <Td left>{p ? `${p.lastName} ${p.firstName}` : s.playerId}</Td>
                   <Td>{s.isStarter ? '●' : ''}</Td>
