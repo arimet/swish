@@ -12,7 +12,7 @@ const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
 
 export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   const { guard } = useAdmin()
-  const [teams, setTeams] = useState<Team[]>([])
+  const [teams, setTeams] = useState<Team[] | null>(null) // null = pas encore chargé
   const [championshipLabel, setChampionship] = useState('')
   const [teamAId, setA] = useState(''); const [teamBId, setB] = useState('')
   const [matchNumber, setNum] = useState(''); const [venue, setVenue] = useState('')
@@ -23,15 +23,24 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
     const [pa, pb] = await Promise.all([listPlayers(teamAId), listPlayers(teamBId)])
     const match: Match = {
       id: newId(),
-      meta: { championshipLabel: championshipLabel.trim() || undefined, matchNumber: matchNumber.trim() || undefined, venue: venue.trim() || undefined, date: date || undefined, time: time || undefined, teamAId, teamBId, coachA: teams.find((t) => t.id === teamAId)?.coach, coachB: teams.find((t) => t.id === teamBId)?.coach },
+      meta: { championshipLabel: championshipLabel.trim() || undefined, matchNumber: matchNumber.trim() || undefined, venue: venue.trim() || undefined, date: date || undefined, time: time || undefined, teamAId, teamBId, coachA: teams?.find((t) => t.id === teamAId)?.coach, coachB: teams?.find((t) => t.id === teamBId)?.coach },
       roster: { A: pa.map((p) => p.id), B: pb.map((p) => p.id) }, events: [], status: 'setup',
     }
     await saveMatch(match)
     publishBundle({ match, players: [...pa, ...pb], teamNames: { A: nameOf(teamAId), B: nameOf(teamBId) } })
     onCreated(match.id)
   }
-  const nameOf = (id: string) => teams.find((t) => t.id === id)?.name ?? '—'
+  const nameOf = (id: string) => teams?.find((t) => t.id === id)?.name ?? '—'
   const canCreate = !!teamAId && !!teamBId && teamAId !== teamBId
+
+  if (teams === null) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="h-8 w-40 animate-pulse rounded-lg" style={{ background: C.card }} />
+        <div className="mt-6 h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
+      </div>
+    )
+  }
 
   if (teams.length < 2) {
     return (
