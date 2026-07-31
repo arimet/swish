@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { redis, keyOf, TTL_SECONDS } from '../_redis'
+import { redis, keyOf, TTL_SECONDS } from '../_redis.js'
 
 /** Snapshot d'une rencontre pour le suivi spectateur.
  * GET  → renvoie le « bundle » publié (match + joueurs + noms d'équipe).

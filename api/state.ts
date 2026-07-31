@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { redis } from './_redis'
+import { redis } from './_redis.js'
 
 /** Snapshot des données partagées (source de vérité multi-machine) :
  * équipes, joueurs et matchs. Consommé au démarrage pour hydrater le cache local. */

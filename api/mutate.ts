@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { redis } from './_redis'
+import { redis } from './_redis.js'
 
 /** Applique des mutations d'entités partagées (upsert/suppression).
  * Accepte un lot d'opérations (vidage de la file d'attente offline). */
