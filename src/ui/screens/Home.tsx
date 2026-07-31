@@ -86,6 +86,13 @@ export function Home() {
             ? <p className="col-span-full rounded-2xl border border-dashed py-12 text-center text-sm" style={{ border: bd, color: C.muted }}>Aucune rencontre.</p>
             : list.map((m) => <MatchCard key={m.id} m={m} teams={teams} />)}
         </div>
+
+        <footer className="mt-8 pt-4 text-center text-[11px] font-medium" style={{ borderTop: bd, color: C.faint }}>
+          Swish · fait par{' '}
+          <a href="https://github.com/arimet" target="_blank" rel="noopener noreferrer" className="font-bold hover:underline" style={{ color: C.muted }}>
+            Anthony Rimet ↗
+          </a>
+        </footer>
       </div>
     </div>
   )

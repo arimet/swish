@@ -98,15 +98,21 @@ function Sidebar() {
         ))}
       </ul>
 
-      <button
-        onClick={() => (isAdmin ? lock() : guard(() => {}))}
-        className="mt-auto flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition"
-        style={{ background: C.card, border: bd, color: isAdmin ? C.green : C.muted }}
-        title={isAdmin ? 'Verrouiller l’accès admin' : 'Déverrouiller l’accès admin'}
-      >
-        <span>{isAdmin ? '🔓' : '🔒'}</span>
-        {isAdmin ? 'Admin déverrouillé' : 'Accès admin'}
-      </button>
+      <div className="mt-auto space-y-2.5">
+        <button
+          onClick={() => (isAdmin ? lock() : guard(() => {}))}
+          className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition"
+          style={{ background: C.card, border: bd, color: isAdmin ? C.green : C.muted }}
+          title={isAdmin ? 'Verrouiller l’accès admin' : 'Déverrouiller l’accès admin'}
+        >
+          <span>{isAdmin ? '🔓' : '🔒'}</span>
+          {isAdmin ? 'Admin déverrouillé' : 'Accès admin'}
+        </button>
+        <a href="https://github.com/arimet" target="_blank" rel="noopener noreferrer"
+          className="block px-2 text-center text-[11px] font-medium transition hover:underline" style={{ color: C.faint }}>
+          Fait par Anthony Rimet ↗
+        </a>
+      </div>
     </aside>
   )
 }
