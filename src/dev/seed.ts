@@ -1,13 +1,14 @@
 import { db } from '../persistence/db'
 import { saveTeam, savePlayer, saveMatch } from '../persistence/repositories'
 import type { GameEvent, Match, Player, ScoreKind, TeamSide } from '../domain/types'
+import { kindAt } from '../domain/shotzones'
 
 /**
  * Données de démo (DEV uniquement). Championnat complet : poule de 6 équipes,
  * round-robin simple (15 rencontres) sur 5 journées, avec résultats + marqueurs.
  * Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v7'
+const SEED_VERSION = 'v8'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. Les 6 premières forment la poule (round-robin) ; les autres sont dispo.
@@ -28,13 +29,28 @@ let seq = 0
 const ev = (e: Omit<GameEvent, 'id' | 'wallClock'> & Record<string, unknown>): GameEvent =>
   ({ ...e, id: `seed-ev-${seq}`, wallClock: seq++ } as GameEvent)
 
-/** Répartit ~`points` en paniers, pondérés (les premiers joueurs marquent plus). */
+/** Positions de tir plausibles : beaucoup de raquette, des corners, un peu d'axe. */
+const SPOTS: { x: number; y: number }[] = [
+  { x: 0.50, y: 0.14 }, { x: 0.45, y: 0.18 }, { x: 0.56, y: 0.16 }, // raquette
+  { x: 0.24, y: 0.24 }, { x: 0.76, y: 0.24 }, { x: 0.50, y: 0.45 }, // mi-distance
+  { x: 0.03, y: 0.10 }, { x: 0.97, y: 0.11 }, { x: 0.50, y: 0.68 }, // 3 points
+]
+
+/** Répartit ~`points` en paniers positionnés, pondérés (les premiers joueurs marquent
+ *  plus), avec un tir manqué toutes les trois tentatives pour alimenter les hot zones. */
 function baskets(side: TeamSide, roster: string[], points: number, clock: () => number): GameEvent[] {
   const weighted = roster.flatMap((id, i) => Array(Math.max(1, 8 - i)).fill(id) as string[])
   const out: GameEvent[] = []
   const n2 = Math.floor(points / 2)
-  for (let k = 0; k < n2; k++)
-    out.push(ev({ type: 'SCORE', team: side, playerId: weighted[k % weighted.length], kind: '2int' as ScoreKind, period: 1, gameClock: clock() }))
+  for (let k = 0; k < n2; k++) {
+    const playerId = weighted[k % weighted.length]
+    const shot = SPOTS[k % SPOTS.length]
+    out.push(ev({ type: 'SCORE', team: side, playerId, kind: kindAt(shot.x, shot.y), shot, period: 1, gameClock: clock() }))
+    if (k % 3 === 2) {
+      const missed = SPOTS[(k + 4) % SPOTS.length]
+      out.push(ev({ type: 'MISS', team: side, playerId, kind: kindAt(missed.x, missed.y), shot: missed, period: 1, gameClock: clock() }))
+    }
+  }
   if (points % 2) out.push(ev({ type: 'SCORE', team: side, playerId: weighted[0], kind: 'lf' as ScoreKind, period: 1, gameClock: clock() }))
   return out
 }
@@ -93,10 +109,23 @@ function buildMatch(home: number, away: number, round: number, slot: number, idx
     if (status === 'finished') events.push(ev({ type: 'PERIOD_END', period: 1, gameClock: 90 }))
   }
 
+  // Le dernier match terminé de la première journée sert de démonstration au
+  // mode « une seule équipe » : effectif adverse vide, score adverse global.
+  const solo = idx === 2
+  if (solo)
+    events = events.map((e) =>
+      e.type !== 'SCORE' || e.team !== 'B' ? e : ({ ...e, playerId: undefined, shot: undefined } as GameEvent),
+    ).filter((e) => !('team' in e && e.team === 'B' && (e.type === 'MISS' || e.type === 'STAT' || e.type === 'STARTING_FIVE')))
+
   return {
     id: `seed-m${idx}`,
-    meta: { championshipLabel: CHAMP, matchNumber: String(40 + idx), date: DATES[round], time: TIMES[slot], venue: TEAMS[home][0].split(' ').pop(), coachA: TEAMS[home][1], coachB: TEAMS[away][1], referee1: 'BART S', referee2: 'WEISSE F', teamAId: teamId(home), teamBId: teamId(away) },
-    roster: { A: aRoster, B: bRoster },
+    meta: {
+      championshipLabel: CHAMP, matchNumber: String(40 + idx), date: DATES[round], time: TIMES[slot],
+      venue: TEAMS[home][0].split(' ').pop(), coachA: TEAMS[home][1], coachB: solo ? undefined : TEAMS[away][1],
+      referee1: 'BART S', referee2: 'WEISSE F', teamAId: teamId(home), teamBId: teamId(away),
+      ...(solo ? { solo: true as const } : {}),
+    },
+    roster: { A: aRoster, B: solo ? [] : bRoster },
     events,
     status,
   }

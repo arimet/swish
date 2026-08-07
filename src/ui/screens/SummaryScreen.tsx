@@ -229,7 +229,7 @@ function TeamTable({ match, side, players, name, teamId, onPick }: { match: Matc
         <table className="w-full text-sm">
           <thead>
             <tr className="text-[11px] font-bold uppercase" style={{ color: C.faint }}>
-              <Th left>N°</Th><Th left>Joueur</Th><Th>5</Th><Th>Tps</Th><Th>Pts</Th><Th>Tirs</Th><Th>3pts</Th><Th>2 Int</Th><Th>2 Ext</Th><Th>LF</Th><Th>PD</Th><Th>RO</Th><Th>RD</Th><Th>CT</Th><Th>Ftes</Th>
+              <Th left>N°</Th><Th left>Joueur</Th><Th>5</Th><Th>Tps</Th><Th>Pts</Th><Th>Tirs</Th><Th>%Tirs</Th><Th>3pts</Th><Th>2 Int</Th><Th>2 Ext</Th><Th>LF</Th><Th>PD</Th><Th>RO</Th><Th>RD</Th><Th>CT</Th><Th>Ftes</Th>
             </tr>
           </thead>
           <tbody>
@@ -245,7 +245,9 @@ function TeamTable({ match, side, players, name, teamId, onPick }: { match: Matc
                   <Td>{s.isStarter ? '●' : ''}</Td>
                   <Td>{fmt(times.get(s.playerId) ?? 0)}</Td>
                   <Td><span className="font-black" style={{ color: s.points > 0 ? C.text : C.faint }}>{s.points}</span></Td>
-                  <Td>{s.fieldGoalsMade}</Td><Td>{s.threes}</Td><Td>{s.twoInside}</Td><Td>{s.twoOutside}</Td><Td>{s.freeThrows}</Td>
+                  <Td>{s.fieldGoalsMade}</Td>
+                  <Td>{s.fieldGoalsMade + s.misses > 0 ? `${Math.round((s.fieldGoalsMade / (s.fieldGoalsMade + s.misses)) * 100)} %` : '—'}</Td>
+                  <Td>{s.threes}</Td><Td>{s.twoInside}</Td><Td>{s.twoOutside}</Td><Td>{s.freeThrows}</Td>
                   <Td>{s.assists}</Td><Td>{s.offRebounds}</Td><Td>{s.defRebounds}</Td><Td>{s.blocks}</Td>
                   <Td><span style={{ color: s.fouls >= 5 ? C.pink : undefined }}>{s.fouls}</span></Td>
                 </tr>
@@ -254,7 +256,7 @@ function TeamTable({ match, side, players, name, teamId, onPick }: { match: Matc
             <tr style={{ borderTop: `2px solid ${C.border}`, background: C.panel }}>
               <Td left></Td><Td left><span className="font-black uppercase text-[12px]">Total équipe</span></Td><Td></Td><Td></Td>
               <Td><span className="font-black" style={{ color: teamColor(teamId) }}>{totals.team.points}</span></Td>
-              <Td><b>{totals.team.fieldGoalsMade}</b></Td><Td><b>{totals.team.threes}</b></Td><Td><b>{totals.team.twoInside}</b></Td><Td><b>{totals.team.twoOutside}</b></Td><Td><b>{totals.team.freeThrows}</b></Td>
+              <Td><b>{totals.team.fieldGoalsMade}</b></Td><Td></Td><Td><b>{totals.team.threes}</b></Td><Td><b>{totals.team.twoInside}</b></Td><Td><b>{totals.team.twoOutside}</b></Td><Td><b>{totals.team.freeThrows}</b></Td>
               <Td><b>{totals.team.assists}</b></Td><Td><b>{totals.team.offRebounds}</b></Td><Td><b>{totals.team.defRebounds}</b></Td><Td><b>{totals.team.blocks}</b></Td>
               <Td><b>{totals.team.fouls}</b></Td>
             </tr>
