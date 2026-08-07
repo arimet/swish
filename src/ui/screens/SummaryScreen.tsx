@@ -8,6 +8,7 @@ import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { useAdmin } from '../../app/admin'
 import { publishBundle } from '../../app/sync'
 import { getMatch, listPlayers, listTeams, saveMatch } from '../../persistence/repositories'
+import { flushNow } from '../../persistence/remote'
 import { removeLastEvent } from '../../domain/reducer'
 import { newId } from '../../domain/ids'
 import { liveState } from '../../rules/ffbb'
@@ -62,6 +63,10 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const persist = (next: Match) => {
     setMatch(next)
     saveMatch(next)
+    // Envoi immédiat (pas d'attente du débounce de 700 ms) : une correction de
+    // stats ici est typiquement suivie d'une navigation qui peut déclencher une
+    // hydratation ailleurs.
+    void flushNow()
     publishBundle({ match: next, players: Object.values(players), teamNames })
   }
   const saveMeta = async (patch: Partial<Match['meta']>) => persist({ ...match, meta: { ...match.meta, ...patch } })
