@@ -134,8 +134,10 @@ export function TeamDetail() {
             <ul className="mb-4 space-y-1.5">
               {[...players].sort((a, b) => a.number - b.number).map((p) => (
                 <li key={p.id} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: C.panel }}>
-                  <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
-                  <span className="font-semibold">{p.lastName}</span><span style={{ color: C.muted }}>{p.firstName}</span>
+                  <Link to={`/players/${p.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
+                    <span className="font-semibold">{p.lastName}</span><span style={{ color: C.muted }}>{p.firstName}</span>
+                  </Link>
                   <button onClick={() => removePlayer(p.id)} className="ml-auto rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.pink }}>retirer</button>
                 </li>
               ))}

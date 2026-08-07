@@ -5,6 +5,7 @@ import type { Team, Player, Match } from '../domain/types'
 // Écritures : cache local (immédiat, offline-ok) + mise en file pour le serveur.
 export const saveTeam = async (t: Team) => { await db.teams.put(t); await enqueuePut('team', t.id, t) }
 export const getTeam = (id: string) => db.teams.get(id)
+export const getPlayer = (id: string) => db.players.get(id)
 export const listTeams = () => db.teams.toArray()
 /** Supprime une équipe et tous ses joueurs. */
 export const deleteTeam = async (id: string) => {

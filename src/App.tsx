@@ -7,6 +7,7 @@ import { Classement } from './ui/screens/Classement'
 import { TeamsList } from './ui/screens/TeamsList'
 import { TeamCreate } from './ui/screens/TeamCreate'
 import { TeamDetail } from './ui/screens/TeamDetail'
+import { PlayerDetail } from './ui/screens/PlayerDetail'
 import { MatchSetup } from './ui/screens/MatchSetup'
 import { MatchPreview } from './ui/screens/MatchPreview'
 import { LiveMatch } from './ui/screens/LiveMatch'
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="/teams" element={<Padded><TeamsList /></Padded>} />
           <Route path="/teams/new" element={<TeamCreate />} />
           <Route path="/teams/:id" element={<TeamDetail />} />
+          <Route path="/players/:id" element={<PlayerDetail />} />
           <Route path="/match/new" element={<Padded><MatchSetupRoute /></Padded>} />
           <Route path="/match/:id/summary" element={<SummaryRoute />} />
           <Route path="/match/:id" element={<Padded><MatchPreviewRoute /></Padded>} />
