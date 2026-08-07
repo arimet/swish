@@ -17,13 +17,22 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   const [teamAId, setA] = useState(''); const [teamBId, setB] = useState('')
   const [matchNumber, setNum] = useState(''); const [venue, setVenue] = useState('')
   const [date, setDate] = useState(''); const [time, setTime] = useState('')
+  const [solo, setSolo] = useState(false)
   useEffect(() => { refresh().then(() => listTeams()).then((ts) => { setTeams(ts); setA(ts[0]?.id ?? ''); setB(ts[1]?.id ?? '') }) }, [])
 
   const create = async () => {
-    const [pa, pb] = await Promise.all([listPlayers(teamAId), listPlayers(teamBId)])
+    // En mode solo l'effectif adverse n'est pas chargé : rien n'y sera saisi.
+    const [pa, pb] = await Promise.all([listPlayers(teamAId), solo ? Promise.resolve([]) : listPlayers(teamBId)])
     const match: Match = {
       id: newId(),
-      meta: { championshipLabel: championshipLabel.trim() || undefined, matchNumber: matchNumber.trim() || undefined, venue: venue.trim() || undefined, date: date || undefined, time: time || undefined, teamAId, teamBId, coachA: teams?.find((t) => t.id === teamAId)?.coach, coachB: teams?.find((t) => t.id === teamBId)?.coach },
+      meta: {
+        championshipLabel: championshipLabel.trim() || undefined, matchNumber: matchNumber.trim() || undefined,
+        venue: venue.trim() || undefined, date: date || undefined, time: time || undefined,
+        teamAId, teamBId,
+        coachA: teams?.find((t) => t.id === teamAId)?.coach,
+        coachB: solo ? undefined : teams?.find((t) => t.id === teamBId)?.coach,
+        ...(solo ? { solo: true as const } : {}),
+      },
       roster: { A: pa.map((p) => p.id), B: pb.map((p) => p.id) }, events: [], status: 'setup',
     }
     await saveMatch(match)
@@ -83,10 +92,19 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
         </div>
         <Field id="venue" label="Lieu" value={venue} onChange={setVenue} placeholder="ex. VIGNOT" />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Picker id="ta" label="Équipe A · locaux" teams={teams} value={teamAId} onChange={setA} />
+          <Picker id="ta" label={solo ? 'Mon équipe' : 'Équipe A · locaux'} teams={teams} value={teamAId} onChange={setA} />
           <Picker id="tb" label="Équipe B · visiteurs" teams={teams} value={teamBId} onChange={setB} />
         </div>
         {teamAId === teamBId && <p className="text-sm font-semibold" style={{ color: C.amber }}>Choisissez deux équipes différentes.</p>}
+        <label htmlFor="solo" className="flex cursor-pointer items-start gap-3 rounded-xl p-3" style={{ background: C.panel, border: bd }}>
+          <input id="solo" type="checkbox" checked={solo} onChange={(e) => setSolo(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#ff4d6d]" />
+          <span>
+            <span className="block text-sm font-bold">Je ne détaille que mon équipe</span>
+            <span className="block text-[12px]" style={{ color: C.muted }}>
+              L’équipe A est saisie joueur par joueur ; le score adverse se saisit globalement. Le match compte normalement au classement.
+            </span>
+          </span>
+        </label>
       </div>
 
       <div className="mt-6 flex justify-end gap-3">

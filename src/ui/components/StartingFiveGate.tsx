@@ -29,14 +29,18 @@ export function StartingFiveGate({
             </button>
           )}
           <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Cinq de départ</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Désignez les titulaires de chaque équipe pour démarrer.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {requiredB === 0 ? 'Désignez vos titulaires pour démarrer.' : 'Désignez les titulaires de chaque équipe pour démarrer.'}
+          </p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <StartingFivePanel title="LOCAUX" color={TEAM_A} players={rosterA} required={requiredA}
+        <div className={`grid gap-5 ${requiredB === 0 ? 'mx-auto max-w-md' : 'sm:grid-cols-2'}`}>
+          <StartingFivePanel title={requiredB === 0 ? 'MON ÉQUIPE' : 'LOCAUX'} color={TEAM_A} players={rosterA} required={requiredA}
             chosen={selected.A} onToggle={(id) => onToggle('A', id)} />
-          <StartingFivePanel title="VISITEURS" color={TEAM_B} players={rosterB} required={requiredB}
-            chosen={selected.B} onToggle={(id) => onToggle('B', id)} />
+          {requiredB > 0 && (
+            <StartingFivePanel title="VISITEURS" color={TEAM_B} players={rosterB} required={requiredB}
+              chosen={selected.B} onToggle={(id) => onToggle('B', id)} />
+          )}
         </div>
 
         <div className="sticky bottom-4 mt-8 flex justify-center">
