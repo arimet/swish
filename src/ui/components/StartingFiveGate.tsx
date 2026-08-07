@@ -9,7 +9,7 @@ const TEAM_B = 'var(--team-b)'
  * son cinq de départ (STARTING_FIVE) avant que le match live ne s'affiche.
  */
 export function StartingFiveGate({
-  rosterA, rosterB, requiredA, requiredB, selected, onToggle, onStart, canStart, onExit,
+  rosterA, rosterB, requiredA, requiredB, selected, onToggle, onStart, canStart, onExit, solo = false,
 }: {
   rosterA: Player[]; rosterB: Player[]
   requiredA: number; requiredB: number
@@ -18,6 +18,9 @@ export function StartingFiveGate({
   onStart: () => void
   canStart: boolean
   onExit?: () => void
+  /** Mode « une seule équipe » : une seule colonne, pas de panneau visiteurs.
+   *  Drapeau explicite — un effectif adverse vide ne suffit pas à le déduire. */
+  solo?: boolean
 }) {
   return (
     <div>
@@ -30,14 +33,14 @@ export function StartingFiveGate({
           )}
           <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Cinq de départ</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {requiredB === 0 ? 'Désignez vos titulaires pour démarrer.' : 'Désignez les titulaires de chaque équipe pour démarrer.'}
+            {solo ? 'Désignez vos titulaires pour démarrer.' : 'Désignez les titulaires de chaque équipe pour démarrer.'}
           </p>
         </div>
 
-        <div className={`grid gap-5 ${requiredB === 0 ? 'mx-auto max-w-md' : 'sm:grid-cols-2'}`}>
-          <StartingFivePanel title={requiredB === 0 ? 'MON ÉQUIPE' : 'LOCAUX'} color={TEAM_A} players={rosterA} required={requiredA}
+        <div className={`grid gap-5 ${solo ? 'mx-auto max-w-md' : 'sm:grid-cols-2'}`}>
+          <StartingFivePanel title={solo ? 'MON ÉQUIPE' : 'LOCAUX'} color={TEAM_A} players={rosterA} required={requiredA}
             chosen={selected.A} onToggle={(id) => onToggle('A', id)} />
-          {requiredB > 0 && (
+          {!solo && (
             <StartingFivePanel title="VISITEURS" color={TEAM_B} players={rosterB} required={requiredB}
               chosen={selected.B} onToggle={(id) => onToggle('B', id)} />
           )}
