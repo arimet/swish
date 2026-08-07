@@ -77,3 +77,12 @@ async function doFlush(): Promise<void> {
 
 // Vide la file dès que la connexion revient.
 if (typeof window !== 'undefined' && BASE) window.addEventListener('online', () => flush(0))
+
+/** Force l'envoi immédiat de la file et permet de l'attendre. À utiliser après
+ *  une écriture que l'utilisateur peut suivre d'une navigation : sans cela, le
+ *  débounce laisse une fenêtre pendant laquelle une hydratation écraserait
+ *  l'écriture avec un état serveur pas encore au courant. */
+export function flushNow(): Promise<void> {
+  clearTimeout(timer)
+  return doFlush()
+}
