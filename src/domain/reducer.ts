@@ -25,6 +25,7 @@ export function validateEvent(match: Match, event: GameEvent): string | null {
       if (!clockRunning(events)) return 'Le chrono est déjà arrêté.'
       return null
     case 'SCORE':
+    case 'MISS':
       if (!clockStartedThisPeriod(events, event.period))
         return 'Impossible de marquer avant le démarrage du chrono.'
       return null

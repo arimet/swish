@@ -25,6 +25,12 @@ describe('appendEvent', () => {
       appendEvent(m, ev({ type: 'SCORE', team: 'A', playerId: 'p1', kind: '3' } as Partial<GameEvent> & { type: 'SCORE' })),
     ).toThrow()
   })
+  it('refuse aussi un MISS si le chrono na jamais demarré sur la periode', () => {
+    const m = baseMatch()
+    expect(() =>
+      appendEvent(m, ev({ type: 'MISS', team: 'A', playerId: 'p1', kind: '3', shot: { x: 0.5, y: 0.65 } } as Partial<GameEvent> & { type: 'MISS' })),
+    ).toThrow()
+  })
   it('refuse deux CLOCK_START consecutifs', () => {
     let m = baseMatch()
     m = appendEvent(m, ev({ type: 'PERIOD_START' }))
