@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { GameClock } from '../components/GameClock'
 import { TeamPanel } from '../components/TeamPanel'
 import { PlayerActionDialog } from '../components/PlayerActionDialog'
@@ -64,9 +64,16 @@ export function SoloLiveMatch({ matchId, onFinish }: { matchId: string; onFinish
     }
   }, [ls?.clockRunning])
 
+  // Suivi spectateur (multi-appareils) : publie l'état à chaque changement, et
+  // republie au retour du réseau (une saisie hors ligne ne se repousse sinon
+  // qu'au prochain évènement).
   useEffect(() => {
     if (!match || !syncEnabled()) return
-    publishBundle({ match, players: Object.values(players), teamNames })
+    const bundle = { match, players: Object.values(players), teamNames }
+    publishBundle(bundle)
+    const onOnline = () => publishBundle(bundle)
+    window.addEventListener('online', onOnline)
+    return () => window.removeEventListener('online', onOnline)
   }, [match, players, teamNames])
 
   if (!match || !ls)
@@ -153,6 +160,8 @@ export function SoloLiveMatch({ matchId, onFinish }: { matchId: string; onFinish
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
           <PeriodStrip current={ls.period} />
           <div className="flex items-center gap-2">
+            <Link to={`/match/${match.id}/watch`} target="_blank" title="Ouvrir le suivi spectateur"
+              className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-white/20">👁 Suivi</Link>
             <SbButton onClick={undo} title="Annuler la dernière action">↩︎ Annuler</SbButton>
             <SbButton onClick={nextPeriod}>Période suivante →</SbButton>
             <SbButton onClick={() => setAskFinish(true)} danger>Terminer</SbButton>
