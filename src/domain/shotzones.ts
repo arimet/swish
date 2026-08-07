@@ -28,7 +28,7 @@ export const ZONE_LABELS: Record<ShotZone, string> = {
   mid_center: 'Mi-distance axe',
   mid_right: 'Mi-distance droite',
   corner3_left: 'Corner gauche',
-  top3: 'Aile / axe a 3 pts',
+  top3: 'Aile / axe à 3 pts',
   corner3_right: 'Corner droit',
 }
 
