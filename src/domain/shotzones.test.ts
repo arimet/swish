@@ -19,7 +19,9 @@ describe('zoneAt', () => {
   it('sous la jonction corner/arc, seule la ligne de corner compte', () => {
     // À 5 cm au-delà de la ligne de corner : 3 points.
     expect(zoneAt(0.05, 0.05)).toBe('corner3_left')
-    // À 30 cm en deçà : 2 points, même si la distance au panier dépasse 6,75 m.
+    // À 30 cm en deçà : 2 points. La distance au panier (~6,43 m) reste sous le
+    // rayon de l'arc — c'est le premier cas ci-dessus qui montre que seule la
+    // ligne de corner tranche, indépendamment de la distance.
     expect(zoneAt(0.08, 0.02)).toBe('mid_left')
   })
 
