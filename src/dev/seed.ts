@@ -115,7 +115,7 @@ function buildMatch(home: number, away: number, round: number, slot: number, idx
   if (solo)
     events = events.map((e) =>
       e.type !== 'SCORE' || e.team !== 'B' ? e : ({ ...e, playerId: undefined, shot: undefined } as GameEvent),
-    ).filter((e) => !('team' in e && e.team === 'B' && (e.type === 'MISS' || e.type === 'STAT' || e.type === 'STARTING_FIVE')))
+    ).filter((e) => !('team' in e && e.team === 'B' && (e.type === 'MISS' || e.type === 'STAT' || e.type === 'STARTING_FIVE' || e.type === 'FOUL' || e.type === 'TIMEOUT')))
 
   return {
     id: `seed-m${idx}`,
