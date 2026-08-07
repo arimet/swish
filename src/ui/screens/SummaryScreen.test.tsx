@@ -54,3 +54,36 @@ describe('SummaryScreen — mode solo', () => {
     expect(screen.getAllByText('Total équipe')).toHaveLength(1)
   })
 })
+
+describe('SummaryScreen — colonne %Tirs', () => {
+  it("affiche — et non 100 % quand aucun tir manqué n'a été saisi sur la rencontre", async () => {
+    const matchId = 'no-miss-tracked'
+    await saveTeam({ id: 'tc', name: 'ÉPINAL' })
+    await savePlayer({ id: 'p9', teamId: 'tc', number: 9, lastName: 'DUPONT', firstName: 'Marc' })
+    const m: Match = {
+      id: matchId,
+      meta: { teamAId: 'tc', teamBId: 'tb' },
+      roster: { A: ['p9'], B: [] },
+      status: 'finished',
+      events: [
+        { id: 'e0', wallClock: 0, period: 1, gameClock: 600, type: 'STARTING_FIVE', team: 'A', playerIds: ['p9'] },
+        { id: 'e1', wallClock: 1, period: 1, gameClock: 590, type: 'SCORE', team: 'A', playerId: 'p9', kind: '2int' },
+      ],
+    }
+    await saveMatch(m)
+
+    render(
+      <AdminProvider>
+        <MemoryRouter>
+          <SummaryScreen matchId={matchId} onHome={vi.fn()} />
+        </MemoryRouter>
+      </AdminProvider>,
+    )
+
+    await screen.findByText('DUPONT Marc')
+    // Le joueur a marqué son seul tir (fieldGoalsMade=1, misses=0) : sans MISS suivi
+    // sur ce match, on ne peut pas savoir si c'est 100 % ou juste « pas suivi ».
+    expect(screen.queryByText('100 %')).not.toBeInTheDocument()
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+  })
+})

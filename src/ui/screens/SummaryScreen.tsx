@@ -239,6 +239,11 @@ function TeamTable({ match, side, players, name, teamId, onPick }: { match: Matc
   const stats = playerStats(match, side)
   const times = playingTimes(match, side)
   const totals = teamTotals(match, side)
+  // Avant cette branche, l'évènement MISS n'existait pas : sur ces rencontres (et sur
+  // toute nouvelle rencontre où « Manqué » n'a jamais été utilisé), le dénominateur
+  // fieldGoalsMade + misses vaut toujours fieldGoalsMade, donc chaque marqueur afficherait
+  // à tort 100 %. On n'affiche le pourcentage que si ce côté a suivi au moins un tir manqué.
+  const tracksMisses = match.events.some((e) => e.type === 'MISS' && e.team === side)
   return (
     <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: bd, ...(onPick ? { boxShadow: `0 0 0 1px ${C.accent}55` } : {}) }}>
       <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -267,7 +272,7 @@ function TeamTable({ match, side, players, name, teamId, onPick }: { match: Matc
                   <Td>{fmt(times.get(s.playerId) ?? 0)}</Td>
                   <Td><span className="font-black" style={{ color: s.points > 0 ? C.text : C.faint }}>{s.points}</span></Td>
                   <Td>{s.fieldGoalsMade}</Td>
-                  <Td>{s.fieldGoalsMade + s.misses > 0 ? `${Math.round((s.fieldGoalsMade / (s.fieldGoalsMade + s.misses)) * 100)} %` : '—'}</Td>
+                  <Td>{tracksMisses && s.fieldGoalsMade + s.misses > 0 ? `${Math.round((s.fieldGoalsMade / (s.fieldGoalsMade + s.misses)) * 100)} %` : '—'}</Td>
                   <Td>{s.threes}</Td><Td>{s.twoInside}</Td><Td>{s.twoOutside}</Td><Td>{s.freeThrows}</Td>
                   <Td>{s.assists}</Td><Td>{s.offRebounds}</Td><Td>{s.defRebounds}</Td><Td>{s.blocks}</Td>
                   <Td><span style={{ color: s.fouls >= 5 ? C.pink : undefined }}>{s.fouls}</span></Td>
