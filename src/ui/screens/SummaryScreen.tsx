@@ -241,7 +241,7 @@ function TeamTable({ match, side, players, name, teamId, onPick }: { match: Matc
                   className={onPick ? 'cursor-pointer transition hover:bg-white/[0.04]' : ''}
                   style={{ borderTop: `1px solid ${C.border}`, opacity: dnp && !onPick ? 0.5 : 1 }}>
                   <Td left><span className="font-black">{p?.number ?? '—'}</span></Td>
-                  <Td left>{p ? <Link to={`/players/${s.playerId}`} className="hover:underline">{p.lastName} {p.firstName}</Link> : s.playerId}</Td>
+                  <Td left>{p ? <Link to={`/players/${s.playerId}`} onClick={(e) => e.stopPropagation()} className="hover:underline">{p.lastName} {p.firstName}</Link> : s.playerId}</Td>
                   <Td>{s.isStarter ? '●' : ''}</Td>
                   <Td>{fmt(times.get(s.playerId) ?? 0)}</Td>
                   <Td><span className="font-black" style={{ color: s.points > 0 ? C.text : C.faint }}>{s.points}</span></Td>

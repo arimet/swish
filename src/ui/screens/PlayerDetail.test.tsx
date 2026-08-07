@@ -23,6 +23,7 @@ beforeEach(async () => {
     { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
     { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
     { type: 'MISS', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
+    { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int', shot: { x: 0.5, y: 0.15 } },
   ]))
 })
 
@@ -37,9 +38,9 @@ describe('PlayerDetail', () => {
   it('affiche l’identité, les totaux et la réussite aux tirs', async () => {
     renderAt('p1')
     expect(await screen.findByText('MARTIN Lucas')).toBeInTheDocument()
-    // Tous les tirs localisés sont à 3 pts ici : réussite aux tirs et à 3 pts coïncident (2/3).
-    expect(await screen.findAllByText('67 %')).toHaveLength(2)
-    expect(screen.getByText('6')).toBeInTheDocument() // points par match
+    expect(await screen.findByText('75 %')).toBeInTheDocument() // 3 tirs sur 4
+    expect(screen.getByText('67 %')).toBeInTheDocument() // 2 tirs à 3 pts sur 3
+    expect(screen.getByText('Points / match').closest('div')).toHaveTextContent('8') // 2×3 + 1×2
   })
 
   it('liste les rencontres du joueur', async () => {
