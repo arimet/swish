@@ -7,6 +7,7 @@ import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { ClockEditDialog } from '../components/ClockEditDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { StartingFiveGate } from '../components/StartingFiveGate'
+import { AdminGate } from '../components/AdminGate'
 import { useAdmin } from '../../app/admin'
 import { syncEnabled, publishBundle } from '../../app/sync'
 import { SubstitutionDialog } from '../components/SubstitutionDialog'
@@ -14,21 +15,12 @@ import { useMatch } from '../../app/useMatch'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
 import { listPlayers, listTeams } from '../../persistence/repositories'
-import { periodLength } from '../../domain/ids'
+import { periodLength, seedSeconds } from '../../domain/ids'
 import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
-import type { Match, Period, Player, ScoreKind, StatKind, FoulType, TeamSide, ShotSpot } from '../../domain/types'
+import type { Player, ScoreKind, StatKind, FoulType, TeamSide, ShotSpot } from '../../domain/types'
 
 const TEAM_A = 'var(--team-a)'
 const TEAM_B = 'var(--team-b)'
-
-/** Chrono restant à reprendre pour la période courante : celui du dernier évènement
- * de cette période dans le journal, ou la durée pleine si la période vient de commencer. */
-function seedSeconds(match: Match, period: Period): number {
-  for (let i = match.events.length - 1; i >= 0; i--) {
-    if (match.events[i].period === period) return match.events[i].gameClock
-  }
-  return periodLength(period)
-}
 
 export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: () => void }) {
   const navigate = useNavigate()
@@ -90,22 +82,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   // La table de marque (saisie du match) est réservée à l'admin ; les
   // spectateurs passent par /watch (lecture seule).
   if (!isAdmin)
-    return (
-      <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
-        <div className="text-5xl">🔒</div>
-        <h2 className="text-xl font-extrabold tracking-tight">Accès table de marque</h2>
-        <p className="max-w-sm text-sm text-muted-foreground">Le mot de passe administrateur est requis pour saisir la rencontre.</p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-          <button onClick={() => guard(() => {})} className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110">
-            🔓 Déverrouiller
-          </button>
-          <Link to={`/match/${matchId}/watch`} className="rounded-xl border border-border/70 px-5 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-muted">
-            👁 Suivi spectateur
-          </Link>
-        </div>
-        <button onClick={() => navigate('/')} className="mt-1 text-xs font-semibold text-muted-foreground hover:text-foreground">← Accueil</button>
-      </div>
-    )
+    return <AdminGate matchId={matchId} onUnlock={() => guard(() => {})} onExit={() => navigate('/')} />
 
   const rosterPlayers = (side: TeamSide) => match.roster[side].map((id) => players[id]).filter(Boolean)
   const teamName = (side: TeamSide) => teamNames[side]

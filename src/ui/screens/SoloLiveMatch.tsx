@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { GameClock } from '../components/GameClock'
 import { TeamPanel } from '../components/TeamPanel'
 import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { ClockEditDialog } from '../components/ClockEditDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { StartingFiveGate } from '../components/StartingFiveGate'
+import { AdminGate } from '../components/AdminGate'
 import { SubstitutionDialog } from '../components/SubstitutionDialog'
 import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
 import { useAdmin } from '../../app/admin'
@@ -14,18 +15,11 @@ import { useMatch } from '../../app/useMatch'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
 import { listPlayers, listTeams } from '../../persistence/repositories'
-import { periodLength } from '../../domain/ids'
-import type { Match, Period, Player, ScoreKind, ShotSpot, StatKind, FoulType } from '../../domain/types'
+import { periodLength, seedSeconds } from '../../domain/ids'
+import type { Match, Player, ScoreKind, ShotSpot, StatKind, FoulType } from '../../domain/types'
 
 const TEAM_A = 'var(--team-a)'
 const OPP_POINTS: { k: ScoreKind; n: number }[] = [{ k: 'lf', n: 1 }, { k: '2int', n: 2 }, { k: '3', n: 3 }]
-
-/** Chrono restant à reprendre pour la période courante. */
-function seedSeconds(match: Match, period: Period): number {
-  for (let i = match.events.length - 1; i >= 0; i--)
-    if (match.events[i].period === period) return match.events[i].gameClock
-  return periodLength(period)
-}
 
 /**
  * Table de marque du mode « une seule équipe » : notre effectif est détaillé
@@ -79,22 +73,7 @@ export function SoloLiveMatch({ matchId, onFinish }: { matchId: string; onFinish
     return <div className="grid min-h-dvh place-items-center text-muted-foreground">Chargement…</div>
 
   if (!isAdmin)
-    return (
-      <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
-        <div className="text-5xl">🔒</div>
-        <h2 className="text-xl font-extrabold tracking-tight">Accès table de marque</h2>
-        <p className="max-w-sm text-sm text-muted-foreground">Le mot de passe administrateur est requis pour saisir la rencontre.</p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-          <button onClick={() => guard(() => {})} className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110">
-            🔓 Déverrouiller
-          </button>
-          <Link to={`/match/${matchId}/watch`} className="rounded-xl border border-border/70 px-5 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-muted">
-            👁 Suivi spectateur
-          </Link>
-        </div>
-        <button onClick={() => navigate('/')} className="mt-1 text-xs font-semibold text-muted-foreground hover:text-foreground">← Accueil</button>
-      </div>
-    )
+    return <AdminGate matchId={matchId} onUnlock={() => guard(() => {})} onExit={() => navigate('/')} />
 
   const rosterPlayers = match.roster.A.map((id) => players[id]).filter(Boolean)
 
