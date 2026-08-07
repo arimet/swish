@@ -3,7 +3,7 @@ import type { Player, ScoreKind } from '../../domain/types'
 type Stat = { points: number; fouls: number }
 
 /** Colonne d'équipe : entête (fautes/bonus/TM), cartes joueurs avec raccourcis
- * +1/+2/+3/Faute (1 clic) ; tap sur le nom = dialogue précis (2int/2ext). */
+ * lancer franc et faute ; tap sur le nom = dialogue avec la carte de tir. */
 export function TeamPanel({
   title, color, players, statsByPlayer, teamFouls, bonus, timeoutsRemaining, timeoutsUsed,
   onPick, onScore, onFoul, onSub, onTimeout, onUndoTimeout,
@@ -79,10 +79,8 @@ export function TeamPanel({
                   </span>
                 </span>
               </button>
-              <div className="mt-2 grid grid-cols-4 gap-1">
+              <div className="mt-2 grid grid-cols-2 gap-1">
                 <Quick disabled={out} label="+1" onClick={() => onScore(p.id, 'lf')} />
-                <Quick disabled={out} label="+2" onClick={() => onScore(p.id, '2int')} />
-                <Quick disabled={out} label="+3" onClick={() => onScore(p.id, '3')} />
                 <Quick disabled={out} label="F" foul onClick={() => onFoul(p.id)} />
               </div>
             </div>

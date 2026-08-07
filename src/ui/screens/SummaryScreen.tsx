@@ -17,7 +17,7 @@ import { teamTotals } from '../../domain/totals'
 import { matchRatios, scoreProgression } from '../../domain/progression'
 import { fmt } from '../components/GameClock'
 import { C, bd, TeamBadge, teamColor, fmtDate, champLabel } from '../olive/kit'
-import type { GameEvent, Match, Player, ScoreKind, StatKind, TeamSide } from '../../domain/types'
+import type { GameEvent, Match, Player, ScoreKind, ShotSpot, StatKind, TeamSide } from '../../domain/types'
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
 type EventInput = DistributiveOmit<GameEvent, 'id' | 'wallClock'>
@@ -73,9 +73,12 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
     const next = removeLastEvent(match, pred)
     if (next !== match) persist(next)
   }
-  const addScore = (side: TeamSide, playerId: string, kind: ScoreKind) => addEvent({ type: 'SCORE', team: side, playerId, kind, period: ls.period, gameClock: 0 })
+  const addScore = (side: TeamSide, playerId: string, kind: ScoreKind, shot?: ShotSpot) => addEvent({ type: 'SCORE', team: side, playerId, kind, shot, period: ls.period, gameClock: 0 })
   const addFoul = (side: TeamSide, playerId: string) => addEvent({ type: 'FOUL', team: side, target: { kind: 'player', playerId }, foulType: 'personal', period: ls.period, gameClock: 0 })
   const addStat = (side: TeamSide, playerId: string, stat: StatKind) => addEvent({ type: 'STAT', team: side, playerId, stat, period: ls.period, gameClock: 0 })
+  const addMiss = (side: TeamSide, playerId: string, kind: ScoreKind, shot: ShotSpot) => addEvent({ type: 'MISS', team: side, playerId, kind, shot, period: ls.period, gameClock: 0 })
+  const removeMiss = (side: TeamSide, id: string) => removeLast((e) => e.type === 'MISS' && e.team === side && e.playerId === id)
+  const missesOf = (side: TeamSide, id: string) => match.events.filter((e) => e.type === 'MISS' && e.team === side && e.playerId === id).length
   const removeScoreKind = (side: TeamSide, id: string, kind: ScoreKind) => removeLast((e) => e.type === 'SCORE' && e.team === side && e.playerId === id && e.kind === kind)
   const removeFoul = (side: TeamSide, id: string) => removeLast((e) => e.type === 'FOUL' && e.team === side && e.target.kind === 'player' && e.target.playerId === id)
   const removeStatKind = (side: TeamSide, id: string, stat: StatKind) => removeLast((e) => e.type === 'STAT' && e.team === side && e.playerId === id && e.stat === stat)
@@ -118,12 +121,15 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         statCounts={pick ? statCountsOf(pick.side, pick.id) : undefined}
         fouls={pick ? foulsOf(pick.side, pick.id) : 0}
         onClose={() => setPick(null)}
-        onScore={(k) => pick && addScore(pick.side, pick.id, k)}
+        onScore={(k, shot) => pick && addScore(pick.side, pick.id, k, shot)}
         onFoul={() => pick && addFoul(pick.side, pick.id)}
         onStat={(k) => pick && addStat(pick.side, pick.id, k)}
         onRemoveScore={(k) => pick && removeScoreKind(pick.side, pick.id, k)}
         onRemoveFoul={() => pick && removeFoul(pick.side, pick.id)}
         onRemoveStat={(k) => pick && removeStatKind(pick.side, pick.id, k)}
+        misses={pick ? missesOf(pick.side, pick.id) : 0}
+        onMiss={(k, shot) => pick && addMiss(pick.side, pick.id, k, shot)}
+        onRemoveMiss={() => pick && removeMiss(pick.side, pick.id)}
       />
 
       {/* SCOREBOARD FINAL */}

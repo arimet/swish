@@ -15,7 +15,7 @@ import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
 import { listPlayers, listTeams } from '../../persistence/repositories'
 import { periodLength } from '../../domain/ids'
-import type { Match, Period, Player, ScoreKind, StatKind, FoulType, TeamSide } from '../../domain/types'
+import type { Match, Period, Player, ScoreKind, StatKind, FoulType, TeamSide, ShotSpot } from '../../domain/types'
 
 const TEAM_A = 'var(--team-a)'
 const TEAM_B = 'var(--team-b)'
@@ -185,6 +185,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     dispatch({ type: 'FOUL', team: side, target: { kind: 'player', playerId }, foulType: 'personal', period: ls.period, gameClock: seconds })
   const quickStat = (side: TeamSide, playerId: string, stat: StatKind) =>
     dispatch({ type: 'STAT', team: side, playerId, stat, period: ls.period, gameClock: seconds })
+  const quickMiss = (side: TeamSide, playerId: string, kind: ScoreKind, shot: ShotSpot) =>
+    dispatch({ type: 'MISS', team: side, playerId, kind, shot, period: ls.period, gameClock: seconds })
+  const removeMiss = (side: TeamSide, playerId: string) =>
+    removeLast((e) => e.type === 'MISS' && e.team === side && e.playerId === playerId)
+  const missCount = (side: TeamSide, playerId: string) =>
+    match.events.filter((e) => e.type === 'MISS' && e.team === side && e.playerId === playerId).length
 
   // Corrections (erreurs de saisie) : on retire le dernier évènement concerné.
   // Retrait ciblé d'un type de panier précis (le dernier 3 pts, même si un 2 a suivi).
@@ -213,8 +219,8 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   const clampClock = (s: number) => Math.min(periodLength(ls.period), Math.max(0, s))
   const adjustClock = (delta: number) => setSeconds((s) => clampClock(s + delta))
 
-  const score = (kind: ScoreKind) => pick &&
-    dispatch({ type: 'SCORE', team: pick.side, playerId: pick.id, kind, period: ls.period, gameClock: seconds })
+  const score = (kind: ScoreKind, shot?: ShotSpot) => pick &&
+    dispatch({ type: 'SCORE', team: pick.side, playerId: pick.id, kind, shot, period: ls.period, gameClock: seconds })
   const foul = (type: FoulType) => pick &&
     dispatch({ type: 'FOUL', team: pick.side, target: { kind: 'player', playerId: pick.id }, foulType: type, period: ls.period, gameClock: seconds })
 
@@ -311,6 +317,9 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         onRemoveScore={(kind) => pick && removeScoreKind(pick.side, pick.id, kind)}
         onRemoveFoul={() => pick && removeFoul(pick.side, pick.id)}
         onRemoveStat={(kind) => pick && removeStatKind(pick.side, pick.id, kind)}
+        misses={pick ? missCount(pick.side, pick.id) : 0}
+        onMiss={(kind, shot) => pick && quickMiss(pick.side, pick.id, kind, shot)}
+        onRemoveMiss={() => pick && removeMiss(pick.side, pick.id)}
       />
       <ClockEditDialog
         open={editClock} seconds={seconds} max={periodLength(ls.period)}
