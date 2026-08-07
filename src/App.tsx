@@ -10,7 +10,7 @@ import { TeamDetail } from './ui/screens/TeamDetail'
 import { PlayerDetail } from './ui/screens/PlayerDetail'
 import { MatchSetup } from './ui/screens/MatchSetup'
 import { MatchPreview } from './ui/screens/MatchPreview'
-import { LiveMatch } from './ui/screens/LiveMatch'
+import { LiveRouter } from './ui/screens/LiveRouter'
 import { SummaryScreen } from './ui/screens/SummaryScreen'
 import { SpectatorMatch } from './ui/screens/SpectatorMatch'
 import { AdminProvider } from './app/admin'
@@ -30,7 +30,7 @@ function LiveRoute() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   if (!id) return <Navigate to="/" replace />
-  return <LiveMatch matchId={id} onFinish={() => navigate(`/match/${id}/summary`)} />
+  return <LiveRouter matchId={id} onFinish={() => navigate(`/match/${id}/summary`)} />
 }
 function SummaryRoute() {
   const navigate = useNavigate()
