@@ -60,14 +60,14 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const f = fmtDate(match.meta.date)
   const meta = match.meta
 
-  const persist = (next: Match) => {
+  const persist = async (next: Match) => {
     setMatch(next)
-    saveMatch(next)
-    // Envoi immédiat (pas d'attente du débounce de 700 ms) : une correction de
-    // stats ici est typiquement suivie d'une navigation qui peut déclencher une
-    // hydratation ailleurs.
-    void flushNow()
+    await saveMatch(next)
     publishBundle({ match: next, players: Object.values(players), teamNames })
+    // Envoi immédiat (pas d'attente du débounce de 700 ms), une fois l'écriture
+    // dans la file confirmée : une correction de stats ici est typiquement
+    // suivie d'une navigation qui peut déclencher une hydratation ailleurs.
+    void flushNow()
   }
   const saveMeta = async (patch: Partial<Match['meta']>) => persist({ ...match, meta: { ...match.meta, ...patch } })
 
