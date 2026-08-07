@@ -18,7 +18,7 @@ export function PrintableSummary({ match, players, teamNames }: {
           <span>Arbitres : {meta.referee1 ?? ''} {meta.referee2 ?? ''} {meta.referee3 ?? ''}</span>
         </div>
       </header>
-      <Summary match={match} players={players} />
+      <Summary match={match} players={players} teamNames={teamNames} />
     </div>
   )
 }

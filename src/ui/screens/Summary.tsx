@@ -7,22 +7,28 @@ import { matchRatios, scoreProgression } from '../../domain/progression'
 import { fmt } from '../components/GameClock'
 import { ProgressionChart } from '../../export/ProgressionChart'
 import { printSummary } from '../../export/print'
+import { liveState } from '../../rules/ffbb'
 import type { Match, Player, TeamSide } from '../../domain/types'
 
-export function Summary({ match, players }: { match: Match; players: Record<string, Player> }) {
+export function Summary({ match, players, teamNames }: { match: Match; players: Record<string, Player>; teamNames: Record<TeamSide, string> }) {
   const ratios = matchRatios(match)
+  const score = liveState(match).score
   return (
     <div className="space-y-8 p-4">
       <Button className="no-print" onClick={printSummary}>Exporter / Imprimer (PDF)</Button>
-      {(['A', 'B'] as TeamSide[]).map((side) => (
-        <TeamBox key={side} match={match} side={side} players={players} />
-      ))}
+      {(['A', 'B'] as TeamSide[]).map((side) =>
+        side === 'B' && match.meta.solo ? (
+          <SoloOpponentLine key="B" name={teamNames.B} score={score.b} />
+        ) : (
+          <TeamBox key={side} match={match} side={side} players={players} />
+        ),
+      )}
       <section>
         <h3 className="font-bold mb-2">Données et ratios</h3>
         <ul className="text-sm grid grid-cols-2 gap-x-8 max-w-xl">
           <li>Avantage max — A {ratios.A.maxLead} / B {ratios.B.maxLead}</li>
           <li>Série max — A {ratios.A.maxRun} / B {ratios.B.maxRun}</li>
-          <li>Points du banc — A {teamTotals(match, 'A').bench.points} / B {teamTotals(match, 'B').bench.points}</li>
+          <li>Points du banc — A {teamTotals(match, 'A').bench.points} / B {match.meta.solo ? '—' : teamTotals(match, 'B').bench.points}</li>
           <li>Égalités — {ratios.ties}</li>
           <li>Durée avantage — A {fmt(ratios.A.leadDurationSec)} / B {fmt(ratios.B.leadDurationSec)}</li>
         </ul>
@@ -32,6 +38,20 @@ export function Summary({ match, players }: { match: Match; players: Record<stri
         <ProgressionChart points={scoreProgression(match)} />
       </section>
     </div>
+  )
+}
+
+/** Mode « une seule équipe » : pas de tableau joueur pour l'adversaire (roster
+ *  vide), mais son score reste réel — l'écrire évite la contradiction avec le
+ *  score final affiché en en-tête. */
+function SoloOpponentLine({ name, score }: { name: string; score: number }) {
+  return (
+    <section>
+      <h3 className="font-bold mb-2">VISITEURS</h3>
+      <p className="border border-black p-2 text-sm">
+        {name} — {score} points. Score saisi globalement — pas de détail joueur en mode « une seule équipe ».
+      </p>
+    </section>
   )
 }
 
