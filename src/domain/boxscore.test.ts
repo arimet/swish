@@ -66,3 +66,26 @@ describe('playerStats', () => {
     expect(p1).toMatchObject({ assists: 2, offRebounds: 1, defRebounds: 1, blocks: 1 })
   })
 })
+
+describe('playerStats — tirs manqués et paniers d’équipe', () => {
+  it('compte les tirs manqués sans ajouter de points', () => {
+    const m = mk([
+      { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: { x: 0.5, y: 0.65 } },
+      { type: 'MISS', team: 'A', playerId: 'p1', kind: '3', shot: { x: 0.5, y: 0.7 } },
+      { type: 'MISS', team: 'A', playerId: 'p1', kind: '2int', shot: { x: 0.5, y: 0.15 } },
+    ])
+    const [p1] = playerStats(m, 'A')
+    expect(p1.points).toBe(3)
+    expect(p1.fieldGoalsMade).toBe(1)
+    expect(p1.misses).toBe(2)
+  })
+
+  it('ignore un panier sans joueur identifié dans les lignes individuelles', () => {
+    const m = mk([
+      { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' },
+      { type: 'SCORE', team: 'A', kind: '3' }, // panier d'équipe (mode solo côté adverse)
+    ])
+    const stats = playerStats(m, 'A')
+    expect(stats.reduce((n, s) => n + s.points, 0)).toBe(2)
+  })
+})

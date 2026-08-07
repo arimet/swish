@@ -16,13 +16,22 @@ export interface Player {
 }
 
 interface EventBase { id: string; wallClock: number; period: Period; gameClock: number }
+
+/** Position d'un tir, normalisée dans le demi-terrain :
+ *  x 0..1 de la touche gauche à la touche droite,
+ *  y 0..1 de la ligne de fond à la ligne médiane. */
+export interface ShotSpot { x: number; y: number }
+
 export type GameEvent =
   | (EventBase & { type: 'STARTING_FIVE'; team: TeamSide; playerIds: string[] })
   | (EventBase & { type: 'PERIOD_START' })
   | (EventBase & { type: 'PERIOD_END' })
   | (EventBase & { type: 'CLOCK_START' })
   | (EventBase & { type: 'CLOCK_STOP' })
-  | (EventBase & { type: 'SCORE'; team: TeamSide; playerId: string; kind: ScoreKind })
+  // playerId absent = panier d'équipe sans joueur identifié (score adverse en mode solo).
+  // shot absent = tir saisi sans position (lancer franc, ou match antérieur à la carte de tir).
+  | (EventBase & { type: 'SCORE'; team: TeamSide; playerId?: string; kind: ScoreKind; shot?: ShotSpot })
+  | (EventBase & { type: 'MISS'; team: TeamSide; playerId: string; kind: ScoreKind; shot: ShotSpot })
   | (EventBase & { type: 'FOUL'; team: TeamSide; target: FoulTarget; foulType: FoulType })
   | (EventBase & { type: 'TIMEOUT'; team: TeamSide })
   | (EventBase & { type: 'SUBSTITUTION'; team: TeamSide; playerInId: string; playerOutId: string })
@@ -34,6 +43,9 @@ export interface MatchMeta {
   referee1?: string; referee2?: string; referee3?: string
   coachA?: string; coachB?: string
   teamAId: string; teamBId: string
+  /** Mode « une seule équipe » : seul le côté A est détaillé joueur par joueur,
+   *  le score adverse est saisi globalement. */
+  solo?: true
 }
 export interface Match {
   id: string

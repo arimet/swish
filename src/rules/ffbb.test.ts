@@ -71,4 +71,12 @@ describe("liveState", () => {
     // p9 remplace p2 à l'index 1, les autres ne bougent pas.
     expect(s.onCourt.A).toEqual(['p1', 'p9', 'p3', 'p4', 'p5'])
   })
+  it('compte un panier sans joueur identifié dans le score de l’équipe', () => {
+    const m = mk([
+      { type: 'CLOCK_START', period: 1, gameClock: 600 },
+      { type: 'SCORE', team: 'B', kind: '3', period: 1, gameClock: 500 },
+      { type: 'MISS', team: 'A', playerId: 'p1', kind: '3', shot: { x: 0.5, y: 0.7 }, period: 1, gameClock: 490 },
+    ])
+    expect(liveState(m).score).toEqual({ a: 0, b: 3 })
+  })
 })
