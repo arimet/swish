@@ -19,13 +19,8 @@ export async function pullAll(): Promise<{ teams: Team[]; players: Player[]; mat
   } catch { return null }
 }
 
-/** Hydrate le cache local (IndexedDB) depuis le serveur.
- * On vide d'abord la file sortante : sinon une écriture encore en attente du
- * débounce (ex. correction de stats juste avant un clic qui déclenche une
- * hydratation) serait écrasée par l'état serveur, pas encore au courant. */
+/** Hydrate le cache local (IndexedDB) depuis le serveur. */
 export async function hydrate(): Promise<boolean> {
-  clearTimeout(timer)
-  await doFlush()
   const s = await pullAll()
   if (!s) return false
   await db.transaction('rw', db.teams, db.players, db.matches, async () => {
@@ -48,11 +43,7 @@ async function enqueue(op: Omit<OutboxItem, 'ts' | 'seq'>): Promise<void> {
 export const enqueuePut = (kind: Kind, id: string, doc: unknown) => enqueue({ kind, op: 'put', id, doc })
 export const enqueueDel = (kind: Kind, id: string) => enqueue({ kind, op: 'del', id })
 
-// Promesse du flush en cours, le cas échéant. Sert de verrou (un seul flush
-// réseau à la fois) ET permet à hydrate() d'attendre un flush déjà démarré au
-// lieu de l'ignorer (sinon la file pourrait se vider « en même temps » qu'une
-// hydratation sans que celle-ci n'ait jamais attendu son résultat).
-let inflight: Promise<void> | null = null
+let flushing = false
 let timer: ReturnType<typeof setTimeout> | undefined
 
 /** Vide la file vers le serveur (dédupliquée par entité). Débounce par défaut. */
@@ -62,29 +53,26 @@ export function flush(delay = 700): void {
   timer = setTimeout(() => { void doFlush() }, delay)
 }
 
-function doFlush(): Promise<void> {
-  if (!BASE) return Promise.resolve()
-  if (inflight) return inflight
-  inflight = (async () => {
-    try {
-      const items = await db.outbox.orderBy('seq').toArray()
-      if (items.length) {
-        // Déduplication : on ne garde que la dernière opération par (kind:id).
-        const byKey = new Map<string, OutboxItem>()
-        for (const it of items) byKey.set(`${it.kind}:${it.id}`, it)
-        const ops = [...byKey.values()].map((it) =>
-          it.op === 'del' ? { kind: it.kind, op: it.op, id: it.id } : { kind: it.kind, op: it.op, id: it.id, doc: it.doc })
-        const r = await fetch(`${BASE}/mutate`, {
-          method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ ops }), keepalive: true,
-        })
-        if (r.ok) await db.outbox.bulkDelete(items.map((i) => i.seq!))
-      }
-    } catch { /* hors-ligne : on garde la file pour un prochain essai */ } finally {
-      inflight = null
+async function doFlush(): Promise<void> {
+  if (!BASE || flushing) return
+  flushing = true
+  try {
+    const items = await db.outbox.orderBy('seq').toArray()
+    if (items.length) {
+      // Déduplication : on ne garde que la dernière opération par (kind:id).
+      const byKey = new Map<string, OutboxItem>()
+      for (const it of items) byKey.set(`${it.kind}:${it.id}`, it)
+      const ops = [...byKey.values()].map((it) =>
+        it.op === 'del' ? { kind: it.kind, op: it.op, id: it.id } : { kind: it.kind, op: it.op, id: it.id, doc: it.doc })
+      const r = await fetch(`${BASE}/mutate`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ops }), keepalive: true,
+      })
+      if (r.ok) await db.outbox.bulkDelete(items.map((i) => i.seq!))
     }
-  })()
-  return inflight
+  } catch { /* hors-ligne : on garde la file pour un prochain essai */ } finally {
+    flushing = false
+  }
 }
 
 // Vide la file dès que la connexion revient.
