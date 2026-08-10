@@ -148,4 +148,7 @@ export async function seedDevData(): Promise<void> {
       await saveMatch(buildMatch(h, a, r, s, idx++))
     }
   localStorage.setItem('seed-version', SEED_VERSION)
+  // L'Avenir de Vignot est le club de démonstration : sans cela, la démo s'ouvre
+  // sur l'écran de bienvenue à chaque régénération des données.
+  if (!localStorage.getItem('swish-club-id')) localStorage.setItem('swish-club-id', teamId(0))
 }
