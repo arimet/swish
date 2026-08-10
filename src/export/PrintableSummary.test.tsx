@@ -6,9 +6,9 @@ import type { Match } from '../domain/types'
 const match: Match = {
   id: 'm', meta: {
     championshipLabel: 'Pré régionale masculine', matchNumber: '78',
-    date: '22/05/26', venue: 'VIGNOT', referee1: 'BART S', teamAId: 'a', teamBId: 'b',
+    date: '22/05/26', venue: 'VIGNOT', referee1: 'BART S', clubId: 'a', opponentId: 'b',
   },
-  roster: { A: [], B: [] }, events: [], status: 'finished',
+  roster: [], events: [], status: 'finished',
 }
 
 describe('PrintableSummary', () => {

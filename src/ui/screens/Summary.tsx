@@ -16,14 +16,14 @@ export function Summary({ match, players, teamNames }: { match: Match; players: 
   return (
     <div className="space-y-8 p-4">
       <Button className="no-print" onClick={printSummary}>Exporter / Imprimer (PDF)</Button>
-      <TeamBox match={match} side="A" players={players} />
+      <TeamBox match={match} players={players} />
       <OpponentLine name={teamNames.B} score={score.b} />
       <section>
         <h3 className="font-bold mb-2">Données et ratios</h3>
         <ul className="text-sm grid grid-cols-2 gap-x-8 max-w-xl">
           <li>Avantage max — A {ratios.A.maxLead} / B {ratios.B.maxLead}</li>
           <li>Série max — A {ratios.A.maxRun} / B {ratios.B.maxRun}</li>
-          <li>Points du banc — A {teamTotals(match, 'A').bench.points}</li>
+          <li>Points du banc — A {teamTotals(match).bench.points}</li>
           <li>Égalités — {ratios.ties}</li>
           <li>Durée avantage — A {fmt(ratios.A.leadDurationSec)} / B {fmt(ratios.B.leadDurationSec)}</li>
         </ul>
@@ -50,13 +50,13 @@ function OpponentLine({ name, score }: { name: string; score: number }) {
   )
 }
 
-function TeamBox({ match, side, players }: { match: Match; side: TeamSide; players: Record<string, Player> }) {
-  const stats = playerStats(match, side)
-  const times = playingTimes(match, side)
-  const totals = teamTotals(match, side)
+function TeamBox({ match, players }: { match: Match; players: Record<string, Player> }) {
+  const stats = playerStats(match)
+  const times = playingTimes(match)
+  const totals = teamTotals(match)
   return (
     <section>
-      <h3 className="font-bold mb-2">{side === 'A' ? 'LOCAUX' : 'VISITEURS'}</h3>
+      <h3 className="font-bold mb-2">LOCAUX</h3>
       <Table>
         <TableHeader>
           <TableRow>

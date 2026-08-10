@@ -34,7 +34,7 @@ export function Dashboard() {
   if (!clubId || !club) return null
   if (!matches) return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
 
-  const mine = matches.filter((m) => m.meta.teamAId === clubId || m.meta.teamBId === clubId)
+  const mine = matches.filter((m) => m.meta.clubId === clubId || m.meta.opponentId === clubId)
   const live = mine.find((m) => m.status === 'live')
   const next = mine.filter((m) => m.status === 'setup').sort((a, b) => (a.meta.date ?? '').localeCompare(b.meta.date ?? ''))[0]
   const rec = teamRecord(clubId, matches)
@@ -124,12 +124,12 @@ export function Dashboard() {
 }
 
 function Banner({ live, next, clubId, teams }: { live?: Match; next?: Match; clubId: string; teams: Record<string, Team> }) {
-  const opponent = (m: Match) => teams[m.meta.teamAId === clubId ? m.meta.teamBId : m.meta.teamAId]?.name ?? 'Adversaire'
+  const opponent = (m: Match) => teams[m.meta.clubId === clubId ? m.meta.opponentId : m.meta.clubId]?.name ?? 'Adversaire'
   if (live) {
     const ls = liveState(live)
     const dc = displayClock(live)
-    const mine = live.meta.teamAId === clubId ? ls.score.a : ls.score.b
-    const opp = live.meta.teamAId === clubId ? ls.score.b : ls.score.a
+    const mine = live.meta.clubId === clubId ? ls.score.a : ls.score.b
+    const opp = live.meta.clubId === clubId ? ls.score.b : ls.score.a
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accent}55` }}>
         <span className="rounded-md px-2 py-0.5 text-[10px] font-black uppercase" style={{ background: C.greenBg, color: C.green }}>En direct</span>

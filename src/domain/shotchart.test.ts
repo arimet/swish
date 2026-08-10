@@ -3,8 +3,8 @@ import { shootingPct, shotsOf, zoneSummary } from './shotchart'
 import type { GameEvent, Match } from './types'
 
 const mk = (id: string, events: Partial<GameEvent>[]): Match => ({
-  id, meta: { championshipLabel: 'x', teamAId: 'a', teamBId: 'b' },
-  roster: { A: ['p1', 'p2'], B: [] }, status: 'finished',
+  id, meta: { championshipLabel: 'x', clubId: 'a', opponentId: 'b' },
+  roster: ['p1', 'p2'], status: 'finished',
   events: events.map((e, i) => ({ id: `${id}-e${i}`, wallClock: i, period: 1, gameClock: 600, ...e } as GameEvent)),
 })
 

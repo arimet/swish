@@ -41,16 +41,17 @@ export interface MatchMeta {
   championshipLabel?: string; championshipCode?: string; matchNumber?: string
   date?: string; time?: string; venue?: string; pool?: string
   referee1?: string; referee2?: string; referee3?: string
-  coachA?: string; coachB?: string
-  teamAId: string; teamBId: string
-  /** Mode « une seule équipe » : seul le côté A est détaillé joueur par joueur,
-   *  le score adverse est saisi globalement. */
-  solo?: true
+  coachA?: string
+  /** Notre club. L'application ne détaille jamais qu'une équipe. */
+  clubId: string
+  /** L'adversaire : une fiche équipe sans effectif, dont on ne saisit que le score. */
+  opponentId: string
 }
 export interface Match {
   id: string
   meta: MatchMeta
-  roster: { A: string[]; B: string[] }   // ids de joueurs par côté
+  /** Notre effectif. L'adversaire n'en a pas. */
+  roster: string[]
   events: GameEvent[]
   status: 'setup' | 'live' | 'finished'
 }

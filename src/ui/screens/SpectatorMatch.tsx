@@ -55,16 +55,16 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
 
   useEffect(() => {
     if (syncEnabled() || !match) return
-    Promise.all([listPlayers(match.meta.teamAId), listPlayers(match.meta.teamBId), listTeams()]).then(([pa, pb, teams]) => {
+    Promise.all([listPlayers(match.meta.clubId), listTeams()]).then(([roster, teams]) => {
       const map: Record<string, Player> = {}
-      for (const p of [...pa, ...pb]) map[p.id] = p
+      for (const p of roster) map[p.id] = p
       setPlayers(map)
       setNames({
-        A: teams.find((t) => t.id === match.meta.teamAId)?.name ?? 'Locaux',
-        B: teams.find((t) => t.id === match.meta.teamBId)?.name ?? 'Visiteurs',
+        A: teams.find((t) => t.id === match.meta.clubId)?.name ?? 'Locaux',
+        B: teams.find((t) => t.id === match.meta.opponentId)?.name ?? 'Visiteurs',
       })
     })
-  }, [match?.meta.teamAId, match?.meta.teamBId])
+  }, [match?.meta.clubId, match?.meta.opponentId])
 
   if (match === undefined) return <Screen><p style={{ color: C.muted }}>Chargement…</p></Screen>
   if (match === null) return <Screen><p style={{ color: C.muted }}>Rencontre introuvable.</p></Screen>
@@ -100,8 +100,8 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
 
         {/* SCOREBOARD (blocs équipe : lisible sur mobile) */}
         <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-6">
-          <TeamScore id={match.meta.teamAId} name={names.A} score={ls.score.a} />
-          <TeamScore id={match.meta.teamBId} name={names.B} score={ls.score.b} />
+          <TeamScore id={match.meta.clubId} name={names.A} score={ls.score.a} />
+          <TeamScore id={match.meta.opponentId} name={names.B} score={ls.score.b} />
         </div>
         <div className="mt-3 flex flex-col items-center gap-1">
           <span className="nums rounded-lg px-3.5 py-1.5 text-base font-black tabular-nums" style={{ background: C.card, color: finished ? C.muted : C.text, border: `1px solid ${C.border}` }}>
@@ -119,9 +119,9 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
 
         {/* STATS JOUEURS */}
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          <StatList side="A" name={names.A} match={match} players={players}
+          <StatList name={names.A} match={match} players={players}
             openId={openShotsId} onToggle={setOpenShotsId} />
-          <OpponentPanel id={match.meta.teamBId} name={names.B} score={ls.score.b} />
+          <OpponentPanel id={match.meta.opponentId} name={names.B} score={ls.score.b} />
         </div>
 
         <p className="mt-6 text-center text-[11px]" style={{ color: C.faint }}>Mise à jour automatique · suivi en direct</p>
@@ -170,19 +170,19 @@ function OpponentPanel({ id, name, score }: { id: string; name: string; score: n
   )
 }
 
-function StatList({ side, name, match, players, openId, onToggle }: {
-  side: TeamSide; name: string; match: Match; players: Record<string, Player>
+function StatList({ name, match, players, openId, onToggle }: {
+  name: string; match: Match; players: Record<string, Player>
   openId: string | null; onToggle: (id: string | null) => void
 }) {
-  const stats = [...playerStats(match, side)].sort((a, b) => b.points - a.points || a.fouls - b.fouls)
-  const t = teamTotals(match, side).team
+  const stats = [...playerStats(match)].sort((a, b) => b.points - a.points || a.fouls - b.fouls)
+  const t = teamTotals(match).team
   const top = stats[0]?.points ?? 0
   const active = stats.filter((s) => s.points || s.fouls || s.assists || s.offRebounds || s.defRebounds || s.blocks)
   const rows = active.length > 0 ? active : stats.slice(0, 5)
   return (
     <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: `1px solid ${C.border}` }}>
-        <span className="h-2.5 w-2.5 rounded-full" style={{ background: teamColor(side === 'A' ? match.meta.teamAId : match.meta.teamBId) }} />
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: teamColor(match.meta.clubId) }} />
         <h3 className="text-sm font-extrabold uppercase tracking-wide">{name}</h3>
       </div>
       <div className="overflow-x-auto">
@@ -227,7 +227,7 @@ function StatList({ side, name, match, players, openId, onToggle }: {
             {rows.length === 0 && <tr><td colSpan={8} className="px-3 py-6 text-center text-sm" style={{ color: C.muted }}>Pas encore de statistiques.</td></tr>}
             <tr style={{ borderTop: `2px solid ${C.border}`, background: C.panel }}>
               <td className="px-3 py-2"></td><td className="px-2 py-2 text-[12px] font-black uppercase">Total</td>
-              <td className="px-3 py-2 text-center font-black tabular-nums" style={{ color: teamColor(side === 'A' ? match.meta.teamAId : match.meta.teamBId) }}>{t.points}</td>
+              <td className="px-3 py-2 text-center font-black tabular-nums" style={{ color: teamColor(match.meta.clubId) }}>{t.points}</td>
               <Std b>{t.threes}</Std><Std b>{t.assists}</Std><Std b>{t.offRebounds + t.defRebounds}</Std><Std b>{t.blocks}</Std><Std b>{t.fouls}</Std>
             </tr>
           </tbody>

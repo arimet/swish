@@ -14,7 +14,7 @@ export function referenceMatch(): Match {
     })),
   ]
   return {
-    id: 'ref', meta: { championshipLabel: 'Pré régionale masculine', matchNumber: '78', teamAId: 'ta', teamBId: 'tb' },
-    roster: { A: ['milas'], B: [] }, events, status: 'finished',
+    id: 'ref', meta: { championshipLabel: 'Pré régionale masculine', matchNumber: '78', clubId: 'ta', opponentId: 'tb' },
+    roster: ['milas'], events, status: 'finished',
   }
 }

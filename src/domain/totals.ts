@@ -1,5 +1,5 @@
 import { playerStats, pointsForKind, type PlayerStat } from './boxscore'
-import type { Match, TeamSide } from './types'
+import type { Match } from './types'
 
 export interface StatTotals {
   points: number
@@ -53,8 +53,9 @@ const addStat = (acc: StatTotals, s: PlayerStat) => {
   acc.blocks += s.blocks
 }
 
-export function teamTotals(match: Match, side: TeamSide): TeamTotals {
-  const stats = playerStats(match, side)
+/** Totaux de notre effectif (côté A). Le score adverse se lit via `liveState`. */
+export function teamTotals(match: Match): TeamTotals {
+  const stats = playerStats(match)
   const team = empty()
   const starters = empty()
   const bench = empty()
@@ -73,10 +74,10 @@ export function teamTotals(match: Match, side: TeamSide): TeamTotals {
   let coachFouls = 0
 
   for (const e of match.events) {
-    if (e.type === 'SCORE' && e.team === side) {
+    if (e.type === 'SCORE' && e.team === 'A') {
       bucketOf(e.period).points += pointsForKind(e.kind)
     }
-    if (e.type === 'FOUL' && e.team === side) {
+    if (e.type === 'FOUL' && e.team === 'A') {
       if (e.target.kind === 'coach') {
         coachFouls++
       } else if (e.target.kind === 'player') {

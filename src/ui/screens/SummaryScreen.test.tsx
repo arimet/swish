@@ -8,7 +8,7 @@ import { db } from '../../persistence/db'
 import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { Match } from '../../domain/types'
 
-const MATCH_ID = 'solo-finished'
+const MATCH_ID = 'match-finished'
 
 beforeEach(async () => {
   await db.matches.clear(); await db.players.clear(); await db.teams.clear()
@@ -17,13 +17,13 @@ beforeEach(async () => {
   await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas' })
   const m: Match = {
     id: MATCH_ID,
-    meta: { teamAId: 'ta', teamBId: 'tb', solo: true },
-    roster: { A: ['p1'], B: [] },
+    meta: { clubId: 'ta', opponentId: 'tb' },
+    roster: ['p1'],
     status: 'finished',
     events: [
       { id: 'e0', wallClock: 0, period: 1, gameClock: 600, type: 'STARTING_FIVE', team: 'A', playerIds: ['p1'] },
       { id: 'e1', wallClock: 1, period: 1, gameClock: 590, type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' },
-      // Panier adverse saisi globalement : pas de playerId, comme en mode solo réel.
+      // Panier adverse saisi globalement : pas de playerId, l'adversaire n'a pas d'effectif.
       { id: 'e2', wallClock: 2, period: 1, gameClock: 580, type: 'SCORE', team: 'B', kind: '3' },
       { id: 'e3', wallClock: 3, period: 1, gameClock: 570, type: 'SCORE', team: 'B', kind: '3' },
     ],
@@ -62,8 +62,8 @@ describe('SummaryScreen — colonne %Tirs', () => {
     await savePlayer({ id: 'p9', teamId: 'tc', number: 9, lastName: 'DUPONT', firstName: 'Marc' })
     const m: Match = {
       id: matchId,
-      meta: { teamAId: 'tc', teamBId: 'tb' },
-      roster: { A: ['p9'], B: [] },
+      meta: { clubId: 'tc', opponentId: 'tb' },
+      roster: ['p9'],
       status: 'finished',
       events: [
         { id: 'e0', wallClock: 0, period: 1, gameClock: 600, type: 'STARTING_FIVE', team: 'A', playerIds: ['p9'] },

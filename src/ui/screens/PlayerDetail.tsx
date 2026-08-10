@@ -27,7 +27,7 @@ export function PlayerDetail() {
         if (cancelled) return
         setTeam(t ?? null)
         // Rencontres où le joueur figure à l'effectif et qui ont commencé.
-        setMatches(all.filter((m) => m.status !== 'setup' && (m.roster.A.includes(id) || m.roster.B.includes(id))))
+        setMatches(all.filter((m) => m.status !== 'setup' && m.roster.includes(id)))
         setPlayer(p)
       })
     return () => { cancelled = true }
@@ -44,8 +44,7 @@ export function PlayerDetail() {
       </div>
     )
 
-  const sideOf = (m: Match) => (m.roster.A.includes(id) ? 'A' : 'B') as 'A' | 'B'
-  const lineOf = (m: Match) => playerStats(m, sideOf(m)).find((s) => s.playerId === id)
+  const lineOf = (m: Match) => playerStats(m).find((s) => s.playerId === id)
   const totalPoints = matches.reduce((n, m) => n + (lineOf(m)?.points ?? 0), 0)
   const career = shotsOf(matches, id)
   const pct = shootingPct(career)

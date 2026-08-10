@@ -3,8 +3,8 @@ import { liveState, timeoutsAllowed, TEAM_FOUL_BONUS } from './ffbb'
 import type { Match, GameEvent } from '../domain/types'
 
 const mk = (events: Partial<GameEvent>[]): Match => ({
-  id: 'm', meta: { championshipLabel: 'x', teamAId: 'a', teamBId: 'b' },
-  roster: { A: ['p1', 'p2'], B: ['q1'] }, status: 'live',
+  id: 'm', meta: { championshipLabel: 'x', clubId: 'a', opponentId: 'b' },
+  roster: ['p1', 'p2'], status: 'live',
   events: events.map((e, i) => ({ id: `e${i}`, wallClock: i, period: e.period ?? 1, gameClock: e.gameClock ?? 600, ...e } as GameEvent)),
 })
 
@@ -70,6 +70,10 @@ describe("liveState", () => {
     ]))
     // p9 remplace p2 à l'index 1, les autres ne bougent pas.
     expect(s.onCourt.A).toEqual(['p1', 'p9', 'p3', 'p4', 'p5'])
+  })
+  it('l\'adversaire n\'a pas d\'effectif : jamais « sorti sur fautes »', () => {
+    const s = liveState(mk([{ type: 'PERIOD_START' as const, period: 1 }]))
+    expect(s.fouledOut.B).toEqual([])
   })
   it('compte un panier sans joueur identifié dans le score de l’équipe', () => {
     const m = mk([

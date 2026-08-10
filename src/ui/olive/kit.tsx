@@ -53,16 +53,16 @@ export function TeamBadge({ id, name, size = 'h-8 w-8 text-[9px]' }: { id: strin
 
 /** Carte de match façon 'Live Score' Olive. */
 export function MatchCard({ m, teams }: { m: Match; teams: Record<string, Team> }) {
-  const a = teams[m.meta.teamAId]?.name ?? 'Équipe A', b = teams[m.meta.teamBId]?.name ?? 'Équipe B'
+  const a = teams[m.meta.clubId]?.name ?? 'Équipe A', b = teams[m.meta.opponentId]?.name ?? 'Équipe B'
   const { score } = liveState(m); const dc = displayClock(m)
   const to = m.status === 'finished' ? `/match/${m.id}/summary` : m.status === 'live' ? `/match/${m.id}/live` : `/match/${m.id}`
   const leadA = score.a > score.b, leadB = score.b > score.a, setup = m.status === 'setup'
   return (
     <Link to={to} className="flex gap-3 rounded-2xl p-3 transition hover:-translate-y-0.5 hover:border-white/15" style={{ background: C.card, border: bd }}>
       <div className="flex w-11 shrink-0 flex-col items-center justify-between rounded-xl py-3" style={{ background: C.panel }}>
-        <TeamBadge id={m.meta.teamAId} name={a} />
+        <TeamBadge id={m.meta.clubId} name={a} />
         <span className="text-[10px] font-black" style={{ color: C.faint }}>VS</span>
-        <TeamBadge id={m.meta.teamBId} name={b} />
+        <TeamBadge id={m.meta.opponentId} name={b} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">

@@ -1,63 +1,60 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { newId } from '../../domain/ids'
-import { listTeams, listPlayers, saveMatch } from '../../persistence/repositories'
+import { listPlayers, saveMatch } from '../../persistence/repositories'
 import type { Match, Team } from '../../domain/types'
 import { C, bd, PageTitle, TeamBadge } from '../olive/kit'
 import { useAdmin } from '../../app/admin'
+import { useClub } from '../../app/club'
 import { publishBundle } from '../../app/sync'
-import { refresh } from '../../persistence/remote'
 
 const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
+/** Planification d'une rencontre : notre club (celui suivi par l'appareil) est
+ *  fixé d'avance, seul l'adversaire se choisit ici — il n'a pas d'effectif à
+ *  détailler, son score se saisira globalement pendant le match. */
 export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   const { guard } = useAdmin()
-  const [teams, setTeams] = useState<Team[] | null>(null) // null = pas encore chargé
+  const { clubId, club, teams } = useClub()
+  const opponents = teams.filter((t) => t.id !== clubId)
   const [championshipLabel, setChampionship] = useState('')
-  const [teamAId, setA] = useState(''); const [teamBId, setB] = useState('')
+  // La liste des équipes charge de façon asynchrone (ClubProvider) : un état
+  // initialisé une fois au montage figerait ce choix sur « aucun adversaire ».
+  const [pickedOpponentId, setOpponentId] = useState('')
+  const opponentId = pickedOpponentId || opponents[0]?.id || ''
   const [matchNumber, setNum] = useState(''); const [venue, setVenue] = useState('')
   const [date, setDate] = useState(''); const [time, setTime] = useState('')
-  const [solo, setSolo] = useState(false)
-  useEffect(() => { refresh().then(() => listTeams()).then((ts) => { setTeams(ts); setA(ts[0]?.id ?? ''); setB(ts[1]?.id ?? '') }) }, [])
+
+  const nameOf = (id: string) => teams.find((t) => t.id === id)?.name ?? '—'
 
   const create = async () => {
-    // En mode solo l'effectif adverse n'est pas chargé : rien n'y sera saisi.
-    const [pa, pb] = await Promise.all([listPlayers(teamAId), solo ? Promise.resolve([]) : listPlayers(teamBId)])
+    if (!clubId) return
+    const roster = await listPlayers(clubId)
     const match: Match = {
       id: newId(),
       meta: {
         championshipLabel: championshipLabel.trim() || undefined, matchNumber: matchNumber.trim() || undefined,
         venue: venue.trim() || undefined, date: date || undefined, time: time || undefined,
-        teamAId, teamBId,
-        coachA: teams?.find((t) => t.id === teamAId)?.coach,
-        coachB: solo ? undefined : teams?.find((t) => t.id === teamBId)?.coach,
-        ...(solo ? { solo: true as const } : {}),
+        clubId, opponentId,
+        coachA: club?.coach,
       },
-      roster: { A: pa.map((p) => p.id), B: pb.map((p) => p.id) }, events: [], status: 'setup',
+      roster: roster.map((p) => p.id), events: [], status: 'setup',
     }
     await saveMatch(match)
-    publishBundle({ match, players: [...pa, ...pb], teamNames: { A: nameOf(teamAId), B: nameOf(teamBId) } })
+    publishBundle({ match, players: roster, teamNames: { A: club?.name ?? nameOf(clubId), B: nameOf(opponentId) } })
     onCreated(match.id)
   }
-  const nameOf = (id: string) => teams?.find((t) => t.id === id)?.name ?? '—'
-  const canCreate = !!teamAId && !!teamBId && teamAId !== teamBId
+  const canCreate = !!clubId && !!opponentId
 
-  if (teams === null) {
-    return (
-      <div className="mx-auto max-w-2xl">
-        <div className="h-8 w-40 animate-pulse rounded-lg" style={{ background: C.card }} />
-        <div className="mt-6 h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
-      </div>
-    )
-  }
+  if (!club) return null
 
-  if (teams.length < 2) {
+  if (opponents.length === 0) {
     return (
       <div className="mx-auto max-w-lg">
         <h1 className="text-2xl font-extrabold tracking-tight">Nouveau match</h1>
         <div className="mt-6 rounded-2xl p-10 text-center" style={{ border: `1px dashed ${C.border}` }}>
-          <p className="text-sm" style={{ color: C.muted }}>Il faut au moins <strong style={{ color: C.text }}>deux équipes</strong> pour créer une rencontre.</p>
-          <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>Créer mes équipes →</Link>
+          <p className="text-sm" style={{ color: C.muted }}>Il faut au moins <strong style={{ color: C.text }}>une autre équipe</strong> pour créer une rencontre.</p>
+          <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>Créer une équipe →</Link>
         </div>
       </div>
     )
@@ -69,14 +66,14 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
 
       <div className="mb-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <div className="flex flex-col items-center gap-2 text-center">
-          <TeamBadge id={teamAId} name={nameOf(teamAId)} size="h-10 w-10 text-xs" />
-          <span className="line-clamp-2 text-sm font-bold">{nameOf(teamAId)}</span>
+          <TeamBadge id={club.id} name={club.name} size="h-10 w-10 text-xs" />
+          <span className="line-clamp-2 text-sm font-bold">{club.name}</span>
           <span className="text-[11px] font-semibold" style={{ color: C.muted }}>Locaux</span>
         </div>
         <span className="text-lg font-black" style={{ color: C.faint }}>VS</span>
         <div className="flex flex-col items-center gap-2 text-center">
-          <TeamBadge id={teamBId} name={nameOf(teamBId)} size="h-10 w-10 text-xs" />
-          <span className="line-clamp-2 text-sm font-bold">{nameOf(teamBId)}</span>
+          <TeamBadge id={opponentId} name={nameOf(opponentId)} size="h-10 w-10 text-xs" />
+          <span className="line-clamp-2 text-sm font-bold">{nameOf(opponentId)}</span>
           <span className="text-[11px] font-semibold" style={{ color: C.muted }}>Visiteurs</span>
         </div>
       </div>
@@ -91,20 +88,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
           <Field id="time" label="Heure" type="time" value={time} onChange={setTime} />
         </div>
         <Field id="venue" label="Lieu" value={venue} onChange={setVenue} placeholder="ex. VIGNOT" />
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Picker id="ta" label={solo ? 'Mon équipe' : 'Équipe A · locaux'} teams={teams} value={teamAId} onChange={setA} />
-          <Picker id="tb" label="Équipe B · visiteurs" teams={teams} value={teamBId} onChange={setB} />
-        </div>
-        {teamAId === teamBId && <p className="text-sm font-semibold" style={{ color: C.amber }}>Choisissez deux équipes différentes.</p>}
-        <label htmlFor="solo" className="flex cursor-pointer items-start gap-3 rounded-xl p-3" style={{ background: C.panel, border: bd }}>
-          <input id="solo" type="checkbox" checked={solo} onChange={(e) => setSolo(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#ff4d6d]" />
-          <span>
-            <span className="block text-sm font-bold">Je ne détaille que mon équipe</span>
-            <span className="block text-[12px]" style={{ color: C.muted }}>
-              L’équipe A est saisie joueur par joueur ; le score adverse se saisit globalement. Le match compte normalement au classement.
-            </span>
-          </span>
-        </label>
+        <Picker id="opp" label="Adversaire" teams={opponents} value={opponentId} onChange={setOpponentId} />
       </div>
 
       <div className="mt-6 flex justify-end gap-3">

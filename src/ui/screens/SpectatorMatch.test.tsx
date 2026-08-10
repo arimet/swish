@@ -8,7 +8,7 @@ import { db } from '../../persistence/db'
 import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { GameEvent, Match } from '../../domain/types'
 
-const MATCH_ID = 'solo-spectator'
+const MATCH_ID = 'match-spectator'
 
 beforeEach(async () => {
   await db.matches.clear(); await db.players.clear(); await db.teams.clear()
@@ -17,13 +17,13 @@ beforeEach(async () => {
   await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas' })
   const m: Match = {
     id: MATCH_ID,
-    meta: { teamAId: 'ta', teamBId: 'tb', solo: true },
-    roster: { A: ['p1'], B: [] },
+    meta: { clubId: 'ta', opponentId: 'tb' },
+    roster: ['p1'],
     status: 'live',
     events: [
       { id: 'e0', wallClock: 0, period: 1, gameClock: 600, type: 'STARTING_FIVE', team: 'A', playerIds: ['p1'] },
       { id: 'e1', wallClock: 1, period: 1, gameClock: 590, type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' },
-      // Panier adverse saisi globalement : pas de playerId, comme en mode solo réel.
+      // Panier adverse saisi globalement : pas de playerId, l'adversaire n'a pas d'effectif.
       { id: 'e2', wallClock: 2, period: 1, gameClock: 580, type: 'SCORE', team: 'B', kind: '3' },
       { id: 'e3', wallClock: 3, period: 1, gameClock: 570, type: 'SCORE', team: 'B', kind: '3' },
     ],
@@ -44,7 +44,7 @@ describe('SpectatorMatch', () => {
     const scoreEls = await screen.findAllByText('6')
     expect(scoreEls.length).toBeGreaterThan(0)
 
-    // Aucun bandeau fautes/TM pour le côté B (rien n'est saisissable en mode solo).
+    // Aucun bandeau fautes/TM pour le côté B (l'adversaire n'a rien de saisissable).
     expect(screen.queryAllByText(/TM/)).toHaveLength(1)
   })
 })
@@ -67,8 +67,8 @@ describe('SpectatorMatch — carte de tirs par joueur', () => {
       { type: 'SCORE', team: 'A', playerId: 'p2b', kind: '3', shot: TOP3 },
     ]
     const m: Match = {
-      id: SPEC_MATCH_ID, meta: { teamAId: 'ta2', teamBId: 'tb2' },
-      roster: { A: ['p2', 'p2b'], B: [] }, status: 'live',
+      id: SPEC_MATCH_ID, meta: { clubId: 'ta2', opponentId: 'tb2' },
+      roster: ['p2', 'p2b'], status: 'live',
       events: rawEvents.map(ev),
     }
     await saveMatch(m)

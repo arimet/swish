@@ -5,11 +5,13 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MatchSetup } from './MatchSetup'
 import { AdminProvider } from '../../app/admin'
+import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { saveTeam, savePlayer } from '../../persistence/repositories'
 
 beforeEach(async () => {
   sessionStorage.setItem('admin-unlocked', '1') // actions protégées débloquées pour le test
+  localStorage.setItem('swish-club-id', 'ta') // notre club est déjà réglé (écran derrière la garde club)
   await db.teams.clear(); await db.players.clear(); await db.matches.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' }); await saveTeam({ id: 'tb', name: 'VERDUN' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'A', firstName: 'x' })
@@ -19,7 +21,7 @@ beforeEach(async () => {
 describe('MatchSetup', () => {
   it('crée un match et notifie onCreated', async () => {
     const onCreated = vi.fn()
-    render(<MemoryRouter><AdminProvider><MatchSetup onCreated={onCreated} /></AdminProvider></MemoryRouter>)
+    render(<MemoryRouter><ClubProvider><AdminProvider><MatchSetup onCreated={onCreated} /></AdminProvider></ClubProvider></MemoryRouter>)
     await waitFor(() => expect(screen.getAllByText('VIGNOT').length).toBeGreaterThan(0))
     await userEvent.type(screen.getByLabelText(/championnat/i), 'PRM')
     await userEvent.click(screen.getByRole('button', { name: /planifier la rencontre/i }))
@@ -29,18 +31,15 @@ describe('MatchSetup', () => {
     expect(created.status).toBe('setup') // planifié, pas démarré
   })
 
-  it('crée un match solo sans effectif adverse', async () => {
+  it('notre club est fixé d\'avance et l\'adversaire n\'a pas d\'effectif détaillé', async () => {
     const onCreated = vi.fn()
-    render(<AdminProvider><MemoryRouter><MatchSetup onCreated={onCreated} /></MemoryRouter></AdminProvider>)
+    render(<ClubProvider><MemoryRouter><AdminProvider><MatchSetup onCreated={onCreated} /></AdminProvider></MemoryRouter></ClubProvider>)
     await waitFor(() => expect(screen.getAllByText('VIGNOT').length).toBeGreaterThan(0))
-    // Le nom accessible de la case concatène le titre et le paragraphe descriptif :
-    // on ne peut pas matcher le libellé exact, une correspondance partielle sur le rôle suffit.
-    await userEvent.click(await screen.findByRole('checkbox', { name: /Je ne détaille que mon équipe/ }))
     await userEvent.click(screen.getByRole('button', { name: /Planifier la rencontre/ }))
     await waitFor(() => expect(onCreated).toHaveBeenCalled())
     const created = await db.matches.get(onCreated.mock.calls[0][0])
-    expect(created!.meta.solo).toBe(true)
-    expect(created!.roster.A).toHaveLength(1)
-    expect(created!.roster.B).toEqual([])
+    expect(created!.meta.clubId).toBe('ta')
+    expect(created!.meta.opponentId).toBe('tb')
+    expect(created!.roster).toEqual(['p1']) // notre effectif seulement, l'adversaire n'en a pas
   })
 })
