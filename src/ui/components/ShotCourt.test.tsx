@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ShotChart, ShotPicker, ZONE_PATH } from './ShotCourt'
 import type { Shot } from '../../domain/shotchart'
+import { C } from '../olive/kit'
 
 beforeEach(() => {
   // jsdom ne calcule pas de mise en page : on fixe la boîte du SVG à 300×280.
@@ -39,13 +40,13 @@ describe('ShotPicker', () => {
 
 describe('ShotPicker — confirmation', () => {
   it('affiche le libellé du tir enregistré dans une zone d’état', () => {
-    render(<ShotPicker onPick={vi.fn()} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: '2 PTS · Raquette' }} />)
+    render(<ShotPicker onPick={vi.fn()} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: '2 PTS · Raquette', made: true }} />)
     expect(screen.getByRole('status')).toHaveTextContent('2 PTS · Raquette')
   })
 
   it('neutralise le terrain et les boutons de zone tant que la confirmation est affichée', async () => {
     const onPick = vi.fn()
-    render(<ShotPicker onPick={onPick} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: '2 PTS · Raquette' }} />)
+    render(<ShotPicker onPick={onPick} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: '2 PTS · Raquette', made: true }} />)
     fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 28 })
     await userEvent.click(screen.getByRole('button', { name: 'Corner gauche' }))
     expect(onPick).not.toHaveBeenCalled()
@@ -58,6 +59,15 @@ describe('ShotPicker — confirmation', () => {
     fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 28 })
     expect(vibrate).toHaveBeenCalledWith(15)
     Reflect.deleteProperty(navigator, 'vibrate')
+  })
+
+  it('ne remplit pas le cercle de confirmation en C.accent quand le tir est manqué', () => {
+    const { container } = render(
+      <ShotPicker onPick={vi.fn()} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: 'MANQUÉ · Raquette', made: false }} />,
+    )
+    const missed = container.querySelector('[data-confirmation="missed"]')
+    expect(missed).toBeInTheDocument()
+    expect(missed).not.toHaveAttribute('fill', C.accent)
   })
 
   it('dessine en fond les tirs déjà pris par le joueur', () => {

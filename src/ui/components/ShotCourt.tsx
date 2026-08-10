@@ -101,7 +101,7 @@ function buzz(): void {
  */
 export function ShotPicker({ onPick, confirmation, shots }: {
   onPick: (spot: ShotSpot) => void
-  confirmation?: { spot: ShotSpot; label: string } | null
+  confirmation?: { spot: ShotSpot; label: string; made: boolean } | null
   shots?: Shot[]
 }) {
   const locked = !!confirmation
@@ -130,14 +130,20 @@ export function ShotPicker({ onPick, confirmation, shots }: {
           />
         ))}
         <CourtLines />
-        {confirmation && <Confirmation spot={confirmation.spot} />}
+        {confirmation && <Confirmation spot={confirmation.spot} made={confirmation.made} />}
       </Court>
-      {confirmation && (
-        <p role="status" className="mt-2 rounded-lg px-3 py-1.5 text-center text-[13px] font-black uppercase tracking-wide"
-          style={{ background: C.accentBg, color: C.accent }}>
-          {confirmation.label}
-        </p>
-      )}
+      {/* Toujours rendue (contenu vide sans confirmation) : la pastille ne doit jamais
+          apparaître ni disparaître, sinon tout ce qui suit — dont les boutons de zone
+          et « + 1 Lancer franc » — se décale pendant que le verrou anti-double-comptage
+          les protège encore, exposant une fenêtre où un second tap vise une cible fantôme. */}
+      <p role="status" className="mt-2 rounded-lg px-3 py-1.5 text-center text-[13px] font-black uppercase tracking-wide"
+        style={{
+          visibility: confirmation ? 'visible' : 'hidden',
+          background: confirmation && !confirmation.made ? C.card2 : C.accentBg,
+          color: confirmation && !confirmation.made ? C.muted : C.accent,
+        }}>
+        {confirmation?.label ?? ''}
+      </p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {ZONES.map((z) => (
           <button
@@ -155,17 +161,27 @@ export function ShotPicker({ onPick, confirmation, shots }: {
   )
 }
 
-/** Point de tir enregistré : zone illuminée, point plein, anneau qui s'étend. */
-function Confirmation({ spot }: { spot: ShotSpot }) {
+/**
+ * Point de tir enregistré : zone illuminée, point plein, anneau qui s'étend.
+ * Même convention que les tirs passés (`shots?.map` plus haut) : disque plein en
+ * `C.accent` pour un tir réussi, anneau creux gris pour un manqué. Sans quoi le
+ * disque géant du retour visuel dirait « panier » même quand le tir est manqué.
+ */
+function Confirmation({ spot, made }: { spot: ShotSpot; made: boolean }) {
   const cx = spot.x * W
   const cy = spot.y * D
   return (
     <g>
-      <path d={ZONE_PATH[zoneAt(spot.x, spot.y)]} fill={C.accent} fillOpacity={0.22} />
-      <circle cx={cx} cy={cy} r={26} fill={C.accent} />
+      <path d={ZONE_PATH[zoneAt(spot.x, spot.y)]} fill={made ? C.accent : C.muted} fillOpacity={0.22} />
+      <circle
+        data-confirmation={made ? 'made' : 'missed'}
+        cx={cx} cy={cy} r={26}
+        fill={made ? C.accent : 'none'}
+        stroke={made ? 'none' : C.accent} strokeWidth={made ? 0 : 10}
+      />
       <circle cx={cx} cy={cy} r={26} fill="none" stroke={C.accent} strokeWidth={10}>
-        <animate attributeName="r" from="26" to="160" dur="0.35s" fill="freeze" />
-        <animate attributeName="opacity" from="0.9" to="0" dur="0.35s" fill="freeze" />
+        <animate attributeName="r" from="26" to="160" dur={`${SHOT_FEEDBACK_MS}ms`} fill="freeze" />
+        <animate attributeName="opacity" from="0.9" to="0" dur={`${SHOT_FEEDBACK_MS}ms`} fill="freeze" />
       </circle>
     </g>
   )
