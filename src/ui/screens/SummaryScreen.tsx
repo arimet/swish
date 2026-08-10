@@ -160,21 +160,16 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
 
       {/* TABLEAUX PAR ÉQUIPE */}
       <div className="mt-6 space-y-6">
-        {(['A', 'B'] as TeamSide[]).map((side) =>
-          side === 'B' && meta.solo ? (
-            <SoloOpponentCard key={side} teamId={meta.teamBId} name={teamNames.B} score={score.b} />
-          ) : (
-            <TeamTable key={side} match={match} side={side} players={players} name={teamNames[side]} teamId={side === 'A' ? meta.teamAId : meta.teamBId}
-              onPick={editStats ? (id, label) => setPick({ side, id, name: label }) : undefined} />
-          ),
-        )}
+        <TeamTable match={match} side="A" players={players} name={teamNames.A} teamId={meta.teamAId}
+          onPick={editStats ? (id, label) => setPick({ side: 'A', id, name: label }) : undefined} />
+        <OpponentCard teamId={meta.teamBId} name={teamNames.B} score={score.b} />
       </div>
 
       {/* INDICATEURS */}
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         <Stat label="Plus large écart" a={ratios.A.maxLead} b={ratios.B.maxLead} />
         <Stat label="Plus longue série" a={ratios.A.maxRun} b={ratios.B.maxRun} />
-        <Stat label="Points du banc" a={teamTotals(match, 'A').bench.points} b={meta.solo ? '—' : teamTotals(match, 'B').bench.points} />
+        <Stat label="Points du banc" a={teamTotals(match, 'A').bench.points} b="—" />
         <Stat label="Temps en tête" a={fmt(ratios.A.leadDurationSec)} b={fmt(ratios.B.leadDurationSec)} />
         <div className="rounded-2xl p-4" style={{ background: C.card, border: bd }}>
           <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Égalités</p>
@@ -225,11 +220,11 @@ function Stat({ label, a, b }: { label: string; a: ReactNode; b: ReactNode }) {
   )
 }
 
-/** Mode « une seule équipe » : l'effectif adverse est vide, un tableau de stats
- *  joueur y afficherait un total à 0 sous un score qui, lui, est réel. On
- *  affiche donc à la place ce score (indépendant du roster) avec la mention
- *  explicite que la saisie était globale, plutôt qu'un silence trompeur. */
-function SoloOpponentCard({ teamId, name, score }: { teamId: string; name: string; score: number }) {
+/** L'adversaire n'a pas d'effectif : un tableau de stats joueur y afficherait un
+ *  total à 0 sous un score qui, lui, est réel. On affiche donc à la place ce
+ *  score (indépendant du roster) avec la mention explicite que la saisie était
+ *  globale, plutôt qu'un silence trompeur. */
+function OpponentCard({ teamId, name, score }: { teamId: string; name: string; score: number }) {
   return (
     <section className="flex items-center gap-4 overflow-hidden rounded-2xl px-5 py-4" style={{ background: C.card, border: bd }}>
       <TeamBadge id={teamId} name={name} size="h-11 w-11 text-xs" />

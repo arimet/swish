@@ -19,10 +19,9 @@ describe('PrintableSummary', () => {
     expect(screen.getByText(/BART S/)).toBeInTheDocument()
   })
 
-  it('en mode solo, affiche le score adverse réel plutôt qu’un total à 0', () => {
+  it('affiche le score adverse réel plutôt qu’un total à 0', () => {
     const soloMatch: Match = {
       ...match,
-      meta: { ...match.meta, solo: true },
       events: [
         { id: 'e1', wallClock: 1, period: 1, gameClock: 590, type: 'SCORE', team: 'B', kind: '3' },
         { id: 'e2', wallClock: 2, period: 1, gameClock: 580, type: 'SCORE', team: 'B', kind: '3' },

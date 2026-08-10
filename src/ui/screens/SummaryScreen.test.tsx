@@ -31,7 +31,7 @@ beforeEach(async () => {
   await saveMatch(m)
 })
 
-describe('SummaryScreen — mode solo', () => {
+describe('SummaryScreen', () => {
   it('affiche le score adverse réel et la mention de saisie globale, pas un total à 0', async () => {
     render(
       <AdminProvider>
