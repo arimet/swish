@@ -7,7 +7,7 @@ describe('StartingFiveGate', () => {
     render(
       <StartingFiveGate
         rosterA={[]} requiredA={5}
-        selected={{ A: [], B: [] }} onToggle={vi.fn()} onStart={vi.fn()} canStart={false}
+        selected={[]} onToggle={vi.fn()} onStart={vi.fn()} canStart={false}
       />,
     )
     expect(screen.getByText('MON ÉQUIPE')).toBeInTheDocument()

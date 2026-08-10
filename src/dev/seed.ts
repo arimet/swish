@@ -1,6 +1,6 @@
 import { db } from '../persistence/db'
 import { saveTeam, savePlayer, saveMatch } from '../persistence/repositories'
-import type { GameEvent, Match, Player, ScoreKind, TeamSide } from '../domain/types'
+import type { GameEvent, Match, Player, ScoreKind } from '../domain/types'
 import { kindAt } from '../domain/shotzones'
 import { CLUB_ID_KEY } from '../app/club'
 
@@ -9,7 +9,7 @@ import { CLUB_ID_KEY } from '../app/club'
  * round-robin simple (15 rencontres) sur 5 journées, avec résultats + marqueurs.
  * Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v8'
+const SEED_VERSION = 'v9'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. Les 6 premières forment la poule (round-robin) ; les autres sont dispo.
@@ -39,29 +39,29 @@ const SPOTS: { x: number; y: number }[] = [
 
 /** Répartit ~`points` en paniers positionnés, pondérés (les premiers joueurs marquent
  *  plus), avec un tir manqué toutes les trois tentatives pour alimenter les hot zones. */
-function baskets(side: TeamSide, roster: string[], points: number, clock: () => number): GameEvent[] {
+function baskets(roster: string[], points: number, clock: () => number): GameEvent[] {
   const weighted = roster.flatMap((id, i) => Array(Math.max(1, 8 - i)).fill(id) as string[])
   const out: GameEvent[] = []
   const n2 = Math.floor(points / 2)
   for (let k = 0; k < n2; k++) {
     const playerId = weighted[k % weighted.length]
     const shot = SPOTS[k % SPOTS.length]
-    out.push(ev({ type: 'SCORE', team: side, playerId, kind: kindAt(shot.x, shot.y), shot, period: 1, gameClock: clock() }))
+    out.push(ev({ type: 'SCORE', team: 'A', playerId, kind: kindAt(shot.x, shot.y), shot, period: 1, gameClock: clock() }))
     if (k % 3 === 2) {
       const missed = SPOTS[(k + 4) % SPOTS.length]
-      out.push(ev({ type: 'MISS', team: side, playerId, kind: kindAt(missed.x, missed.y), shot: missed, period: 1, gameClock: clock() }))
+      out.push(ev({ type: 'MISS', team: 'A', playerId, kind: kindAt(missed.x, missed.y), shot: missed, period: 1, gameClock: clock() }))
     }
   }
-  if (points % 2) out.push(ev({ type: 'SCORE', team: side, playerId: weighted[0], kind: 'lf' as ScoreKind, period: 1, gameClock: clock() }))
+  if (points % 2) out.push(ev({ type: 'SCORE', team: 'A', playerId: weighted[0], kind: 'lf' as ScoreKind, period: 1, gameClock: clock() }))
   return out
 }
 
 /** Quelques stats secondaires (passes, rebonds, contres) pour la démo. */
-function extras(side: TeamSide, roster: string[], clock: () => number): GameEvent[] {
+function extras(roster: string[], clock: () => number): GameEvent[] {
   const kinds: [number, 'assist' | 'reb_off' | 'reb_def' | 'block'][] = [
     [1, 'assist'], [0, 'assist'], [3, 'reb_def'], [4, 'reb_def'], [2, 'reb_off'], [4, 'block'], [0, 'reb_def'],
   ]
-  return kinds.map(([i, stat]) => ev({ type: 'STAT', team: side, playerId: roster[i], stat, period: 1, gameClock: clock() }))
+  return kinds.map(([i, stat]) => ev({ type: 'STAT', team: 'A', playerId: roster[i], stat, period: 1, gameClock: clock() }))
 }
 
 /** Score de l'adversaire : uniquement des paniers d'équipe, sans joueur identifié
@@ -108,9 +108,9 @@ function buildMatch(home: number, away: number, round: number, slot: number, idx
       ev({ type: 'PERIOD_START', period: 1, gameClock: 600 }),
       ev({ type: 'STARTING_FIVE', team: 'A', playerIds: aStart, period: 1, gameClock: 600 }),
       ev({ type: 'CLOCK_START', period: 1, gameClock: 600 }),
-      ...baskets('A', aRoster, liveA, clock),
+      ...baskets(aRoster, liveA, clock),
       ...opponentBaskets(liveB, clock),
-      ...extras('A', aRoster, clock),
+      ...extras(aRoster, clock),
       ev({ type: 'CLOCK_STOP', period: 1, gameClock: status === 'live' ? 372 : 90 }),
     ]
     if (status === 'finished') events.push(ev({ type: 'PERIOD_END', period: 1, gameClock: 90 }))

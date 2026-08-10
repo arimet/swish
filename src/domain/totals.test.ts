@@ -74,7 +74,7 @@ describe('teamTotals', () => {
     expect(t.secondHalf.points).toBe(0)
   })
 
-  it('ignore les paniers adverses (côté B) dans nos totaux', () => {
+  it('ignore les paniers adverses (côté B) dans nos totaux, y compris par période', () => {
     const t = teamTotals(
       mk([
         { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' },
@@ -82,5 +82,8 @@ describe('teamTotals', () => {
       ]),
     )
     expect(t.team.points).toBe(2)
+    // t.team.points dérive de playerStats (déjà verrouillé ailleurs) ; seule cette
+    // assertion protège la boucle par période de teamTotals elle-même.
+    expect(t.firstHalf.points).toBe(2)
   })
 })

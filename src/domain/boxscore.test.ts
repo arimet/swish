@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { playerStats, pointsForKind } from './boxscore'
+import { liveState } from '../rules/ffbb'
 import type { Match, GameEvent } from './types'
 
 const mk = (events: Partial<GameEvent>[]): Match => ({
@@ -80,12 +81,15 @@ describe('playerStats — tirs manqués et paniers d’équipe', () => {
     expect(p1.misses).toBe(2)
   })
 
-  it('ignore un panier sans joueur identifié dans les lignes individuelles', () => {
+  it('ignore un panier sans joueur identifié dans les lignes individuelles, mais il compte au score', () => {
     const m = mk([
       { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' },
       { type: 'SCORE', team: 'B', kind: '3' }, // panier adverse : pas de joueur identifié, l'adversaire n'a pas d'effectif
     ])
     const stats = playerStats(m)
     expect(stats.reduce((n, s) => n + s.points, 0)).toBe(2) // le panier adverse ne compte dans aucune ligne
+    // Sur le même match : le panier adverse compte bien au score, lié à la moitié
+    // de l'invariant qu'une assertion sur les lignes seules ne protège pas.
+    expect(liveState(m).score.b).toBe(3)
   })
 })

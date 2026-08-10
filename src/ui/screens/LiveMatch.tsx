@@ -87,13 +87,13 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
 
   if (!match.events.some((e) => e.type === 'STARTING_FIVE' && e.team === 'A')) {
     const required = Math.min(5, match.roster.length)
-    const toggle = (_side: 'A' | 'B', id: string) =>
+    const toggle = (id: string) =>
       setStarters((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= required ? cur : [...cur, id]))
     const byNumber = (ids: string[]) => [...ids].sort((a, b) => (players[a]?.number ?? 0) - (players[b]?.number ?? 0))
     return (
       <StartingFiveGate
         rosterA={rosterPlayers} requiredA={required}
-        selected={{ A: starters, B: [] }} onToggle={toggle}
+        selected={starters} onToggle={toggle}
         canStart={starters.length === required}
         onStart={() => guard(() => dispatch({ type: 'STARTING_FIVE', team: 'A', playerIds: byNumber(starters), period: ls.period, gameClock: periodLength(ls.period) }))}
         onExit={() => navigate('/')}

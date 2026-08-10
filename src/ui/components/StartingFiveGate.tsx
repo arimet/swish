@@ -1,4 +1,4 @@
-import type { Player, TeamSide } from '../../domain/types'
+import type { Player } from '../../domain/types'
 import { C } from '../olive/kit'
 
 const TEAM_A = 'var(--team-a)'
@@ -12,8 +12,8 @@ export function StartingFiveGate({
 }: {
   rosterA: Player[]
   requiredA: number
-  selected: { A: string[]; B: string[] }
-  onToggle: (side: TeamSide, playerId: string) => void
+  selected: string[]
+  onToggle: (playerId: string) => void
   onStart: () => void
   canStart: boolean
   onExit?: () => void
@@ -33,7 +33,7 @@ export function StartingFiveGate({
 
         <div className="mx-auto grid max-w-md gap-5">
           <StartingFivePanel title="MON ÉQUIPE" color={TEAM_A} players={rosterA} required={requiredA}
-            chosen={selected.A} onToggle={(id) => onToggle('A', id)} />
+            chosen={selected} onToggle={onToggle} />
         </div>
 
         <div className="sticky bottom-4 mt-8 flex justify-center">
