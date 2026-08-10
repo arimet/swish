@@ -71,9 +71,11 @@ describe("liveState", () => {
     // p9 remplace p2 à l'index 1, les autres ne bougent pas.
     expect(s.onCourt.A).toEqual(['p1', 'p9', 'p3', 'p4', 'p5'])
   })
-  it('l\'adversaire n\'a pas d\'effectif : jamais « sorti sur fautes », même à 5 fautes sur un joueur visé', () => {
+  it('l\'adversaire n\'a pas d\'effectif : jamais « sorti sur fautes », même à 5 fautes sur un joueur du roster', () => {
+    // 'p1' est dans le roster (côté A) : si fouledOutOf lisait match.roster des
+    // deux côtés sans garde, il apparaîtrait à tort dans fouledOut.B.
     const events: Partial<GameEvent>[] = Array(5).fill(null).map(() => ({
-      type: 'FOUL' as const, team: 'B' as const, target: { kind: 'player' as const, playerId: 'q1' }, foulType: 'personal' as const, period: 1,
+      type: 'FOUL' as const, team: 'B' as const, target: { kind: 'player' as const, playerId: 'p1' }, foulType: 'personal' as const, period: 1,
     }))
     expect(liveState(mk(events)).fouledOut.B).toEqual([])
   })
