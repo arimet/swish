@@ -64,6 +64,9 @@ export default function App() {
           <Routes>
             {/* Suivi spectateur : plein écran, hors du shell (projetable) */}
             <Route path="/match/:id/watch" element={<SpectatorRoute />} />
+            {/* Création d'équipe : hors garde, c'est l'issue proposée par l'écran de
+                bienvenue quand aucune équipe n'existe encore pour choisir un club. */}
+            <Route path="/teams/new" element={<TeamCreate />} />
             {/* Toute l'app dans le shell Olive, derrière le choix du club */}
             <Route element={<ClubGate />}>
               <Route index element={<Home />} />
@@ -71,7 +74,6 @@ export default function App() {
               <Route path="/calendrier" element={<Calendrier />} />
               <Route path="/classement" element={<Classement />} />
               <Route path="/teams" element={<Padded><TeamsList /></Padded>} />
-              <Route path="/teams/new" element={<TeamCreate />} />
               <Route path="/teams/:id" element={<TeamDetail />} />
               <Route path="/players/:id" element={<PlayerDetail />} />
               <Route path="/match/new" element={<Padded><MatchSetupRoute /></Padded>} />
