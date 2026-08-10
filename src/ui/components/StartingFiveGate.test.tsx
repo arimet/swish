@@ -3,16 +3,16 @@ import { describe, expect, it, vi } from 'vitest'
 import { StartingFiveGate } from './StartingFiveGate'
 
 describe('StartingFiveGate', () => {
-  it('affiche les deux panneaux quand `solo` est absent, même avec un effectif adverse vide', () => {
-    // Une équipe B sans joueur (créée sans effectif) ne doit pas être confondue avec le mode solo :
-    // seul le drapeau explicite `solo` doit masquer le panneau visiteurs.
+  it('n’affiche qu’un seul panneau et garde le bouton de démarrage désactivé tant que le cinq n’est pas complet', () => {
     render(
       <StartingFiveGate
-        rosterA={[]} rosterB={[]} requiredA={5} requiredB={0}
+        rosterA={[]} requiredA={5}
         selected={{ A: [], B: [] }} onToggle={vi.fn()} onStart={vi.fn()} canStart={false}
       />,
     )
-    expect(screen.getByText('LOCAUX')).toBeInTheDocument()
-    expect(screen.getByText('VISITEURS')).toBeInTheDocument()
+    expect(screen.getByText('MON ÉQUIPE')).toBeInTheDocument()
+    expect(screen.queryByText('VISITEURS')).not.toBeInTheDocument()
+    expect(screen.queryByText('LOCAUX')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Démarrer le match/ })).toBeDisabled()
   })
 })

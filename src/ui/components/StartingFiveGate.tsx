@@ -2,25 +2,21 @@ import type { Player, TeamSide } from '../../domain/types'
 import { C } from '../olive/kit'
 
 const TEAM_A = 'var(--team-a)'
-const TEAM_B = 'var(--team-b)'
 
 /**
- * Porte d'entrée avant tout démarrage de chrono : chaque équipe doit désigner
+ * Porte d'entrée avant tout démarrage de chrono : notre équipe doit désigner
  * son cinq de départ (STARTING_FIVE) avant que le match live ne s'affiche.
  */
 export function StartingFiveGate({
-  rosterA, rosterB, requiredA, requiredB, selected, onToggle, onStart, canStart, onExit, solo = false,
+  rosterA, requiredA, selected, onToggle, onStart, canStart, onExit,
 }: {
-  rosterA: Player[]; rosterB: Player[]
-  requiredA: number; requiredB: number
+  rosterA: Player[]
+  requiredA: number
   selected: { A: string[]; B: string[] }
   onToggle: (side: TeamSide, playerId: string) => void
   onStart: () => void
   canStart: boolean
   onExit?: () => void
-  /** Mode « une seule équipe » : une seule colonne, pas de panneau visiteurs.
-   *  Drapeau explicite — un effectif adverse vide ne suffit pas à le déduire. */
-  solo?: boolean
 }) {
   return (
     <div>
@@ -32,18 +28,12 @@ export function StartingFiveGate({
             </button>
           )}
           <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Cinq de départ</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {solo ? 'Désignez vos titulaires pour démarrer.' : 'Désignez les titulaires de chaque équipe pour démarrer.'}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Désignez vos titulaires pour démarrer.</p>
         </div>
 
-        <div className={`grid gap-5 ${solo ? 'mx-auto max-w-md' : 'sm:grid-cols-2'}`}>
-          <StartingFivePanel title={solo ? 'MON ÉQUIPE' : 'LOCAUX'} color={TEAM_A} players={rosterA} required={requiredA}
+        <div className="mx-auto grid max-w-md gap-5">
+          <StartingFivePanel title="MON ÉQUIPE" color={TEAM_A} players={rosterA} required={requiredA}
             chosen={selected.A} onToggle={(id) => onToggle('A', id)} />
-          {!solo && (
-            <StartingFivePanel title="VISITEURS" color={TEAM_B} players={rosterB} required={requiredB}
-              chosen={selected.B} onToggle={(id) => onToggle('B', id)} />
-          )}
         </div>
 
         <div className="sticky bottom-4 mt-8 flex justify-center">

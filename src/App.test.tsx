@@ -17,7 +17,7 @@ beforeEach(async () => {
 describe('App', () => {
   it('affiche la page d’accueil (dashboard)', async () => {
     render(<App />)
-    await waitFor(() => expect(screen.getAllByText(/Rencontres/i).length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByText(/Tableau de bord/i).length).toBeGreaterThan(0))
     expect(screen.getAllByText(/Swish/i).length).toBeGreaterThan(0)
   })
 
