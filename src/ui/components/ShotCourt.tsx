@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { zoneSummary, type Shot } from '../../domain/shotchart'
-import { ZONE_CENTROID, ZONE_LABELS, ZONES, type ShotZone } from '../../domain/shotzones'
+import { zoneAt, ZONE_CENTROID, ZONE_LABELS, ZONES, type ShotZone } from '../../domain/shotzones'
 import type { ShotSpot } from '../../domain/types'
 import { C } from '../olive/kit'
 
@@ -51,29 +51,57 @@ function Court({ children, label, onClick }: { children: ReactNode; label: strin
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
 
+/** Durée d'affichage du retour visuel après un tap, avant fermeture de la popup. */
+export const SHOT_FEEDBACK_MS = 350
+
+/** Vibration courte là où le navigateur la supporte. iOS ne l'implémente sur aucun
+ *  navigateur : le retour visuel reste le mécanisme principal, la vibration un bonus. */
+function buzz(): void {
+  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(15)
+}
+
 /**
- * Terrain de saisie. Le clic est converti en coordonnées normalisées à partir de
- * la boîte rendue, donc indépendamment de la taille d'affichage.
+ * Terrain de saisie, **contrôlé** : c'est l'appelant qui détient la confirmation du
+ * dernier tir. Tant qu'elle est posée, toute saisie est neutralisée — sans ce garde,
+ * un second tap pendant les 350 ms d'affichage enregistrerait un second tir.
  * Les sept boutons sous le terrain donnent le même résultat au clavier, à la
  * précision de la zone près.
  */
-export function ShotPicker({ onPick }: { onPick: (spot: ShotSpot) => void }) {
+export function ShotPicker({ onPick, confirmation }: {
+  onPick: (spot: ShotSpot) => void
+  confirmation?: { spot: ShotSpot; label: string } | null
+}) {
+  const locked = !!confirmation
+  const commit = (spot: ShotSpot) => {
+    if (locked) return
+    buzz()
+    onPick(spot)
+  }
   const pickFromEvent = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (locked) return
     const r = e.currentTarget.getBoundingClientRect()
     if (!r.width || !r.height) return
-    onPick({ x: clamp01((e.clientX - r.left) / r.width), y: clamp01((e.clientY - r.top) / r.height) })
+    commit({ x: clamp01((e.clientX - r.left) / r.width), y: clamp01((e.clientY - r.top) / r.height) })
   }
   return (
     <div>
       <Court label="Demi-terrain — toucher le point de tir" onClick={pickFromEvent}>
         <CourtLines />
+        {confirmation && <Confirmation spot={confirmation.spot} />}
       </Court>
+      {confirmation && (
+        <p role="status" className="mt-2 rounded-lg px-3 py-1.5 text-center text-[13px] font-black uppercase tracking-wide"
+          style={{ background: C.accentBg, color: C.accent }}>
+          {confirmation.label}
+        </p>
+      )}
       <div className="mt-2 flex flex-wrap gap-1.5">
         {ZONES.map((z) => (
           <button
             key={z}
-            onClick={() => onPick(ZONE_CENTROID[z])}
-            className="rounded-lg px-2 py-1 text-[11px] font-semibold transition hover:brightness-125"
+            disabled={locked}
+            onClick={() => commit(ZONE_CENTROID[z])}
+            className="rounded-lg px-2 py-1 text-[11px] font-semibold transition hover:brightness-125 disabled:opacity-40"
             style={{ background: C.card2, color: C.muted, border: `1px solid ${C.border}` }}
           >
             {ZONE_LABELS[z]}
@@ -81,6 +109,22 @@ export function ShotPicker({ onPick }: { onPick: (spot: ShotSpot) => void }) {
         ))}
       </div>
     </div>
+  )
+}
+
+/** Point de tir enregistré : zone illuminée, point plein, anneau qui s'étend. */
+function Confirmation({ spot }: { spot: ShotSpot }) {
+  const cx = spot.x * W
+  const cy = spot.y * D
+  return (
+    <g>
+      <path d={ZONE_PATH[zoneAt(spot.x, spot.y)]} fill={C.accent} fillOpacity={0.22} />
+      <circle cx={cx} cy={cy} r={26} fill={C.accent} />
+      <circle cx={cx} cy={cy} r={26} fill="none" stroke={C.accent} strokeWidth={10}>
+        <animate attributeName="r" from="26" to="160" dur="0.35s" fill="freeze" />
+        <animate attributeName="opacity" from="0.9" to="0" dur="0.35s" fill="freeze" />
+      </circle>
+    </g>
   )
 }
 
