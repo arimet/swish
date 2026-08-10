@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { zoneSummary, type Shot } from '../../domain/shotchart'
 import { zoneAt, ZONE_CENTROID, ZONE_LABELS, ZONES, type ShotZone } from '../../domain/shotzones'
 import type { ShotSpot } from '../../domain/types'
@@ -9,7 +9,7 @@ const W = 1500
 const D = 1400
 
 /** Contours des zones, dans le même ordre que ZONES. Les arcs suivent la ligne à 3 points. */
-const ZONE_PATH: Record<ShotZone, string> = {
+export const ZONE_PATH: Record<ShotZone, string> = {
   paint: 'M 505 0 H 995 V 580 H 505 Z',
   mid_left: 'M 90 0 H 505 V 786.5 A 675 675 0 0 1 90 299.01 Z',
   mid_center: 'M 505 580 H 995 V 786.5 A 675 675 0 0 1 505 786.5 Z',
@@ -19,22 +19,47 @@ const ZONE_PATH: Record<ShotZone, string> = {
   top3: 'M 0 299.01 H 90 A 675 675 0 0 0 1410 299.01 H 1500 V 1400 H 0 Z',
 }
 
-/** Tracés réglementaires, sans interaction ni données. */
+/**
+ * Tracés réglementaires. Purement décoratif : aucune de ces formes n'entre dans le
+ * calcul des zones, qui repose sur `zoneAt` et `ZONE_PATH`.
+ * Trois poids de trait : les limites et la ligne à 3 points guident le regard, la
+ * raquette et le cercle de lancer franc viennent ensuite, le reste s'efface.
+ */
 function CourtLines() {
-  const line = { fill: 'none', stroke: 'currentColor', strokeWidth: 8, opacity: 0.45 } as const
+  const major = { fill: 'none', stroke: 'currentColor', strokeWidth: 9, opacity: 0.7 } as const
+  const minor = { fill: 'none', stroke: 'currentColor', strokeWidth: 6, opacity: 0.4 } as const
+  const faint = { fill: 'none', stroke: 'currentColor', strokeWidth: 4, opacity: 0.22 } as const
   return (
     <g style={{ color: C.muted }}>
-      <rect x={4} y={4} width={W - 8} height={D - 8} rx={12} {...line} />
-      <rect x={505} y={0} width={490} height={580} {...line} />
-      <circle cx={750} cy={580} r={180} {...line} />
-      <line x1={660} y1={120} x2={840} y2={120} {...line} />
-      <circle cx={750} cy={157.5} r={22.5} {...line} />
-      <path d="M 90 0 L 90 299.01 A 675 675 0 0 0 1410 299.01 L 1410 0" {...line} />
+      {/* Fond propre à la raquette */}
+      <rect x={505} y={0} width={490} height={580} fill={C.text} fillOpacity={0.05} />
+      {/* Prolongements des lignes de raquette : laissent deviner les cibles de mi-distance */}
+      <g {...faint} strokeDasharray="18 22">
+        <line x1={505} y1={580} x2={505} y2={786.5} />
+        <line x1={995} y1={580} x2={995} y2={786.5} />
+      </g>
+      {/* Zone restrictive (1,25 m sous le panier) */}
+      <path d="M 625 157.5 A 125 125 0 0 0 875 157.5" {...faint} />
+      {/* Cercle de lancer franc : la moitié hors-raquette (côté milieu de terrain) en
+          trait plein, la moitié qui chevauche la raquette en pointillés — règle FIBA
+          « les parties du cercle situées dans la raquette sont tracées en pointillés ».
+          Balayage à 0 des deux côtés : vérifié par calcul, un balayage à 1 inverse les
+          deux moitiés et fait bomber le trait plein vers le panier. */}
+      <path d="M 570 580 A 180 180 0 0 0 930 580" {...minor} />
+      <path d="M 930 580 A 180 180 0 0 0 570 580" {...minor} strokeDasharray="30 26" />
+      <rect x={505} y={0} width={490} height={580} {...minor} />
+      {/* Panneau puis arceau */}
+      <rect x={660} y={112} width={180} height={14} fill="currentColor" opacity={0.55} />
+      <circle cx={750} cy={157.5} r={22.5} {...major} />
+      {/* Ligne à 3 points et limites du terrain */}
+      <path d="M 90 0 L 90 299.01 A 675 675 0 0 0 1410 299.01 L 1410 0" {...major} />
+      <rect x={4} y={4} width={W - 8} height={D - 8} rx={12} {...major} />
     </g>
   )
 }
 
 function Court({ children, label, onClick }: { children: ReactNode; label: string; onClick?: (e: React.MouseEvent<SVGSVGElement>) => void }) {
+  const gid = `court-${useId()}`
   return (
     <svg
       viewBox={`0 0 ${W} ${D}`}
@@ -42,8 +67,15 @@ function Court({ children, label, onClick }: { children: ReactNode; label: strin
       aria-label={label}
       onClick={onClick}
       className={`w-full rounded-2xl ${onClick ? 'cursor-crosshair' : ''}`}
-      style={{ background: C.panel, border: `1px solid ${C.border}`, touchAction: 'manipulation' }}
+      style={{ border: `1px solid ${C.border}`, touchAction: 'manipulation' }}
     >
+      <defs>
+        <radialGradient id={gid} cx="50%" cy="10%" r="95%">
+          <stop offset="0%" stopColor={C.card2} />
+          <stop offset="100%" stopColor={C.panel} />
+        </radialGradient>
+      </defs>
+      <rect width={W} height={D} fill={`url(#${gid})`} />
       {children}
     </svg>
   )

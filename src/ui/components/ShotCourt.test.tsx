@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ShotChart, ShotPicker } from './ShotCourt'
+import { ShotChart, ShotPicker, ZONE_PATH } from './ShotCourt'
 import type { Shot } from '../../domain/shotchart'
 
 beforeEach(() => {
@@ -58,6 +58,32 @@ describe('ShotPicker — confirmation', () => {
     fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 28 })
     expect(vibrate).toHaveBeenCalledWith(15)
     Reflect.deleteProperty(navigator, 'vibrate')
+  })
+})
+
+describe('ZONE_PATH', () => {
+  // Ces chemins ont été vérifiés point par point contre zoneAt par lancer de rayons.
+  // Les modifier désalignerait les zones colorées des zones réellement calculées :
+  // un tir compté dans la raquette pourrait s'afficher en mi-distance.
+  it('reste littéralement inchangé', () => {
+    expect(ZONE_PATH).toEqual({
+      paint: 'M 505 0 H 995 V 580 H 505 Z',
+      mid_left: 'M 90 0 H 505 V 786.5 A 675 675 0 0 1 90 299.01 Z',
+      mid_center: 'M 505 580 H 995 V 786.5 A 675 675 0 0 1 505 786.5 Z',
+      mid_right: 'M 1410 0 H 995 V 786.5 A 675 675 0 0 0 1410 299.01 Z',
+      corner3_left: 'M 0 0 H 90 V 299.01 H 0 Z',
+      corner3_right: 'M 1410 0 H 1500 V 299.01 H 1410 Z',
+      top3: 'M 0 299.01 H 90 A 675 675 0 0 0 1410 299.01 H 1500 V 1400 H 0 Z',
+    })
+  })
+})
+
+describe('CourtLines', () => {
+  it('donne un identifiant de dégradé distinct à chaque terrain rendu', () => {
+    const { container } = render(<><ShotChart shots={[]} /><ShotChart shots={[]} /></>)
+    const ids = [...container.querySelectorAll('radialGradient')].map((g) => g.id)
+    expect(ids).toHaveLength(2)
+    expect(new Set(ids).size).toBe(2)
   })
 })
 
