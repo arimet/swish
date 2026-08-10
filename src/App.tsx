@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useNavigate, useParams, Navigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { OliveShell } from './ui/olive/OliveShell'
+import { Dashboard } from './ui/screens/Dashboard'
 import { Home } from './ui/screens/Home'
 import { Calendrier } from './ui/screens/Calendrier'
 import { Classement } from './ui/screens/Classement'
@@ -69,7 +70,8 @@ export default function App() {
             <Route path="/teams/new" element={<TeamCreate />} />
             {/* Toute l'app dans le shell Olive, derrière le choix du club */}
             <Route element={<ClubGate />}>
-              <Route index element={<Home />} />
+              <Route index element={<Dashboard />} />
+              <Route path="/rencontres" element={<Home />} />
               <Route path="/match/:id/live" element={<LiveRoute />} />
               <Route path="/calendrier" element={<Calendrier />} />
               <Route path="/classement" element={<Classement />} />
