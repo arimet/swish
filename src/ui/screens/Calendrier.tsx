@@ -3,8 +3,10 @@ import { listMatches, listTeams } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
 import type { Match, Team } from '../../domain/types'
 import { C, MatchCard, PageTitle, fmtDate } from '../olive/kit'
+import { useClub } from '../../app/club'
 
 export function Calendrier() {
+  const { clubId } = useClub()
   const [matches, setMatches] = useState<Match[] | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
 
@@ -18,21 +20,23 @@ export function Calendrier() {
     return () => { cancel = true }
   }, [])
 
+  const nos = useMemo(() => matches?.filter((m) => m.meta.clubId === clubId) ?? null, [matches, clubId])
+
   const groups = useMemo(() => {
-    if (!matches) return []
+    if (!nos) return []
     const map = new Map<string, Match[]>()
-    for (const m of matches) {
+    for (const m of nos) {
       const k = m.meta.date ?? '—'
       if (!map.has(k)) map.set(k, [])
       map.get(k)!.push(m)
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
-  }, [matches])
+  }, [nos])
 
   return (
     <div className="p-6">
-      <PageTitle title="Calendrier" subtitle="Toutes les rencontres de la saison, par date." />
-      {!matches ? (
+      <PageTitle title="Calendrier" subtitle="Les rencontres de votre équipe, par date." />
+      {!nos ? (
         <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
       ) : groups.length === 0 ? (
         <p className="rounded-2xl border border-dashed py-16 text-center text-sm" style={{ borderColor: C.border, color: C.muted }}>Aucune rencontre planifiée.</p>
