@@ -1,11 +1,12 @@
 import 'fake-indexeddb/auto'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { SpectatorMatch } from './SpectatorMatch'
 import { db } from '../../persistence/db'
 import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
-import type { Match } from '../../domain/types'
+import type { GameEvent, Match } from '../../domain/types'
 
 const MATCH_ID = 'solo-spectator'
 
@@ -45,5 +46,45 @@ describe('SpectatorMatch — mode solo', () => {
 
     // Aucun bandeau fautes/TM pour le côté B (rien n'est saisissable en mode solo).
     expect(screen.queryAllByText(/TM/)).toHaveLength(1)
+  })
+})
+
+const TOP3 = { x: 0.5, y: 0.65 }
+const SPEC_MATCH_ID = 'spec-1'
+
+const ev = (e: Partial<GameEvent>, i: number): GameEvent =>
+  ({ id: `e${i}`, wallClock: i, period: 1, gameClock: 600, ...e } as GameEvent)
+
+describe('SpectatorMatch — carte de tirs par joueur', () => {
+  beforeEach(async () => {
+    await saveTeam({ id: 'ta2', name: 'VIGNOT' }); await saveTeam({ id: 'tb2', name: 'VERDUN' })
+    await savePlayer({ id: 'p2', teamId: 'ta2', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
+    const rawEvents: Partial<GameEvent>[] = [
+      { type: 'STARTING_FIVE', team: 'A', playerIds: ['p2'] },
+      { type: 'CLOCK_START' },
+      { type: 'SCORE', team: 'A', playerId: 'p2', kind: '3', shot: TOP3 },
+    ]
+    const m: Match = {
+      id: SPEC_MATCH_ID, meta: { teamAId: 'ta2', teamBId: 'tb2' },
+      roster: { A: ['p2'], B: [] }, status: 'live',
+      events: rawEvents.map(ev),
+    }
+    await saveMatch(m)
+  })
+
+  it('déplie la carte du joueur au clic sur sa ligne', async () => {
+    render(<MemoryRouter><SpectatorMatch matchId={SPEC_MATCH_ID} /></MemoryRouter>)
+    const row = await screen.findByRole('button', { name: /MARTIN/ })
+    expect(screen.queryByLabelText('Carte des tirs')).not.toBeInTheDocument()
+    await userEvent.click(row)
+    expect(await screen.findByLabelText('Carte des tirs')).toBeInTheDocument()
+  })
+
+  it('n’ouvre qu’une carte à la fois et referme au second clic', async () => {
+    render(<MemoryRouter><SpectatorMatch matchId={SPEC_MATCH_ID} /></MemoryRouter>)
+    const row = await screen.findByRole('button', { name: /MARTIN/ })
+    await userEvent.click(row)
+    await userEvent.click(row)
+    expect(screen.queryByLabelText('Carte des tirs')).not.toBeInTheDocument()
   })
 })

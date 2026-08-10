@@ -59,6 +59,16 @@ describe('ShotPicker — confirmation', () => {
     expect(vibrate).toHaveBeenCalledWith(15)
     Reflect.deleteProperty(navigator, 'vibrate')
   })
+
+  it('dessine en fond les tirs déjà pris par le joueur', () => {
+    const shots: Shot[] = [
+      { matchId: 'm1', spot: { x: 0.5, y: 0.15 }, zone: 'paint', made: true },
+      { matchId: 'm1', spot: { x: 0.5, y: 0.65 }, zone: 'top3', made: false },
+    ]
+    const { container } = render(<ShotPicker onPick={vi.fn()} shots={shots} />)
+    expect(container.querySelectorAll('[data-past-shot]')).toHaveLength(2)
+    expect(container.querySelector('[data-past-shot="missed"]')).toBeInTheDocument()
+  })
 })
 
 describe('ZONE_PATH', () => {

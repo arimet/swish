@@ -14,6 +14,7 @@ import { syncEnabled, publishBundle } from '../../app/sync'
 import { useMatch } from '../../app/useMatch'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
+import { shotsOf } from '../../domain/shotchart'
 import { listPlayers, listTeams } from '../../persistence/repositories'
 import { periodLength, seedSeconds } from '../../domain/ids'
 import type { Match, Player, ScoreKind, ShotSpot, StatKind, FoulType } from '../../domain/types'
@@ -224,6 +225,7 @@ export function SoloLiveMatch({ matchId, onFinish }: { matchId: string; onFinish
         statCounts={pick ? statCounts(pick.id) : undefined}
         fouls={pick ? statsByPlayer().get(pick.id)?.fouls ?? 0 : 0}
         misses={pick ? missCount(pick.id) : 0}
+        shots={pick ? shotsOf([match], pick.id) : undefined}
         onClose={() => setPick(null)} onScore={score} onMiss={miss} onFoul={foul}
         onStat={(kind) => pick && dispatch({ type: 'STAT', team: 'A', playerId: pick.id, stat: kind, period: ls.period, gameClock: seconds })}
         onRemoveScore={(kind) => pick && removeLast((e) => e.type === 'SCORE' && e.team === 'A' && e.playerId === pick.id && e.kind === kind)}

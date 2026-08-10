@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { getMatch, listPlayers, listTeams } from '../../persistence/repositories'
 import { syncEnabled, fetchBundle, subscribeBundle, type SyncBundle } from '../../app/sync'
@@ -6,6 +6,8 @@ import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
 import { teamTotals } from '../../domain/totals'
 import { periodLength } from '../../domain/ids'
+import { shotsOf } from '../../domain/shotchart'
+import { ShotChart } from '../components/ShotCourt'
 import { fmt } from '../components/GameClock'
 import { C, TeamBadge, teamColor, champLabel } from '../olive/kit'
 import type { Match, Player, TeamSide } from '../../domain/types'
@@ -169,6 +171,9 @@ function SoloOpponentPanel({ id, name, score }: { id: string; name: string; scor
 }
 
 function StatList({ side, name, match, players }: { side: TeamSide; name: string; match: Match; players: Record<string, Player> }) {
+  // Une seule carte ouverte à la fois : cet écran est souvent projeté, deux cartes
+  // simultanées le rendraient illisible.
+  const [openId, setOpenId] = useState<string | null>(null)
   const stats = [...playerStats(match, side)].sort((a, b) => b.points - a.points || a.fouls - b.fouls)
   const t = teamTotals(match, side).team
   const top = stats[0]?.points ?? 0
@@ -191,14 +196,29 @@ function StatList({ side, name, match, players }: { side: TeamSide; name: string
           <tbody>
             {rows.map((s) => {
               const p = players[s.playerId]
+              const label = p ? `${p.lastName} ${p.firstName}` : s.playerId
+              const isOpen = openId === s.playerId
               return (
-                <tr key={s.playerId} style={{ borderTop: `1px solid ${C.border}` }}>
-                  <td className="px-3 py-2 font-black tabular-nums">{p?.number ?? '—'}</td>
-                  <td className="px-2 py-2 font-semibold">{p ? `${p.lastName} ${p.firstName}` : s.playerId}</td>
-                  <td className="px-3 py-2 text-center font-black tabular-nums" style={{ color: s.points > 0 && s.points === top ? C.orange : s.points > 0 ? C.text : C.faint }}>{s.points}</td>
-                  <Std>{s.threes}</Std><Std>{s.assists}</Std><Std>{s.offRebounds + s.defRebounds}</Std><Std>{s.blocks}</Std>
-                  <td className="px-3 py-2 text-center tabular-nums" style={{ color: s.fouls >= 5 ? C.pink : C.muted }}>{s.fouls}</td>
-                </tr>
+                <Fragment key={s.playerId}>
+                  <tr style={{ borderTop: `1px solid ${C.border}`, background: isOpen ? C.panel : undefined }}>
+                    <td className="px-3 py-2 font-black tabular-nums">{p?.number ?? '—'}</td>
+                    <td className="px-2 py-2 font-semibold">
+                      <button onClick={() => setOpenId(isOpen ? null : s.playerId)} className="text-left hover:underline">
+                        {label} <span style={{ color: C.faint }}>{isOpen ? '▾' : '▸'}</span>
+                      </button>
+                    </td>
+                    <td className="px-3 py-2 text-center font-black tabular-nums" style={{ color: s.points > 0 && s.points === top ? C.orange : s.points > 0 ? C.text : C.faint }}>{s.points}</td>
+                    <Std>{s.threes}</Std><Std>{s.assists}</Std><Std>{s.offRebounds + s.defRebounds}</Std><Std>{s.blocks}</Std>
+                    <td className="px-3 py-2 text-center tabular-nums" style={{ color: s.fouls >= 5 ? C.pink : C.muted }}>{s.fouls}</td>
+                  </tr>
+                  {isOpen && (
+                    <tr style={{ background: C.panel }}>
+                      <td colSpan={8} className="px-3 pb-4 pt-1">
+                        <ShotChart shots={shotsOf([match], s.playerId)} minAttempts={1} />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               )
             })}
             {rows.length === 0 && <tr><td colSpan={8} className="px-3 py-6 text-center text-sm" style={{ color: C.muted }}>Pas encore de statistiques.</td></tr>}

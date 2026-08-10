@@ -13,6 +13,7 @@ import { removeLastEvent } from '../../domain/reducer'
 import { newId } from '../../domain/ids'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
+import { shotsOf } from '../../domain/shotchart'
 import { playingTimes } from '../../domain/playingtime'
 import { teamTotals } from '../../domain/totals'
 import { matchRatios, scoreProgression } from '../../domain/progression'
@@ -125,6 +126,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         scoreCounts={pick ? scoreCountsOf(pick.side, pick.id) : undefined}
         statCounts={pick ? statCountsOf(pick.side, pick.id) : undefined}
         fouls={pick ? foulsOf(pick.side, pick.id) : 0}
+        shots={pick ? shotsOf([match], pick.id) : undefined}
         onClose={() => setPick(null)}
         onScore={(k, shot) => pick && addScore(pick.side, pick.id, k, shot)}
         onFoul={() => pick && addFoul(pick.side, pick.id)}

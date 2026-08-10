@@ -99,9 +99,10 @@ function buzz(): void {
  * Les sept boutons sous le terrain donnent le même résultat au clavier, à la
  * précision de la zone près.
  */
-export function ShotPicker({ onPick, confirmation }: {
+export function ShotPicker({ onPick, confirmation, shots }: {
   onPick: (spot: ShotSpot) => void
   confirmation?: { spot: ShotSpot; label: string } | null
+  shots?: Shot[]
 }) {
   const locked = !!confirmation
   const commit = (spot: ShotSpot) => {
@@ -118,6 +119,16 @@ export function ShotPicker({ onPick, confirmation }: {
   return (
     <div>
       <Court label="Demi-terrain — toucher le point de tir" onClick={pickFromEvent}>
+        {shots?.map((s, i) => (
+          <circle
+            key={i}
+            data-past-shot={s.made ? 'made' : 'missed'}
+            cx={s.spot.x * W} cy={s.spot.y * D} r={11}
+            fill={s.made ? C.accent : 'none'}
+            stroke={s.made ? 'none' : C.muted} strokeWidth={5}
+            opacity={0.5}
+          />
+        ))}
         <CourtLines />
         {confirmation && <Confirmation spot={confirmation.spot} />}
       </Court>
