@@ -59,14 +59,16 @@ describe('SpectatorMatch — carte de tirs par joueur', () => {
   beforeEach(async () => {
     await saveTeam({ id: 'ta2', name: 'VIGNOT' }); await saveTeam({ id: 'tb2', name: 'VERDUN' })
     await savePlayer({ id: 'p2', teamId: 'ta2', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
+    await savePlayer({ id: 'p2b', teamId: 'ta2', number: 9, lastName: 'DUPONT', firstName: 'Julie' })
     const rawEvents: Partial<GameEvent>[] = [
-      { type: 'STARTING_FIVE', team: 'A', playerIds: ['p2'] },
+      { type: 'STARTING_FIVE', team: 'A', playerIds: ['p2', 'p2b'] },
       { type: 'CLOCK_START' },
       { type: 'SCORE', team: 'A', playerId: 'p2', kind: '3', shot: TOP3 },
+      { type: 'SCORE', team: 'A', playerId: 'p2b', kind: '3', shot: TOP3 },
     ]
     const m: Match = {
       id: SPEC_MATCH_ID, meta: { teamAId: 'ta2', teamBId: 'tb2' },
-      roster: { A: ['p2'], B: [] }, status: 'live',
+      roster: { A: ['p2', 'p2b'], B: [] }, status: 'live',
       events: rawEvents.map(ev),
     }
     await saveMatch(m)
@@ -86,5 +88,19 @@ describe('SpectatorMatch — carte de tirs par joueur', () => {
     await userEvent.click(row)
     await userEvent.click(row)
     expect(screen.queryByLabelText('Carte des tirs')).not.toBeInTheDocument()
+  })
+
+  it('ouvrir la carte d’un second joueur referme celle du premier (état partagé, pas par ligne)', async () => {
+    render(<MemoryRouter><SpectatorMatch matchId={SPEC_MATCH_ID} /></MemoryRouter>)
+    const rowA = await screen.findByRole('button', { name: /MARTIN/ })
+    const rowB = await screen.findByRole('button', { name: /DUPONT/ })
+
+    await userEvent.click(rowA)
+    expect(await screen.findAllByLabelText('Carte des tirs')).toHaveLength(1)
+
+    await userEvent.click(rowB)
+    // Une seule carte affichée à la fois, projection oblige : un état par ligne
+    // laisserait les deux ouvertes ici.
+    expect(await screen.findAllByLabelText('Carte des tirs')).toHaveLength(1)
   })
 })
