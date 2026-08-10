@@ -66,4 +66,12 @@ describe('Dashboard', () => {
     renderDash()
     expect(await screen.findByLabelText('Carte des tirs')).toBeInTheDocument()
   })
+
+  it('n’annonce aucune rencontre jouée pour un club qui n’est le clubId d’aucun match', async () => {
+    // 'tb' n'apparaît qu'en `opponentId` de m1 : ce n'est jamais « notre » rencontre.
+    await saveMatch(finished('m1', 10, 4))
+    localStorage.setItem('swish-club-id', 'tb')
+    renderDash()
+    expect(await screen.findByText('Aucune rencontre jouée')).toBeInTheDocument()
+  })
 })
