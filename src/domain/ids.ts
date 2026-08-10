@@ -1,4 +1,4 @@
-import type { Match, Period } from './types'
+import type { Match, MatchMeta, Period } from './types'
 
 export function newId(): string {
   return crypto.randomUUID()
@@ -18,3 +18,5 @@ export function seedSeconds(match: Match, period: Period): number {
     if (match.events[i].period === period) return match.events[i].gameClock
   return periodLength(period)
 }
+/** Libellé de championnat avec repli quand la rencontre n'en a pas. */
+export const champLabel = (meta: MatchMeta) => meta.championshipLabel?.trim() || 'Match amical'
