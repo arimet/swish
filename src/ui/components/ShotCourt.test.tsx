@@ -37,6 +37,30 @@ describe('ShotPicker', () => {
   })
 })
 
+describe('ShotPicker — confirmation', () => {
+  it('affiche le libellé du tir enregistré dans une zone d’état', () => {
+    render(<ShotPicker onPick={vi.fn()} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: '2 PTS · Raquette' }} />)
+    expect(screen.getByRole('status')).toHaveTextContent('2 PTS · Raquette')
+  })
+
+  it('neutralise le terrain et les boutons de zone tant que la confirmation est affichée', async () => {
+    const onPick = vi.fn()
+    render(<ShotPicker onPick={onPick} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: '2 PTS · Raquette' }} />)
+    fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 28 })
+    await userEvent.click(screen.getByRole('button', { name: 'Corner gauche' }))
+    expect(onPick).not.toHaveBeenCalled()
+  })
+
+  it('fait vibrer l’appareil quand le navigateur le permet', () => {
+    const vibrate = vi.fn()
+    Object.defineProperty(navigator, 'vibrate', { value: vibrate, configurable: true })
+    render(<ShotPicker onPick={vi.fn()} />)
+    fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 28 })
+    expect(vibrate).toHaveBeenCalledWith(15)
+    Reflect.deleteProperty(navigator, 'vibrate')
+  })
+})
+
 describe('ShotChart', () => {
   const shot = (zoneY: number, made: boolean): Shot => ({
     matchId: 'm1', spot: { x: 0.5, y: zoneY }, zone: zoneY > 0.6 ? 'top3' : 'paint', made,

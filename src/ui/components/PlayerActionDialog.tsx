@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ShotPicker } from './ShotCourt'
-import { kindAt } from '../../domain/shotzones'
+import { ShotPicker, SHOT_FEEDBACK_MS } from './ShotCourt'
+import { kindAt, ZONE_LABELS, zoneAt } from '../../domain/shotzones'
 import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types'
 
 const SCORES: { k: ScoreKind; label: string; pts: number }[] = [
@@ -18,6 +18,7 @@ const STATS: { k: StatKind; label: string }[] = [
 ]
 const ZERO_S: Record<ScoreKind, number> = { '2int': 0, '2ext': 0, '3': 0, lf: 0 }
 const ZERO_T: Record<StatKind, number> = { assist: 0, reb_off: 0, reb_def: 0, block: 0 }
+const POINTS_LABEL: Record<'2int' | '2ext' | '3', string> = { '2int': '2 PTS', '2ext': '2 PTS', '3': '3 PTS' }
 
 export function PlayerActionDialog({
   open, playerName, color = '#ffffff', scoreCounts, statCounts, fouls = 0, misses = 0,
@@ -34,18 +35,30 @@ export function PlayerActionDialog({
   onRemoveStat: (kind: StatKind) => void; onRemoveMiss: () => void
 }) {
   const [made, setMade] = useState(true)
+  const [confirmation, setConfirmation] = useState<{ spot: ShotSpot; label: string } | null>(null)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const sc = scoreCounts ?? ZERO_S
   const tc = statCounts ?? ZERO_T
   const hasCorrections =
     Object.values(sc).some((n) => n > 0) || Object.values(tc).some((n) => n > 0) || fouls > 0 || misses > 0
 
-  // Le mode revient à « Réussi » à chaque ouverture : c'est le cas courant.
-  const close = () => { setMade(true); onClose() }
+  // Sans cette annulation, fermer la popup à la main pendant le délai déclencherait
+  // une mise à jour d'état sur un composant démonté.
+  useEffect(() => () => clearTimeout(closeTimer.current), [])
+
+  // Le mode revient à « Réussi » à chaque fermeture : c'est le cas courant.
+  const close = () => {
+    clearTimeout(closeTimer.current)
+    setMade(true)
+    setConfirmation(null)
+    onClose()
+  }
 
   const pick = (spot: ShotSpot) => {
     const kind = kindAt(spot.x, spot.y)
     if (made) onScore(kind, spot); else onMiss(kind, spot)
-    close()
+    setConfirmation({ spot, label: `${made ? POINTS_LABEL[kind] : 'MANQUÉ'} · ${ZONE_LABELS[zoneAt(spot.x, spot.y)]}` })
+    closeTimer.current = setTimeout(close, SHOT_FEEDBACK_MS)
   }
 
   return (
@@ -66,7 +79,7 @@ export function PlayerActionDialog({
         <p className="mt-2 text-[11px] font-semibold text-white/45">
           {made ? 'Touchez l’endroit du tir : la zone donne les points.' : 'Touchez l’endroit du tir manqué.'}
         </p>
-        <div className="mt-2"><ShotPicker onPick={pick} /></div>
+        <div className="mt-2"><ShotPicker onPick={pick} confirmation={confirmation} /></div>
 
         <button onClick={() => { onScore('lf'); close() }}
           className="mt-3 w-full rounded-2xl border border-white/10 bg-[#202024] py-3 text-sm font-bold text-white transition hover:border-[#ff4d6d] active:scale-[0.98]">
