@@ -11,6 +11,7 @@ beforeEach(async () => {
   // l'écran de bienvenue au lieu du tableau de bord attendu par ce test.
   await saveTeam({ id: 'app-test-club', name: 'CLUB TEST' })
   localStorage.setItem('swish-club-id', 'app-test-club')
+  sessionStorage.clear()
 })
 
 describe('App', () => {
@@ -26,6 +27,23 @@ describe('App', () => {
     await userEvent.click(button)
     expect(await screen.findByText(/bienvenue sur swish/i)).toBeInTheDocument()
   })
+
+  it('supprimer sa propre équipe ramène à l’écran de bienvenue, pas à un club fantôme', async () => {
+    // ClubProvider ne revalide sa liste d'équipes qu'à un changement de club :
+    // sans le clear() dans TeamDetail, le tableau de bord resterait épinglé
+    // sur ce club supprimé avec un effectif vide.
+    sessionStorage.setItem('admin-unlocked', '1')
+    render(<App />)
+    const teamLink = await screen.findByRole('link', { name: /mon équipe/i })
+    await userEvent.click(teamLink)
+    await screen.findByRole('heading', { name: /club test/i })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Supprimer' }))
+    const confirmButtons = await screen.findAllByRole('button', { name: 'Supprimer' })
+    await userEvent.click(confirmButtons[confirmButtons.length - 1])
+
+    expect(await screen.findByText(/bienvenue sur swish/i)).toBeInTheDocument()
+  })
 })
 
 describe('premier lancement (appareil vierge)', () => {
@@ -34,15 +52,27 @@ describe('premier lancement (appareil vierge)', () => {
     // aucun club réglé, et aucune équipe en base pour en proposer un.
     localStorage.clear()
     await db.teams.clear()
+    // La création d'équipe est une action admin (guard) : on la déverrouille
+    // pour tester le parcours plutôt que la boîte de mot de passe.
+    sessionStorage.setItem('admin-unlocked', '1')
   })
 
-  it('mène de l’écran de bienvenue jusqu’au formulaire de création d’équipe', async () => {
+  it('mène de l’écran de bienvenue jusqu’au tableau de bord, en passant par la création d’équipe', async () => {
     render(<App />)
     const link = await screen.findByRole('link', { name: /créer ma première équipe/i })
     await userEvent.click(link)
     // La route de création doit rester joignable sans club réglé, sinon
     // l'utilisateur tourne en rond entre l'écran de bienvenue et lui-même.
     expect(await screen.findByText(/nommez l.équipe/i)).toBeInTheDocument()
+    expect(screen.queryByText(/bienvenue sur swish/i)).not.toBeInTheDocument()
+
+    await userEvent.type(screen.getByLabelText(/nom de l.équipe/i), 'NOUVEAU CLUB')
+    await userEvent.click(screen.getByRole('button', { name: /créer l.équipe/i }))
+
+    // L'équipe tout juste créée doit devenir le club suivi et mener à
+    // l'application — pas de retour à l'écran de bienvenue faute de
+    // revalidation de la liste des équipes par ClubProvider.
+    expect(await screen.findByRole('heading', { name: /nouveau club/i })).toBeInTheDocument()
     expect(screen.queryByText(/bienvenue sur swish/i)).not.toBeInTheDocument()
   })
 })

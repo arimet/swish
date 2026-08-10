@@ -5,6 +5,7 @@ import { saveTeam, savePlayer } from '../../persistence/repositories'
 import type { Player } from '../../domain/types'
 import { C, bd, PageTitle } from '../olive/kit'
 import { useAdmin } from '../../app/admin'
+import { useClub } from '../../app/club'
 
 type Draft = Omit<Player, 'id' | 'teamId'>
 const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
@@ -13,6 +14,7 @@ const Label = ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: str
 export function TeamCreate() {
   const navigate = useNavigate()
   const { guard } = useAdmin()
+  const { clubId, setClub } = useClub()
   const [name, setName] = useState(''); const [coach, setCoach] = useState('')
   const [roster, setRoster] = useState<Draft[]>([])
   const [num, setNum] = useState(''); const [ln, setLn] = useState(''); const [fn, setFn] = useState('')
@@ -27,6 +29,9 @@ export function TeamCreate() {
     const teamId = newId()
     await saveTeam({ id: teamId, name: name.trim(), coach: coach.trim() || undefined })
     for (const p of roster) await savePlayer({ id: newId(), teamId, ...p })
+    // Aucun club suivi : l'équipe qu'on vient de créer le devient, sinon la
+    // garde renvoie droit vers l'écran de bienvenue qu'on quitte à peine.
+    if (!clubId) setClub(teamId)
     navigate(`/teams/${teamId}`)
   }
 

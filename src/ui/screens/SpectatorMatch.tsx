@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { getMatch, listPlayers, listTeams } from '../../persistence/repositories'
 import { syncEnabled, fetchBundle, subscribeBundle, type SyncBundle } from '../../app/sync'
 import { liveState } from '../../rules/ffbb'
@@ -86,8 +85,10 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
   return (
     <Screen>
       <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:py-10">
-        <div className="mb-5 flex items-center justify-between">
-          <Link to="/" className="text-sm font-semibold" style={{ color: C.faint }}>← Swish</Link>
+        {/* Pas de lien retour vers "/" : cette page est une destination de
+            partage (lien projeté / envoyé à des spectateurs sans club réglé),
+            pas une porte d'entrée dans l'application derrière la garde club. */}
+        <div className="mb-5 flex items-center justify-center">
           <span className="flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide"
             style={live ? { background: C.greenBg, color: C.green } : finished ? { background: 'rgba(255,255,255,0.08)', color: C.muted } : { background: C.amberBg, color: C.amber }}>
             {live && <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: C.green }} />}
