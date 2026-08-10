@@ -112,22 +112,16 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
           )}
         </div>
 
-        {/* BANDEAU FAUTES / TM (aucune faute/TM adverse saisissable en mode solo) */}
-        <div className={`mt-5 grid gap-3 ${match.meta.solo ? 'grid-cols-1' : 'grid-cols-2'}`}>
+        {/* BANDEAU FAUTES / TM (aucune faute/TM adverse saisissable, pas d'effectif en face) */}
+        <div className="mt-5 grid grid-cols-1 gap-3">
           <MetaRow label={names.A} fouls={ls.teamFoulsThisPeriod.A} bonus={ls.bonus.A} to={ls.timeoutsRemaining.A} />
-          {!match.meta.solo && <MetaRow label={names.B} fouls={ls.teamFoulsThisPeriod.B} bonus={ls.bonus.B} to={ls.timeoutsRemaining.B} />}
         </div>
 
         {/* STATS JOUEURS */}
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           <StatList side="A" name={names.A} match={match} players={players}
             openId={openShotsId} onToggle={setOpenShotsId} />
-          {match.meta.solo ? (
-            <SoloOpponentPanel id={match.meta.teamBId} name={names.B} score={ls.score.b} />
-          ) : (
-            <StatList side="B" name={names.B} match={match} players={players}
-              openId={openShotsId} onToggle={setOpenShotsId} />
-          )}
+          <OpponentPanel id={match.meta.teamBId} name={names.B} score={ls.score.b} />
         </div>
 
         <p className="mt-6 text-center text-[11px]" style={{ color: C.faint }}>Mise à jour automatique · suivi en direct</p>
@@ -163,10 +157,10 @@ function MetaRow({ label, fouls, bonus, to }: { label: string; fouls: number; bo
   )
 }
 
-/** Mode « une seule équipe » côté spectateur : effectif adverse vide, donc pas de
- *  tableau joueur possible — on affiche à la place le score réel (saisi globalement)
- *  en gros, plutôt qu'un tableau vide sous un total à 0. */
-function SoloOpponentPanel({ id, name, score }: { id: string; name: string; score: number }) {
+/** Côté spectateur, l'adversaire n'a pas d'effectif, donc pas de tableau joueur
+ *  possible — on affiche à la place le score réel (saisi globalement) en gros,
+ *  plutôt qu'un tableau vide sous un total à 0. */
+function OpponentPanel({ id, name, score }: { id: string; name: string; score: number }) {
   return (
     <section className="flex flex-col items-center justify-center gap-2 rounded-2xl px-4 py-8 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <h3 className="text-sm font-extrabold uppercase tracking-wide">{name}</h3>

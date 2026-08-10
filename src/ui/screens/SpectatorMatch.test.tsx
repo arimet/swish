@@ -31,7 +31,7 @@ beforeEach(async () => {
   await saveMatch(m)
 })
 
-describe('SpectatorMatch — mode solo', () => {
+describe('SpectatorMatch', () => {
   it("affiche le score adverse réel côté spectateur, pas un tableau vide à 0", async () => {
     render(
       <MemoryRouter>
@@ -86,41 +86,5 @@ describe('SpectatorMatch — carte de tirs par joueur', () => {
     await userEvent.click(row)
     await userEvent.click(row)
     expect(screen.queryByLabelText('Carte des tirs')).not.toBeInTheDocument()
-  })
-})
-
-const BOTH_MATCH_ID = 'spec-both'
-
-describe('SpectatorMatch — une seule carte à la fois entre les deux équipes', () => {
-  beforeEach(async () => {
-    await saveTeam({ id: 'ta3', name: 'VIGNOT' }); await saveTeam({ id: 'tb3', name: 'VERDUN' })
-    await savePlayer({ id: 'p3', teamId: 'ta3', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
-    await savePlayer({ id: 'p4', teamId: 'tb3', number: 9, lastName: 'DUPONT', firstName: 'Julie' })
-    const rawEvents: Partial<GameEvent>[] = [
-      { type: 'STARTING_FIVE', team: 'A', playerIds: ['p3'] },
-      { type: 'STARTING_FIVE', team: 'B', playerIds: ['p4'] },
-      { type: 'CLOCK_START' },
-      { type: 'SCORE', team: 'A', playerId: 'p3', kind: '3', shot: TOP3 },
-      { type: 'SCORE', team: 'B', playerId: 'p4', kind: '3', shot: TOP3 },
-    ]
-    const m: Match = {
-      id: BOTH_MATCH_ID, meta: { teamAId: 'ta3', teamBId: 'tb3' },
-      roster: { A: ['p3'], B: ['p4'] }, status: 'live',
-      events: rawEvents.map(ev),
-    }
-    await saveMatch(m)
-  })
-
-  it('ouvrir la carte du joueur B referme celle du joueur A', async () => {
-    render(<MemoryRouter><SpectatorMatch matchId={BOTH_MATCH_ID} /></MemoryRouter>)
-    const rowA = await screen.findByRole('button', { name: /MARTIN/ })
-    const rowB = await screen.findByRole('button', { name: /DUPONT/ })
-
-    await userEvent.click(rowA)
-    expect(await screen.findAllByLabelText('Carte des tirs')).toHaveLength(1)
-
-    await userEvent.click(rowB)
-    // Une seule carte affichée sur tout l'écran, pas une par équipe.
-    expect(await screen.findAllByLabelText('Carte des tirs')).toHaveLength(1)
   })
 })
