@@ -19,6 +19,9 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
   const [players, setPlayers] = useState<Record<string, Player>>({})
   const [names, setNames] = useState<Record<TeamSide, string>>({ A: 'Locaux', B: 'Visiteurs' })
   const [nowMs, setNowMs] = useState(() => Date.now())
+  // Une seule carte de tirs ouverte sur tout l'écran : il est souvent projeté en
+  // salle, deux cartes simultanées le rendraient illisible de loin.
+  const [openShotsId, setOpenShotsId] = useState<string | null>(null)
 
   // Mode distant (multi-appareils) : flux temps réel SSE + repli polling.
   useEffect(() => {
@@ -116,11 +119,13 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
 
         {/* STATS JOUEURS */}
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
-          <StatList side="A" name={names.A} match={match} players={players} />
+          <StatList side="A" name={names.A} match={match} players={players}
+            openId={openShotsId} onToggle={setOpenShotsId} />
           {match.meta.solo ? (
             <SoloOpponentPanel id={match.meta.teamBId} name={names.B} score={ls.score.b} />
           ) : (
-            <StatList side="B" name={names.B} match={match} players={players} />
+            <StatList side="B" name={names.B} match={match} players={players}
+              openId={openShotsId} onToggle={setOpenShotsId} />
           )}
         </div>
 
@@ -170,10 +175,10 @@ function SoloOpponentPanel({ id, name, score }: { id: string; name: string; scor
   )
 }
 
-function StatList({ side, name, match, players }: { side: TeamSide; name: string; match: Match; players: Record<string, Player> }) {
-  // Une seule carte ouverte à la fois : cet écran est souvent projeté, deux cartes
-  // simultanées le rendraient illisible.
-  const [openId, setOpenId] = useState<string | null>(null)
+function StatList({ side, name, match, players, openId, onToggle }: {
+  side: TeamSide; name: string; match: Match; players: Record<string, Player>
+  openId: string | null; onToggle: (id: string | null) => void
+}) {
   const stats = [...playerStats(match, side)].sort((a, b) => b.points - a.points || a.fouls - b.fouls)
   const t = teamTotals(match, side).team
   const top = stats[0]?.points ?? 0
@@ -203,7 +208,7 @@ function StatList({ side, name, match, players }: { side: TeamSide; name: string
                   <tr style={{ borderTop: `1px solid ${C.border}`, background: isOpen ? C.panel : undefined }}>
                     <td className="px-3 py-2 font-black tabular-nums">{p?.number ?? '—'}</td>
                     <td className="px-2 py-2 font-semibold">
-                      <button onClick={() => setOpenId(isOpen ? null : s.playerId)} className="text-left hover:underline">
+                      <button onClick={() => onToggle(isOpen ? null : s.playerId)} className="text-left hover:underline">
                         {label} <span style={{ color: C.faint }}>{isOpen ? '▾' : '▸'}</span>
                       </button>
                     </td>
