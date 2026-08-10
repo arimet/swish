@@ -230,7 +230,7 @@ function OpponentCard({ teamId, name, score }: { teamId: string; name: string; s
       <TeamBadge id={teamId} name={name} size="h-11 w-11 text-xs" />
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-sm font-extrabold uppercase tracking-wide">Visiteurs · {name}</h3>
-        <p className="mt-0.5 text-[11px] font-semibold" style={{ color: C.faint }}>Score saisi globalement — pas de détail joueur en mode « une seule équipe ».</p>
+        <p className="mt-0.5 text-[11px] font-semibold" style={{ color: C.faint }}>Score saisi globalement — l'adversaire n'a pas d'effectif à détailler.</p>
       </div>
       <span className="text-3xl font-black tabular-nums" style={{ color: teamColor(teamId) }}>{score}</span>
     </section>

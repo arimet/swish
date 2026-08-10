@@ -44,7 +44,7 @@ function OpponentLine({ name, score }: { name: string; score: number }) {
     <section>
       <h3 className="font-bold mb-2">VISITEURS</h3>
       <p className="border border-black p-2 text-sm">
-        {name} — {score} points. Score saisi globalement — pas de détail joueur en mode « une seule équipe ».
+        {name} — {score} points. Score saisi globalement — l'adversaire n'a pas d'effectif à détailler.
       </p>
     </section>
   )
