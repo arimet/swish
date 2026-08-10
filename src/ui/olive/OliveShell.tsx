@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
-import { listTeams } from '../../persistence/repositories'
-import type { Team } from '../../domain/types'
-import { C, bd, Ic, ICON, TeamBadge } from './kit'
+import { listPlayers } from '../../persistence/repositories'
+import type { Player } from '../../domain/types'
+import { C, bd, Ic, ICON } from './kit'
 import { useAdmin } from '../../app/admin'
 import { useClub } from '../../app/club'
 
@@ -91,8 +91,8 @@ function NavGroup({ items }: { items: { icon: string; label: string; to: string;
 function Sidebar() {
   const { isAdmin, lock, guard } = useAdmin()
   const { clubId, clear } = useClub()
-  const [teams, setTeams] = useState<Team[]>([])
-  useEffect(() => { listTeams().then(setTeams) }, [])
+  const [players, setPlayers] = useState<Player[]>([])
+  useEffect(() => { if (clubId) listPlayers(clubId).then(setPlayers); else setPlayers([]) }, [clubId])
   return (
     <aside className="hidden w-[236px] shrink-0 flex-col overflow-y-auto px-4 py-5 lg:flex" style={{ background: C.panel, borderRight: `1px solid ${C.border}` }}>
       <Link to="/" className="flex items-center gap-2.5 px-1">
@@ -116,16 +116,21 @@ function Sidebar() {
       <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Championnat</p>
       <NavGroup items={NAV_CHAMP} />
 
-      <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Équipes</p>
-      <ul className="mt-1.5 space-y-0.5">
-        {teams.map((t) => (
-          <li key={t.id}>
-            <Link to={`/teams/${t.id}`} className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition hover:bg-white/5" style={{ color: C.muted }}>
-              <TeamBadge id={t.id} name={t.name} size="h-6 w-6 text-[9px]" /><span className="truncate">{t.name}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {clubId && players.length > 0 && (
+        <>
+          <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Effectif</p>
+          <ul className="mt-1.5 space-y-0.5">
+            {[...players].sort((a, b) => a.number - b.number).map((p) => (
+              <li key={p.id}>
+                <Link to={`/players/${p.id}`} className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition hover:bg-white/5" style={{ color: C.muted }}>
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[9px] font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
+                  <span className="truncate">{p.firstName} {p.lastName}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       <div className="mt-auto space-y-2.5">
         <button

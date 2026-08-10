@@ -5,26 +5,27 @@ import { kindAt } from '../domain/shotzones'
 import { CLUB_ID_KEY } from '../app/club'
 
 /**
- * Données de démo (DEV uniquement). Championnat complet : poule de 6 équipes,
- * round-robin simple (15 rencontres) sur 5 journées, avec résultats + marqueurs.
- * Versionné : re-seed automatique quand SEED_VERSION change.
+ * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
+ * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v9'
+const SEED_VERSION = 'v10'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
-// [nom, entraîneur]. Les 6 premières forment la poule (round-robin) ; les autres sont dispo.
+// [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
 const TEAMS: [string, string][] = [
   ['AVENIR DE VIGNOT', 'BART S.'], ['BCV VERDUN', 'WEISSE F.'], ['BC BAR-LE-DUC', 'DURAND M.'],
   ['SLUC NANCY', 'LEROY P.'], ['ÉTOILE DE METZ', 'MOREAU J.'], ['USM SAINT-DIZIER', 'SIMON A.'],
-  ['ASPTT NANCY', 'GARCIA L.'], ['BC LONGWY', 'DAVID T.'], ['ÉPINAL BASKET', 'ROUX H.'], ['TOUL BASKET CLUB', 'MOREL E.'],
 ]
-const LAST = ['MARTIN', 'BERNARD', 'DUBOIS', 'THOMAS', 'ROBERT', 'PETIT', 'DURAND', 'LEROY', 'MOREAU', 'SIMON', 'LAURENT', 'MICHEL', 'GARCIA', 'DAVID', 'ROUX', 'VINCENT', 'FOURNIER', 'MOREL']
-const FIRST = ['Lucas', 'Hugo', 'Mathis', 'Nathan', 'Louis', 'Tom', 'Théo', 'Enzo', 'Léo', 'Noah', 'Gabriel', 'Ethan', 'Adam', 'Jules', 'Sacha']
+const LAST = ['MARTIN', 'BERNARD', 'DUBOIS', 'THOMAS', 'ROBERT', 'PETIT', 'DURAND', 'LEROY', 'MOREAU', 'SIMON']
+const FIRST = ['Lucas', 'Hugo', 'Mathis', 'Nathan', 'Louis', 'Tom', 'Théo', 'Enzo', 'Léo', 'Noah']
 
 const teamId = (t: number) => `seed-t${t}`
-const playerId = (t: number, i: number) => `seed-p${t}-${i}`
-const makePlayers = (t: number): Player[] =>
-  Array.from({ length: 10 }, (_, i) => ({ id: playerId(t, i), teamId: teamId(t), number: i + 4, lastName: LAST[(t * 7 + i) % LAST.length], firstName: FIRST[(t * 5 + i) % FIRST.length] }))
+const playerId = (i: number) => `seed-p${i}`
+// Notre seul effectif : l'adversaire n'a jamais de joueurs saisis.
+const PLAYERS: Player[] = Array.from({ length: 10 }, (_, i) => ({
+  id: playerId(i), teamId: teamId(0), number: i + 4, lastName: LAST[i], firstName: FIRST[i],
+}))
+const ROSTER = PLAYERS.map((p) => p.id)
 
 let seq = 0
 const ev = (e: Omit<GameEvent, 'id' | 'wallClock'> & Record<string, unknown>): GameEvent =>
@@ -39,8 +40,8 @@ const SPOTS: { x: number; y: number }[] = [
 
 /** Répartit ~`points` en paniers positionnés, pondérés (les premiers joueurs marquent
  *  plus), avec un tir manqué toutes les trois tentatives pour alimenter les hot zones. */
-function baskets(roster: string[], points: number, clock: () => number): GameEvent[] {
-  const weighted = roster.flatMap((id, i) => Array(Math.max(1, 8 - i)).fill(id) as string[])
+function baskets(points: number, clock: () => number): GameEvent[] {
+  const weighted = ROSTER.flatMap((id, i) => Array(Math.max(1, 8 - i)).fill(id) as string[])
   const out: GameEvent[] = []
   const n2 = Math.floor(points / 2)
   for (let k = 0; k < n2; k++) {
@@ -56,12 +57,12 @@ function baskets(roster: string[], points: number, clock: () => number): GameEve
   return out
 }
 
-/** Quelques stats secondaires (passes, rebonds, contres) pour la démo. */
-function extras(roster: string[], clock: () => number): GameEvent[] {
-  const kinds: [number, 'assist' | 'reb_off' | 'reb_def' | 'block'][] = [
-    [1, 'assist'], [0, 'assist'], [3, 'reb_def'], [4, 'reb_def'], [2, 'reb_off'], [4, 'block'], [0, 'reb_def'],
-  ]
-  return kinds.map(([i, stat]) => ev({ type: 'STAT', team: 'A', playerId: roster[i], stat, period: 1, gameClock: clock() }))
+/** Statistiques secondaires, réparties sur tout l'effectif : une vingtaine par
+ *  rencontre pour que les moyennes par match soient parlantes. */
+function extras(clock: () => number): GameEvent[] {
+  const STATS = ['assist', 'reb_off', 'reb_def', 'block'] as const
+  return Array.from({ length: 20 }, (_, k) =>
+    ev({ type: 'STAT', team: 'A', playerId: ROSTER[k % ROSTER.length], stat: STATS[k % STATS.length], period: 1, gameClock: clock() }))
 }
 
 /** Score de l'adversaire : uniquement des paniers d'équipe, sans joueur identifié
@@ -74,58 +75,66 @@ function opponentBaskets(points: number, clock: () => number): GameEvent[] {
   return out
 }
 
-// Round-robin (méthode du cercle) pour 6 équipes → 5 journées de 3 matchs.
-const ROUNDS: [number, number][][] = [
-  [[0, 5], [1, 4], [2, 3]],
-  [[0, 4], [5, 3], [1, 2]],
-  [[0, 3], [4, 2], [5, 1]],
-  [[0, 2], [3, 1], [4, 5]],
-  [[0, 1], [2, 5], [3, 4]],
+/** Rotations : trois titulaires cèdent leur place à trois remplaçants, à des instants
+ *  échelonnés du chrono — sans elles, seuls les cinq titulaires auraient du temps de jeu. */
+function rotations(stopClock: number): GameEvent[] {
+  const window = 600 - stopClock
+  const at = [0.25, 0.5, 0.75].map((f) => Math.round(600 - window * f))
+  const swaps: [number, number][] = [[0, 5], [1, 6], [2, 7]] // [titulaire sortant, remplaçant entrant]
+  return swaps.map(([out, into], i) => ev({
+    type: 'SUBSTITUTION', team: 'A', playerOutId: playerId(out), playerInId: playerId(into),
+    period: 1, gameClock: at[i],
+  }))
+}
+
+interface Fixture { opponent: number; date: string; time: string; status: 'finished' | 'live' | 'setup' }
+// Nos cinq rencontres de la saison : trois jouées, une en direct, une à venir.
+const FIXTURES: Fixture[] = [
+  { opponent: 1, date: '2026-01-10', time: '20:30', status: 'finished' },
+  { opponent: 2, date: '2026-01-17', time: '20:00', status: 'finished' },
+  { opponent: 3, date: '2026-01-24', time: '18:30', status: 'finished' },
+  { opponent: 4, date: '2026-01-31', time: '20:30', status: 'live' },
+  { opponent: 5, date: '2026-02-07', time: '18:30', status: 'setup' },
 ]
-const DATES = ['2026-01-10', '2026-01-17', '2026-01-24', '2026-01-31', '2026-02-07']
-const TIMES = ['20:30', '20:00', '18:30']
 
-function buildMatch(home: number, away: number, round: number, slot: number, idx: number): Match {
+function buildMatch(f: Fixture, idx: number): Match {
   seq = idx * 1000
-  // 1 seul match live (le "à la une"), journées 1-3 terminées, journée 5 à venir.
-  let status: 'finished' | 'live' | 'setup'
-  if (round <= 2) status = 'finished'
-  else if (round === 3) status = slot === 0 ? 'live' : 'finished'
-  else status = 'setup'
-
-  const sa = 56 + ((home * 13 + away * 7 + round * 5) % 26)
-  const sb = 54 + ((away * 11 + home * 3 + round * 9) % 28)
-  const aStart = Array.from({ length: 5 }, (_, i) => playerId(home, i))
-  const aRoster = Array.from({ length: 10 }, (_, i) => playerId(home, i))
+  const starters = ROSTER.slice(0, 5)
+  const sa = 56 + ((idx * 13 + 7) % 26)
+  const sb = 54 + ((idx * 11 + 3) % 28)
+  const stopClock = f.status === 'live' ? 372 : 90
 
   let events: GameEvent[] = []
-  if (status !== 'setup') {
+  if (f.status !== 'setup') {
     let c = 594
     const clock = () => (c = Math.max(60, c - 5))
-    const liveA = status === 'live' ? Math.round(sa * 0.55) : sa
-    const liveB = status === 'live' ? Math.round(sb * 0.55) : sb
+    const liveA = f.status === 'live' ? Math.round(sa * 0.55) : sa
+    const liveB = f.status === 'live' ? Math.round(sb * 0.55) : sb
+    const halfA = Math.round(liveA / 2)
     events = [
       ev({ type: 'PERIOD_START', period: 1, gameClock: 600 }),
-      ev({ type: 'STARTING_FIVE', team: 'A', playerIds: aStart, period: 1, gameClock: 600 }),
+      ev({ type: 'STARTING_FIVE', team: 'A', playerIds: starters, period: 1, gameClock: 600 }),
       ev({ type: 'CLOCK_START', period: 1, gameClock: 600 }),
-      ...baskets(aRoster, liveA, clock),
+      ...baskets(halfA, clock),
+      ...rotations(stopClock),
+      ...baskets(liveA - halfA, clock),
       ...opponentBaskets(liveB, clock),
-      ...extras(aRoster, clock),
-      ev({ type: 'CLOCK_STOP', period: 1, gameClock: status === 'live' ? 372 : 90 }),
+      ...extras(clock),
+      ev({ type: 'CLOCK_STOP', period: 1, gameClock: stopClock }),
     ]
-    if (status === 'finished') events.push(ev({ type: 'PERIOD_END', period: 1, gameClock: 90 }))
+    if (f.status === 'finished') events.push(ev({ type: 'PERIOD_END', period: 1, gameClock: stopClock }))
   }
 
   return {
     id: `seed-m${idx}`,
     meta: {
-      championshipLabel: CHAMP, matchNumber: String(40 + idx), date: DATES[round], time: TIMES[slot],
-      venue: TEAMS[home][0].split(' ').pop(), coachA: TEAMS[home][1],
-      referee1: 'BART S', referee2: 'WEISSE F', clubId: teamId(home), opponentId: teamId(away),
+      championshipLabel: CHAMP, matchNumber: String(idx + 1), date: f.date, time: f.time,
+      venue: idx % 2 === 0 ? 'Vignot' : TEAMS[f.opponent][0].split(' ').pop(), coachA: TEAMS[0][1],
+      referee1: 'BART S', referee2: 'WEISSE F', clubId: teamId(0), opponentId: teamId(f.opponent),
     },
-    roster: aRoster,
+    roster: ROSTER,
     events,
-    status,
+    status: f.status,
   }
 }
 
@@ -135,16 +144,10 @@ export async function seedDevData(): Promise<void> {
   // Re-seed (schéma/données de démo mis à jour)
   await db.matches.clear(); await db.players.clear(); await db.teams.clear()
 
-  for (let t = 0; t < TEAMS.length; t++) {
-    await saveTeam({ id: teamId(t), name: TEAMS[t][0], coach: TEAMS[t][1] })
-    for (const p of makePlayers(t)) await savePlayer(p)
-  }
-  let idx = 0
-  for (let r = 0; r < ROUNDS.length; r++)
-    for (let s = 0; s < ROUNDS[r].length; s++) {
-      const [h, a] = ROUNDS[r][s]
-      await saveMatch(buildMatch(h, a, r, s, idx++))
-    }
+  for (let t = 0; t < TEAMS.length; t++) await saveTeam({ id: teamId(t), name: TEAMS[t][0], coach: TEAMS[t][1] })
+  for (const p of PLAYERS) await savePlayer(p)
+  for (let idx = 0; idx < FIXTURES.length; idx++) await saveMatch(buildMatch(FIXTURES[idx], idx))
+
   localStorage.setItem('seed-version', SEED_VERSION)
   // L'Avenir de Vignot est le club de démonstration : sans cela, la démo s'ouvre
   // sur l'écran de bienvenue à chaque régénération des données.
