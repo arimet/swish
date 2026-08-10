@@ -35,10 +35,10 @@ export function standings(matches: Match[], teams: Record<string, Team>): { cham
  *  terminée — auquel cas afficher un rang serait inventer une information. */
 export function clubStanding(
   matches: Match[], teams: Record<string, Team>, clubId: string,
-): { rank: number; total: number; line: StandingLine } | null {
-  for (const { lines } of standings(matches, teams)) {
+): { champ: string; rank: number; total: number; line: StandingLine } | null {
+  for (const { champ, lines } of standings(matches, teams)) {
     const i = lines.findIndex((l) => l.id === clubId)
-    if (i >= 0) return { rank: i + 1, total: lines.length, line: lines[i] }
+    if (i >= 0) return { champ, rank: i + 1, total: lines.length, line: lines[i] }
   }
   return null
 }
