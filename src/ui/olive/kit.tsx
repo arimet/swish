@@ -2,12 +2,11 @@
 import { Link } from 'react-router-dom'
 import type { CSSProperties, ReactNode } from 'react'
 import { liveState } from '../../rules/ffbb'
-import { periodLength } from '../../domain/ids'
+import { champLabel, periodLength } from '../../domain/ids'
 import { fmt } from '../components/GameClock'
-import type { Match, MatchMeta, Team } from '../../domain/types'
+import type { Match, Team } from '../../domain/types'
 
-/** Libellé de championnat avec repli quand la rencontre n'en a pas. */
-export const champLabel = (meta: MatchMeta) => meta.championshipLabel?.trim() || 'Match amical'
+export { champLabel }
 
 export const C = {
   page: 'var(--page)', frame: '#0d0d0f', panel: '#0a0a0c', card: '#161618', card2: '#1e1e21',
