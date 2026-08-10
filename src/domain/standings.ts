@@ -32,13 +32,20 @@ export function standings(matches: Match[], teams: Record<string, Team>): { cham
 }
 
 /** Place du club dans son championnat. `null` s'il n'apparaît dans aucune rencontre
- *  terminée — auquel cas afficher un rang serait inventer une information. */
+ *  terminée — auquel cas afficher un rang serait inventer une information.
+ *  Quand le club joue plusieurs compétitions, on retient celle où il a le plus
+ *  de rencontres au compteur plutôt que la première croisée : un amical de
+ *  pré-saison ne doit pas éclipser une saison de championnat entière. */
 export function clubStanding(
   matches: Match[], teams: Record<string, Team>, clubId: string,
 ): { champ: string; rank: number; total: number; line: StandingLine } | null {
+  let best: { champ: string; rank: number; total: number; line: StandingLine } | null = null
+  let bestGames = -1
   for (const { champ, lines } of standings(matches, teams)) {
     const i = lines.findIndex((l) => l.id === clubId)
-    if (i >= 0) return { champ, rank: i + 1, total: lines.length, line: lines[i] }
+    if (i < 0) continue
+    const games = lines[i].j
+    if (games > bestGames) { bestGames = games; best = { champ, rank: i + 1, total: lines.length, line: lines[i] } }
   }
-  return null
+  return best
 }

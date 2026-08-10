@@ -224,12 +224,17 @@ export function ShotChart({ shots, minAttempts = 3 }: { shots: Shot[]; minAttemp
       {ZONES.map((z) => {
         const { made, attempts } = sum[z]
         if (attempts < minAttempts) return null
+        // Les corners sont trop étroits (90 unités) pour un ratio centré en
+        // fontSize 62 gras (~175 unités) : même « 10/10 » déborde du viewBox.
+        // Ancrer le texte à son bord plutôt qu'à son centre le fait toujours
+        // grandir vers l'intérieur du terrain, quelle que soit sa longueur.
+        const anchor = z === 'corner3_left' ? 'start' : z === 'corner3_right' ? 'end' : 'middle'
         return (
           <text
             key={z}
             x={ZONE_CENTROID[z].x * W}
             y={ZONE_CENTROID[z].y * D}
-            textAnchor="middle"
+            textAnchor={anchor}
             dominantBaseline="middle"
             fontSize={62}
             fontWeight={900}

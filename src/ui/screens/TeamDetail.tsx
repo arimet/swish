@@ -6,6 +6,7 @@ import { teamRecord, teamMatches, teamScorers } from '../../domain/teamRecord'
 import type { Match, Player, Team } from '../../domain/types'
 import { C, bd, TeamBadge, fmtDate } from '../olive/kit'
 import { useAdmin } from '../../app/admin'
+import { useClub } from '../../app/club'
 import { refresh as refreshRemote } from '../../persistence/remote'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
@@ -15,6 +16,7 @@ export function TeamDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { guard } = useAdmin()
+  const { clubId, clear } = useClub()
   const [askDelete, setAskDelete] = useState(false)
   const [team, setTeam] = useState<Team | null | undefined>(undefined)
   const [players, setPlayers] = useState<Player[]>([])
@@ -47,7 +49,14 @@ export function TeamDetail() {
     setNum(''); setLn(''); setFn(''); refresh()
   })
   const removePlayer = (pid: string) => guard(async () => { await deletePlayer(pid); refresh() })
-  const removeTeam = async () => { await deleteTeam(id); navigate('/teams') }
+  const removeTeam = async () => {
+    await deleteTeam(id)
+    // Le club suivi disparaît avec sa propre équipe : sans ce `clear()`, le
+    // tableau de bord resterait épinglé sur un club fantôme (ClubProvider ne
+    // revalide sa liste qu'à un changement de club, pas à une suppression brute).
+    if (id === clubId) clear()
+    navigate('/teams')
+  }
 
   const rec = teamRecord(id, matches)
   const lines = teamMatches(id, matches)

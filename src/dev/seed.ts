@@ -2,6 +2,7 @@ import { db } from '../persistence/db'
 import { saveTeam, savePlayer, saveMatch } from '../persistence/repositories'
 import type { GameEvent, Match, Player, ScoreKind, TeamSide } from '../domain/types'
 import { kindAt } from '../domain/shotzones'
+import { CLUB_ID_KEY } from '../app/club'
 
 /**
  * Données de démo (DEV uniquement). Championnat complet : poule de 6 équipes,
@@ -150,5 +151,5 @@ export async function seedDevData(): Promise<void> {
   localStorage.setItem('seed-version', SEED_VERSION)
   // L'Avenir de Vignot est le club de démonstration : sans cela, la démo s'ouvre
   // sur l'écran de bienvenue à chaque régénération des données.
-  if (!localStorage.getItem('swish-club-id')) localStorage.setItem('swish-club-id', teamId(0))
+  if (!localStorage.getItem(CLUB_ID_KEY)) localStorage.setItem(CLUB_ID_KEY, teamId(0))
 }

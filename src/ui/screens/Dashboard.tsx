@@ -8,7 +8,7 @@ import { teamMatches, teamRecord, teamScorers } from '../../domain/teamRecord'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { liveState } from '../../rules/ffbb'
 import { ShotChart } from '../components/ShotCourt'
-import { C, bd, TeamBadge, displayClock, fmtDate } from '../olive/kit'
+import { C, bd, TeamBadge, champLabel, displayClock, fmtDate } from '../olive/kit'
 import type { Match, Player, Team } from '../../domain/types'
 
 export function Dashboard() {
@@ -38,9 +38,13 @@ export function Dashboard() {
   const mine = matches.filter((m) => m.meta.teamAId === clubId || m.meta.teamBId === clubId)
   const live = mine.find((m) => m.status === 'live')
   const next = mine.filter((m) => m.status === 'setup').sort((a, b) => (a.meta.date ?? '').localeCompare(b.meta.date ?? ''))[0]
-  const rec = teamRecord(clubId, matches)
-  const lines = teamMatches(clubId, matches).filter((l) => l.result)
   const rank = clubStanding(matches, teams, clubId)
+  // Bilan et forme doivent parler de la même compétition que le rang affiché
+  // juste au-dessus : sans ce filtre, un amical hors championnat se mélange
+  // aux rencontres de poule et les deux chiffres du bloc se contredisent.
+  const champMatches = rank ? matches.filter((m) => champLabel(m.meta) === rank.champ) : matches
+  const rec = teamRecord(clubId, champMatches)
+  const lines = teamMatches(clubId, champMatches).filter((l) => l.result)
   const diff = rec.pointsFor - rec.pointsAgainst
 
   const rosterIds = players.map((p) => p.id)
@@ -57,17 +61,19 @@ export function Dashboard() {
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-extrabold tracking-tight">{club.name}</h1>
             {rank ? (
-              <>
-                <p className="text-sm" style={{ color: C.muted }}>{rank.rank}ᵉ sur {rank.total} · {rank.line.pts} pts</p>
-                {/* Le rang seul ne dit pas de quelle compétition il vient — indispensable
-                    dès qu'un club joue plusieurs championnats, cf. clubStanding. */}
-                <p className="truncate text-[11px] font-semibold uppercase tracking-wide" style={{ color: C.faint }}>{rank.champ}</p>
-              </>
+              <p className="text-sm" style={{ color: C.muted }}>{rank.rank}ᵉ sur {rank.total} · {rank.line.pts} pts</p>
             ) : (
               <p className="text-sm" style={{ color: C.muted }}>Aucune rencontre terminée</p>
             )}
           </div>
         </div>
+
+        {/* Bilan, forme et rang décrivent tous cette même compétition (cf. le
+            filtrage sur `champMatches` ci-dessus) : le libellé porte sur tout
+            le bloc qui suit, pas sur le seul rang. */}
+        {rank && (
+          <p className="mb-3 text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{rank.champ}</p>
+        )}
 
         <Banner live={live} next={next} clubId={clubId} teams={teams} />
 
@@ -104,7 +110,10 @@ export function Dashboard() {
                         <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.orange : C.faint }}>{i + 1}</span>
                         <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p?.number ?? '?'}</span>
                         <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : 'Joueur'}</span>
-                        <span className="text-[11px] font-semibold" style={{ color: C.muted }}>{pct === null ? '—' : `${pct} %`}</span>
+                        {/* Titre explicite : ce pourcentage ne porte que sur les tirs
+                            localisés, alors que les points juste à côté comptent tout
+                            (lancers francs compris) — cf. PlayerDetail. */}
+                        <span className="text-[11px] font-semibold" style={{ color: C.muted }} title="Réussite sur les tirs localisés">{pct === null ? '—' : `${pct} %`}</span>
                         <span className="w-14 text-right text-sm font-black tabular-nums">{pts} pts</span>
                       </Link>
                     </li>
