@@ -34,8 +34,11 @@ describe('App', () => {
     // sur ce club supprimé avec un effectif vide.
     sessionStorage.setItem('admin-unlocked', '1')
     render(<App />)
-    const teamLink = await screen.findByRole('link', { name: /mon équipe/i })
-    await userEvent.click(teamLink)
+    // « Mon équipe » apparaît deux fois dans le DOM (barre latérale + nav basse
+    // mobile) : jsdom ne masque pas la seconde via `lg:hidden`, faute de media
+    // queries. Les deux mènent à la même route, n'importe laquelle convient.
+    const teamLinks = await screen.findAllByRole('link', { name: /mon équipe/i })
+    await userEvent.click(teamLinks[0])
     await screen.findByRole('heading', { name: /club test/i })
 
     await userEvent.click(screen.getByRole('button', { name: 'Supprimer' }))

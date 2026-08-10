@@ -6,10 +6,12 @@ import { C, bd, Ic, ICON } from './kit'
 import { useAdmin } from '../../app/admin'
 import { useClub } from '../../app/club'
 
-const NAV_CLUB = [
+// « Mon équipe » s'intercale entre les deux : lien à part car sa cible dépend
+// du club suivi (`/teams/<clubId>`), rendu seulement quand un club est réglé.
+const NAV_TOP = [
   { icon: ICON.trophy, label: 'Tableau de bord', to: '/', end: true },
 ]
-const NAV_CHAMP = [
+const NAV_REST = [
   { icon: ICON.cal, label: 'Calendrier', to: '/calendrier', end: false },
   { icon: ICON.users, label: 'Équipes', to: '/teams', end: false },
 ]
@@ -18,6 +20,8 @@ const NAV_MOBILE = [
   { icon: ICON.cal, label: 'Calendrier', to: '/calendrier', end: false },
   { icon: ICON.users, label: 'Équipes', to: '/teams', end: false },
 ]
+// « Mon équipe » cible `/teams/<clubId>` : sans club réglé, ce serait un lien
+// vers `/teams/undefined` — l'entrée n'est ajoutée qu'une fois le club connu.
 const TITLES: Record<string, string> = {
   '/': 'Tableau de bord', '/calendrier': 'Calendrier',
   '/teams': 'Équipes', '/match/new': 'Nouvelle rencontre',
@@ -59,9 +63,13 @@ export function OliveShell() {
 /** Barre de navigation basse (mobile) : le menu latéral étant masqué < lg.
  *  Quatre entrées maximum — au-delà, les cibles deviennent trop étroites au pouce. */
 function MobileNav() {
+  const { clubId } = useClub()
+  const items = clubId
+    ? [...NAV_MOBILE, { icon: ICON.users, label: 'Mon équipe', to: `/teams/${clubId}`, end: true }]
+    : NAV_MOBILE
   return (
     <nav className="flex shrink-0 items-stretch justify-around gap-1 border-t px-1 pb-[env(safe-area-inset-bottom)] pt-1 lg:hidden" style={{ borderColor: C.border, background: C.panel }}>
-      {NAV_MOBILE.map((n) => (
+      {items.map((n) => (
         <NavLink key={n.label} to={n.to} end={n.end}
           className="flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] font-bold transition"
           style={({ isActive }) => ({ color: isActive ? C.orange : C.muted, background: isActive ? C.card2 : 'transparent' })}>
@@ -73,7 +81,7 @@ function MobileNav() {
   )
 }
 
-/** Liens d'un groupe de menu, factorisé entre « Mon club » et « Championnat ». */
+/** Liens d'un groupe de menu de la barre latérale. */
 function NavGroup({ items }: { items: { icon: string; label: string; to: string; end: boolean }[] }) {
   return (
     <nav className="mt-1.5 flex flex-col gap-0.5">
@@ -104,7 +112,7 @@ function Sidebar() {
       </Link>
 
       <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Mon club</p>
-      <NavGroup items={NAV_CLUB} />
+      <NavGroup items={NAV_TOP} />
       {clubId && (
         <NavLink to={`/teams/${clubId}`} end
           className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
@@ -112,9 +120,7 @@ function Sidebar() {
           {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.orange }} />}<Ic d={ICON.users} />Mon équipe</>)}
         </NavLink>
       )}
-
-      <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Championnat</p>
-      <NavGroup items={NAV_CHAMP} />
+      <NavGroup items={NAV_REST} />
 
       {clubId && players.length > 0 && (
         <>
