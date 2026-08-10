@@ -10,20 +10,17 @@ const NAV_CLUB = [
   { icon: ICON.trophy, label: 'Tableau de bord', to: '/', end: true },
 ]
 const NAV_CHAMP = [
-  { icon: ICON.matches, label: 'Rencontres', to: '/rencontres', end: false },
   { icon: ICON.cal, label: 'Calendrier', to: '/calendrier', end: false },
-  { icon: ICON.trophy, label: 'Classement', to: '/classement', end: false },
   { icon: ICON.users, label: 'Équipes', to: '/teams', end: false },
 ]
 const NAV_MOBILE = [
   { icon: ICON.trophy, label: 'Tableau de bord', to: '/', end: true },
-  { icon: ICON.matches, label: 'Rencontres', to: '/rencontres', end: false },
-  { icon: ICON.trophy, label: 'Classement', to: '/classement', end: false },
+  { icon: ICON.cal, label: 'Calendrier', to: '/calendrier', end: false },
   { icon: ICON.users, label: 'Équipes', to: '/teams', end: false },
 ]
 const TITLES: Record<string, string> = {
-  '/': 'Tableau de bord', '/rencontres': 'Rencontres', '/calendrier': 'Calendrier',
-  '/teams': 'Équipes', '/classement': 'Classement', '/match/new': 'Nouvelle rencontre',
+  '/': 'Tableau de bord', '/calendrier': 'Calendrier',
+  '/teams': 'Équipes', '/match/new': 'Nouvelle rencontre',
 }
 
 export function OliveShell() {

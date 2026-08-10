@@ -3,12 +3,11 @@ import { Link } from 'react-router-dom'
 import { useClub } from '../../app/club'
 import { listMatches, listPlayers, listTeams } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
-import { clubStanding } from '../../domain/standings'
 import { teamMatches, teamRecord, teamScorers } from '../../domain/teamRecord'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { liveState } from '../../rules/ffbb'
 import { ShotChart } from '../components/ShotCourt'
-import { C, bd, TeamBadge, champLabel, displayClock, fmtDate } from '../olive/kit'
+import { C, bd, TeamBadge, displayClock, fmtDate } from '../olive/kit'
 import type { Match, Player, Team } from '../../domain/types'
 
 export function Dashboard() {
@@ -38,13 +37,8 @@ export function Dashboard() {
   const mine = matches.filter((m) => m.meta.teamAId === clubId || m.meta.teamBId === clubId)
   const live = mine.find((m) => m.status === 'live')
   const next = mine.filter((m) => m.status === 'setup').sort((a, b) => (a.meta.date ?? '').localeCompare(b.meta.date ?? ''))[0]
-  const rank = clubStanding(matches, teams, clubId)
-  // Bilan et forme doivent parler de la même compétition que le rang affiché
-  // juste au-dessus : sans ce filtre, un amical hors championnat se mélange
-  // aux rencontres de poule et les deux chiffres du bloc se contredisent.
-  const champMatches = rank ? matches.filter((m) => champLabel(m.meta) === rank.champ) : matches
-  const rec = teamRecord(clubId, champMatches)
-  const lines = teamMatches(clubId, champMatches).filter((l) => l.result)
+  const rec = teamRecord(clubId, matches)
+  const lines = teamMatches(clubId, matches).filter((l) => l.result)
   const diff = rec.pointsFor - rec.pointsAgainst
 
   const rosterIds = players.map((p) => p.id)
@@ -60,20 +54,11 @@ export function Dashboard() {
           <TeamBadge id={club.id} name={club.name} size="h-11 w-11 text-sm" />
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-extrabold tracking-tight">{club.name}</h1>
-            {rank ? (
-              <p className="text-sm" style={{ color: C.muted }}>{rank.rank}ᵉ sur {rank.total} · {rank.line.pts} pts</p>
-            ) : (
-              <p className="text-sm" style={{ color: C.muted }}>Aucune rencontre terminée</p>
-            )}
+            <p className="text-sm" style={{ color: C.muted }}>
+              {rec.played ? `${rec.played} rencontre${rec.played > 1 ? 's' : ''} jouée${rec.played > 1 ? 's' : ''}` : 'Aucune rencontre jouée'}
+            </p>
           </div>
         </div>
-
-        {/* Bilan, forme et rang décrivent tous cette même compétition (cf. le
-            filtrage sur `champMatches` ci-dessus) : le libellé porte sur tout
-            le bloc qui suit, pas sur le seul rang. */}
-        {rank && (
-          <p className="mb-3 text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{rank.champ}</p>
-        )}
 
         <Banner live={live} next={next} clubId={clubId} teams={teams} />
 
