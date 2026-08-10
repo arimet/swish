@@ -203,6 +203,7 @@ function StatList({ side, name, match, players, openId, onToggle }: {
               const p = players[s.playerId]
               const label = p ? `${p.lastName} ${p.firstName}` : s.playerId
               const isOpen = openId === s.playerId
+              const shots = isOpen ? shotsOf([match], s.playerId) : []
               return (
                 <Fragment key={s.playerId}>
                   <tr style={{ borderTop: `1px solid ${C.border}`, background: isOpen ? C.panel : undefined }}>
@@ -219,7 +220,9 @@ function StatList({ side, name, match, players, openId, onToggle }: {
                   {isOpen && (
                     <tr style={{ background: C.panel }}>
                       <td colSpan={8} className="px-3 pb-4 pt-1">
-                        <ShotChart shots={shotsOf([match], s.playerId)} minAttempts={1} />
+                        {shots.length === 0
+                          ? <p className="py-6 text-center text-sm" style={{ color: C.muted }}>Aucun tir localisé sur cette rencontre.</p>
+                          : <ShotChart shots={shots} minAttempts={1} />}
                       </td>
                     </tr>
                   )}

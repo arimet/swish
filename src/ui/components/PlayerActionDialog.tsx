@@ -36,7 +36,7 @@ export function PlayerActionDialog({
   onRemoveStat: (kind: StatKind) => void; onRemoveMiss: () => void
 }) {
   const [made, setMade] = useState(true)
-  const [confirmation, setConfirmation] = useState<{ spot: ShotSpot; label: string } | null>(null)
+  const [confirmation, setConfirmation] = useState<{ spot: ShotSpot; label: string; made: boolean } | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const sc = scoreCounts ?? ZERO_S
   const tc = statCounts ?? ZERO_T
@@ -58,7 +58,7 @@ export function PlayerActionDialog({
   const pick = (spot: ShotSpot) => {
     const kind = kindAt(spot.x, spot.y)
     if (made) onScore(kind, spot); else onMiss(kind, spot)
-    setConfirmation({ spot, label: `${made ? POINTS_LABEL[kind] : 'MANQUÉ'} · ${ZONE_LABELS[zoneAt(spot.x, spot.y)]}` })
+    setConfirmation({ spot, made, label: `${made ? POINTS_LABEL[kind] : 'MANQUÉ'} · ${ZONE_LABELS[zoneAt(spot.x, spot.y)]}` })
     closeTimer.current = setTimeout(close, SHOT_FEEDBACK_MS)
   }
 
