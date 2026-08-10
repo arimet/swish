@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getMatch, listTeams, listPlayers, deleteMatch } from '../../persistence/repositories'
+import { getMatch, listTeams, deleteMatch } from '../../persistence/repositories'
 import type { Match, Team } from '../../domain/types'
 import { C, bd, PageTitle, TeamBadge, fmtDate, champLabel } from '../olive/kit'
 import { useAdmin } from '../../app/admin'
@@ -13,17 +13,15 @@ export function MatchPreview({ matchId }: { matchId: string }) {
   const { guard } = useAdmin()
   const [match, setMatch] = useState<Match | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
-  const [counts, setCounts] = useState<{ A: number; B: number }>({ A: 0, B: 0 })
   const [askDelete, setAskDelete] = useState(false)
 
   useEffect(() => {
     let cancel = false
     getMatch(matchId).then(async (m) => {
       if (cancel || !m) { if (!cancel) setMatch(m ?? null); return }
-      const [ts, pa, pb] = await Promise.all([listTeams(), listPlayers(m.meta.clubId), listPlayers(m.meta.opponentId)])
+      const ts = await listTeams()
       if (cancel) return
       setTeams(Object.fromEntries(ts.map((t) => [t.id, t])))
-      setCounts({ A: pa.length, B: pb.length })
       setMatch(m)
     })
     return () => { cancel = true }
@@ -53,9 +51,10 @@ export function MatchPreview({ matchId }: { matchId: string }) {
         </div>
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <TeamCol id={match.meta.clubId} name={nameOf(match.meta.clubId)} role="Locaux" coach={match.meta.coachA} count={counts.A} />
+          <TeamCol id={match.meta.clubId} name={nameOf(match.meta.clubId)} role="Locaux" coach={match.meta.coachA} count={match.roster.length} />
           <span className="text-xl font-black" style={{ color: C.faint }}>VS</span>
-          <TeamCol id={match.meta.opponentId} name={nameOf(match.meta.opponentId)} role="Visiteurs" coach={teams[match.meta.opponentId]?.coach} count={counts.B} />
+          {/* L'adversaire n'a pas d'effectif saisi pour cette rencontre : pas de compte de joueurs à afficher. */}
+          <TeamCol id={match.meta.opponentId} name={nameOf(match.meta.opponentId)} role="Visiteurs" coach={teams[match.meta.opponentId]?.coach} />
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3 border-t pt-5 sm:grid-cols-3" style={{ borderColor: C.border }}>
@@ -87,14 +86,14 @@ export function MatchPreview({ matchId }: { matchId: string }) {
   )
 }
 
-function TeamCol({ id, name, role, coach, count }: { id: string; name: string; role: string; coach?: string; count: number }) {
+function TeamCol({ id, name, role, coach, count }: { id: string; name: string; role: string; coach?: string; count?: number }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <TeamBadge id={id} name={name} size="h-14 w-14 text-sm" />
       <span className="line-clamp-2 text-base font-extrabold">{name}</span>
       <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{role}</span>
       {coach && <span className="text-[11px]" style={{ color: C.faint }}>Coach · {coach}</span>}
-      <span className="text-[11px]" style={{ color: C.faint }}>{count} joueur{count > 1 ? 's' : ''}</span>
+      {count !== undefined && <span className="text-[11px]" style={{ color: C.faint }}>{count} joueur{count > 1 ? 's' : ''}</span>}
     </div>
   )
 }

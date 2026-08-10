@@ -71,9 +71,11 @@ describe("liveState", () => {
     // p9 remplace p2 à l'index 1, les autres ne bougent pas.
     expect(s.onCourt.A).toEqual(['p1', 'p9', 'p3', 'p4', 'p5'])
   })
-  it('l\'adversaire n\'a pas d\'effectif : jamais « sorti sur fautes »', () => {
-    const s = liveState(mk([{ type: 'PERIOD_START' as const, period: 1 }]))
-    expect(s.fouledOut.B).toEqual([])
+  it('l\'adversaire n\'a pas d\'effectif : jamais « sorti sur fautes », même à 5 fautes sur un joueur visé', () => {
+    const events: Partial<GameEvent>[] = Array(5).fill(null).map(() => ({
+      type: 'FOUL' as const, team: 'B' as const, target: { kind: 'player' as const, playerId: 'q1' }, foulType: 'personal' as const, period: 1,
+    }))
+    expect(liveState(mk(events)).fouledOut.B).toEqual([])
   })
   it('compte un panier sans joueur identifié dans le score de l’équipe', () => {
     const m = mk([

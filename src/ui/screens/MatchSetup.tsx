@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { newId } from '../../domain/ids'
-import { listPlayers, saveMatch } from '../../persistence/repositories'
+import { listPlayers, listTeams, saveMatch } from '../../persistence/repositories'
+import { refresh } from '../../persistence/remote'
 import type { Match, Team } from '../../domain/types'
 import { C, bd, PageTitle, TeamBadge } from '../olive/kit'
 import { useAdmin } from '../../app/admin'
@@ -15,17 +16,19 @@ const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
  *  détailler, son score se saisira globalement pendant le match. */
 export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   const { guard } = useAdmin()
-  const { clubId, club, teams } = useClub()
-  const opponents = teams.filter((t) => t.id !== clubId)
+  const { clubId, club, ready } = useClub()
+  const [teams, setTeams] = useState<Team[] | null>(null) // null = pas encore chargé
+  useEffect(() => { refresh().then(() => listTeams()).then(setTeams) }, [])
+  const opponents = (teams ?? []).filter((t) => t.id !== clubId)
   const [championshipLabel, setChampionship] = useState('')
-  // La liste des équipes charge de façon asynchrone (ClubProvider) : un état
-  // initialisé une fois au montage figerait ce choix sur « aucun adversaire ».
+  // La liste des équipes charge de façon asynchrone : un état initialisé une
+  // fois au montage figerait ce choix sur « aucun adversaire ».
   const [pickedOpponentId, setOpponentId] = useState('')
   const opponentId = pickedOpponentId || opponents[0]?.id || ''
   const [matchNumber, setNum] = useState(''); const [venue, setVenue] = useState('')
   const [date, setDate] = useState(''); const [time, setTime] = useState('')
 
-  const nameOf = (id: string) => teams.find((t) => t.id === id)?.name ?? '—'
+  const nameOf = (id: string) => teams?.find((t) => t.id === id)?.name ?? '—'
 
   const create = async () => {
     if (!clubId) return
@@ -45,6 +48,15 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
     onCreated(match.id)
   }
   const canCreate = !!clubId && !!opponentId
+
+  if (!ready || teams === null) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="h-8 w-40 animate-pulse rounded-lg" style={{ background: C.card }} />
+        <div className="mt-6 h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
+      </div>
+    )
+  }
 
   if (!club) return null
 
