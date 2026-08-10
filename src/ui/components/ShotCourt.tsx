@@ -142,7 +142,7 @@ export function ShotPicker({ onPick, confirmation, shots }: {
           background: confirmation && !confirmation.made ? C.card2 : C.accentBg,
           color: confirmation && !confirmation.made ? C.muted : C.accent,
         }}>
-        {confirmation?.label ?? ''}
+        {confirmation?.label ?? ' '}
       </p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {ZONES.map((z) => (

@@ -39,6 +39,19 @@ describe('ShotPicker', () => {
 })
 
 describe('ShotPicker — confirmation', () => {
+  it('réserve la place de la pastille même sans confirmation, pour ne pas décaler les boutons', () => {
+    render(<ShotPicker onPick={vi.fn()} />)
+    // `visibility: hidden` retire l'élément de l'arbre d'accessibilité — RTL
+    // l'exclut donc de getByRole par défaut, d'où `hidden: true` ici. Ce même
+    // retrait garantit qu'un lecteur d'écran n'annonce rien à vide : pas
+    // besoin d'aria-hidden en plus.
+    const status = screen.getByRole('status', { hidden: true })
+    expect(status).toBeInTheDocument()
+    // Une chaîne vide ne crée aucune boîte de ligne : le contenu de repli doit
+    // rester un caractère — l'espace insécable U+00A0 — pas ''.
+    expect(status.textContent).toBe(' ')
+  })
+
   it('affiche le libellé du tir enregistré dans une zone d’état', () => {
     render(<ShotPicker onPick={vi.fn()} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: '2 PTS · Raquette', made: true }} />)
     expect(screen.getByRole('status')).toHaveTextContent('2 PTS · Raquette')
