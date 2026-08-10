@@ -64,6 +64,16 @@ function extras(side: TeamSide, roster: string[], clock: () => number): GameEven
   return kinds.map(([i, stat]) => ev({ type: 'STAT', team: side, playerId: roster[i], stat, period: 1, gameClock: clock() }))
 }
 
+/** Score de l'adversaire : uniquement des paniers d'équipe, sans joueur identifié
+ *  ni position de tir — l'adversaire n'a pas d'effectif à détailler. */
+function opponentBaskets(points: number, clock: () => number): GameEvent[] {
+  const out: GameEvent[] = []
+  const n2 = Math.floor(points / 2)
+  for (let k = 0; k < n2; k++) out.push(ev({ type: 'SCORE', team: 'B', kind: '2int', period: 1, gameClock: clock() }))
+  if (points % 2) out.push(ev({ type: 'SCORE', team: 'B', kind: 'lf', period: 1, gameClock: clock() }))
+  return out
+}
+
 // Round-robin (méthode du cercle) pour 6 équipes → 5 journées de 3 matchs.
 const ROUNDS: [number, number][][] = [
   [[0, 5], [1, 4], [2, 3]],
@@ -86,9 +96,7 @@ function buildMatch(home: number, away: number, round: number, slot: number, idx
   const sa = 56 + ((home * 13 + away * 7 + round * 5) % 26)
   const sb = 54 + ((away * 11 + home * 3 + round * 9) % 28)
   const aStart = Array.from({ length: 5 }, (_, i) => playerId(home, i))
-  const bStart = Array.from({ length: 5 }, (_, i) => playerId(away, i))
   const aRoster = Array.from({ length: 10 }, (_, i) => playerId(home, i))
-  const bRoster = Array.from({ length: 10 }, (_, i) => playerId(away, i))
 
   let events: GameEvent[] = []
   if (status !== 'setup') {
@@ -99,34 +107,23 @@ function buildMatch(home: number, away: number, round: number, slot: number, idx
     events = [
       ev({ type: 'PERIOD_START', period: 1, gameClock: 600 }),
       ev({ type: 'STARTING_FIVE', team: 'A', playerIds: aStart, period: 1, gameClock: 600 }),
-      ev({ type: 'STARTING_FIVE', team: 'B', playerIds: bStart, period: 1, gameClock: 600 }),
       ev({ type: 'CLOCK_START', period: 1, gameClock: 600 }),
       ...baskets('A', aRoster, liveA, clock),
-      ...baskets('B', bRoster, liveB, clock),
+      ...opponentBaskets(liveB, clock),
       ...extras('A', aRoster, clock),
-      ...extras('B', bRoster, clock),
       ev({ type: 'CLOCK_STOP', period: 1, gameClock: status === 'live' ? 372 : 90 }),
     ]
     if (status === 'finished') events.push(ev({ type: 'PERIOD_END', period: 1, gameClock: 90 }))
   }
 
-  // Le dernier match terminé de la première journée sert de démonstration au
-  // mode « une seule équipe » : effectif adverse vide, score adverse global.
-  const solo = idx === 2
-  if (solo)
-    events = events.map((e) =>
-      e.type !== 'SCORE' || e.team !== 'B' ? e : ({ ...e, playerId: undefined, shot: undefined } as GameEvent),
-    ).filter((e) => !('team' in e && e.team === 'B' && (e.type === 'MISS' || e.type === 'STAT' || e.type === 'STARTING_FIVE' || e.type === 'FOUL' || e.type === 'TIMEOUT')))
-
   return {
     id: `seed-m${idx}`,
     meta: {
       championshipLabel: CHAMP, matchNumber: String(40 + idx), date: DATES[round], time: TIMES[slot],
-      venue: TEAMS[home][0].split(' ').pop(), coachA: TEAMS[home][1], coachB: solo ? undefined : TEAMS[away][1],
-      referee1: 'BART S', referee2: 'WEISSE F', teamAId: teamId(home), teamBId: teamId(away),
-      ...(solo ? { solo: true as const } : {}),
+      venue: TEAMS[home][0].split(' ').pop(), coachA: TEAMS[home][1],
+      referee1: 'BART S', referee2: 'WEISSE F', clubId: teamId(home), opponentId: teamId(away),
     },
-    roster: { A: aRoster, B: solo ? [] : bRoster },
+    roster: aRoster,
     events,
     status,
   }

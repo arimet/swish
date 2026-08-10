@@ -20,7 +20,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
     let cancel = false
     getMatch(matchId).then(async (m) => {
       if (cancel || !m) { if (!cancel) setMatch(m ?? null); return }
-      const [ts, pa, pb] = await Promise.all([listTeams(), listPlayers(m.meta.teamAId), listPlayers(m.meta.teamBId)])
+      const [ts, pa, pb] = await Promise.all([listTeams(), listPlayers(m.meta.clubId), listPlayers(m.meta.opponentId)])
       if (cancel) return
       setTeams(Object.fromEntries(ts.map((t) => [t.id, t])))
       setCounts({ A: pa.length, B: pb.length })
@@ -53,9 +53,9 @@ export function MatchPreview({ matchId }: { matchId: string }) {
         </div>
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <TeamCol id={match.meta.teamAId} name={nameOf(match.meta.teamAId)} role="Locaux" coach={match.meta.coachA} count={counts.A} />
+          <TeamCol id={match.meta.clubId} name={nameOf(match.meta.clubId)} role="Locaux" coach={match.meta.coachA} count={counts.A} />
           <span className="text-xl font-black" style={{ color: C.faint }}>VS</span>
-          <TeamCol id={match.meta.teamBId} name={nameOf(match.meta.teamBId)} role="Visiteurs" coach={match.meta.coachB} count={counts.B} />
+          <TeamCol id={match.meta.opponentId} name={nameOf(match.meta.opponentId)} role="Visiteurs" coach={teams[match.meta.opponentId]?.coach} count={counts.B} />
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3 border-t pt-5 sm:grid-cols-3" style={{ borderColor: C.border }}>

@@ -9,7 +9,7 @@ import { db } from '../../persistence/db'
 import { getMatch, saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { Match } from '../../domain/types'
 
-const MATCH_ID = 'solo-1'
+const MATCH_ID = 'match-1'
 
 beforeEach(async () => {
   sessionStorage.setItem('admin-unlocked', '1')
@@ -18,8 +18,8 @@ beforeEach(async () => {
   await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas' })
   const m: Match = {
     id: MATCH_ID,
-    meta: { teamAId: 'ta', teamBId: 'tb', solo: true },
-    roster: { A: ['p1'], B: [] },
+    meta: { clubId: 'ta', opponentId: 'tb' },
+    roster: ['p1'],
     status: 'live',
     events: [
       { id: 'e0', wallClock: 0, period: 1, gameClock: 600, type: 'STARTING_FIVE', team: 'A', playerIds: ['p1'] },

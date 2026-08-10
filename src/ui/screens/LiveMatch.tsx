@@ -45,12 +45,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
 
   useEffect(() => {
     if (!match) return
-    Promise.all([listPlayers(match.meta.teamAId), listTeams()]).then(([a, teams]) => {
+    Promise.all([listPlayers(match.meta.clubId), listTeams()]).then(([a, teams]) => {
       setPlayers(Object.fromEntries(a.map((p) => [p.id, p])))
       const byId = Object.fromEntries(teams.map((t) => [t.id, t.name]))
-      setTeamNames({ A: byId[match.meta.teamAId] ?? 'Mon équipe', B: byId[match.meta.teamBId] ?? 'Adversaire' })
+      setTeamNames({ A: byId[match.meta.clubId] ?? 'Mon équipe', B: byId[match.meta.opponentId] ?? 'Adversaire' })
     })
-  }, [match?.meta.teamAId, match?.meta.teamBId])
+  }, [match?.meta.clubId, match?.meta.opponentId])
 
   useEffect(() => {
     if (!match || !ls || seededMatchId.current === match.id) return
@@ -83,10 +83,10 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   if (!isAdmin)
     return <AdminGate matchId={matchId} onUnlock={() => guard(() => {})} onExit={() => navigate('/')} />
 
-  const rosterPlayers = match.roster.A.map((id) => players[id]).filter(Boolean)
+  const rosterPlayers = match.roster.map((id) => players[id]).filter(Boolean)
 
   if (!match.events.some((e) => e.type === 'STARTING_FIVE' && e.team === 'A')) {
-    const required = Math.min(5, match.roster.A.length)
+    const required = Math.min(5, match.roster.length)
     const toggle = (_side: 'A' | 'B', id: string) =>
       setStarters((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= required ? cur : [...cur, id]))
     const byNumber = (ids: string[]) => [...ids].sort((a, b) => (players[a]?.number ?? 0) - (players[b]?.number ?? 0))
@@ -106,7 +106,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
 
   const statsByPlayer = () => {
     const map = new Map<string, { points: number; fouls: number }>()
-    for (const s of playerStats(match, 'A')) map.set(s.playerId, { points: s.points, fouls: s.fouls })
+    for (const s of playerStats(match)) map.set(s.playerId, { points: s.points, fouls: s.fouls })
     return map
   }
   const score = (kind: ScoreKind, shot?: ShotSpot) => pick &&

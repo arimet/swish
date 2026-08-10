@@ -9,8 +9,8 @@ beforeEach(async () => {
 })
 
 const match = (id: string): Match => ({
-  id, meta: { championshipLabel: 'PRM', teamAId: 'a', teamBId: 'b' },
-  roster: { A: [], B: [] }, events: [], status: 'setup',
+  id, meta: { championshipLabel: 'PRM', clubId: 'a', opponentId: 'b' },
+  roster: [], events: [], status: 'setup',
 })
 
 describe('repositories', () => {

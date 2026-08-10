@@ -10,8 +10,8 @@ import type { GameEvent, Match } from '../../domain/types'
 const TOP3 = { x: 0.5, y: 0.65 }
 
 const match = (id: string, events: Partial<GameEvent>[]): Match => ({
-  id, meta: { championshipLabel: 'Poule A', date: '2026-01-10', teamAId: 'ta', teamBId: 'tb' },
-  roster: { A: ['p1'], B: [] }, status: 'finished',
+  id, meta: { championshipLabel: 'Poule A', date: '2026-01-10', clubId: 'ta', opponentId: 'tb' },
+  roster: ['p1'], status: 'finished',
   events: events.map((e, i) => ({ id: `${id}-e${i}`, wallClock: i, period: 1, gameClock: 600, ...e } as GameEvent)),
 })
 

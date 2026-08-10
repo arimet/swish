@@ -4,8 +4,8 @@ import type { Match, GameEvent } from './types'
 
 const baseMatch = (): Match => ({
   id: 'm1',
-  meta: { championshipLabel: 'PRM', teamAId: 'ta', teamBId: 'tb' },
-  roster: { A: ['p1'], B: ['p2'] },
+  meta: { championshipLabel: 'PRM', clubId: 'ta', opponentId: 'tb' },
+  roster: ['p1'],
   events: [],
   status: 'live',
 })

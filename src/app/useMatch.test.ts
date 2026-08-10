@@ -7,8 +7,8 @@ import { saveMatch } from '../persistence/repositories'
 import type { Match } from '../domain/types'
 
 const seed = (): Match => ({
-  id: 'm1', meta: { championshipLabel: 'PRM', teamAId: 'a', teamBId: 'b' },
-  roster: { A: ['p1'], B: [] }, events: [], status: 'live',
+  id: 'm1', meta: { championshipLabel: 'PRM', clubId: 'a', opponentId: 'b' },
+  roster: ['p1'], events: [], status: 'live',
 })
 
 beforeEach(async () => { await db.matches.clear(); await saveMatch(seed()) })

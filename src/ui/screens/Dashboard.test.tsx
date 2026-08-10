@@ -14,8 +14,8 @@ const ev = (e: Partial<GameEvent>, i: number) =>
   ({ id: `e${i}`, wallClock: i, period: 1, gameClock: 600, ...e } as GameEvent)
 
 const finished = (id: string, pa: number, pb: number, events: Partial<GameEvent>[] = []): Match => ({
-  id, meta: { championshipLabel: 'Poule A', date: '2026-01-10', teamAId: 'ta', teamBId: 'tb' },
-  roster: { A: ['p1'], B: [] }, status: 'finished',
+  id, meta: { championshipLabel: 'Poule A', date: '2026-01-10', clubId: 'ta', opponentId: 'tb' },
+  roster: ['p1'], status: 'finished',
   events: [
     { type: 'CLOCK_START' as const },
     ...Array.from({ length: pa }, () => ({ type: 'SCORE' as const, team: 'A' as const, playerId: 'p1', kind: '2int' as const })),

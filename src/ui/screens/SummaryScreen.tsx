@@ -28,24 +28,25 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const { guard } = useAdmin()
   const [match, setMatch] = useState<Match | null | undefined>(undefined)
   const [players, setPlayers] = useState<Record<string, Player>>({})
+  // Indexé par côté d'évènement : A = notre club, B = l'adversaire (sans effectif).
   const [teamNames, setTeamNames] = useState<Record<TeamSide, string>>({ A: '', B: '' })
   const [showEdit, setShowEdit] = useState(false)
   const [editStats, setEditStats] = useState(false)
-  const [pick, setPick] = useState<{ side: TeamSide; id: string; name: string } | null>(null)
+  const [pick, setPick] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     let cancelled = false
     getMatch(matchId).then(async (m) => {
       if (cancelled) return
       if (!m) { setMatch(null); return }
-      const [pa, pb, teams] = await Promise.all([listPlayers(m.meta.teamAId), listPlayers(m.meta.teamBId), listTeams()])
+      const [roster, teams] = await Promise.all([listPlayers(m.meta.clubId), listTeams()])
       if (cancelled) return
       const map: Record<string, Player> = {}
-      for (const p of [...pa, ...pb]) map[p.id] = p
+      for (const p of roster) map[p.id] = p
       setPlayers(map)
       setTeamNames({
-        A: teams.find((t) => t.id === m.meta.teamAId)?.name ?? 'Locaux',
-        B: teams.find((t) => t.id === m.meta.teamBId)?.name ?? 'Visiteurs',
+        A: teams.find((t) => t.id === m.meta.clubId)?.name ?? 'Notre équipe',
+        B: teams.find((t) => t.id === m.meta.opponentId)?.name ?? 'Adversaire',
       })
       setMatch(m)
     })
@@ -79,27 +80,27 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
     const next = removeLastEvent(match, pred)
     if (next !== match) persist(next)
   }
-  const addScore = (side: TeamSide, playerId: string, kind: ScoreKind, shot?: ShotSpot) => addEvent({ type: 'SCORE', team: side, playerId, kind, shot, period: ls.period, gameClock: 0 })
-  const addFoul = (side: TeamSide, playerId: string) => addEvent({ type: 'FOUL', team: side, target: { kind: 'player', playerId }, foulType: 'personal', period: ls.period, gameClock: 0 })
-  const addStat = (side: TeamSide, playerId: string, stat: StatKind) => addEvent({ type: 'STAT', team: side, playerId, stat, period: ls.period, gameClock: 0 })
-  const addMiss = (side: TeamSide, playerId: string, kind: ScoreKind, shot: ShotSpot) => addEvent({ type: 'MISS', team: side, playerId, kind, shot, period: ls.period, gameClock: 0 })
-  const removeMiss = (side: TeamSide, id: string) => removeLast((e) => e.type === 'MISS' && e.team === side && e.playerId === id)
-  const missesOf = (side: TeamSide, id: string) => match.events.filter((e) => e.type === 'MISS' && e.team === side && e.playerId === id).length
-  const removeScoreKind = (side: TeamSide, id: string, kind: ScoreKind) => removeLast((e) => e.type === 'SCORE' && e.team === side && e.playerId === id && e.kind === kind)
-  const removeFoul = (side: TeamSide, id: string) => removeLast((e) => e.type === 'FOUL' && e.team === side && e.target.kind === 'player' && e.target.playerId === id)
-  const removeStatKind = (side: TeamSide, id: string, stat: StatKind) => removeLast((e) => e.type === 'STAT' && e.team === side && e.playerId === id && e.stat === stat)
-  const scoreCountsOf = (side: TeamSide, id: string): Record<ScoreKind, number> => {
+  // La correction de stats ne porte que sur notre effectif (côté A) : l'adversaire n'a pas de joueurs saisis.
+  const addScore = (playerId: string, kind: ScoreKind, shot?: ShotSpot) => addEvent({ type: 'SCORE', team: 'A', playerId, kind, shot, period: ls.period, gameClock: 0 })
+  const addFoul = (playerId: string) => addEvent({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId }, foulType: 'personal', period: ls.period, gameClock: 0 })
+  const addStat = (playerId: string, stat: StatKind) => addEvent({ type: 'STAT', team: 'A', playerId, stat, period: ls.period, gameClock: 0 })
+  const addMiss = (playerId: string, kind: ScoreKind, shot: ShotSpot) => addEvent({ type: 'MISS', team: 'A', playerId, kind, shot, period: ls.period, gameClock: 0 })
+  const removeMiss = (id: string) => removeLast((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === id)
+  const missesOf = (id: string) => match.events.filter((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === id).length
+  const removeScoreKind = (id: string, kind: ScoreKind) => removeLast((e) => e.type === 'SCORE' && e.team === 'A' && e.playerId === id && e.kind === kind)
+  const removeFoul = (id: string) => removeLast((e) => e.type === 'FOUL' && e.team === 'A' && e.target.kind === 'player' && e.target.playerId === id)
+  const removeStatKind = (id: string, stat: StatKind) => removeLast((e) => e.type === 'STAT' && e.team === 'A' && e.playerId === id && e.stat === stat)
+  const scoreCountsOf = (id: string): Record<ScoreKind, number> => {
     const c: Record<ScoreKind, number> = { '2int': 0, '2ext': 0, '3': 0, lf: 0 }
-    for (const e of match.events) if (e.type === 'SCORE' && e.team === side && e.playerId === id) c[e.kind]++
+    for (const e of match.events) if (e.type === 'SCORE' && e.team === 'A' && e.playerId === id) c[e.kind]++
     return c
   }
-  const statCountsOf = (side: TeamSide, id: string): Record<StatKind, number> => {
+  const statCountsOf = (id: string): Record<StatKind, number> => {
     const c: Record<StatKind, number> = { assist: 0, reb_off: 0, reb_def: 0, block: 0 }
-    for (const e of match.events) if (e.type === 'STAT' && e.team === side && e.playerId === id) c[e.stat]++
+    for (const e of match.events) if (e.type === 'STAT' && e.team === 'A' && e.playerId === id) c[e.stat]++
     return c
   }
-  const foulsOf = (side: TeamSide, id: string) => playerStats(match, side).find((s) => s.playerId === id)?.fouls ?? 0
-  const pickTeamId = pick ? (pick.side === 'A' ? meta.teamAId : meta.teamBId) : ''
+  const foulsOf = (id: string) => playerStats(match).find((s) => s.playerId === id)?.fouls ?? 0
 
   return (
     <div className="p-6">
@@ -122,21 +123,21 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       )}
       <MatchMetaDialog open={showEdit} meta={match.meta} onClose={() => setShowEdit(false)} onSave={saveMeta} />
       <PlayerActionDialog
-        open={!!pick} playerName={pick?.name ?? ''} color={pickTeamId ? teamColor(pickTeamId) : '#ffffff'}
-        scoreCounts={pick ? scoreCountsOf(pick.side, pick.id) : undefined}
-        statCounts={pick ? statCountsOf(pick.side, pick.id) : undefined}
-        fouls={pick ? foulsOf(pick.side, pick.id) : 0}
+        open={!!pick} playerName={pick?.name ?? ''} color={teamColor(meta.clubId)}
+        scoreCounts={pick ? scoreCountsOf(pick.id) : undefined}
+        statCounts={pick ? statCountsOf(pick.id) : undefined}
+        fouls={pick ? foulsOf(pick.id) : 0}
         shots={pick ? shotsOf([match], pick.id) : undefined}
         onClose={() => setPick(null)}
-        onScore={(k, shot) => pick && addScore(pick.side, pick.id, k, shot)}
-        onFoul={() => pick && addFoul(pick.side, pick.id)}
-        onStat={(k) => pick && addStat(pick.side, pick.id, k)}
-        onRemoveScore={(k) => pick && removeScoreKind(pick.side, pick.id, k)}
-        onRemoveFoul={() => pick && removeFoul(pick.side, pick.id)}
-        onRemoveStat={(k) => pick && removeStatKind(pick.side, pick.id, k)}
-        misses={pick ? missesOf(pick.side, pick.id) : 0}
-        onMiss={(k, shot) => pick && addMiss(pick.side, pick.id, k, shot)}
-        onRemoveMiss={() => pick && removeMiss(pick.side, pick.id)}
+        onScore={(k, shot) => pick && addScore(pick.id, k, shot)}
+        onFoul={() => pick && addFoul(pick.id)}
+        onStat={(k) => pick && addStat(pick.id, k)}
+        onRemoveScore={(k) => pick && removeScoreKind(pick.id, k)}
+        onRemoveFoul={() => pick && removeFoul(pick.id)}
+        onRemoveStat={(k) => pick && removeStatKind(pick.id, k)}
+        misses={pick ? missesOf(pick.id) : 0}
+        onMiss={(k, shot) => pick && addMiss(pick.id, k, shot)}
+        onRemoveMiss={() => pick && removeMiss(pick.id)}
       />
 
       {/* SCOREBOARD FINAL */}
@@ -146,9 +147,9 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
           <span className="rounded-md px-2 py-0.5 text-[10px] font-black uppercase" style={{ background: 'rgba(255,255,255,0.08)', color: C.muted }}>Final</span>
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-6 py-5 sm:gap-8">
-          <FinalSide id={meta.teamAId} name={teamNames.A} score={score.a} win={score.a >= score.b} align="right" />
+          <FinalSide id={meta.clubId} name={teamNames.A} score={score.a} win={score.a >= score.b} align="right" />
           <span className="text-lg font-black" style={{ color: C.faint }}>–</span>
-          <FinalSide id={meta.teamBId} name={teamNames.B} score={score.b} win={score.b > score.a} align="left" />
+          <FinalSide id={meta.opponentId} name={teamNames.B} score={score.b} win={score.b > score.a} align="left" />
         </div>
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t px-6 py-3 text-[11px] font-semibold" style={{ borderColor: C.border, color: C.faint }}>
           {meta.matchNumber && <span>Rencontre n°{meta.matchNumber}</span>}
@@ -160,16 +161,16 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
 
       {/* TABLEAUX PAR ÉQUIPE */}
       <div className="mt-6 space-y-6">
-        <TeamTable match={match} side="A" players={players} name={teamNames.A} teamId={meta.teamAId}
-          onPick={editStats ? (id, label) => setPick({ side: 'A', id, name: label }) : undefined} />
-        <OpponentCard teamId={meta.teamBId} name={teamNames.B} score={score.b} />
+        <TeamTable match={match} players={players} name={teamNames.A} teamId={meta.clubId}
+          onPick={editStats ? (id, label) => setPick({ id, name: label }) : undefined} />
+        <OpponentCard teamId={meta.opponentId} name={teamNames.B} score={score.b} />
       </div>
 
       {/* INDICATEURS */}
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         <Stat label="Plus large écart" a={ratios.A.maxLead} b={ratios.B.maxLead} />
         <Stat label="Plus longue série" a={ratios.A.maxRun} b={ratios.B.maxRun} />
-        <Stat label="Points du banc" a={teamTotals(match, 'A').bench.points} b="—" />
+        <Stat label="Points du banc" a={teamTotals(match).bench.points} b="—" />
         <Stat label="Temps en tête" a={fmt(ratios.A.leadDurationSec)} b={fmt(ratios.B.leadDurationSec)} />
         <div className="rounded-2xl p-4" style={{ background: C.card, border: bd }}>
           <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Égalités</p>
@@ -182,12 +183,12 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Progression du score</p>
           <span className="flex items-center gap-4 text-xs font-bold">
-            <span className="flex items-center gap-2"><span className="h-1 w-6 rounded-full" style={{ background: teamColor(meta.teamAId) }} /><span style={{ color: C.text }}>{teamNames.A}</span></span>
-            <span className="flex items-center gap-2"><span className="h-1 w-6 rounded-full" style={{ background: teamColor(meta.teamBId), backgroundImage: `repeating-linear-gradient(90deg, ${teamColor(meta.teamBId)} 0 5px, transparent 5px 8px)` }} /><span style={{ color: C.text }}>{teamNames.B}</span></span>
+            <span className="flex items-center gap-2"><span className="h-1 w-6 rounded-full" style={{ background: teamColor(meta.clubId) }} /><span style={{ color: C.text }}>{teamNames.A}</span></span>
+            <span className="flex items-center gap-2"><span className="h-1 w-6 rounded-full" style={{ background: teamColor(meta.opponentId), backgroundImage: `repeating-linear-gradient(90deg, ${teamColor(meta.opponentId)} 0 5px, transparent 5px 8px)` }} /><span style={{ color: C.text }}>{teamNames.B}</span></span>
           </span>
         </div>
         <div className="overflow-x-auto" style={{ color: C.muted }}>
-          <ProgressionChart points={scoreProgression(match)} colorA={teamColor(meta.teamAId)} colorB={teamColor(meta.teamBId)} />
+          <ProgressionChart points={scoreProgression(match)} colorA={teamColor(meta.clubId)} colorB={teamColor(meta.opponentId)} />
         </div>
       </section>
 
@@ -237,20 +238,20 @@ function OpponentCard({ teamId, name, score }: { teamId: string; name: string; s
   )
 }
 
-function TeamTable({ match, side, players, name, teamId, onPick }: { match: Match; side: TeamSide; players: Record<string, Player>; name: string; teamId: string; onPick?: (playerId: string, label: string) => void }) {
-  const stats = playerStats(match, side)
-  const times = playingTimes(match, side)
-  const totals = teamTotals(match, side)
+function TeamTable({ match, players, name, teamId, onPick }: { match: Match; players: Record<string, Player>; name: string; teamId: string; onPick?: (playerId: string, label: string) => void }) {
+  const stats = playerStats(match)
+  const times = playingTimes(match)
+  const totals = teamTotals(match)
   // Avant cette branche, l'évènement MISS n'existait pas : sur ces rencontres (et sur
   // toute nouvelle rencontre où « Manqué » n'a jamais été utilisé), le dénominateur
   // fieldGoalsMade + misses vaut toujours fieldGoalsMade, donc chaque marqueur afficherait
-  // à tort 100 %. On n'affiche le pourcentage que si ce côté a suivi au moins un tir manqué.
-  const tracksMisses = match.events.some((e) => e.type === 'MISS' && e.team === side)
+  // à tort 100 %. On n'affiche le pourcentage que si notre club a suivi au moins un tir manqué.
+  const tracksMisses = match.events.some((e) => e.type === 'MISS' && e.team === 'A')
   return (
     <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: bd, ...(onPick ? { boxShadow: `0 0 0 1px ${C.accent}55` } : {}) }}>
       <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: `1px solid ${C.border}` }}>
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: teamColor(teamId) }} />
-        <h3 className="text-sm font-extrabold uppercase tracking-wide">{side === 'A' ? 'Locaux' : 'Visiteurs'} · {name}</h3>
+        <h3 className="text-sm font-extrabold uppercase tracking-wide">Locaux · {name}</h3>
         {onPick && <span className="ml-auto text-[11px] font-bold" style={{ color: C.accent }}>✎ cliquez une ligne</span>}
       </div>
       <div className="overflow-x-auto">
