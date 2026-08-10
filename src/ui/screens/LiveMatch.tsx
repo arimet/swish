@@ -14,6 +14,7 @@ import { SubstitutionDialog } from '../components/SubstitutionDialog'
 import { useMatch } from '../../app/useMatch'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
+import { shotsOf } from '../../domain/shotchart'
 import { listPlayers, listTeams } from '../../persistence/repositories'
 import { periodLength, seedSeconds } from '../../domain/ids'
 import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
@@ -259,6 +260,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         scoreCounts={pick ? scoreCounts(pick.side, pick.id) : undefined}
         statCounts={pick ? statCounts(pick.side, pick.id) : undefined}
         fouls={pick ? statsByPlayer(pick.side).get(pick.id)?.fouls ?? 0 : 0}
+        shots={pick ? shotsOf([match], pick.id) : undefined}
         onClose={() => setPick(null)} onScore={score} onFoul={foul}
         onStat={(kind) => pick && quickStat(pick.side, pick.id, kind)}
         onRemoveScore={(kind) => pick && removeScoreKind(pick.side, pick.id, kind)}

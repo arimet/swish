@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ShotPicker, SHOT_FEEDBACK_MS } from './ShotCourt'
 import { kindAt, ZONE_LABELS, zoneAt } from '../../domain/shotzones'
+import type { Shot } from '../../domain/shotchart'
 import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types'
 
 const SCORES: { k: ScoreKind; label: string; pts: number }[] = [
@@ -21,12 +22,12 @@ const ZERO_T: Record<StatKind, number> = { assist: 0, reb_off: 0, reb_def: 0, bl
 const POINTS_LABEL: Record<'2int' | '2ext' | '3', string> = { '2int': '2 PTS', '2ext': '2 PTS', '3': '3 PTS' }
 
 export function PlayerActionDialog({
-  open, playerName, color = '#ffffff', scoreCounts, statCounts, fouls = 0, misses = 0,
+  open, playerName, color = '#ffffff', scoreCounts, statCounts, fouls = 0, misses = 0, shots,
   onClose, onScore, onMiss, onFoul, onStat, onRemoveScore, onRemoveFoul, onRemoveStat, onRemoveMiss,
 }: {
   open: boolean; playerName: string; color?: string
   scoreCounts?: Record<ScoreKind, number>; statCounts?: Record<StatKind, number>
-  fouls?: number; misses?: number
+  fouls?: number; misses?: number; shots?: Shot[]
   onClose: () => void
   onScore: (kind: ScoreKind, shot?: ShotSpot) => void
   onMiss: (kind: ScoreKind, shot: ShotSpot) => void
@@ -79,7 +80,7 @@ export function PlayerActionDialog({
         <p className="mt-2 text-[11px] font-semibold text-white/45">
           {made ? 'Touchez l’endroit du tir : la zone donne les points.' : 'Touchez l’endroit du tir manqué.'}
         </p>
-        <div className="mt-2"><ShotPicker onPick={pick} confirmation={confirmation} /></div>
+        <div className="mt-2"><ShotPicker onPick={pick} confirmation={confirmation} shots={shots} /></div>
 
         <button onClick={() => { onScore('lf'); close() }}
           className="mt-3 w-full rounded-2xl border border-white/10 bg-[#202024] py-3 text-sm font-bold text-white transition hover:border-[#ff4d6d] active:scale-[0.98]">
