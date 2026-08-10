@@ -19,6 +19,13 @@ describe('App', () => {
     await waitFor(() => expect(screen.getAllByText(/Rencontres/i).length).toBeGreaterThan(0))
     expect(screen.getAllByText(/Swish/i).length).toBeGreaterThan(0)
   })
+
+  it('« Changer de club » ramène à l’écran de bienvenue, pas à une page vide', async () => {
+    render(<App />)
+    const button = await screen.findByRole('button', { name: /changer de club/i })
+    await userEvent.click(button)
+    expect(await screen.findByText(/bienvenue sur swish/i)).toBeInTheDocument()
+  })
 })
 
 describe('premier lancement (appareil vierge)', () => {
