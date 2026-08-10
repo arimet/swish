@@ -45,9 +45,20 @@ describe('clubStanding', () => {
     const ms = [mk('m1', 'a', 'b', 10, 5), mk('m2', 'c', 'a', 20, 2), mk('m3', 'c', 'b', 15, 3)]
     const s = clubStanding(ms, TEAMS, 'a')
     expect(s).not.toBeNull()
+    expect(s!.champ).toBe('Poule A')
     expect(s!.rank).toBe(2) // c cumule deux victoires, a une victoire et une défaite : c premier, a deuxième
     expect(s!.total).toBe(3)
     expect(s!.line.id).toBe('a')
+  })
+
+  it('nomme la compétition dont le rang est issu, quand le club en joue plusieurs', () => {
+    // `a` apparaît d'abord en Coupe (m1), puis en Poule A (m2) : le rang renvoyé
+    // doit être celui de la Coupe, et le dire — sinon le chiffre est orphelin.
+    const ms = [mk('m1', 'a', 'b', 10, 5, 'Coupe'), mk('m2', 'a', 'c', 3, 8, 'Poule A')]
+    const s = clubStanding(ms, TEAMS, 'a')
+    expect(s).not.toBeNull()
+    expect(s!.champ).toBe('Coupe')
+    expect(s!.rank).toBe(1)
   })
 
   it('renvoie null sans rencontre terminée', () => {

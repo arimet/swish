@@ -56,9 +56,16 @@ export function Dashboard() {
           <TeamBadge id={club.id} name={club.name} size="h-11 w-11 text-sm" />
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-extrabold tracking-tight">{club.name}</h1>
-            <p className="text-sm" style={{ color: C.muted }}>
-              {rank ? `${rank.rank}ᵉ sur ${rank.total} · ${rank.line.pts} pts` : 'Aucune rencontre terminée'}
-            </p>
+            {rank ? (
+              <>
+                <p className="text-sm" style={{ color: C.muted }}>{rank.rank}ᵉ sur {rank.total} · {rank.line.pts} pts</p>
+                {/* Le rang seul ne dit pas de quelle compétition il vient — indispensable
+                    dès qu'un club joue plusieurs championnats, cf. clubStanding. */}
+                <p className="truncate text-[11px] font-semibold uppercase tracking-wide" style={{ color: C.faint }}>{rank.champ}</p>
+              </>
+            ) : (
+              <p className="text-sm" style={{ color: C.muted }}>Aucune rencontre terminée</p>
+            )}
           </div>
         </div>
 
