@@ -31,7 +31,10 @@ describe('TeamDetail — fiche signalétique', () => {
   it('renseigne la date de naissance sans changer l’identifiant du joueur', async () => {
     renderTeam()
     await userEvent.click(await screen.findByRole('button', { name: /modifier MARTIN/i }))
-    await userEvent.type(screen.getByLabelText(/date de naissance/i), '2000-06-15')
+    // Libellé du bloc d'édition distinct de celui du formulaire d'ajout (« Date de
+    // naissance ») : les deux coexistent à l'écran, ils doivent rester attrapables
+    // sans ambiguïté chacun par leur propre nom accessible.
+    await userEvent.type(screen.getByLabelText(/née le/i), '2000-06-15')
     await userEvent.click(screen.getByRole('button', { name: /enregistrer/i }))
 
     await waitFor(async () => {
@@ -45,9 +48,25 @@ describe('TeamDetail — fiche signalétique', () => {
   it('renseigne la taille', async () => {
     renderTeam()
     await userEvent.click(await screen.findByRole('button', { name: /modifier MARTIN/i }))
-    await userEvent.type(screen.getByLabelText(/taille/i), '192')
+    await userEvent.type(screen.getByLabelText(/taille du joueur/i), '192')
     await userEvent.click(screen.getByRole('button', { name: /enregistrer/i }))
     await waitFor(async () => expect((await listPlayers('ta'))[0].height).toBe(192))
+  })
+
+  it('efface la date de naissance et la taille déjà renseignées', async () => {
+    await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas', birthDate: '2000-06-15', height: 190 })
+    renderTeam()
+    await userEvent.click(await screen.findByRole('button', { name: /modifier MARTIN/i }))
+    await userEvent.clear(screen.getByLabelText(/née le/i))
+    await userEvent.clear(screen.getByLabelText(/taille du joueur/i))
+    await userEvent.click(screen.getByRole('button', { name: /enregistrer/i }))
+
+    await waitFor(async () => {
+      const [p] = await listPlayers('ta')
+      // Un champ vidé redevient `undefined`, jamais '' ni 0 ni NaN.
+      expect(p.birthDate).toBeUndefined()
+      expect(p.height).toBeUndefined()
+    })
   })
 
   it('ajoute un joueur avec sa date de naissance et sa taille', async () => {
