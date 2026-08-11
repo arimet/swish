@@ -8,7 +8,7 @@ import { CLUB_ID_KEY } from '../app/club'
  * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
  * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v13'
+const SEED_VERSION = 'v14'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
