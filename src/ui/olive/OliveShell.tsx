@@ -13,6 +13,7 @@ const NAV_TOP = [
 ]
 const NAV_REST = [
   { icon: ICON.cal, label: 'Calendrier', to: '/calendrier', end: false },
+  { icon: ICON.trophy, label: 'Championnat', to: '/championnat', end: false },
   { icon: ICON.users, label: 'Équipes', to: '/teams', end: false },
 ]
 const NAV_MOBILE = [
@@ -23,7 +24,7 @@ const NAV_MOBILE = [
 // « Mon équipe » cible `/teams/<clubId>` : sans club réglé, ce serait un lien
 // vers `/teams/undefined` — l'entrée n'est ajoutée qu'une fois le club connu.
 const TITLES: Record<string, string> = {
-  '/': 'Tableau de bord', '/calendrier': 'Calendrier',
+  '/': 'Tableau de bord', '/calendrier': 'Calendrier', '/championnat': 'Championnat',
   '/teams': 'Équipes', '/match/new': 'Nouvelle rencontre',
 }
 

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { OliveShell } from './ui/olive/OliveShell'
 import { Dashboard } from './ui/screens/Dashboard'
 import { Calendrier } from './ui/screens/Calendrier'
+import { Championnat } from './ui/screens/Championnat'
 import { TeamsList } from './ui/screens/TeamsList'
 import { TeamCreate } from './ui/screens/TeamCreate'
 import { TeamDetail } from './ui/screens/TeamDetail'
@@ -71,6 +72,7 @@ export default function App() {
               <Route index element={<Dashboard />} />
               <Route path="/match/:id/live" element={<LiveRoute />} />
               <Route path="/calendrier" element={<Calendrier />} />
+              <Route path="/championnat" element={<Championnat />} />
               <Route path="/teams" element={<Padded><TeamsList /></Padded>} />
               <Route path="/teams/:id" element={<TeamDetail />} />
               <Route path="/players/:id" element={<PlayerDetail />} />
