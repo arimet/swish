@@ -34,7 +34,7 @@ describe('TeamDetail — fiche signalétique', () => {
     // Libellé du bloc d'édition distinct de celui du formulaire d'ajout (« Date de
     // naissance ») : les deux coexistent à l'écran, ils doivent rester attrapables
     // sans ambiguïté chacun par leur propre nom accessible.
-    await userEvent.type(screen.getByLabelText(/née le/i), '2000-06-15')
+    await userEvent.type(screen.getByLabelText(/^naissance$/i), '2000-06-15')
     await userEvent.click(screen.getByRole('button', { name: /enregistrer/i }))
 
     await waitFor(async () => {
@@ -57,7 +57,7 @@ describe('TeamDetail — fiche signalétique', () => {
     await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas', birthDate: '2000-06-15', height: 190 })
     renderTeam()
     await userEvent.click(await screen.findByRole('button', { name: /modifier MARTIN/i }))
-    await userEvent.clear(screen.getByLabelText(/née le/i))
+    await userEvent.clear(screen.getByLabelText(/^naissance$/i))
     await userEvent.clear(screen.getByLabelText(/taille du joueur/i))
     await userEvent.click(screen.getByRole('button', { name: /enregistrer/i }))
 

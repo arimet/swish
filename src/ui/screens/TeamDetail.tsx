@@ -181,7 +181,7 @@ export function TeamDetail() {
                   {editingId === p.id && (
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <div>
-                        <label htmlFor={`edit-birth-${p.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Née le</label>
+                        <label htmlFor={`edit-birth-${p.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Naissance</label>
                         <input id={`edit-birth-${p.id}`} type="date" value={editBirth} onChange={(e) => setEditBirth(e.target.value)} style={{ ...field, width: '100%' }} />
                       </div>
                       <div>
