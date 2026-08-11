@@ -25,6 +25,15 @@ describe('nextFixture', () => {
     expect(f).toMatchObject({ kind: 'match', id: 'm1' })
   })
 
+  it('utilise le jour local, pas le jour UTC', () => {
+    // 0h30 heure locale le 3 février : en UTC, selon le décalage, on peut encore
+    // être le 2. Le jour retenu doit rester le 3 (composantes locales), sinon
+    // l'échéance du 2 — déjà passée pour l'utilisateur — repasserait le filtre.
+    const aube = new Date(2026, 1, 3, 0, 30)
+    expect(nextFixture([match('m1', '2026-02-02')], [], aube)).toBeNull()
+    expect(nextFixture([match('m1', '2026-02-03')], [], aube)).toMatchObject({ kind: 'match', id: 'm1' })
+  })
+
   it('à égalité de date, la rencontre passe avant l’entraînement', () => {
     const f = nextFixture([match('m1', '2026-02-03')], [entrainement('e1', '2026-02-03')], new Date('2026-02-01'))
     expect(f).toMatchObject({ kind: 'match', id: 'm1' })
