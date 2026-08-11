@@ -19,10 +19,18 @@ const ZERO: CareerTotals = {
   assists: 0, offRebounds: 0, defRebounds: 0, blocks: 0, fouls: 0, seconds: 0,
 }
 
+/** Un joueur a paru dans la rencontre s'il a du temps de jeu, ou au moins une action
+ *  enregistrée. La seconde condition est nécessaire : sans elle, un panier saisi pour
+ *  un joueur dont on aurait oublié de pointer l'entrée ferait disparaître sa rencontre. */
+function aJoue(s: ReturnType<typeof playerStats>[number], seconds: number): boolean {
+  return seconds > 0 || s.points > 0 || s.fouls > 0 || s.assists > 0
+    || s.offRebounds > 0 || s.defRebounds > 0 || s.blocks > 0 || s.misses > 0
+}
+
 /**
- * Cumuls d'un joueur sur les rencontres où il figure à l'effectif et qui ont commencé.
- * Une rencontre planifiée mais non jouée ne compte pas : elle ferait baisser toutes
- * les moyennes sans qu'aucune action n'ait eu lieu.
+ * Cumuls d'un joueur sur les rencontres où il a réellement paru et qui ont commencé.
+ * Être convoqué n'est pas avoir joué : un joueur resté sur le banc n'a pas disputé
+ * la rencontre, et la compter fausserait toutes ses moyennes par match.
  */
 export function playerCareer(matches: Match[], playerId: string): CareerTotals {
   const t: CareerTotals = { ...ZERO }
@@ -30,6 +38,8 @@ export function playerCareer(matches: Match[], playerId: string): CareerTotals {
     if (m.status === 'setup' || !m.roster.includes(playerId)) continue
     const s = playerStats(m).find((x) => x.playerId === playerId)
     if (!s) continue
+    const seconds = playingTimes(m).get(playerId) ?? 0
+    if (!aJoue(s, seconds)) continue
     t.games++
     t.points += s.points
     t.fieldGoalsMade += s.fieldGoalsMade; t.misses += s.misses
@@ -37,7 +47,7 @@ export function playerCareer(matches: Match[], playerId: string): CareerTotals {
     t.freeThrows += s.freeThrows
     t.assists += s.assists; t.offRebounds += s.offRebounds; t.defRebounds += s.defRebounds
     t.blocks += s.blocks; t.fouls += s.fouls
-    t.seconds += playingTimes(m).get(playerId) ?? 0
+    t.seconds += seconds
   }
   return t
 }

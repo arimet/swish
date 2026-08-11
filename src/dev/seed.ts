@@ -1,6 +1,6 @@
 import { db } from '../persistence/db'
 import { saveTeam, savePlayer, saveMatch } from '../persistence/repositories'
-import type { GameEvent, Match, Player, ScoreKind } from '../domain/types'
+import type { GameEvent, Match, Period, Player, ScoreKind } from '../domain/types'
 import { kindAt } from '../domain/shotzones'
 import { CLUB_ID_KEY } from '../app/club'
 
@@ -8,7 +8,7 @@ import { CLUB_ID_KEY } from '../app/club'
  * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
  * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v11'
+const SEED_VERSION = 'v12'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
@@ -47,53 +47,86 @@ const SPOTS: { x: number; y: number }[] = [
   { x: 0.03, y: 0.10 }, { x: 0.97, y: 0.11 }, { x: 0.50, y: 0.68 }, // 3 points
 ]
 
-/** Répartit ~`points` en paniers positionnés, pondérés (les premiers joueurs marquent
- *  plus), avec un tir manqué toutes les trois tentatives pour alimenter les hot zones. */
-function baskets(points: number, clock: () => number): GameEvent[] {
-  const weighted = ROSTER.flatMap((id, i) => Array(Math.max(1, 8 - i)).fill(id) as string[])
+/** Poids d'un joueur pour la répartition des paniers : les premiers numéros de
+ *  l'effectif marquent plus, à ancienneté égale sur le terrain. */
+const weightFor = (id: string) => Math.max(1, 8 - ROSTER.indexOf(id))
+
+/** Répartit ~`points` en paniers positionnés parmi les joueurs actuellement sur le
+ *  terrain (`onCourtIds`) — jamais un joueur qui n'y est pas —, pondérés (les
+ *  premiers marquent plus), avec un tir manqué toutes les trois tentatives pour
+ *  alimenter les hot zones. */
+function baskets(points: number, clock: () => number, period: Period, onCourtIds: string[]): GameEvent[] {
+  const weighted = onCourtIds.flatMap((id) => Array(weightFor(id)).fill(id) as string[])
   const out: GameEvent[] = []
   const n2 = Math.floor(points / 2)
   for (let k = 0; k < n2; k++) {
     const playerId = weighted[k % weighted.length]
     const shot = SPOTS[k % SPOTS.length]
-    out.push(ev({ type: 'SCORE', team: 'A', playerId, kind: kindAt(shot.x, shot.y), shot, period: 1, gameClock: clock() }))
+    out.push(ev({ type: 'SCORE', team: 'A', playerId, kind: kindAt(shot.x, shot.y), shot, period, gameClock: clock() }))
     if (k % 3 === 2) {
       const missed = SPOTS[(k + 4) % SPOTS.length]
-      out.push(ev({ type: 'MISS', team: 'A', playerId, kind: kindAt(missed.x, missed.y), shot: missed, period: 1, gameClock: clock() }))
+      out.push(ev({ type: 'MISS', team: 'A', playerId, kind: kindAt(missed.x, missed.y), shot: missed, period, gameClock: clock() }))
     }
   }
-  if (points % 2) out.push(ev({ type: 'SCORE', team: 'A', playerId: weighted[0], kind: 'lf' as ScoreKind, period: 1, gameClock: clock() }))
+  if (points % 2) out.push(ev({ type: 'SCORE', team: 'A', playerId: weighted[0], kind: 'lf' as ScoreKind, period, gameClock: clock() }))
   return out
 }
 
-/** Statistiques secondaires, réparties sur tout l'effectif : une vingtaine par
- *  rencontre pour que les moyennes par match soient parlantes. */
-function extras(clock: () => number): GameEvent[] {
+/** Statistiques secondaires : une par joueur actuellement sur le terrain, à chaque
+ *  période — une vingtaine sur un match complet — pour que les moyennes par match
+ *  soient parlantes, sans jamais créditer un joueur resté sur le banc. */
+function extras(clock: () => number, period: Period, onCourtIds: string[]): GameEvent[] {
   const STATS = ['assist', 'reb_off', 'reb_def', 'block'] as const
-  return Array.from({ length: 20 }, (_, k) =>
-    ev({ type: 'STAT', team: 'A', playerId: ROSTER[k % ROSTER.length], stat: STATS[k % STATS.length], period: 1, gameClock: clock() }))
+  return onCourtIds.map((playerId, k) => ev({ type: 'STAT', team: 'A', playerId, stat: STATS[k % STATS.length], period, gameClock: clock() }))
 }
 
 /** Score de l'adversaire : uniquement des paniers d'équipe, sans joueur identifié
  *  ni position de tir — l'adversaire n'a pas d'effectif à détailler. */
-function opponentBaskets(points: number, clock: () => number): GameEvent[] {
+function opponentBaskets(points: number, clock: () => number, period: Period): GameEvent[] {
   const out: GameEvent[] = []
   const n2 = Math.floor(points / 2)
-  for (let k = 0; k < n2; k++) out.push(ev({ type: 'SCORE', team: 'B', kind: '2int', period: 1, gameClock: clock() }))
-  if (points % 2) out.push(ev({ type: 'SCORE', team: 'B', kind: 'lf', period: 1, gameClock: clock() }))
+  for (let k = 0; k < n2; k++) out.push(ev({ type: 'SCORE', team: 'B', kind: '2int', period, gameClock: clock() }))
+  if (points % 2) out.push(ev({ type: 'SCORE', team: 'B', kind: 'lf', period, gameClock: clock() }))
   return out
 }
 
-/** Rotations : trois titulaires cèdent leur place à trois remplaçants, à des instants
- *  échelonnés du chrono — sans elles, seuls les cinq titulaires auraient du temps de jeu. */
-function rotations(stopClock: number): GameEvent[] {
-  const window = 600 - stopClock
-  const at = [0.25, 0.5, 0.75].map((f) => Math.round(600 - window * f))
-  const swaps: [number, number][] = [[0, 5], [1, 6], [2, 7]] // [titulaire sortant, remplaçant entrant]
-  return swaps.map(([out, into], i) => ev({
-    type: 'SUBSTITUTION', team: 'A', playerOutId: playerId(out), playerInId: playerId(into),
-    period: 1, gameClock: at[i],
-  }))
+const STARTERS = ROSTER.slice(0, 5)
+// [titulaire sortant, remplaçant entrant], un par période (aucun en période 4).
+const SUB_SWAPS: [number, number][] = [[0, 5], [1, 6], [2, 7]]
+
+/** Répartit un total en `parts` entiers aussi égaux que possible. */
+function splitEvenly(total: number, parts: number): number[] {
+  const base = Math.floor(total / parts)
+  const rest = total % parts
+  return Array.from({ length: parts }, (_, i) => base + (i < rest ? 1 : 0))
+}
+
+/** Une période de jeu : paniers des deux équipes et stats secondaires, avec un
+ *  remplaçant qui entre à la moitié si la période en a un — seuls les joueurs
+ *  réellement sur le terrain à cet instant peuvent marquer ou être crédités.
+ *  Le chrono descend jusqu'à `stopClock` (0 pour une période jouée en entier).
+ *  Le remplacement est posé au milieu exact du temps de la période (et non au
+ *  gré du nombre de paniers déjà écoulés) : c'est cette valeur de chrono, pas le
+ *  nombre de tirs, que `playingTimes` utilise pour calculer le temps de jeu. */
+function periodEvents(p: Period, pointsA: number, pointsB: number, onCourtBefore: string[], swap: [number, number] | undefined, stopClock: number): { events: GameEvent[]; onCourtAfter: string[] } {
+  let c = 600
+  const clock = () => (c = Math.max(stopClock, c - 5))
+  const half = Math.round(pointsA / 2)
+  const events = [...baskets(half, clock, p, onCourtBefore)]
+  let onCourtAfter = onCourtBefore
+  if (swap) {
+    const [out, into] = swap
+    c = Math.round((600 + stopClock) / 2)
+    events.push(ev({ type: 'SUBSTITUTION', team: 'A', playerOutId: playerId(out), playerInId: playerId(into), period: p, gameClock: c }))
+    onCourtAfter = onCourtBefore.map((id) => (id === playerId(out) ? playerId(into) : id))
+  }
+  events.push(
+    ...baskets(pointsA - half, clock, p, onCourtAfter),
+    ...opponentBaskets(pointsB, clock, p),
+    ...extras(clock, p, onCourtAfter),
+    ev({ type: 'CLOCK_STOP', period: p, gameClock: stopClock }),
+  )
+  return { events, onCourtAfter }
 }
 
 interface Fixture { opponent: number; date: string; time: string; status: 'finished' | 'live' | 'setup' }
@@ -108,30 +141,41 @@ const FIXTURES: Fixture[] = [
 
 function buildMatch(f: Fixture, idx: number): Match {
   seq = idx * 1000
-  const starters = ROSTER.slice(0, 5)
-  const sa = 56 + ((idx * 13 + 7) % 26)
-  const sb = 54 + ((idx * 11 + 3) % 28)
-  const stopClock = f.status === 'live' ? 372 : 90
+  const sa = 56 + ((idx * 13 + 7) % 26) // score final de l'Avenir, rencontre complète
+  const sb = 54 + ((idx * 11 + 3) % 28) // score final adverse, rencontre complète
+  const qA = splitEvenly(sa, 4)
+  const qB = splitEvenly(sb, 4)
 
   let events: GameEvent[] = []
   if (f.status !== 'setup') {
-    let c = 594
-    const clock = () => (c = Math.max(60, c - 5))
-    const liveA = f.status === 'live' ? Math.round(sa * 0.55) : sa
-    const liveB = f.status === 'live' ? Math.round(sb * 0.55) : sb
-    const halfA = Math.round(liveA / 2)
-    events = [
+    // Les quatre périodes pour un match terminé. Pour un match en direct, on
+    // s'arrête au milieu de la deuxième plutôt qu'à la fin : la rencontre doit
+    // rester en cours, pas déjà jouée.
+    const lastPeriod = f.status === 'live' ? 2 : 4
+    const lastClock = f.status === 'live' ? 300 : 0
+
+    events.push(
       ev({ type: 'PERIOD_START', period: 1, gameClock: 600 }),
-      ev({ type: 'STARTING_FIVE', team: 'A', playerIds: starters, period: 1, gameClock: 600 }),
+      ev({ type: 'STARTING_FIVE', team: 'A', playerIds: STARTERS, period: 1, gameClock: 600 }),
       ev({ type: 'CLOCK_START', period: 1, gameClock: 600 }),
-      ...baskets(halfA, clock),
-      ...rotations(stopClock),
-      ...baskets(liveA - halfA, clock),
-      ...opponentBaskets(liveB, clock),
-      ...extras(clock),
-      ev({ type: 'CLOCK_STOP', period: 1, gameClock: stopClock }),
-    ]
-    if (f.status === 'finished') events.push(ev({ type: 'PERIOD_END', period: 1, gameClock: stopClock }))
+    )
+    let onCourt: string[] = STARTERS
+    for (let p = 1; p <= lastPeriod; p++) {
+      const isLast = p === lastPeriod
+      const stopClock = isLast ? lastClock : 0
+      const { events: periodEvs, onCourtAfter } = periodEvents(p, qA[p - 1], qB[p - 1], onCourt, SUB_SWAPS[p - 1], stopClock)
+      events.push(...periodEvs)
+      onCourt = onCourtAfter
+      if (!isLast) {
+        events.push(
+          ev({ type: 'PERIOD_END', period: p, gameClock: 0 }),
+          ev({ type: 'PERIOD_START', period: p + 1, gameClock: 600 }),
+          ev({ type: 'CLOCK_START', period: p + 1, gameClock: 600 }),
+        )
+      } else if (f.status === 'finished') {
+        events.push(ev({ type: 'PERIOD_END', period: p, gameClock: 0 }))
+      }
+    }
   }
 
   return {

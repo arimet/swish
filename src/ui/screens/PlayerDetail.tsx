@@ -105,7 +105,7 @@ export function PlayerDetail() {
           <Panel title="Statistiques">
             <div className="mb-1 flex items-center justify-between text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>
               <span>Par match</span>
-              <span className="flex gap-4"><span className="w-8 text-right">Cumul</span><span className="w-10 text-right">Moy.</span></span>
+              <span className="flex gap-4"><span className="w-8 text-right">Cumul</span><span className="w-14 text-right">Moy.</span></span>
             </div>
             <StatRow label="Passes décisives" total={career.assists} games={played} />
             <StatRow label="Rebonds offensifs" total={career.offRebounds} games={played} />
@@ -113,10 +113,10 @@ export function PlayerDetail() {
             <StatRow label="Contres" total={career.blocks} games={played} />
             <StatRow label="Fautes" total={career.fouls} games={played} />
             <p className="mb-1 mt-4 text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Répartition des paniers</p>
-            <StatRow label="2 pts intérieurs" total={career.twoInside} games={played} avgInParens />
-            <StatRow label="2 pts extérieurs" total={career.twoOutside} games={played} avgInParens />
-            <StatRow label="3 pts" total={career.threes} games={played} avgInParens />
-            <StatRow label="Lancers francs" total={career.freeThrows} games={played} avgInParens />
+            <StatRow label="2 pts intérieurs" total={career.twoInside} games={played} />
+            <StatRow label="2 pts extérieurs" total={career.twoOutside} games={played} />
+            <StatRow label="3 pts" total={career.threes} games={played} />
+            <StatRow label="Lancers francs" total={career.freeThrows} games={played} />
           </Panel>
         </div>
 
@@ -180,20 +180,13 @@ function StatCard({ label, value, hint, accent }: { label: string; value: string
     </div>
   )
 }
-/** `avgInParens` regroupe cumul et moyenne dans un même segment de texte — utile pour la
- *  répartition des paniers, où plusieurs catégories peuvent partager la même moyenne (ex.
- *  un seul panier marqué sur une seule rencontre = 1,0 pour deux catégories différentes) :
- *  la parenthèse évite qu'une moyenne isolée ne soit prise pour une autre. */
-function StatRow({ label, total, games, avgInParens }: { label: string; total: number; games: number; avgInParens?: boolean }) {
-  const moyenne = parMatch(total, games)
+function StatRow({ label, total, games }: { label: string; total: number; games: number }) {
   return (
     <div className="flex items-center justify-between border-b py-1.5 text-sm last:border-b-0" style={{ borderColor: C.border }}>
       <span style={{ color: C.muted }}>{label}</span>
       <span className="flex gap-4">
         <span className="nums w-8 text-right font-bold">{total}</span>
-        <span className="nums w-14 text-right text-xs font-semibold" style={{ color: C.faint }}>
-          {avgInParens ? `(${moyenne})` : moyenne}
-        </span>
+        <span className="nums w-14 text-right text-xs font-semibold" style={{ color: C.faint }}>{parMatch(total, games)}</span>
       </span>
     </div>
   )
