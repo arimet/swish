@@ -60,3 +60,20 @@ export interface Match {
   events: GameEvent[]
   status: 'setup' | 'live' | 'finished'
 }
+
+/**
+ * Résultat d'une rencontre entre deux autres équipes, relevé à la main sur le site
+ * de la fédération. Ce n'est **pas** une `Match` : on n'en connaît ni l'effectif, ni
+ * le déroulé, rien d'autre que le score final. Le forcer dans le moule d'une rencontre
+ * obligerait à fabriquer des évènements de panier qui n'ont jamais été observés.
+ */
+export interface ReportedResult {
+  id: string
+  /** Championnat auquel la rencontre appartient, pour grouper le classement. */
+  championshipLabel: string
+  date?: string
+  homeId: string
+  awayId: string
+  homeScore: number
+  awayScore: number
+}
