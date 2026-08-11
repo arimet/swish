@@ -1,6 +1,6 @@
 import { db } from '../persistence/db'
-import { saveTeam, savePlayer, saveMatch } from '../persistence/repositories'
-import type { GameEvent, Match, Period, Player, ScoreKind } from '../domain/types'
+import { saveTeam, savePlayer, saveMatch, saveResult } from '../persistence/repositories'
+import type { GameEvent, Match, Period, Player, ReportedResult, ScoreKind } from '../domain/types'
 import { kindAt } from '../domain/shotzones'
 import { CLUB_ID_KEY } from '../app/club'
 
@@ -8,7 +8,7 @@ import { CLUB_ID_KEY } from '../app/club'
  * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
  * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v12'
+const SEED_VERSION = 'v13'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
@@ -191,15 +191,40 @@ function buildMatch(f: Fixture, idx: number): Match {
   }
 }
 
+// Confrontations entre nos cinq adversaires (jamais notre club : nos rencontres
+// font déjà foi, un doublon serait ignoré par le classement). Un tour complet entre
+// les six équipes de la poule : à chaque journée où nous jouons l'un des cinq, les
+// quatre autres se répartissent en deux matchs — si bien que chaque adversaire
+// affronte, sur la saison, les quatre autres en plus de nous. Les dates reprennent
+// celles de nos FIXTURES : même poule, mêmes journées.
+interface OutsideGame { home: number; away: number; date: string }
+const OUTSIDE_GAMES: OutsideGame[] = [
+  { home: 2, away: 3, date: '2026-01-10' }, { home: 4, away: 5, date: '2026-01-10' },
+  { home: 1, away: 4, date: '2026-01-17' }, { home: 3, away: 5, date: '2026-01-17' },
+  { home: 1, away: 5, date: '2026-01-24' }, { home: 2, away: 4, date: '2026-01-24' },
+  { home: 1, away: 3, date: '2026-01-31' }, { home: 2, away: 5, date: '2026-01-31' },
+  { home: 1, away: 2, date: '2026-02-07' }, { home: 3, away: 4, date: '2026-02-07' },
+]
+
+/** Score plausible de basket senior (60 à 90 points), variant avec l'index. */
+function buildResult(g: OutsideGame, idx: number): ReportedResult {
+  return {
+    id: `seed-r${idx}`, championshipLabel: CHAMP, date: g.date,
+    homeId: teamId(g.home), awayId: teamId(g.away),
+    homeScore: 60 + ((idx * 7 + 3) % 31), awayScore: 60 + ((idx * 5 + 11) % 31),
+  }
+}
+
 export async function seedDevData(): Promise<void> {
   const already = (await db.teams.count()) > 0
   if (already && localStorage.getItem('seed-version') === SEED_VERSION) return
   // Re-seed (schéma/données de démo mis à jour)
-  await db.matches.clear(); await db.players.clear(); await db.teams.clear()
+  await db.matches.clear(); await db.players.clear(); await db.teams.clear(); await db.results.clear()
 
   for (let t = 0; t < TEAMS.length; t++) await saveTeam({ id: teamId(t), name: TEAMS[t][0], coach: TEAMS[t][1] })
   for (const p of PLAYERS) await savePlayer(p)
   for (let idx = 0; idx < FIXTURES.length; idx++) await saveMatch(buildMatch(FIXTURES[idx], idx))
+  for (let idx = 0; idx < OUTSIDE_GAMES.length; idx++) await saveResult(buildResult(OUTSIDE_GAMES[idx], idx))
 
   localStorage.setItem('seed-version', SEED_VERSION)
   // L'Avenir de Vignot est le club de démonstration : sans cela, la démo s'ouvre
