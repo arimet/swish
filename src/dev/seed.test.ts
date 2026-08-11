@@ -42,7 +42,12 @@ describe('données de démonstration', () => {
     const adversaires = new Set(matches.map((m) => m.meta.opponentId))
     for (const id of adversaires) {
       const rencontres = results.filter((r) => r.homeId === id || r.awayId === id).length
-      expect(rencontres).toBeGreaterThan(0)
+      expect(rencontres).toBeGreaterThanOrEqual(2)
     }
+  })
+
+  it('ne produit aucune égalité (un match de basket ne se termine jamais à égalité)', async () => {
+    const results = await listResults()
+    expect(results.every((r) => r.homeScore !== r.awayScore)).toBe(true)
   })
 })

@@ -208,10 +208,14 @@ const OUTSIDE_GAMES: OutsideGame[] = [
 
 /** Score plausible de basket senior (60 à 90 points), variant avec l'index. */
 function buildResult(g: OutsideGame, idx: number): ReportedResult {
+  const homeScore = 60 + ((idx * 7 + 3) % 31)
+  const awayScore0 = 60 + ((idx * 5 + 11) % 31)
+  // Au basket il n'y a jamais match nul (prolongation) : si les deux formules
+  // coïncident par hasard, on écarte l'égalité plutôt que de la laisser passer.
+  const awayScore = awayScore0 === homeScore ? awayScore0 - 2 : awayScore0
   return {
     id: `seed-r${idx}`, championshipLabel: CHAMP, date: g.date,
-    homeId: teamId(g.home), awayId: teamId(g.away),
-    homeScore: 60 + ((idx * 7 + 3) % 31), awayScore: 60 + ((idx * 5 + 11) % 31),
+    homeId: teamId(g.home), awayId: teamId(g.away), homeScore, awayScore,
   }
 }
 
