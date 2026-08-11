@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { newId } from '../../domain/ids'
-import { standings } from '../../domain/standings'
+import { standings, clefConfrontation } from '../../domain/standings'
 import { listMatches, listResults, saveResult, deleteResult } from '../../persistence/repositories'
 import type { Match, ReportedResult } from '../../domain/types'
 import { C, bd, champLabel, TeamBadge, PageTitle } from '../olive/kit'
@@ -8,11 +8,6 @@ import { useAdmin } from '../../app/admin'
 import { useClub } from '../../app/club'
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
-
-/** Clé d'une confrontation, insensible au sens domicile/extérieur — même principe que
- *  `domain/standings.ts` : elle sert ici à repérer, avant l'enregistrement, un résultat
- *  qui ferait doublon soit avec un autre résultat saisi, soit avec une de nos rencontres. */
-const affiche = (champ: string, x: string, y: string, date?: string) => `${champ}|${[x, y].sort().join('~')}|${date ?? ''}`
 
 export function Championnat() {
   const { clubId, teams } = useClub()
@@ -49,23 +44,33 @@ export function Championnat() {
     if (!awayId && teams[1]) setAwayId(teams[1].id)
   }, [teams, homeId, awayId])
 
+  // Un message d'erreur qui survit à la correction du formulaire accuserait à tort une
+  // saisie qui ne pose plus problème : il s'efface dès que l'un des champs change.
+  const changeChamp = (v: string) => { setErreur(''); setChamp(v) }
+  const changeHomeId = (v: string) => { setErreur(''); setHomeId(v) }
+  const changeAwayId = (v: string) => { setErreur(''); setAwayId(v) }
+  const changeHomeScore = (v: string) => { setErreur(''); setHomeScore(v) }
+  const changeAwayScore = (v: string) => { setErreur(''); setAwayScore(v) }
+  const changeDate = (v: string) => { setErreur(''); setDate(v) }
+
   // Signal informatif, calculé en direct pendant la saisie : la confrontation en cours
   // de saisie correspond déjà à une de nos rencontres terminées, le classement l'ignorera.
   const dejaNotreRencontre = useMemo(() => {
     if (!homeId || !awayId || homeId === awayId) return false
-    const clé = affiche(champ.trim() || 'Match amical', homeId, awayId, date || undefined)
-    return matches.some((m) => m.status === 'finished' && affiche(champLabel(m.meta), m.meta.clubId, m.meta.opponentId, m.meta.date) === clé)
+    const clé = clefConfrontation(champ.trim() || 'Match amical', homeId, awayId, date || undefined)
+    return matches.some((m) => m.status === 'finished' && clefConfrontation(champLabel(m.meta), m.meta.clubId, m.meta.opponentId, m.meta.date) === clé)
   }, [matches, champ, homeId, awayId, date])
 
-  const peutAjouter = !!homeId && !!awayId && homeId !== awayId && homeScore !== '' && awayScore !== ''
+  const scoresValides = homeScore !== '' && awayScore !== '' && Number(homeScore) >= 0 && Number(awayScore) >= 0
+  const peutAjouter = !!homeId && !!awayId && homeId !== awayId && scoresValides
 
   const ajouter = () => {
     if (!peutAjouter) return
     const champLbl = champ.trim() || 'Match amical'
-    const clé = affiche(champLbl, homeId, awayId, date || undefined)
+    const clé = clefConfrontation(champLbl, homeId, awayId, date || undefined)
     // Deux saisies de la même confrontation — même dans l'ordre inverse — compteraient
     // deux fois au classement : rien côté domaine ne s'en protège, c'est ici qu'il faut l'empêcher.
-    if (results.some((r) => affiche(r.championshipLabel, r.homeId, r.awayId, r.date) === clé)) {
+    if (results.some((r) => clefConfrontation(r.championshipLabel, r.homeId, r.awayId, r.date) === clé)) {
       setErreur('Ce résultat est déjà saisi pour cette confrontation.')
       return
     }
@@ -136,12 +141,12 @@ export function Championnat() {
       <section className="mt-8 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <p className="mb-4 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Saisir un résultat extérieur</p>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Picker id="champ-home" label="Équipe reçue" value={homeId} onChange={setHomeId} teams={teams} />
-          <Picker id="champ-away" label="Équipe visiteuse" value={awayId} onChange={setAwayId} teams={teams} />
-          <Field id="champ-home-score" label="Score équipe reçue" type="number" value={homeScore} onChange={setHomeScore} />
-          <Field id="champ-away-score" label="Score équipe visiteuse" type="number" value={awayScore} onChange={setAwayScore} />
-          <Field id="champ-date" label="Date de la rencontre" type="date" value={date} onChange={setDate} />
-          <Field id="champ-label" label="Championnat" value={champ} onChange={setChamp} />
+          <Picker id="champ-home" label="Équipe reçue" value={homeId} onChange={changeHomeId} teams={teams} />
+          <Picker id="champ-away" label="Équipe visiteuse" value={awayId} onChange={changeAwayId} teams={teams} />
+          <Field id="champ-home-score" label="Score équipe reçue" type="number" min={0} value={homeScore} onChange={changeHomeScore} />
+          <Field id="champ-away-score" label="Score équipe visiteuse" type="number" min={0} value={awayScore} onChange={changeAwayScore} />
+          <Field id="champ-date" label="Date de la rencontre" type="date" value={date} onChange={changeDate} />
+          <Field id="champ-label" label="Championnat" value={champ} onChange={changeChamp} />
         </div>
 
         {dejaNotreRencontre && (
@@ -150,7 +155,7 @@ export function Championnat() {
           </p>
         )}
         {erreur && (
-          <p className="mt-3 rounded-xl px-3 py-2 text-sm" style={{ background: 'rgba(255,77,109,0.14)', color: C.pink }}>{erreur}</p>
+          <p className="mt-3 rounded-xl px-3 py-2 text-sm" style={{ background: C.accentBg, color: C.pink }}>{erreur}</p>
         )}
 
         <button onClick={ajouter} disabled={!peutAjouter} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>
@@ -170,12 +175,12 @@ export function Championnat() {
                 <TeamBadge id={r.homeId} name={teamsById[r.homeId]?.name ?? '—'} size="h-6 w-6 text-[8px]" />
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">{teamsById[r.homeId]?.name ?? '—'}</span>
                 <label htmlFor={`score-home-${r.id}`} className="sr-only">Score {teamsById[r.homeId]?.name ?? 'équipe reçue'}</label>
-                <input id={`score-home-${r.id}`} type="number" defaultValue={r.homeScore} style={{ ...field, width: 64, height: 36 }} className="text-center text-sm"
-                  onBlur={(e) => { const n = Number(e.target.value); if (!Number.isNaN(n) && n !== r.homeScore) majScore(r, { homeScore: n }) }} />
+                <input id={`score-home-${r.id}`} type="number" min={0} defaultValue={r.homeScore} style={{ ...field, width: 64, height: 36 }} className="text-center text-sm"
+                  onBlur={(e) => { const n = Number(e.target.value); if (!Number.isNaN(n) && n >= 0 && n !== r.homeScore) majScore(r, { homeScore: n }) }} />
                 <span className="text-xs font-bold" style={{ color: C.faint }}>–</span>
                 <label htmlFor={`score-away-${r.id}`} className="sr-only">Score {teamsById[r.awayId]?.name ?? 'équipe visiteuse'}</label>
-                <input id={`score-away-${r.id}`} type="number" defaultValue={r.awayScore} style={{ ...field, width: 64, height: 36 }} className="text-center text-sm"
-                  onBlur={(e) => { const n = Number(e.target.value); if (!Number.isNaN(n) && n !== r.awayScore) majScore(r, { awayScore: n }) }} />
+                <input id={`score-away-${r.id}`} type="number" min={0} defaultValue={r.awayScore} style={{ ...field, width: 64, height: 36 }} className="text-center text-sm"
+                  onBlur={(e) => { const n = Number(e.target.value); if (!Number.isNaN(n) && n >= 0 && n !== r.awayScore) majScore(r, { awayScore: n }) }} />
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">{teamsById[r.awayId]?.name ?? '—'}</span>
                 <TeamBadge id={r.awayId} name={teamsById[r.awayId]?.name ?? '—'} size="h-6 w-6 text-[8px]" />
                 <span className="text-[11px] font-semibold" style={{ color: C.faint }}>{r.championshipLabel}</span>
@@ -193,11 +198,11 @@ export function Championnat() {
   )
 }
 
-function Field({ id, label, value, onChange, type = 'text' }: { id: string; label: string; value: string; onChange: (v: string) => void; type?: string }) {
+function Field({ id, label, value, onChange, type = 'text', min }: { id: string; label: string; value: string; onChange: (v: string) => void; type?: string; min?: number }) {
   return (
     <div>
       <label htmlFor={id} className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</label>
-      <input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} className="mt-1.5 w-full text-sm [color-scheme:dark]" style={field} />
+      <input id={id} type={type} min={min} value={value} onChange={(e) => onChange(e.target.value)} className="mt-1.5 w-full text-sm [color-scheme:dark]" style={field} />
     </div>
   )
 }

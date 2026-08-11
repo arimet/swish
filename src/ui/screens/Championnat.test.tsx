@@ -77,6 +77,12 @@ describe('Championnat', () => {
     expect(await listResults()).toHaveLength(1)
   })
 
+  it('interdit l’ajout tant qu’un score saisi est négatif', async () => {
+    renderChamp()
+    await remplirFormulaire('tb', 'tc', '-5', '60')
+    expect(screen.getByRole('button', { name: /ajouter le résultat/i })).toBeDisabled()
+  })
+
   it('signale, avant l’enregistrement, qu’une confrontation saisie correspond à une de nos rencontres', async () => {
     await saveMatch({
       id: 'm1',

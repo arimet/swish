@@ -9,8 +9,10 @@ export interface StandingLine {
 }
 
 /** Clé d'une confrontation, insensible au sens domicile/extérieur : deux saisies du
- *  même match dans l'ordre inverse doivent se reconnaître. */
-const affiche = (champ: string, x: string, y: string, date?: string) =>
+ *  même match dans l'ordre inverse doivent se reconnaître. Exportée pour que l'écran
+ *  de saisie (Championnat.tsx) détecte les doublons avec la même définition — une
+ *  clé dupliquée ailleurs divergerait un jour en silence. */
+export const clefConfrontation = (champ: string, x: string, y: string, date?: string) =>
   `${champ}|${[x, y].sort().join('~')}|${date ?? ''}`
 
 /**
@@ -39,13 +41,13 @@ export function standings(
     if (m.status !== 'finished') continue
     const champ = champLabel(m.meta)
     const { score } = liveState(m)
-    nôtres.add(affiche(champ, m.meta.clubId, m.meta.opponentId, m.meta.date))
+    nôtres.add(clefConfrontation(champ, m.meta.clubId, m.meta.opponentId, m.meta.date))
     compte(champ, m.meta.clubId, m.meta.opponentId, score.a, score.b)
   }
   for (const r of results) {
     // Une de nos rencontres fait foi : elle est saisie action par action, le résultat
     // recopié ne l'est pas. Sans ce garde, une saisie par distraction compterait deux fois.
-    if (nôtres.has(affiche(r.championshipLabel, r.homeId, r.awayId, r.date))) continue
+    if (nôtres.has(clefConfrontation(r.championshipLabel, r.homeId, r.awayId, r.date))) continue
     compte(r.championshipLabel, r.homeId, r.awayId, r.homeScore, r.awayScore)
   }
 
