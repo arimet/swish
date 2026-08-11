@@ -181,11 +181,11 @@ export function TeamDetail() {
                   {editingId === p.id && (
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <div>
-                        <label htmlFor={`edit-birth-${p.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Date de naissance</label>
+                        <label htmlFor={`edit-birth-${p.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Née le</label>
                         <input id={`edit-birth-${p.id}`} type="date" value={editBirth} onChange={(e) => setEditBirth(e.target.value)} style={{ ...field, width: '100%' }} />
                       </div>
                       <div>
-                        <label htmlFor={`edit-height-${p.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Taille (cm)</label>
+                        <label htmlFor={`edit-height-${p.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Taille du joueur</label>
                         <input id={`edit-height-${p.id}`} type="number" inputMode="numeric" value={editHeight} onChange={(e) => setEditHeight(e.target.value)} style={{ ...field, width: '100%' }} />
                       </div>
                       <button onClick={() => saveEdit(p)} className="col-span-2 rounded-xl py-2 text-sm font-bold text-white" style={{ background: C.accent }}>Enregistrer</button>
@@ -201,20 +201,16 @@ export function TeamDetail() {
                 <input placeholder="Nom" value={ln} onChange={(e) => setLn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={field} />
               </div>
               <input placeholder="Prénom" value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={{ ...field, width: '100%' }} />
-              {/* Masqués pendant l'édition d'un joueur existant, sinon deux champs
-                  « Date de naissance » / « Taille » coexistent à l'écran, plus atteignables sans ambiguïté par leur libellé. */}
-              {!editingId && (
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label htmlFor="add-birth" className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Date de naissance</label>
-                    <input id="add-birth" type="date" value={birth} onChange={(e) => setBirth(e.target.value)} style={{ ...field, width: '100%' }} />
-                  </div>
-                  <div>
-                    <label htmlFor="add-height" className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Taille (cm)</label>
-                    <input id="add-height" type="number" inputMode="numeric" value={height} onChange={(e) => setHeight(e.target.value)} style={{ ...field, width: '100%' }} />
-                  </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label htmlFor="add-birth" className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Date de naissance</label>
+                  <input id="add-birth" type="date" value={birth} onChange={(e) => setBirth(e.target.value)} style={{ ...field, width: '100%' }} />
                 </div>
-              )}
+                <div>
+                  <label htmlFor="add-height" className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Taille (cm)</label>
+                  <input id="add-height" type="number" inputMode="numeric" value={height} onChange={(e) => setHeight(e.target.value)} style={{ ...field, width: '100%' }} />
+                </div>
+              </div>
               <button onClick={addPlayer} className="w-full rounded-xl py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Ajouter le joueur</button>
             </div>
           </Panel>
