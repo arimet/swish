@@ -39,6 +39,15 @@ describe('nextFixture', () => {
     expect(f).toMatchObject({ kind: 'match', id: 'm1' })
   })
 
+  it('entre deux rencontres à la même date, retient la première par ordre d’insertion', () => {
+    // Un comparateur qui ne regarderait que a.kind (jamais b.kind) serait incohérent
+    // entre deux échéances de même nature : cmp(a,b) et cmp(b,a) renverraient tous
+    // deux -1. Le tri étant stable, l'ordre d'insertion doit trancher, de façon
+    // déterministe et reproductible.
+    const f = nextFixture([match('m1', '2026-02-03'), match('m2', '2026-02-03')], [], new Date('2026-02-01'))
+    expect(f).toMatchObject({ kind: 'match', id: 'm1' })
+  })
+
   it('ignore une rencontre sans date', () => {
     const sansDate = { ...match('m1', '2026-02-03'), meta: { championshipLabel: 'Poule A', clubId: 'ta', opponentId: 'tb' } }
     expect(nextFixture([sansDate], [], new Date('2026-02-01'))).toBeNull()
