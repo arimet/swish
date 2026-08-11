@@ -19,10 +19,14 @@ export function Championnat() {
   const teamsById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams])
   // Le championnat de nos rencontres sert de valeur par défaut au formulaire : la
   // plupart des résultats saisis à la main concernent la même poule que la nôtre.
+  // Sans rencontre enregistrée, on se replie sur le championnat du premier résultat
+  // déjà saisi plutôt que de partir vide — sinon la saisie ouvrirait sous « Match
+  // amical » une seconde table de classement à côté de celle déjà là.
   const notreChamp = useMemo(() => {
     const m = matches.find((mm) => mm.meta.clubId === clubId)
-    return m ? champLabel(m.meta) : ''
-  }, [matches, clubId])
+    if (m) return champLabel(m.meta)
+    return results[0]?.championshipLabel ?? ''
+  }, [matches, clubId, results])
 
   const rafraichir = () => Promise.all([listMatches(), listResults()]).then(([m, r]) => { setMatches(m); setResults(r) })
   useEffect(() => { rafraichir() }, [])
@@ -30,6 +34,7 @@ export function Championnat() {
   const groups = useMemo(() => standings(matches, results, teamsById), [matches, results, teamsById])
 
   const [champ, setChamp] = useState('')
+  const [champTouché, setChampTouché] = useState(false)
   const [homeId, setHomeId] = useState('')
   const [awayId, setAwayId] = useState('')
   const [homeScore, setHomeScore] = useState('')
@@ -37,8 +42,11 @@ export function Championnat() {
   const [date, setDate] = useState('')
   // Le formulaire suit le championnat de nos rencontres tant que l'utilisateur ne l'a
   // pas modifié à la main — un `useState` figé au montage manquerait les matchs chargés
-  // après le premier rendu (ils arrivent de façon asynchrone).
-  useEffect(() => { if (!champ) setChamp(notreChamp) }, [notreChamp, champ])
+  // après le premier rendu (ils arrivent de façon asynchrone). Un drapeau explicite est
+  // nécessaire ici : depuis que la valeur par défaut peut elle-même être non vide (repli
+  // sur le championnat du premier résultat saisi), se fier au champ vide comme indice
+  // « pas encore touché » réinstallerait le défaut au milieu d'un effacement volontaire.
+  useEffect(() => { if (!champTouché) setChamp(notreChamp) }, [notreChamp, champTouché])
   useEffect(() => {
     if (!homeId && teams[0]) setHomeId(teams[0].id)
     if (!awayId && teams[1]) setAwayId(teams[1].id)
@@ -46,7 +54,7 @@ export function Championnat() {
 
   // Un message d'erreur qui survit à la correction du formulaire accuserait à tort une
   // saisie qui ne pose plus problème : il s'efface dès que l'un des champs change.
-  const changeChamp = (v: string) => { setErreur(''); setChamp(v) }
+  const changeChamp = (v: string) => { setErreur(''); setChamp(v); setChampTouché(true) }
   const changeHomeId = (v: string) => { setErreur(''); setHomeId(v) }
   const changeAwayId = (v: string) => { setErreur(''); setAwayId(v) }
   const changeHomeScore = (v: string) => { setErreur(''); setHomeScore(v) }
@@ -62,12 +70,20 @@ export function Championnat() {
   }, [matches, champ, homeId, awayId, date])
 
   const scoresValides = homeScore !== '' && awayScore !== '' && Number(homeScore) >= 0 && Number(awayScore) >= 0
-  const peutAjouter = !!homeId && !!awayId && homeId !== awayId && scoresValides
+  // La date entre dans la clé de confrontation (aller/retour) : sans elle, une même
+  // rencontre saisie deux fois — une fois datée, une fois vide — produirait deux clés
+  // distinctes et compterait double au classement. On l'exige donc dès la saisie.
+  const peutAjouter = !!homeId && !!awayId && homeId !== awayId && scoresValides && !!date
 
   const ajouter = () => {
     if (!peutAjouter) return
+    // Au basket, il y a prolongation : un match nul n'existe pas.
+    if (Number(homeScore) === Number(awayScore)) {
+      setErreur('Un match nul n’existe pas au basket : il y a prolongation.')
+      return
+    }
     const champLbl = champ.trim() || 'Match amical'
-    const clé = clefConfrontation(champLbl, homeId, awayId, date || undefined)
+    const clé = clefConfrontation(champLbl, homeId, awayId, date)
     // Deux saisies de la même confrontation — même dans l'ordre inverse — compteraient
     // deux fois au classement : rien côté domaine ne s'en protège, c'est ici qu'il faut l'empêcher.
     if (results.some((r) => clefConfrontation(r.championshipLabel, r.homeId, r.awayId, r.date) === clé)) {
@@ -77,7 +93,7 @@ export function Championnat() {
     setErreur('')
     guard(async () => {
       await saveResult({
-        id: newId(), championshipLabel: champLbl, date: date || undefined,
+        id: newId(), championshipLabel: champLbl, date,
         homeId, awayId, homeScore: Number(homeScore), awayScore: Number(awayScore),
       })
       setHomeScore(''); setAwayScore('')
@@ -176,11 +192,22 @@ export function Championnat() {
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">{teamsById[r.homeId]?.name ?? '—'}</span>
                 <label htmlFor={`score-home-${r.id}`} className="sr-only">Score {teamsById[r.homeId]?.name ?? 'équipe reçue'}</label>
                 <input id={`score-home-${r.id}`} type="number" min={0} defaultValue={r.homeScore} style={{ ...field, width: 64, height: 36 }} className="text-center text-sm"
-                  onBlur={(e) => { const n = Number(e.target.value); if (!Number.isNaN(n) && n >= 0 && n !== r.homeScore) majScore(r, { homeScore: n }) }} />
+                  onBlur={(e) => {
+                    // Un champ vidé n'est pas une saisie de 0 : c'est le premier geste de qui
+                    // corrige une faute de frappe. `Number('')` vaut 0, pas NaN — sans ce garde
+                    // explicite, un clic ailleurs enregistrerait 0 en silence.
+                    if (e.target.value === '') { e.target.value = String(r.homeScore); return }
+                    const n = Number(e.target.value)
+                    if (!Number.isNaN(n) && n >= 0 && n !== r.homeScore) majScore(r, { homeScore: n })
+                  }} />
                 <span className="text-xs font-bold" style={{ color: C.faint }}>–</span>
                 <label htmlFor={`score-away-${r.id}`} className="sr-only">Score {teamsById[r.awayId]?.name ?? 'équipe visiteuse'}</label>
                 <input id={`score-away-${r.id}`} type="number" min={0} defaultValue={r.awayScore} style={{ ...field, width: 64, height: 36 }} className="text-center text-sm"
-                  onBlur={(e) => { const n = Number(e.target.value); if (!Number.isNaN(n) && n >= 0 && n !== r.awayScore) majScore(r, { awayScore: n }) }} />
+                  onBlur={(e) => {
+                    if (e.target.value === '') { e.target.value = String(r.awayScore); return }
+                    const n = Number(e.target.value)
+                    if (!Number.isNaN(n) && n >= 0 && n !== r.awayScore) majScore(r, { awayScore: n })
+                  }} />
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">{teamsById[r.awayId]?.name ?? '—'}</span>
                 <TeamBadge id={r.awayId} name={teamsById[r.awayId]?.name ?? '—'} size="h-6 w-6 text-[8px]" />
                 <span className="text-[11px] font-semibold" style={{ color: C.faint }}>{r.championshipLabel}</span>
