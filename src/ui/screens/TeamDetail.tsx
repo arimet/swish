@@ -11,6 +11,15 @@ import { refresh as refreshRemote } from '../../persistence/remote'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
+const miniLabel: CSSProperties = { color: C.faint }
+
+// Une chaîne vide devient `undefined`, jamais une chaîne vide ni un `NaN` :
+// un joueur dont on ne connaît pas la taille n'a pas une taille nulle, il n'a pas de taille.
+const toUndef = (s: string) => s.trim() || undefined
+const toHeight = (s: string): number | undefined => {
+  const n = Number(s)
+  return s.trim() && !Number.isNaN(n) ? n : undefined
+}
 
 export function TeamDetail() {
   const { id } = useParams<{ id: string }>()
@@ -24,6 +33,10 @@ export function TeamDetail() {
   const [teamsById, setTeamsById] = useState<Record<string, Team>>({})
   const [coach, setCoach] = useState('')
   const [num, setNum] = useState(''); const [ln, setLn] = useState(''); const [fn, setFn] = useState('')
+  const [birth, setBirth] = useState(''); const [height, setHeight] = useState('')
+  // Un seul joueur dépliable à la fois : pas d'état par ligne à faire vivre.
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editBirth, setEditBirth] = useState(''); const [editHeight, setEditHeight] = useState('')
 
   const refresh = () => { if (id) listPlayers(id).then(setPlayers) }
   useEffect(() => {
@@ -45,10 +58,20 @@ export function TeamDetail() {
   }
   const addPlayer = () => guard(async () => {
     if (!num || !ln.trim()) return
-    await savePlayer({ id: newId(), teamId: id, number: Number(num), lastName: ln.trim().toUpperCase(), firstName: fn.trim() })
-    setNum(''); setLn(''); setFn(''); refresh()
+    await savePlayer({
+      id: newId(), teamId: id, number: Number(num), lastName: ln.trim().toUpperCase(), firstName: fn.trim(),
+      birthDate: toUndef(birth), height: toHeight(height),
+    })
+    setNum(''); setLn(''); setFn(''); setBirth(''); setHeight(''); refresh()
   })
   const removePlayer = (pid: string) => guard(async () => { await deletePlayer(pid); refresh() })
+  const startEdit = (p: Player) => { setEditingId(p.id); setEditBirth(p.birthDate ?? ''); setEditHeight(p.height ? String(p.height) : '') }
+  // L'identifiant du joueur survit à la modification : c'est lui qui porte tout
+  // son historique de tirs et de statistiques, le recréer le lui ferait perdre.
+  const saveEdit = (p: Player) => guard(async () => {
+    await savePlayer({ ...p, birthDate: toUndef(editBirth), height: toHeight(editHeight) })
+    setEditingId(null); refresh()
+  })
   const removeTeam = async () => {
     await deleteTeam(id)
     // Le club suivi disparaît avec sa propre équipe : sans ce `clear()`, le
@@ -142,12 +165,32 @@ export function TeamDetail() {
               placeholder="Nom de l'entraîneur" style={{ ...field, width: '100%' }} className="mb-4" />
             <ul className="mb-4 space-y-1.5">
               {[...players].sort((a, b) => a.number - b.number).map((p) => (
-                <li key={p.id} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: C.panel }}>
-                  <Link to={`/players/${p.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-                    <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
-                    <span className="font-semibold">{p.lastName}</span><span style={{ color: C.muted }}>{p.firstName}</span>
-                  </Link>
-                  <button onClick={() => removePlayer(p.id)} className="ml-auto rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.pink }}>retirer</button>
+                <li key={p.id} className="space-y-2 rounded-xl px-3 py-2" style={{ background: C.panel }}>
+                  <div className="flex items-center gap-3">
+                    <Link to={`/players/${p.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+                      <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
+                      <span className="font-semibold">{p.lastName}</span><span style={{ color: C.muted }}>{p.firstName}</span>
+                    </Link>
+                    <button onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.muted }}>
+                      {editingId === p.id ? 'fermer' : `modifier ${p.lastName}`}
+                    </button>
+                    {/* Le retrait reste hors de la zone dépliée : c'est une action destructrice,
+                        elle ne doit pas se retrouver mêlée aux champs d'édition. */}
+                    <button onClick={() => removePlayer(p.id)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.pink }}>retirer</button>
+                  </div>
+                  {editingId === p.id && (
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <div>
+                        <label htmlFor={`edit-birth-${p.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Date de naissance</label>
+                        <input id={`edit-birth-${p.id}`} type="date" value={editBirth} onChange={(e) => setEditBirth(e.target.value)} style={{ ...field, width: '100%' }} />
+                      </div>
+                      <div>
+                        <label htmlFor={`edit-height-${p.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Taille (cm)</label>
+                        <input id={`edit-height-${p.id}`} type="number" inputMode="numeric" value={editHeight} onChange={(e) => setEditHeight(e.target.value)} style={{ ...field, width: '100%' }} />
+                      </div>
+                      <button onClick={() => saveEdit(p)} className="col-span-2 rounded-xl py-2 text-sm font-bold text-white" style={{ background: C.accent }}>Enregistrer</button>
+                    </div>
+                  )}
                 </li>
               ))}
               {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>Aucun joueur. Ajoutez-en ci-dessous.</li>}
@@ -157,10 +200,22 @@ export function TeamDetail() {
                 <input placeholder="N°" value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center' }} />
                 <input placeholder="Nom" value={ln} onChange={(e) => setLn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={field} />
               </div>
-              <div className="grid grid-cols-[1fr_44px] gap-2">
-                <input placeholder="Prénom" value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={field} />
-                <button onClick={addPlayer} aria-label="Ajouter le joueur" className="grid h-11 w-11 place-items-center rounded-xl text-xl font-bold text-white" style={{ background: C.accent }}>+</button>
-              </div>
+              <input placeholder="Prénom" value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={{ ...field, width: '100%' }} />
+              {/* Masqués pendant l'édition d'un joueur existant, sinon deux champs
+                  « Date de naissance » / « Taille » coexistent à l'écran, plus atteignables sans ambiguïté par leur libellé. */}
+              {!editingId && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label htmlFor="add-birth" className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Date de naissance</label>
+                    <input id="add-birth" type="date" value={birth} onChange={(e) => setBirth(e.target.value)} style={{ ...field, width: '100%' }} />
+                  </div>
+                  <div>
+                    <label htmlFor="add-height" className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Taille (cm)</label>
+                    <input id="add-height" type="number" inputMode="numeric" value={height} onChange={(e) => setHeight(e.target.value)} style={{ ...field, width: '100%' }} />
+                  </div>
+                </div>
+              )}
+              <button onClick={addPlayer} className="w-full rounded-xl py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Ajouter le joueur</button>
             </div>
           </Panel>
         </div>
