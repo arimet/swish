@@ -78,4 +78,17 @@ describe('playerCareer', () => {
     const aVenir: Match = { ...mk('m4', ['p1'], []), status: 'setup', events: [] }
     expect(playerCareer([m1, aVenir], 'p1').games).toBe(1)
   })
+
+  it('ne compte pas une rencontre où le joueur est à l’effectif sans temps de jeu ni action', () => {
+    // p6 figure au roster mais ne fait partie ni des titulaires ni d’aucune entrée.
+    const banc = mk('m5', ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'], [])
+    expect(playerCareer([banc], 'p6').games).toBe(0)
+  })
+
+  it('compte une rencontre pour un joueur sans temps de jeu mais crédité d’un panier', () => {
+    const banc = mk('m6', ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'], [
+      { type: 'SCORE', team: 'A', playerId: 'p6', kind: '2int', shot: { x: 0.5, y: 0.15 } },
+    ])
+    expect(playerCareer([banc], 'p6').games).toBe(1)
+  })
 })

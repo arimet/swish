@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { PlayerDetail } from './PlayerDetail'
@@ -70,8 +70,10 @@ describe('PlayerDetail', () => {
 
   it('affiche les statistiques secondaires en moyenne par match', async () => {
     renderAt('p1')
+    await screen.findByText('MARTIN Lucas')
     // Une passe décisive sur une rencontre → 1,0 par match, jamais « 1 ».
-    expect(await screen.findByText('1,0')).toBeInTheDocument()
+    const ligne = screen.getByText('Passes décisives').closest('div')!
+    expect(within(ligne).getByText('1,0')).toBeInTheDocument()
   })
 
   it('affiche un tiret plutôt qu’un zéro pour un joueur sans rencontre', async () => {
