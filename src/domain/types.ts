@@ -77,3 +77,26 @@ export interface ReportedResult {
   homeScore: number
   awayScore: number
 }
+
+/** Qui est convoqué pour une rencontre, et où l'on se retrouve.
+ *  Une seule par rencontre : `matchId` est la clé. */
+export interface Convocation {
+  matchId: string
+  /** Joueurs convoqués, sous-ensemble de l'effectif du club. */
+  playerIds: string[]
+  /** Rendez-vous, souvent différent de l'heure et du lieu du match. */
+  meetTime?: string
+  meetPlace?: string
+  /** Consignes libres : tenue, covoiturage. */
+  note?: string
+}
+
+/** Séance d'entraînement. Existe seule, sans rencontre associée. */
+export interface Training {
+  id: string
+  date: string        // ISO AAAA-MM-JJ
+  time?: string
+  place?: string
+  /** Thème de la séance : « défense sur écran », « tirs extérieurs »… */
+  theme?: string
+}
