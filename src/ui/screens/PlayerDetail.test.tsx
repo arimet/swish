@@ -24,6 +24,7 @@ beforeEach(async () => {
     { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
     { type: 'MISS', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
     { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int', shot: { x: 0.5, y: 0.15 } },
+    { type: 'STAT', team: 'A', playerId: 'p1', stat: 'assist' },
   ]))
 })
 
@@ -51,5 +52,32 @@ describe('PlayerDetail', () => {
   it('signale un joueur introuvable', async () => {
     renderAt('inconnu')
     expect(await screen.findByText(/introuvable/i)).toBeInTheDocument()
+  })
+
+  it('affiche l’âge et la taille quand ils sont renseignés', async () => {
+    await savePlayer({ id: 'p1', teamId: 'ta', number: 7, lastName: 'MARTIN', firstName: 'Lucas', birthDate: '2000-06-15', height: 192 })
+    renderAt('p1')
+    expect(await screen.findByText(/192 cm/)).toBeInTheDocument()
+    expect(screen.getByText(/ans/)).toBeInTheDocument()
+  })
+
+  it('n’affiche aucun bloc signalétique quand rien n’est renseigné', async () => {
+    renderAt('p1')
+    expect(await screen.findByText('MARTIN Lucas')).toBeInTheDocument()
+    expect(screen.queryByText(/cm/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/ans/)).not.toBeInTheDocument()
+  })
+
+  it('affiche les statistiques secondaires en moyenne par match', async () => {
+    renderAt('p1')
+    // Une passe décisive sur une rencontre → 1,0 par match, jamais « 1 ».
+    expect(await screen.findByText('1,0')).toBeInTheDocument()
+  })
+
+  it('affiche un tiret plutôt qu’un zéro pour un joueur sans rencontre', async () => {
+    await db.matches.clear()
+    renderAt('p1')
+    expect(await screen.findByText('MARTIN Lucas')).toBeInTheDocument()
+    expect(screen.queryByText('0,0')).not.toBeInTheDocument()
   })
 })

@@ -3,10 +3,21 @@ import { Link, useParams } from 'react-router-dom'
 import { getPlayer, getTeam, listMatches } from '../../persistence/repositories'
 import { refresh as refreshRemote } from '../../persistence/remote'
 import { playerStats } from '../../domain/boxscore'
+import { playingTimes } from '../../domain/playingtime'
+import { playerCareer, ageAt } from '../../domain/career'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { ShotChart } from '../components/ShotCourt'
+import { fmt } from '../components/GameClock'
 import { C, bd, TeamBadge, champLabel, fmtDate } from '../olive/kit'
 import type { Match, Player, Team } from '../../domain/types'
+
+/** Moyenne par rencontre, à une décimale. `—` quand aucune rencontre n'a été jouée :
+ *  un joueur qui n'a pas joué n'a pas « 0,0 passe », il n'a pas de moyenne. */
+const parMatch = (total: number, games: number) =>
+  games ? (total / games).toFixed(1).replace('.', ',') : '—'
+
+/** Accord au pluriel pour les petits décomptes affichés en toutes lettres. */
+const plur = (n: number) => (n > 1 ? 's' : '')
 
 export function PlayerDetail() {
   const { id } = useParams<{ id: string }>()
@@ -45,10 +56,10 @@ export function PlayerDetail() {
     )
 
   const lineOf = (m: Match) => playerStats(m).find((s) => s.playerId === id)
-  const totalPoints = matches.reduce((n, m) => n + (lineOf(m)?.points ?? 0), 0)
-  const career = shotsOf(matches, id)
-  const pct = shootingPct(career)
-  const played = matches.length
+  const career = playerCareer(matches, id)
+  const shotsCareer = shotsOf(matches, id)
+  const pct = shootingPct(shotsCareer)
+  const played = career.games
   const ordered = [...matches].sort((a, b) => (b.meta.date ?? '').localeCompare(a.meta.date ?? ''))
 
   return (
@@ -63,25 +74,51 @@ export function PlayerDetail() {
         </span>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{player.lastName} {player.firstName}</h1>
-          {team && <p className="flex items-center gap-2 text-sm" style={{ color: C.muted }}><TeamBadge id={team.id} name={team.name} size="h-5 w-5 text-[8px]" />{team.name}</p>}
+          {team && (
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm" style={{ color: C.muted }}>
+              <span className="flex items-center gap-2"><TeamBadge id={team.id} name={team.name} size="h-5 w-5 text-[8px]" />{team.name}</span>
+              {player.birthDate && <span>· {ageAt(player.birthDate, new Date())} ans</span>}
+              {player.height && <span>· {player.height} cm</span>}
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard label="Rencontres" value={String(played)} hint="jouées" />
-        <StatCard label="Points / match" value={played ? String(Math.round(totalPoints / played)) : '—'} hint={`${totalPoints} au total`} />
-        <StatCard label="Réussite aux tirs" value={pct.fg === null ? '—' : `${pct.fg} %`} hint={`${career.length} tir${career.length > 1 ? 's' : ''} localisé${career.length > 1 ? 's' : ''}`} accent={C.accent} />
+        <StatCard label="Points / match" value={parMatch(career.points, played)} hint={`${career.points} au total`} />
+        <StatCard label="Réussite aux tirs" value={pct.fg === null ? '—' : `${pct.fg} %`} hint={`${shotsCareer.length} tir${plur(shotsCareer.length)} localisé${plur(shotsCareer.length)}`} accent={C.accent} />
         <StatCard label="Réussite à 3 pts" value={pct.three === null ? '—' : `${pct.three} %`} hint="sur la carrière" />
+        <StatCard label="Temps de jeu moyen" value={played ? fmt(Math.round(career.seconds / played)) : '—'} hint="par match" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
-        <Panel title="Hot zone — carrière">
-          {career.length === 0 ? (
-            <Empty>Aucun tir localisé pour l’instant.</Empty>
-          ) : (
-            <ShotChart shots={career} />
-          )}
-        </Panel>
+        <div className="space-y-6">
+          <Panel title="Hot zone — carrière">
+            {shotsCareer.length === 0 ? (
+              <Empty>Aucun tir localisé pour l’instant.</Empty>
+            ) : (
+              <ShotChart shots={shotsCareer} />
+            )}
+          </Panel>
+
+          <Panel title="Statistiques">
+            <div className="mb-1 flex items-center justify-between text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>
+              <span>Par match</span>
+              <span className="flex gap-4"><span className="w-8 text-right">Cumul</span><span className="w-10 text-right">Moy.</span></span>
+            </div>
+            <StatRow label="Passes décisives" total={career.assists} games={played} />
+            <StatRow label="Rebonds offensifs" total={career.offRebounds} games={played} />
+            <StatRow label="Rebonds défensifs" total={career.defRebounds} games={played} />
+            <StatRow label="Contres" total={career.blocks} games={played} />
+            <StatRow label="Fautes" total={career.fouls} games={played} />
+            <p className="mb-1 mt-4 text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Répartition des paniers</p>
+            <StatRow label="2 pts intérieurs" total={career.twoInside} games={played} avgInParens />
+            <StatRow label="2 pts extérieurs" total={career.twoOutside} games={played} avgInParens />
+            <StatRow label="3 pts" total={career.threes} games={played} avgInParens />
+            <StatRow label="Lancers francs" total={career.freeThrows} games={played} avgInParens />
+          </Panel>
+        </div>
 
         <Panel title="Rencontres">
           {ordered.length === 0 ? (
@@ -102,11 +139,22 @@ export function PlayerDetail() {
                     </button>
                     {isOpen && (
                       <div className="border-t px-3 py-3" style={{ borderColor: C.border }}>
-                        <p className="mb-2 text-[11px] font-semibold" style={{ color: C.muted }}>
-                          {s?.fieldGoalsMade ?? 0} tir{(s?.fieldGoalsMade ?? 0) > 1 ? 's' : ''} réussi{(s?.fieldGoalsMade ?? 0) > 1 ? 's' : ''} ·
-                          {' '}{s?.misses ?? 0} manqué{(s?.misses ?? 0) > 1 ? 's' : ''} · {s?.fouls ?? 0} faute{(s?.fouls ?? 0) > 1 ? 's' : ''}
-                        </p>
-                        {shots.length === 0 ? <Empty>Aucun tir localisé sur cette rencontre.</Empty> : <ShotChart shots={shots} minAttempts={1} />}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                          <ul className="grid flex-1 grid-cols-2 gap-x-4 gap-y-1 text-[11px] font-semibold" style={{ color: C.muted }}>
+                            <li className="col-span-2 font-bold" style={{ color: C.text }}>{s?.points ?? 0} pt{plur(s?.points ?? 0)}</li>
+                            <li>{s?.fieldGoalsMade ?? 0} tir{plur(s?.fieldGoalsMade ?? 0)} réussi{plur(s?.fieldGoalsMade ?? 0)}</li>
+                            <li>{s?.misses ?? 0} manqué{plur(s?.misses ?? 0)}</li>
+                            <li>{s?.assists ?? 0} passe{plur(s?.assists ?? 0)} décisive{plur(s?.assists ?? 0)}</li>
+                            <li>{s?.blocks ?? 0} contre{plur(s?.blocks ?? 0)}</li>
+                            <li>{s?.offRebounds ?? 0} rebond{plur(s?.offRebounds ?? 0)} off.</li>
+                            <li>{s?.defRebounds ?? 0} rebond{plur(s?.defRebounds ?? 0)} déf.</li>
+                            <li>{s?.fouls ?? 0} faute{plur(s?.fouls ?? 0)}</li>
+                            <li>{fmt(playingTimes(m).get(id) ?? 0)} de jeu</li>
+                          </ul>
+                          <div className="shrink-0 sm:w-44">
+                            {shots.length === 0 ? <Empty>Aucun tir localisé sur cette rencontre.</Empty> : <ShotChart shots={shots} minAttempts={1} />}
+                          </div>
+                        </div>
                         <Link to={`/match/${m.id}/summary`} className="mt-2 inline-block text-xs font-bold" style={{ color: C.accent }}>
                           Voir la feuille de match →
                         </Link>
@@ -129,6 +177,24 @@ function StatCard({ label, value, hint, accent }: { label: string; value: string
       <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</p>
       <p className="mt-1 text-2xl font-black tabular-nums" style={{ color: accent ?? C.text }}>{value}</p>
       {hint && <p className="mt-0.5 text-[11px] font-semibold" style={{ color: C.muted }}>{hint}</p>}
+    </div>
+  )
+}
+/** `avgInParens` regroupe cumul et moyenne dans un même segment de texte — utile pour la
+ *  répartition des paniers, où plusieurs catégories peuvent partager la même moyenne (ex.
+ *  un seul panier marqué sur une seule rencontre = 1,0 pour deux catégories différentes) :
+ *  la parenthèse évite qu'une moyenne isolée ne soit prise pour une autre. */
+function StatRow({ label, total, games, avgInParens }: { label: string; total: number; games: number; avgInParens?: boolean }) {
+  const moyenne = parMatch(total, games)
+  return (
+    <div className="flex items-center justify-between border-b py-1.5 text-sm last:border-b-0" style={{ borderColor: C.border }}>
+      <span style={{ color: C.muted }}>{label}</span>
+      <span className="flex gap-4">
+        <span className="nums w-8 text-right font-bold">{total}</span>
+        <span className="nums w-14 text-right text-xs font-semibold" style={{ color: C.faint }}>
+          {avgInParens ? `(${moyenne})` : moyenne}
+        </span>
+      </span>
     </div>
   )
 }
