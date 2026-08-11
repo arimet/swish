@@ -56,6 +56,18 @@ describe('Championnat', () => {
     await waitFor(async () => expect(await listResults()).toHaveLength(0))
   })
 
+  it('ne modifie pas le score enregistré quand on vide le champ puis qu’on en sort', async () => {
+    // Vider le champ est le premier geste de qui corrige une faute de frappe : ça ne
+    // doit pas enregistrer 0 en silence (`Number('')` vaut 0, pas NaN).
+    await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
+    renderChamp()
+    const scoreHome = await screen.findByLabelText(/score verdun/i)
+    await userEvent.clear(scoreHome)
+    await userEvent.click(document.body)
+    expect((await listResults())[0].homeScore).toBe(70)
+    expect(scoreHome).toHaveValue(70)
+  })
+
   it('signale que les résultats saisis restent sur cet appareil', async () => {
     renderChamp()
     expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
@@ -81,6 +93,16 @@ describe('Championnat', () => {
     renderChamp()
     await remplirFormulaire('tb', 'tc', '-5', '60')
     expect(screen.getByRole('button', { name: /ajouter le résultat/i })).toBeDisabled()
+  })
+
+  it('interdit l’ajout tant que la date n’est pas renseignée', async () => {
+    // Sans date, une même rencontre saisie une fois datée et une fois vide produirait
+    // deux clés de confrontation distinctes et compterait deux fois au classement.
+    renderChamp()
+    await remplirFormulaire('tb', 'tc', '70', '60')
+    expect(screen.getByRole('button', { name: /ajouter le résultat/i })).toBeDisabled()
+    await userEvent.type(screen.getByLabelText('Date de la rencontre'), '2026-01-10')
+    expect(screen.getByRole('button', { name: /ajouter le résultat/i })).toBeEnabled()
   })
 
   it('signale, avant l’enregistrement, qu’une confrontation saisie correspond à une de nos rencontres', async () => {

@@ -7,12 +7,18 @@ export const saveTeam = async (t: Team) => { await db.teams.put(t); await enqueu
 export const getTeam = (id: string) => db.teams.get(id)
 export const getPlayer = (id: string) => db.players.get(id)
 export const listTeams = () => db.teams.toArray()
-/** Supprime une équipe et tous ses joueurs. */
+/** Supprime une équipe, ses joueurs, et les résultats saisis à la main qui la
+ *  mentionnent (d'un côté comme de l'autre) : un résultat dont une équipe n'existe
+ *  plus n'a plus de sens, on le supprime plutôt que de le laisser hanter le
+ *  classement sous son identifiant brut. La table des résultats reste petite ; un
+ *  filtrage sur `toArray()` évite d'ajouter un index Dexie pour si peu. */
 export const deleteTeam = async (id: string) => {
   const players = await db.players.where('teamId').equals(id).toArray()
-  await db.transaction('rw', db.teams, db.players, async () => {
+  const résultats = (await db.results.toArray()).filter((r) => r.homeId === id || r.awayId === id)
+  await db.transaction('rw', db.teams, db.players, db.results, async () => {
     await db.players.where('teamId').equals(id).delete()
     await db.teams.delete(id)
+    await db.results.bulkDelete(résultats.map((r) => r.id))
   })
   for (const p of players) await enqueueDel('player', p.id)
   await enqueueDel('team', id)

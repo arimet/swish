@@ -1,11 +1,11 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
-import { saveTeam, listTeams, saveMatch, getMatch, listMatches, deleteMatch } from './repositories'
+import { saveTeam, listTeams, saveMatch, getMatch, listMatches, deleteMatch, deleteTeam, saveResult, listResults } from './repositories'
 import type { Match } from '../domain/types'
 
 beforeEach(async () => {
-  await db.teams.clear(); await db.players.clear(); await db.matches.clear()
+  await db.teams.clear(); await db.players.clear(); await db.matches.clear(); await db.results.clear()
 })
 
 const match = (id: string): Match => ({
@@ -30,5 +30,19 @@ describe('repositories', () => {
     m.events.push({ id: 'e1', type: 'PERIOD_START', wallClock: 0, period: 1, gameClock: 600 })
     await saveMatch(m)
     expect((await getMatch('m2'))?.events).toHaveLength(1)
+  })
+  it('supprime les résultats saisis qui mentionnent une équipe supprimée, des deux côtés', async () => {
+    await saveTeam({ id: 'ta', name: 'VIGNOT' })
+    await saveTeam({ id: 'tb', name: 'VERDUN' })
+    await saveTeam({ id: 'tc', name: 'METZ' })
+    // « ta » supprimée : le premier résultat (ta reçoit tb) et le second (tc reçoit ta)
+    // la mentionnent chacun d'un côté différent — les deux doivent disparaître.
+    await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'ta', awayId: 'tb', homeScore: 70, awayScore: 60 })
+    await saveResult({ id: 'r2', championshipLabel: 'Poule A', date: '2026-01-17', homeId: 'tc', awayId: 'ta', homeScore: 55, awayScore: 80 })
+    await saveResult({ id: 'r3', championshipLabel: 'Poule A', date: '2026-01-17', homeId: 'tb', awayId: 'tc', homeScore: 60, awayScore: 50 })
+
+    await deleteTeam('ta')
+
+    expect((await listResults()).map((r) => r.id)).toEqual(['r3'])
   })
 })
