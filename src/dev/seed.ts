@@ -8,7 +8,7 @@ import { CLUB_ID_KEY } from '../app/club'
  * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
  * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v10'
+const SEED_VERSION = 'v11'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
@@ -21,9 +21,18 @@ const FIRST = ['Lucas', 'Hugo', 'Mathis', 'Nathan', 'Louis', 'Tom', 'Théo', 'En
 
 const teamId = (t: number) => `seed-t${t}`
 const playerId = (i: number) => `seed-p${i}`
+// Dates de naissance et tailles : les petits numéros sont les meneurs (plus jeunes,
+// plus petits), les grands numéros les intérieurs (plus âgés, plus grands). Le dernier
+// joueur n'a ni l'une ni l'autre : c'est le cas à vérifier à l'écran (pas de bloc vide).
+const BIRTH = [
+  '1998-03-12', '2001-11-05', '1995-07-22', '1999-01-30', '1993-09-14',
+  '1997-05-02', '2000-12-19', '1994-04-08', '1992-06-25', undefined,
+]
+const HEIGHT = [180, 183, 186, 188, 190, 192, 195, 198, 201, undefined]
 // Notre seul effectif : l'adversaire n'a jamais de joueurs saisis.
 const PLAYERS: Player[] = Array.from({ length: 10 }, (_, i) => ({
   id: playerId(i), teamId: teamId(0), number: i + 4, lastName: LAST[i], firstName: FIRST[i],
+  birthDate: BIRTH[i], height: HEIGHT[i],
 }))
 const ROSTER = PLAYERS.map((p) => p.id)
 
