@@ -32,7 +32,11 @@ export function nextFixture(matches: Match[], trainings: Training[], today: Date
     if (m.status === 'finished' || !m.meta.date) continue
     if (m.meta.date >= jour) echeances.push({ kind: 'match', id: m.id, date: m.meta.date, match: m })
   }
-  // À égalité de date, la rencontre passe avant : c'est elle qui compte.
-  echeances.sort((a, b) => a.date.localeCompare(b.date) || (a.kind === 'match' ? -1 : 1))
+  // À égalité de date, la rencontre passe avant : c'est elle qui compte. Entre deux
+  // échéances de même nature, rien ne les départage : renvoyer 0 (et non -1 des deux
+  // côtés) évite un comparateur incohérent — un sort() ainsi mal formé a un résultat
+  // indéfini, qui peut varier d'un moteur ou d'une version à l'autre.
+  echeances.sort((a, b) =>
+    a.date.localeCompare(b.date) || (a.kind === b.kind ? 0 : a.kind === 'match' ? -1 : 1))
   return echeances[0] ?? null
 }
