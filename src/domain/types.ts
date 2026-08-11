@@ -13,6 +13,11 @@ export interface Team { id: string; name: string; coach?: string }
 export interface Player {
   id: string; teamId: string; number: number
   lastName: string; firstName: string; license?: string
+  /** Date de naissance au format ISO `AAAA-MM-JJ`. L'âge s'en déduit à l'affichage,
+   *  il n'est jamais stocké : un âge en dur devient faux au premier anniversaire. */
+  birthDate?: string
+  /** Taille en centimètres. */
+  height?: number
 }
 
 interface EventBase { id: string; wallClock: number; period: Period; gameClock: number }
