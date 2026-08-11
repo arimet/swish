@@ -1,6 +1,6 @@
 import { db } from './db'
 import { enqueuePut, enqueueDel, remoteEnabled, hydrate } from './remote'
-import type { Team, Player, Match, ReportedResult } from '../domain/types'
+import type { Team, Player, Match, ReportedResult, Convocation, Training } from '../domain/types'
 
 // Écritures : cache local (immédiat, offline-ok) + mise en file pour le serveur.
 export const saveTeam = async (t: Team) => { await db.teams.put(t); await enqueuePut('team', t.id, t) }
@@ -36,10 +36,26 @@ export const getMatch = async (id: string): Promise<Match | undefined> => {
   return m
 }
 export const listMatches = () => db.matches.toArray()
-export const deleteMatch = async (id: string) => { await db.matches.delete(id); await enqueueDel('match', id) }
+/** Supprime la rencontre et sa convocation : une convocation sans rencontre n'a
+ *  aucun sens, et resterait sinon invisible et indéboulonnable. */
+export const deleteMatch = async (id: string) => {
+  await db.transaction('rw', db.matches, db.convocations, async () => {
+    await db.matches.delete(id)
+    await db.convocations.delete(id)
+  })
+  await enqueueDel('match', id)
+}
 
 /** Les résultats saisis restent locaux à l'appareil : ils ne passent pas par la file
  *  de synchronisation, qui ne transporte qu'équipes, joueurs et rencontres. */
 export const listResults = () => db.results.toArray()
 export const saveResult = async (r: ReportedResult) => { await db.results.put(r) }
 export const deleteResult = async (id: string) => { await db.results.delete(id) }
+
+/** Convocations et entraînements restent locaux à l'appareil : comme les résultats
+ *  du championnat, ils ne passent pas par la file de synchronisation. */
+export const getConvocation = (matchId: string) => db.convocations.get(matchId)
+export const saveConvocation = async (c: Convocation) => { await db.convocations.put(c) }
+export const listTrainings = () => db.trainings.toArray()
+export const saveTraining = async (t: Training) => { await db.trainings.put(t) }
+export const deleteTraining = async (id: string) => { await db.trainings.delete(id) }

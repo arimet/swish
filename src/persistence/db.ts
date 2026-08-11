@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type { Team, Player, Match, ReportedResult } from '../domain/types'
+import type { Team, Player, Match, ReportedResult, Convocation, Training } from '../domain/types'
 
 /** File d'attente de synchronisation (offline-first) : mutations à pousser vers le serveur. */
 export interface OutboxItem {
@@ -17,6 +17,8 @@ export class ScoreSheetDB extends Dexie {
   matches!: Table<Match, string>
   outbox!: Table<OutboxItem, number>
   results!: Table<ReportedResult, string>
+  convocations!: Table<Convocation, string>
+  trainings!: Table<Training, string>
   constructor() {
     super('score-sheet')
     this.version(1).stores({
@@ -31,6 +33,11 @@ export class ScoreSheetDB extends Dexie {
     // v3 : résultats saisis à la main pour les rencontres entre autres équipes.
     this.version(3).stores({
       results: 'id, championshipLabel',
+    })
+    // v4 : vie d'équipe — convocations (une par rencontre) et entraînements.
+    this.version(4).stores({
+      convocations: 'matchId',
+      trainings: 'id, date',
     })
   }
 }
