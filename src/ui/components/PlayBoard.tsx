@@ -183,7 +183,7 @@ function Objet({ o, h }: { o: ObjetPose; h: number }) {
  * sur le premier — un schéma a toujours au moins un temps, une vignette ne doit
  * jamais rendre un terrain vide. `apercu` coupe toute interaction (vignettes).
  */
-export function PlayBoard({ schema, tempsIndex, temps, onPointerDown, onPointerMove, onPointerUp, children, apercu }: {
+export function PlayBoard({ schema, tempsIndex, temps, onPointerDown, onPointerMove, onPointerUp, children, apercu, remplit }: {
   schema: Schema
   tempsIndex: number
   /** Un temps calculé — l'instantané du lecteur — à afficher au lieu de celui du
@@ -194,6 +194,10 @@ export function PlayBoard({ schema, tempsIndex, temps, onPointerDown, onPointerM
   onPointerUp?: (e: React.PointerEvent<SVGSVGElement>) => void
   children?: ReactNode
   apercu?: boolean
+  /** Le SVG remplit sa boîte au lieu de suivre sa largeur. Réservé au lecteur, qui
+   *  cale lui-même le rapport du terrain : un appelant qui convertit des
+   *  coordonnées de pointeur ne doit pas l'utiliser. */
+  remplit?: boolean
 }) {
   const h = profondeur(schema)
   const t = temps ?? schema.temps[tempsIndex] ?? schema.temps[0]
@@ -206,7 +210,7 @@ export function PlayBoard({ schema, tempsIndex, temps, onPointerDown, onPointerM
       onPointerDown={apercu ? undefined : onPointerDown}
       onPointerMove={apercu ? undefined : onPointerMove}
       onPointerUp={apercu ? undefined : onPointerUp}
-      className={`w-full rounded-2xl ${interactif ? 'cursor-crosshair' : ''}`}
+      className={`rounded-2xl ${remplit ? 'h-full w-full' : 'w-full'} ${interactif ? 'cursor-crosshair' : ''}`}
       style={{ border: `1px solid ${C.border}`, background: C.panel, touchAction: interactif ? 'none' : 'manipulation' }}
     >
       <CourtLines bord={schema.terrain === 'demi'} />

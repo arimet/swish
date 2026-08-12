@@ -95,6 +95,12 @@ export function SchemaPlayer() {
   const temps = !enLecture && Number.isInteger(pos)
     ? schema.temps[pos]
     : instantane(schema, { temps: Math.floor(pos), part: pos - Math.floor(pos) })
+  // Le lecteur remplit toute la place disponible : le SVG se cale lui-même dans sa
+  // boîte (`preserveAspectRatio`), sans distorsion. L'éditeur ne peut pas faire ça —
+  // il borne la largeur pour que la boîte du SVG garde le rapport du viewBox, sans
+  // quoi la conversion du doigt en coordonnées viserait de travers. Ici rien ne
+  // convertit : on lit, on ne dessine pas. C'est l'écran du temps-mort, cinq joueurs
+  // penchés dessus — chaque centimètre gagné se voit.
   const large = schema.terrain === 'demi' ? '46vh' : undefined
 
   return (
@@ -111,8 +117,8 @@ export function SchemaPlayer() {
             ne vise pas un bouton de quarante pixels. Elles s'arrêtent au-dessus
             des commandes, qui restent atteignables. */}
         <div className="relative flex min-h-0 flex-1 items-center justify-center">
-          <div className="w-full select-none" style={{ maxWidth: large }}>
-            <PlayBoard schema={schema} tempsIndex={0} temps={temps} />
+          <div className="h-full w-full select-none">
+            <PlayBoard schema={schema} tempsIndex={0} temps={temps} remplit />
           </div>
           <Zone cote="left" label="Temps précédent" fleche="‹" onClick={() => aller(-1)} disabled={courant === 0} />
           <Zone cote="right" label="Temps suivant" fleche="›" onClick={() => aller(1)} disabled={courant === dernier} />
