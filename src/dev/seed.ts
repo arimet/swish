@@ -8,7 +8,7 @@ import { CLUB_ID_KEY } from '../app/club'
  * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
  * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v15'
+const SEED_VERSION = 'v16'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
@@ -129,21 +129,30 @@ function periodEvents(p: Period, pointsA: number, pointsB: number, onCourtBefore
   return { events, onCourtAfter }
 }
 
-interface Fixture { opponent: number; date: string; time: string; status: 'finished' | 'live' | 'setup' }
-// Nos cinq rencontres de la saison : trois jouées, une en direct, une à venir.
-const FIXTURES: Fixture[] = [
-  { opponent: 1, date: '2026-01-10', time: '20:30', status: 'finished' },
-  { opponent: 2, date: '2026-01-17', time: '20:00', status: 'finished' },
-  { opponent: 3, date: '2026-01-24', time: '18:30', status: 'finished' },
-  { opponent: 4, date: '2026-01-31', time: '20:30', status: 'live' },
-  { opponent: 5, date: '2026-02-07', time: '18:30', status: 'setup' },
-]
-
 const addDays = (iso: string, delta: number): string => {
   const d = new Date(iso + 'T00:00:00')
   d.setDate(d.getDate() + delta)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+const today = new Date()
+const TODAY_ISO = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+// Les cinq journées de la saison, ancrées sur la date du jour du seed plutôt que
+// figées : sans quoi la démonstration devient invisible dès que la vraie date passe
+// la saison codée en dur (`nextFixture` compare à l'horloge réelle, jamais simulée).
+// Cadence hebdomadaire inchangée : trois journées passées, une aujourd'hui, une dans
+// une semaine.
+const JOURNEES = [-21, -14, -7, 0, 7].map((delta) => addDays(TODAY_ISO, delta))
+
+interface Fixture { opponent: number; date: string; time: string; status: 'finished' | 'live' | 'setup' }
+// Nos cinq rencontres de la saison : trois jouées, une en direct, une à venir.
+const FIXTURES: Fixture[] = [
+  { opponent: 1, date: JOURNEES[0], time: '20:30', status: 'finished' },
+  { opponent: 2, date: JOURNEES[1], time: '20:00', status: 'finished' },
+  { opponent: 3, date: JOURNEES[2], time: '18:30', status: 'finished' },
+  { opponent: 4, date: JOURNEES[3], time: '20:30', status: 'live' },
+  { opponent: 5, date: JOURNEES[4], time: '18:30', status: 'setup' },
+]
 
 const THEMES = ['Défense sur écran', 'Tirs extérieurs', 'Transition rapide', 'Jeu sans ballon', 'Rebond et boxout']
 
@@ -228,14 +237,14 @@ function buildMatch(f: Fixture, idx: number): Match {
 // les six équipes de la poule : à chaque journée où nous jouons l'un des cinq, les
 // quatre autres se répartissent en deux matchs — si bien que chaque adversaire
 // affronte, sur la saison, les quatre autres en plus de nous. Les dates reprennent
-// celles de nos FIXTURES : même poule, mêmes journées.
+// celles de nos FIXTURES (`JOURNEES`) : même poule, mêmes journées.
 interface OutsideGame { home: number; away: number; date: string }
 const OUTSIDE_GAMES: OutsideGame[] = [
-  { home: 2, away: 3, date: '2026-01-10' }, { home: 4, away: 5, date: '2026-01-10' },
-  { home: 1, away: 4, date: '2026-01-17' }, { home: 3, away: 5, date: '2026-01-17' },
-  { home: 1, away: 5, date: '2026-01-24' }, { home: 2, away: 4, date: '2026-01-24' },
-  { home: 1, away: 3, date: '2026-01-31' }, { home: 2, away: 5, date: '2026-01-31' },
-  { home: 1, away: 2, date: '2026-02-07' }, { home: 3, away: 4, date: '2026-02-07' },
+  { home: 2, away: 3, date: JOURNEES[0] }, { home: 4, away: 5, date: JOURNEES[0] },
+  { home: 1, away: 4, date: JOURNEES[1] }, { home: 3, away: 5, date: JOURNEES[1] },
+  { home: 1, away: 5, date: JOURNEES[2] }, { home: 2, away: 4, date: JOURNEES[2] },
+  { home: 1, away: 3, date: JOURNEES[3] }, { home: 2, away: 5, date: JOURNEES[3] },
+  { home: 1, away: 2, date: JOURNEES[4] }, { home: 3, away: 4, date: JOURNEES[4] },
 ]
 
 /** Score plausible de basket senior (60 à 90 points), variant avec l'index. */
