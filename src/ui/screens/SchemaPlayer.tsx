@@ -78,9 +78,17 @@ export function SchemaPlayer() {
   )
 
   const courant = Math.round(pos)
+  /**
+   * Le temps voisin **dans le sens du geste**, pas le voisin de l'arrondi. Depuis
+   * une position fractionnaire — pause en pleine transition, barre lâchée hors
+   * d'un cran — `Math.round` a déjà « pré-avancé » d'un demi-pas, et ajouter 1
+   * sauterait un temps entier. Un coach qui met en pause pour commenter puis tape
+   * « suivant » ne doit pas voir la combinaison enjamber une étape.
+   */
   const aller = (delta: number) => {
     setEnLecture(false)
-    setPos(Math.min(dernier, Math.max(0, courant + delta)))
+    const vise = delta > 0 ? Math.floor(pos) + 1 : Math.ceil(pos) - 1
+    setPos(Math.min(dernier, Math.max(0, vise)))
   }
   const jouer = () => {
     // Relancer depuis le bout, c'est rejouer : sinon le bouton ne ferait rien.
@@ -92,6 +100,10 @@ export function SchemaPlayer() {
   // flèches comprises : l'animation les remplace le temps qu'elle joue, mais à
   // la pause c'est le carnet qu'on relit — et le dernier temps ne dit son
   // intention que par ses traits, puisqu'aucun temps ne le suit.
+  // Arrêté **entre** deux temps, en revanche, on ne les remontre pas : elles
+  // partent des positions dessinées, pas de celles où les pions se trouvent à cet
+  // instant, et le décalage se lirait comme une erreur. Un arrêt à mi-geste montre
+  // où les joueurs en sont ; c'est déjà ce qu'on est venu voir.
   const temps = !enLecture && Number.isInteger(pos)
     ? schema.temps[pos]
     : instantane(schema, { temps: Math.floor(pos), part: pos - Math.floor(pos) })

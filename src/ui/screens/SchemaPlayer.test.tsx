@@ -115,6 +115,26 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     expect(ordonneeDuMeneur()).toBeCloseTo(DEPART, 6)
   })
 
+  it('depuis une pause à mi-transition, la zone suivante n’enjambe pas un temps', async () => {
+    // Trois temps : le meneur descend par paliers. En pause à 70 % du premier
+    // mouvement, « suivant » doit poser sur le temps 2 — arrondir au plus proche
+    // le ferait sauter au temps 3, et le coach ne verrait jamais l'étape qu'il
+    // s'était arrêté pour commenter.
+    const s = deuxTemps()
+    const t2 = tempsSuivant(s.temps[1])
+    t2.pions = t2.pions.map((p) => (p.poste === 1 ? { ...p, at: { x: 0.5, y: 0.05 } } : p))
+    await db.plays.clear()
+    await savePlay({ ...s, temps: [...s.temps, t2] })
+
+    await ouvrir()
+    fireEvent.click(bouton('Lecture'))
+    avancer(1050)                                   // 70 % de la première transition
+    fireEvent.click(bouton('Pause'))
+    fireEvent.click(bouton('Temps suivant'))
+
+    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)   // le temps 2, pas le temps 3
+  })
+
   it('« Lecture » joue la combinaison, « Pause » la laisse où elle en est', async () => {
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
