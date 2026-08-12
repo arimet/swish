@@ -9,6 +9,7 @@ import { Link, useParams } from 'react-router-dom'
 import { instantane, transitions } from '../../domain/anim'
 import type { Schema } from '../../domain/plays'
 import { getPlay } from '../../persistence/repositories'
+import { ExportSchema } from '../components/ExportSchema'
 import { PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
 
@@ -35,6 +36,7 @@ export function SchemaPlayer() {
   const [enLecture, setEnLecture] = useState(false)
   const [boucle, setBoucle] = useState(false)
   const [ralenti, setRalenti] = useState(false)
+  const [partage, setPartage] = useState(false)
 
   useEffect(() => { if (id) getPlay(id).then((s) => setSchema(s ?? null)) }, [id])
 
@@ -120,10 +122,19 @@ export function SchemaPlayer() {
       <div className="flex min-h-dvh flex-col gap-2 p-3">
         <div className="flex shrink-0 items-center gap-3">
           <h1 className="min-w-0 flex-1 truncate text-sm font-extrabold tracking-tight" style={{ color: C.muted }}>{schema.nom}</h1>
+          {/* La lecture s'arrête pendant le partage : on ne fabrique pas une image
+              du temps qu'on est en train de quitter. */}
+          <button
+            onClick={() => { setEnLecture(false); setPartage(true) }}
+            className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: bd, color: C.text }}
+          >
+            Partager
+          </button>
           <Link to={`/schemas/${id}`} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: bd, color: C.text }}>
             Quitter ✕
           </Link>
         </div>
+        <ExportSchema schema={schema} tempsIndex={courant} open={partage} onClose={() => setPartage(false)} />
 
         {/* Le terrain, et par-dessus les deux moitiés d'écran : au temps-mort on
             ne vise pas un bouton de quarante pixels. Elles s'arrêtent au-dessus
