@@ -85,15 +85,19 @@ function deplace(s: Schema, tempsIndex: number, quoi: Prise, at: Point): Schema 
   }
 }
 
-/** Les cinq croix en miroir : chaque défenseur au milieu du segment attaquant-panier. */
+/** Les cinq croix en miroir : chaque défenseur au milieu du segment attaquant-panier.
+ *  Le panier retenu est le plus proche de l'attaquant — sur terrain complet, une
+ *  attaque placée dans la moitié arrière (transition, presse) verrait sinon son
+ *  défenseur posé dix mètres plus loin, au milieu du terrain. */
 function avecDefense(t: Temps, terrain: Terrain): Temps {
-  const panier = PANIER[terrain][0]
+  const paniers = PANIER[terrain]
   const attaque = t.pions.filter((p) => p.camp === 'attaque')
   return {
     ...t,
-    pions: [...attaque, ...attaque.map((a): Pion => ({
-      camp: 'defense', poste: a.poste, at: { x: (a.at.x + panier.x) / 2, y: (a.at.y + panier.y) / 2 },
-    }))],
+    pions: [...attaque, ...attaque.map((a): Pion => {
+      const panier = paniers.reduce((meilleur, p) => (dist(a.at, p) < dist(a.at, meilleur) ? p : meilleur))
+      return { camp: 'defense', poste: a.poste, at: { x: (a.at.x + panier.x) / 2, y: (a.at.y + panier.y) / 2 } }
+    })],
   }
 }
 
@@ -219,8 +223,11 @@ export function SchemaEdit() {
       if (o >= 0) modifier((s) => ({ ...s, objets: s.objets.filter((_, k) => k !== o) }))
       return
     }
-    // Une flèche part toujours d'un pion : ailleurs, le geste ne trace rien.
-    if (pion) setTrace({ depuis: { camp: pion.camp, poste: pion.poste }, points: [p] })
+    // Une flèche part toujours d'un pion : ailleurs, le geste ne trace rien. Et
+    // elle part de sa position exacte, pas du point touché — le doigt tombe à un
+    // rayon de prise près, ce qui détacherait le trait du pion, et l'animation de
+    // 8B ferait démarrer le joueur à côté de lui-même.
+    if (pion) setTrace({ depuis: { camp: pion.camp, poste: pion.poste }, points: [pion.at] })
   }
 
   const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -261,11 +268,15 @@ export function SchemaEdit() {
 
   // La défense touche tous les temps à la fois : elle sort de la pile d'annulation,
   // qui est par temps. Sa protection, c'est la confirmation avant retrait.
+  // Et elle vide la pile, comme le changement de terrain : une étape empilée porte
+  // dix pions quand le schéma vient de repasser à cinq. La restaurer écrirait un
+  // schéma sans défense mais avec ses croix — l'invariante « cinq ou dix pions
+  // selon `defense` » cassée, et écrite en base.
   const changerDefense = (v: boolean) => {
     if (!v) { setAskDefense(true); return }
-    modifier((s) => ({ ...s, defense: true, temps: s.temps.map((t) => avecDefense(t, s.terrain)) }), false)
+    modifier((s) => { setPile([]); return { ...s, defense: true, temps: s.temps.map((t) => avecDefense(t, s.terrain)) } }, false)
   }
-  const retirerDefense = () => modifier((s) => ({ ...s, defense: false, temps: s.temps.map(sansDefense) }), false)
+  const retirerDefense = () => modifier((s) => { setPile([]); return { ...s, defense: false, temps: s.temps.map(sansDefense) } }, false)
 
   const ajouterTemps = () => modifier((s) => {
     setTempsIndex(s.temps.length)          // le temps ajouté devient le temps courant
