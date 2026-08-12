@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { PlayerDetail } from './PlayerDetail'
+import { AuthProvider, PLAYER_ID_KEY } from '../../app/auth'
 import { db } from '../../persistence/db'
 import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { GameEvent, Match } from '../../domain/types'
@@ -16,6 +17,7 @@ const match = (id: string, events: Partial<GameEvent>[]): Match => ({
 })
 
 beforeEach(async () => {
+  localStorage.clear()
   await db.matches.clear(); await db.players.clear(); await db.teams.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
@@ -31,7 +33,9 @@ beforeEach(async () => {
 const renderAt = (id: string) =>
   render(
     <MemoryRouter initialEntries={[`/players/${id}`]}>
-      <Routes><Route path="/players/:id" element={<PlayerDetail />} /></Routes>
+      <AuthProvider>
+        <Routes><Route path="/players/:id" element={<PlayerDetail />} /></Routes>
+      </AuthProvider>
     </MemoryRouter>,
   )
 
@@ -81,5 +85,28 @@ describe('PlayerDetail', () => {
     renderAt('p1')
     expect(await screen.findByText('MARTIN Lucas')).toBeInTheDocument()
     expect(screen.queryByText('0,0')).not.toBeInTheDocument()
+  })
+
+  it('mentionne discrètement au joueur identifié que c’est sa fiche', async () => {
+    localStorage.setItem(PLAYER_ID_KEY, 'p1')
+    renderAt('p1')
+    expect(await screen.findByText(/c’est vous/i)).toBeInTheDocument()
+  })
+
+  it('ne mentionne rien sur la fiche d’un autre joueur que celui identifié', async () => {
+    await savePlayer({ id: 'p2', teamId: 'ta', number: 9, lastName: 'DURAND', firstName: 'Théo' })
+    localStorage.setItem(PLAYER_ID_KEY, 'p1')
+    renderAt('p2')
+    expect(await screen.findByText('DURAND Théo')).toBeInTheDocument()
+    expect(screen.queryByText(/c’est vous/i)).not.toBeInTheDocument()
+  })
+
+  it('ne mentionne rien quand l’identifiant enregistré ne correspond à personne', async () => {
+    // Le joueur identifié a été retiré de l'effectif : sa fiche n'existe plus,
+    // et celle des autres ne doit surtout pas hériter de la mention.
+    localStorage.setItem(PLAYER_ID_KEY, 'parti')
+    renderAt('p1')
+    expect(await screen.findByText('MARTIN Lucas')).toBeInTheDocument()
+    expect(screen.queryByText(/c’est vous/i)).not.toBeInTheDocument()
   })
 })

@@ -47,6 +47,15 @@ export const ICON = {
   clock: 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18', chevron: 'm6 9 6 6 6-6', arrow: 'm9 6 6 6-6 6', plus: 'M12 5v14M5 12h14',
 }
 
+/** Marque discrète du joueur identifié sur cet appareil. Elle met en avant, elle
+ *  ne protège rien : l'identité et les droits d'écriture sont deux axes séparés. */
+export function Vous() {
+  return (
+    <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide"
+      style={{ background: C.accentBg, color: C.accent }}>vous</span>
+  )
+}
+
 export function TeamBadge({ id, name, size = 'h-8 w-8 text-[9px]' }: { id: string; name: string; size?: string }) {
   return <span className={`grid shrink-0 place-items-center rounded-full font-black text-white ${size}`} style={{ background: teamColor(id) }}>{initials(name)}</span>
 }

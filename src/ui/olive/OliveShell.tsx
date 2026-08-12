@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { listPlayers } from '../../persistence/repositories'
 import type { Player } from '../../domain/types'
-import { C, bd, Ic, ICON } from './kit'
-import { useAuth } from '../../app/auth'
+import { C, bd, Ic, ICON, Vous } from './kit'
+import { NOM_ROLE, useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 
 // « Mon équipe » s'intercale entre les deux : lien à part car sa cible dépend
@@ -30,23 +31,32 @@ const TITLES: Record<string, string> = {
 
 export function OliveShell() {
   const { pathname } = useLocation()
-  const { can, lock, guard } = useAuth()
-  const isAdmin = can('manage')
+  const { clubId } = useClub()
+  const { playerId, setPlayer } = useAuth()
+  // `null` tant que l'effectif n'est pas chargé : sans cette distinction, le
+  // garde ci-dessous prendrait le tableau vide du premier rendu pour un effectif
+  // réel et effacerait l'identité à chaque ouverture.
+  const [players, setPlayers] = useState<Player[] | null>(null)
+  useEffect(() => { if (clubId) listPlayers(clubId).then(setPlayers); else setPlayers([]) }, [clubId])
+
+  // Joueur retiré de l'effectif alors que son identifiant survit dans le
+  // localStorage : on oublie l'identité plutôt que de laisser une mise en
+  // évidence fantôme, comme `ClubProvider` oublie un club supprimé.
+  useEffect(() => {
+    if (players && playerId && !players.some((p) => p.id === playerId)) setPlayer(null)
+  }, [players, playerId, setPlayer])
+
+  const effectif = players ?? []
   const title = TITLES[pathname] ?? (pathname.startsWith('/teams') ? 'Équipes' : pathname.startsWith('/match') ? 'Rencontre' : 'Rencontres')
   return (
     <div className="min-h-dvh lg:p-4" style={{ background: C.page }}>
       <div className="mx-auto flex h-dvh w-full max-w-[1680px] overflow-hidden lg:h-[calc(100dvh-2rem)] lg:rounded-[26px] lg:shadow-2xl" style={{ background: C.frame, color: C.text }}>
-        <Sidebar />
+        <Sidebar players={effectif} />
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex shrink-0 items-center gap-3 px-4 py-3 sm:px-6 sm:py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
             <div className="flex items-center gap-2 text-base font-extrabold sm:text-lg"><span>🏀</span><span style={{ color: C.orange }}>{title}</span></div>
             <div className="ml-auto flex items-center gap-2">
-              <button
-                onClick={() => (isAdmin ? lock() : guard('manage', () => {}))}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm lg:hidden"
-                style={{ background: C.card, border: bd, color: isAdmin ? C.green : C.muted }}
-                title={isAdmin ? 'Admin déverrouillé' : 'Accès admin'}
-              >{isAdmin ? '🔓' : '🔒'}</button>
+              <AccesMenu players={effectif} compact />
               <Link to="/match/new" className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-white sm:px-4" style={{ background: C.orange }}>
                 <Ic d={ICON.plus} className="h-4 w-4" /> <span className="hidden sm:inline">Nouvelle rencontre</span>
               </Link>
@@ -59,6 +69,107 @@ export function OliveShell() {
         </div>
       </div>
     </div>
+  )
+}
+
+/** Point d'entrée unique des accès. Il dit le rôle en cours, en prend un autre à
+ *  partir d'un code, verrouille, et — quand le code saisi est celui du joueur —
+ *  laisse choisir son nom dans l'effectif.
+ *
+ *  Une seule saisie pour tous les codes : l'utilisateur tape ce qu'il a, il ne
+ *  déclare pas d'abord ce qu'il veut être. Et l'identité de joueur n'est pas un
+ *  quatrième rôle — la choisir n'accorde aucun droit d'écriture, la perdre n'en
+ *  retire aucun.
+ *
+ *  Le même composant sert à l'en-tête mobile (`compact`) et à la barre latérale :
+ *  deux copies finiraient par diverger. */
+function AccesMenu({ players, compact = false }: { players: Player[]; compact?: boolean }) {
+  const { role, playerId, unlock, lock, setPlayer } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [code, setCode] = useState('')
+  const [erreur, setErreur] = useState('')
+  const [choix, setChoix] = useState(false)
+  const moi = players.find((p) => p.id === playerId) ?? null
+  const verrouille = role === 'visiteur'
+
+  const ouvrir = () => { setCode(''); setErreur(''); setChoix(false); setOpen(true) }
+  const valider = () => {
+    const obtenu = unlock(code)
+    setCode('')
+    if (!obtenu) { setErreur('Code inconnu.'); return }
+    setErreur('')
+    // Seul le code joueur ouvre le choix du nom ; les autres changent le rôle,
+    // que le dialogue affiche aussitôt en guise de confirmation.
+    setChoix(obtenu === 'joueur')
+  }
+
+  return (
+    <>
+      <button
+        onClick={ouvrir}
+        aria-label={`Accès · ${NOM_ROLE[role]}`}
+        title={`Accès · ${NOM_ROLE[role]}`}
+        className={compact
+          ? 'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm lg:hidden'
+          : 'flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition'}
+        style={{ background: C.card, border: bd, color: verrouille ? C.muted : C.green }}
+      >
+        <span>{verrouille ? '🔒' : '🔓'}</span>
+        {!compact && <span className="truncate">Accès · {NOM_ROLE[role]}</span>}
+      </button>
+
+      <Dialog open={open} onOpenChange={(o) => !o && setOpen(false)}>
+        <DialogContent className="sm:max-w-xs border-none bg-[#161618] p-5 text-white [&>button]:text-white/60">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-extrabold">Accès</DialogTitle>
+          </DialogHeader>
+          <p className="text-[13px] font-semibold">Accès en cours : {NOM_ROLE[role]}</p>
+          <p className="text-[13px]" style={{ color: '#8a8a90' }}>
+            {moi ? `Identifié comme ${moi.lastName} ${moi.firstName}.` : 'Aucun joueur identifié sur cet appareil.'}
+          </p>
+
+          {choix ? (
+            <>
+              <p className="text-[13px] font-semibold">Qui êtes-vous dans l’effectif ?</p>
+              <ul className="max-h-56 space-y-1 overflow-y-auto">
+                {[...players].sort((a, b) => a.number - b.number).map((p) => (
+                  <li key={p.id}>
+                    <button
+                      onClick={() => { setPlayer(p.id); setChoix(false); setOpen(false) }}
+                      className="flex w-full items-center gap-2.5 rounded-xl bg-white/5 px-2.5 py-2 text-left text-sm font-medium transition hover:bg-white/10"
+                    >
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[9px] font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
+                      <span className="truncate">{p.lastName} {p.firstName}</span>
+                    </button>
+                  </li>
+                ))}
+                {players.length === 0 && <li className="py-2 text-[13px]" style={{ color: '#8a8a90' }}>Aucun joueur dans l’effectif.</li>}
+              </ul>
+            </>
+          ) : (
+            <>
+              <input
+                autoFocus aria-label="Code d’accès" type="password" value={code} placeholder="Code"
+                onChange={(e) => { setCode(e.target.value); setErreur('') }}
+                onKeyDown={(e) => e.key === 'Enter' && valider()}
+                className={`w-full rounded-xl border bg-[#202024] px-4 py-3 text-sm outline-none transition ${erreur ? 'border-red-500/60' : 'border-white/10 focus:border-[#ff4d6d]'}`}
+              />
+              {erreur && <p className="text-xs font-semibold text-red-400">{erreur}</p>}
+              <button onClick={valider} className="rounded-xl bg-[#ff4d6d] py-2.5 text-sm font-bold text-white transition hover:brightness-110">Déverrouiller</button>
+            </>
+          )}
+
+          <div className="flex gap-2">
+            {moi && !choix && (
+              <button onClick={() => setPlayer(null)} className="flex-1 rounded-xl bg-white/10 py-2.5 text-sm font-bold transition hover:bg-white/20">Ne plus m’identifier</button>
+            )}
+            {!verrouille && (
+              <button onClick={lock} className="flex-1 rounded-xl bg-white/10 py-2.5 text-sm font-bold transition hover:bg-white/20">Se verrouiller</button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -98,12 +209,9 @@ function NavGroup({ items }: { items: { icon: string; label: string; to: string;
   )
 }
 
-function Sidebar() {
-  const { can, lock, guard } = useAuth()
-  const isAdmin = can('manage')
+function Sidebar({ players }: { players: Player[] }) {
+  const { playerId } = useAuth()
   const { clubId, clear } = useClub()
-  const [players, setPlayers] = useState<Player[]>([])
-  useEffect(() => { if (clubId) listPlayers(clubId).then(setPlayers); else setPlayers([]) }, [clubId])
   return (
     <aside className="hidden w-[236px] shrink-0 flex-col overflow-y-auto px-4 py-5 lg:flex" style={{ background: C.panel, borderRight: `1px solid ${C.border}` }}>
       <Link to="/" className="flex items-center gap-2.5 px-1">
@@ -129,14 +237,18 @@ function Sidebar() {
         <>
           <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Effectif</p>
           <ul className="mt-1.5 space-y-0.5">
-            {[...players].sort((a, b) => a.number - b.number).map((p) => (
-              <li key={p.id}>
-                <Link to={`/players/${p.id}`} className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition hover:bg-white/5" style={{ color: C.muted }}>
-                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[9px] font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
-                  <span className="truncate">{p.firstName} {p.lastName}</span>
-                </Link>
-              </li>
-            ))}
+            {[...players].sort((a, b) => a.number - b.number).map((p) => {
+              const estMoi = p.id === playerId
+              return (
+                <li key={p.id}>
+                  <Link to={`/players/${p.id}`} className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition hover:bg-white/5" style={{ color: estMoi ? C.text : C.muted }}>
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[9px] font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
+                    <span className="truncate">{p.firstName} {p.lastName}</span>
+                    {estMoi && <Vous />}
+                  </Link>
+                </li>
+              )
+            })}
           </ul>
         </>
       )}
@@ -151,15 +263,7 @@ function Sidebar() {
           <span>🔁</span>
           Changer de club
         </button>
-        <button
-          onClick={() => (isAdmin ? lock() : guard('manage', () => {}))}
-          className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition"
-          style={{ background: C.card, border: bd, color: isAdmin ? C.green : C.muted }}
-          title={isAdmin ? 'Verrouiller l’accès admin' : 'Déverrouiller l’accès admin'}
-        >
-          <span>{isAdmin ? '🔓' : '🔒'}</span>
-          {isAdmin ? 'Admin déverrouillé' : 'Accès admin'}
-        </button>
+        <AccesMenu players={players} />
         <a href="https://github.com/arimet" target="_blank" rel="noopener noreferrer"
           className="block px-2 text-center text-[11px] font-medium transition hover:underline" style={{ color: C.faint }}>
           Fait par Anthony Rimet ↗

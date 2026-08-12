@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { getConvocation, listMatches, listPlayers, listTeams, listTrainings } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
@@ -8,11 +9,12 @@ import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { nextFixture, type Fixture } from '../../domain/fixtures'
 import { liveState } from '../../rules/ffbb'
 import { ShotChart } from '../components/ShotCourt'
-import { C, bd, TeamBadge, displayClock, fmtDate } from '../olive/kit'
+import { C, bd, TeamBadge, Vous, displayClock, fmtDate } from '../olive/kit'
 import type { Convocation, Match, Player, Team, Training } from '../../domain/types'
 
 export function Dashboard() {
   const { clubId, club } = useClub()
+  const { playerId } = useAuth()
   const [matches, setMatches] = useState<Match[] | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [players, setPlayers] = useState<Player[]>([])
@@ -78,6 +80,10 @@ export function Dashboard() {
   const scorers = [...teamScorers(clubId, matches).entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
   const byId = Object.fromEntries(players.map((p) => [p.id, p]))
   const shownShots = openPlayer ? shotsOf(matches, openPlayer) : clubShots
+  // Résolu dans l'effectif plutôt que pris tel quel : un identifiant qui ne
+  // correspond à personne (joueur retiré) doit se comporter comme une absence
+  // d'identité, sans raccourci vers une fiche disparue ni ligne mise en évidence.
+  const moi = players.find((p) => p.id === playerId) ?? null
 
   return (
     <div className="p-6">
@@ -90,6 +96,11 @@ export function Dashboard() {
               {rec.played ? `${rec.played} rencontre${rec.played > 1 ? 's' : ''} jouée${rec.played > 1 ? 's' : ''}` : 'Aucune rencontre jouée'}
             </p>
           </div>
+          {moi && (
+            <Link to={`/players/${moi.id}`} className="ml-auto shrink-0 rounded-xl px-3 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>
+              Ma fiche →
+            </Link>
+          )}
         </div>
 
         <Banner live={live} next={next} teams={teams} />
@@ -123,12 +134,15 @@ export function Dashboard() {
                 {scorers.map(([pid, pts], i) => {
                   const p = byId[pid]
                   const pct = shootingPct(shotsOf(matches, pid)).fg
+                  const estMoi = pid === moi?.id
                   return (
                     <li key={pid}>
-                      <Link to={`/players/${pid}`} className="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-white/5" style={{ background: C.panel }}>
+                      <Link to={`/players/${pid}`} className="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-white/5"
+                        style={estMoi ? { background: C.accentBg, border: `1px solid ${C.accent}55` } : { background: C.panel }}>
                         <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.orange : C.faint }}>{i + 1}</span>
                         <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p?.number ?? '?'}</span>
                         <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : 'Joueur'}</span>
+                        {estMoi && <Vous />}
                         {/* Titre explicite : ce pourcentage ne porte que sur les tirs
                             localisés, alors que les points juste à côté comptent tout
                             (lancers francs compris) — cf. PlayerDetail. */}
