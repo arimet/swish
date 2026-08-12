@@ -50,12 +50,15 @@ export function Calendrier() {
     if (!nos || !nosEntrainements) return []
     const map = new Map<string, CalItem[]>()
     const push = (k: string, item: CalItem) => { if (!map.has(k)) map.set(k, []); map.get(k)!.push(item) }
-    for (const m of nos) push(m.meta.date ?? '—', { key: m.id, kind: 'match', match: m, time: m.meta.time ?? '' })
+    // Les entraînements sont ajoutés avant les rencontres : le tri ci-dessous est stable,
+    // donc si l'ordre d'insertion décidait des égalités d'heure, il faudrait qu'il coïncide
+    // par hasard avec la règle voulue (la rencontre passe avant). En les mettant dans
+    // l'ordre « inverse », c'est bien le départage explicite qui décide, et non un ordre
+    // d'insertion accidentel — même dilemme, même remède que `nextFixture` dans
+    // `src/domain/fixtures.ts`.
     for (const t of nosEntrainements) push(t.date ?? '—', { key: t.id, kind: 'training', training: t, time: t.time ?? '' })
-    // À heure égale, la rencontre passe avant l'entraînement — même règle de
-    // départage explicite que `nextFixture` (src/domain/fixtures.ts), pour la même
-    // raison : un tri stable sans départage masquerait sa propre absence tant que
-    // personne n'inverse l'ordre des deux boucles ci-dessus.
+    for (const m of nos) push(m.meta.date ?? '—', { key: m.id, kind: 'match', match: m, time: m.meta.time ?? '' })
+    // À heure égale, la rencontre passe avant l'entraînement — c'est elle qui compte.
     for (const items of map.values())
       items.sort((a, b) => a.time.localeCompare(b.time) || (a.kind === b.kind ? 0 : a.kind === 'match' ? -1 : 1))
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
