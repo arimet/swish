@@ -5,8 +5,10 @@ import type { ShotSpot } from '../../domain/types'
 import { C } from '../olive/kit'
 
 // viewBox en centimètres, ligne de fond en haut. Voir les repères du plan.
-const W = 1500
-const D = 1400
+// Exportés parce que le tableau tactique dessine sur le même demi-terrain — et,
+// pour le terrain complet, sur son miroir : une seule géométrie pour tous.
+export const W = 1500
+export const D = 1400
 
 /** Contours des zones, dans le même ordre que ZONES. Les arcs suivent la ligne à 3 points. */
 export const ZONE_PATH: Record<ShotZone, string> = {
@@ -25,7 +27,7 @@ export const ZONE_PATH: Record<ShotZone, string> = {
  * Trois poids de trait : les limites et la ligne à 3 points guident le regard, la
  * raquette et le cercle de lancer franc viennent ensuite, le reste s'efface.
  */
-function CourtLines() {
+export function CourtLines({ bord = true }: { bord?: boolean }) {
   const major = { fill: 'none', stroke: 'currentColor', strokeWidth: 9, opacity: 0.7 } as const
   const minor = { fill: 'none', stroke: 'currentColor', strokeWidth: 6, opacity: 0.4 } as const
   const faint = { fill: 'none', stroke: 'currentColor', strokeWidth: 4, opacity: 0.22 } as const
@@ -51,9 +53,11 @@ function CourtLines() {
       {/* Panneau puis arceau */}
       <rect x={660} y={112} width={180} height={14} fill="currentColor" opacity={0.55} />
       <circle cx={750} cy={157.5} r={22.5} {...major} />
-      {/* Ligne à 3 points et limites du terrain */}
+      {/* Ligne à 3 points et limites du terrain. Le cadre est optionnel : mis bout
+          à bout avec son miroir (terrain complet), il doublerait la ligne médiane
+          et y planterait deux coins arrondis — l'appelant le trace alors lui-même. */}
       <path d="M 90 0 L 90 299.01 A 675 675 0 0 0 1410 299.01 L 1410 0" {...major} />
-      <rect x={4} y={4} width={W - 8} height={D - 8} rx={12} {...major} />
+      {bord && <rect x={4} y={4} width={W - 8} height={D - 8} rx={12} {...major} />}
     </g>
   )
 }
@@ -81,7 +85,7 @@ function Court({ children, label, onClick }: { children: ReactNode; label: strin
   )
 }
 
-const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
+export const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
 
 /** Durée d'affichage du retour visuel après un tap, avant fermeture de la popup. */
 export const SHOT_FEEDBACK_MS = 350
