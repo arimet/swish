@@ -129,6 +129,60 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     expect((await getPlay('s1'))!.temps[0].pions[0].at.y).toBeCloseTo(0.4285, 3)
   })
 
+  it('n’annule pas une défense retirée : le schéma ne repasse pas à dix pions', async () => {
+    // Une étape empilée porte dix pions ; la restaurer après le retrait de la
+    // défense écrirait `defense: false` avec ses croix — l'invariante « cinq ou
+    // dix pions selon `defense` » cassée, et écrite en base.
+    const s: Schema = { id: 's2', ...nouveauSchema('c1', 'demi', true) }
+    await savePlay(s)
+    renderEdit('s2')
+    const svg = await tableau()
+    fireEvent.pointerDown(svg, { clientX: 150, clientY: 174 })
+    fireEvent.pointerMove(svg, { clientX: 120, clientY: 240 })
+    fireEvent.pointerUp(svg, { clientX: 120, clientY: 240 })
+    await waitFor(async () => expect((await getPlay('s2'))!.temps[0].pions).toHaveLength(10))
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /défense/i }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Retirer' }))
+    await waitFor(async () => expect((await getPlay('s2'))!.temps[0].pions).toHaveLength(5))
+
+    expect(screen.getByRole('button', { name: /↩ Annuler/ })).toBeDisabled()
+    const apres = (await getPlay('s2'))!
+    expect(apres.defense).toBe(false)
+    expect(apres.temps[0].pions).toHaveLength(5)
+  })
+
+  it('pose la défense au panier le plus proche, pas toujours au panier avant', async () => {
+    // Sur terrain complet, une attaque dans la moitié arrière — transition, presse —
+    // verrait sinon son défenseur posé au milieu du terrain, à dix mètres d'elle.
+    const s: Schema = { id: 's3', ...nouveauSchema('c1', 'complet', false) }
+    s.temps[0].pions = s.temps[0].pions.map((p) => ({ ...p, at: { x: p.at.x, y: 0.9 } }))
+    await savePlay(s)
+    renderEdit('s3')
+    await userEvent.click(await screen.findByRole('checkbox', { name: /défense/i }))
+
+    await waitFor(async () => expect((await getPlay('s3'))!.temps[0].pions).toHaveLength(10))
+    const croix = (await getPlay('s3'))!.temps[0].pions.filter((p) => p.camp === 'defense')
+    // Panier arrière à y ≈ 0,944 : le défenseur est entre son attaquant et lui.
+    croix.forEach((c) => expect(c.at.y).toBeGreaterThan(0.9))
+  })
+
+  it('la flèche part de la position du pion, pas du point touché', async () => {
+    // Le doigt tombe à un rayon de prise près : partir du point touché détacherait
+    // le trait du pion, et l'animation de 8B ferait démarrer le joueur à côté.
+    renderEdit('s1')
+    await userEvent.click(await screen.findByRole('button', { name: 'Course' }))
+    const svg = await tableau()
+    // Le meneur est en (0.5, 0.62) ; on touche nettement à côté, dans le rayon de prise.
+    fireEvent.pointerDown(svg, { clientX: 160, clientY: 182 })
+    fireEvent.pointerMove(svg, { clientX: 90, clientY: 220 })
+    fireEvent.pointerUp(svg, { clientX: 30, clientY: 250 })
+
+    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].fleches).toHaveLength(1))
+    const f = (await getPlay('s1'))!.temps[0].fleches[0]
+    expect(f.points[0]).toEqual({ x: 0.5, y: 0.62 })
+  })
+
   it('la table de marque ne peut pas modifier : le tracé demande le code admin', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     const { container } = renderEdit('s1')
