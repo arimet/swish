@@ -29,3 +29,16 @@ describe('TeamCreate', () => {
     expect(await db.players.count()).toBe(1)
   })
 })
+
+describe('TeamCreate — droits', () => {
+  it('créer une équipe est administratif : la table de marque se voit demander le code admin', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    render(<MemoryRouter><ClubProvider><AuthProvider><TeamCreate /></AuthProvider></ClubProvider></MemoryRouter>)
+
+    await userEvent.type(screen.getByLabelText(/nom de l.équipe/i), 'VIGNOT')
+    await userEvent.click(screen.getByRole('button', { name: /créer l.équipe/i }))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(await db.teams.count()).toBe(0)
+  })
+})
