@@ -10,7 +10,7 @@ import { CLUB_ID_KEY } from '../app/club'
  * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
  * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v23'
+const SEED_VERSION = 'v24'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
@@ -171,7 +171,10 @@ function buildTrainings(): Training[] {
     const dernière = idx === FIXTURES.length - 1
     const [d0, d1] = dernière ? [3, 5] : [-5, -3]
     return [
-      { id: `seed-tr${idx}-0`, clubId: teamId(0), date: addDays(f.date, d0), time: '19:00', place: 'Gymnase de Vignot', theme: THEMES[idx % THEMES.length] },
+      // Seules les séances de la dernière journée sont encore à venir : c'est donc
+      // la première d'entre elles qui porte les schémas de démonstration, pour que
+      // le tableau de bord ait de quoi annoncer « au programme » sans rien saisir.
+      { id: `seed-tr${idx}-0`, clubId: teamId(0), date: addDays(f.date, d0), time: '19:00', place: 'Gymnase de Vignot', theme: THEMES[idx % THEMES.length], playIds: dernière ? ['seed-sch0', 'seed-sch1'] : undefined },
       { id: `seed-tr${idx}-1`, clubId: teamId(0), date: addDays(f.date, d1), time: '19:00', place: 'Gymnase de Vignot', theme: THEMES[(idx + 1) % THEMES.length] },
     ]
   })
@@ -295,7 +298,7 @@ interface Etape { deplace?: Mvt[]; ballon?: Temps['ballon']; fleches?: Fleche[] 
  * une combinaison qui ne se joue pas.
  */
 function schemaDemo(
-  idx: number, clubId: string, nom: string, note: string,
+  idx: number, clubId: string, nom: string, note: string, dossier: string,
   terrain: Terrain, defense: boolean, etapes: Etape[],
 ): Schema {
   const base = nouveauSchema(clubId, terrain, defense)
@@ -310,14 +313,14 @@ function schemaDemo(
     t.fleches = e.fleches ?? []
     return t
   })
-  return { ...base, id: `seed-sch${idx}`, nom, note, temps }
+  return { ...base, id: `seed-sch${idx}`, nom, note, dossier, temps }
 }
 
 function buildSchemas(clubId: string): Schema[] {
   return [
     // Le classique du haut : le 5 monte prendre l'écran, le 1 tourne autour par
     // l'extérieur, le 5 plonge dans le dos de son défenseur et reçoit.
-    schemaDemo(0, clubId, 'Pick and roll haut', 'Écran du 5 au sommet, le 1 tourne autour, passe au 5 qui plonge.', 'demi', true, [
+    schemaDemo(0, clubId, 'Pick and roll haut', 'Écran du 5 au sommet, le 1 tourne autour, passe au 5 qui plonge.', 'Attaque placée', 'demi', true, [
       {
         deplace: [
           ['attaque', 1, 0.50, 0.66], ['attaque', 2, 0.05, 0.16], ['attaque', 3, 0.95, 0.16],
@@ -343,11 +346,19 @@ function buildSchemas(clubId: string): Schema[] {
           fl(1, 'passe', [[0.70, 0.44], [0.63, 0.34], [0.555, 0.255]]),
         ],
       },
+      {
+        // La finition, jouée et non plus seulement dessinée : le 5 arrive au bout
+        // de sa course (là où menait sa flèche du temps précédent) et reçoit la
+        // passe. Son défenseur, resté haut sur l'écran, ne le rattrape pas ; celui
+        // du 1 reste collé au porteur qui vient de lâcher le ballon.
+        deplace: [['attaque', 5, 0.52, 0.21], ['defense', 5, 0.565, 0.37], ['defense', 1, 0.71, 0.51]],
+        ballon: { camp: 'attaque', poste: 5 },
+      },
     ]),
 
     // Renversement d'un côté à l'autre : le 4 sort du poste bas et va prendre le
     // corner, le ballon y arrive par l'aile.
-    schemaDemo(1, clubId, 'Corner pour le 4', 'Le 4 sort du poste bas vers le corner, le ballon suit par l’aile.', 'demi', false, [
+    schemaDemo(1, clubId, 'Corner pour le 4', 'Le 4 sort du poste bas vers le corner, le ballon suit par l’aile.', 'Attaque placée', 'demi', false, [
       {
         deplace: [
           ['attaque', 1, 0.50, 0.64], ['attaque', 2, 0.82, 0.46], ['attaque', 3, 0.18, 0.46],
@@ -372,7 +383,7 @@ function buildSchemas(clubId: string): Schema[] {
 
     // Remise en jeu en boîte, sur terrain complet : le remetteur est derrière la
     // ligne de fond et le ballon attend au sol tant que l'arbitre ne l'a pas donné.
-    schemaDemo(2, clubId, 'Remise ligne de fond', 'Boîte à quatre : écran du 5, le 3 coupe au panier, le 4 assure derrière.', 'complet', false, [
+    schemaDemo(2, clubId, 'Remise ligne de fond', 'Boîte à quatre : écran du 5, le 3 coupe au panier, le 4 assure derrière.', 'Remises en jeu', 'complet', false, [
       {
         deplace: [
           ['attaque', 1, 0.62, 0.025], ['attaque', 2, 0.36, 0.20], ['attaque', 3, 0.64, 0.20],
