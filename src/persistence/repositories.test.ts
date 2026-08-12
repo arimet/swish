@@ -106,6 +106,20 @@ describe('repositories', () => {
     expect((await listTrainings())[0].playIds).toEqual(['s2'])
   })
 
+  it('supprime deux schémas coup sur coup sans qu’un identifiant ressuscite', async () => {
+    // Lire les séances avant la transaction, c'est en prendre un instantané : les
+    // deux suppressions partiraient du même état et la seconde réinstallerait
+    // l'identifiant que la première venait de retirer, pour de bon.
+    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
+    await savePlay({ id: 's2', ...nouveauSchema('ta', 'demi', false), nom: 'B' })
+    await saveTraining({ id: 't1', clubId: 'ta', date: '2026-09-01', playIds: ['s1', 's2'] })
+
+    await Promise.all([deletePlay('s1'), deletePlay('s2')])
+
+    expect((await listTrainings())[0].playIds).toEqual([])
+    expect(await listPlays('ta')).toEqual([])
+  })
+
   it('les schémas ne passent pas par la file de synchronisation', async () => {
     await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'PnR haut' })
     await deletePlay('s1')

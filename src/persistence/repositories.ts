@@ -107,11 +107,15 @@ export const getPlay = (id: string) => db.plays.get(id)
 export const savePlay = async (s: Schema) => { await db.plays.put({ ...s, majLe: new Date().toISOString() }) }
 /** Supprime un schéma et le retire des entraînements qui le citaient, dans la même
  *  transaction : même cascade que `deletePlayer` sur les convocations, et pour la
- *  même raison — un identifiant orphelin fausserait le compte affiché sur la séance. */
-export const deletePlay = async (id: string) => {
-  const séances = (await db.trainings.toArray()).filter((t) => t.playIds?.includes(id))
-  await db.transaction('rw', db.plays, db.trainings, async () => {
+ *  même raison — un identifiant orphelin fausserait le compte affiché sur la séance.
+ *
+ *  Les séances se relisent **dans** la transaction. Les lire avant, c'est prendre un
+ *  instantané : deux suppressions coup sur coup partiraient toutes deux du même état,
+ *  et la seconde écriture réinstallerait l'identifiant que la première venait de
+ *  retirer. Le déchet resterait ensuite indéfiniment. */
+export const deletePlay = async (id: string) =>
+  db.transaction('rw', db.plays, db.trainings, async () => {
     await db.plays.delete(id)
+    const séances = (await db.trainings.toArray()).filter((t) => t.playIds?.includes(id))
     await db.trainings.bulkPut(séances.map((t) => ({ ...t, playIds: t.playIds!.filter((pid) => pid !== id) })))
   })
-}
