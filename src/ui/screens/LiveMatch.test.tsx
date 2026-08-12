@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LiveMatch } from './LiveMatch'
-import { AdminProvider } from '../../app/admin'
+import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { db } from '../../persistence/db'
 import { getMatch, saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { Match } from '../../domain/types'
@@ -12,7 +12,7 @@ import type { Match } from '../../domain/types'
 const MATCH_ID = 'match-1'
 
 beforeEach(async () => {
-  sessionStorage.setItem('admin-unlocked', '1')
+  sessionStorage.setItem(ROLE_KEY, 'admin')
   await db.matches.clear(); await db.players.clear(); await db.teams.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' }); await saveTeam({ id: 'tb', name: 'VERDUN' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas' })
@@ -30,7 +30,7 @@ beforeEach(async () => {
 })
 
 const renderLive = () =>
-  render(<AdminProvider><MemoryRouter><LiveMatch matchId={MATCH_ID} onFinish={vi.fn()} /></MemoryRouter></AdminProvider>)
+  render(<AuthProvider><MemoryRouter><LiveMatch matchId={MATCH_ID} onFinish={vi.fn()} /></MemoryRouter></AuthProvider>)
 
 describe('LiveMatch', () => {
   it('n’affiche qu’une colonne d’équipe', async () => {
@@ -82,7 +82,7 @@ describe('parcours complet', () => {
   })
 
   const renderE2E = (onFinish = vi.fn()) =>
-    render(<AdminProvider><MemoryRouter><LiveMatch matchId={ID} onFinish={onFinish} /></MemoryRouter></AdminProvider>)
+    render(<AuthProvider><MemoryRouter><LiveMatch matchId={ID} onFinish={onFinish} /></MemoryRouter></AuthProvider>)
 
   it('porte du cinq → panier avec position → tir manqué → changement → terminer', async () => {
     const onFinish = vi.fn()

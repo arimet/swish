@@ -5,7 +5,7 @@ import { listPlayers, listTeams, saveMatch } from '../../persistence/repositorie
 import { refresh } from '../../persistence/remote'
 import type { Match, Team } from '../../domain/types'
 import { C, bd, PageTitle, TeamBadge } from '../olive/kit'
-import { useAdmin } from '../../app/admin'
+import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { publishBundle } from '../../app/sync'
 
@@ -15,7 +15,7 @@ const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
  *  fixé d'avance, seul l'adversaire se choisit ici — il n'a pas d'effectif à
  *  détailler, son score se saisira globalement pendant le match. */
 export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
-  const { guard } = useAdmin()
+  const { guard } = useAuth()
   const { clubId, club, ready } = useClub()
   const [teams, setTeams] = useState<Team[] | null>(null) // null = pas encore chargé
   useEffect(() => { refresh().then(() => listTeams()).then(setTeams) }, [])
@@ -105,7 +105,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
 
       <div className="mt-6 flex justify-end gap-3">
         <Link to="/" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>Annuler</Link>
-        <button onClick={() => guard(create)} disabled={!canCreate} className="rounded-xl px-6 py-3 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>Planifier la rencontre →</button>
+        <button onClick={() => guard('manage', create)} disabled={!canCreate} className="rounded-xl px-6 py-3 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>Planifier la rencontre →</button>
       </div>
     </div>
   )

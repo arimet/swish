@@ -4,13 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MatchSetup } from './MatchSetup'
-import { AdminProvider } from '../../app/admin'
+import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { saveTeam, savePlayer } from '../../persistence/repositories'
 
 beforeEach(async () => {
-  sessionStorage.setItem('admin-unlocked', '1') // actions protégées débloquées pour le test
+  sessionStorage.setItem(ROLE_KEY, 'admin') // actions protégées débloquées pour le test
   localStorage.setItem('swish-club-id', 'ta') // notre club est déjà réglé (écran derrière la garde club)
   await db.teams.clear(); await db.players.clear(); await db.matches.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' }); await saveTeam({ id: 'tb', name: 'VERDUN' })
@@ -21,7 +21,7 @@ beforeEach(async () => {
 describe('MatchSetup', () => {
   it('crée un match et notifie onCreated', async () => {
     const onCreated = vi.fn()
-    render(<MemoryRouter><ClubProvider><AdminProvider><MatchSetup onCreated={onCreated} /></AdminProvider></ClubProvider></MemoryRouter>)
+    render(<MemoryRouter><ClubProvider><AuthProvider><MatchSetup onCreated={onCreated} /></AuthProvider></ClubProvider></MemoryRouter>)
     await waitFor(() => expect(screen.getAllByText('VIGNOT').length).toBeGreaterThan(0))
     await userEvent.type(screen.getByLabelText(/championnat/i), 'PRM')
     await userEvent.click(screen.getByRole('button', { name: /planifier la rencontre/i }))
@@ -33,7 +33,7 @@ describe('MatchSetup', () => {
 
   it('notre club est fixé d\'avance et l\'adversaire n\'a pas d\'effectif détaillé', async () => {
     const onCreated = vi.fn()
-    render(<ClubProvider><MemoryRouter><AdminProvider><MatchSetup onCreated={onCreated} /></AdminProvider></MemoryRouter></ClubProvider>)
+    render(<ClubProvider><MemoryRouter><AuthProvider><MatchSetup onCreated={onCreated} /></AuthProvider></MemoryRouter></ClubProvider>)
     await waitFor(() => expect(screen.getAllByText('VIGNOT').length).toBeGreaterThan(0))
     await userEvent.click(screen.getByRole('button', { name: /Planifier la rencontre/ }))
     await waitFor(() => expect(onCreated).toHaveBeenCalled())

@@ -5,7 +5,7 @@ import { refresh } from '../../persistence/remote'
 import type { Match, Team, Training } from '../../domain/types'
 import { C, bd, MatchCard, PageTitle, fmtDate } from '../olive/kit'
 import { useClub } from '../../app/club'
-import { useAdmin } from '../../app/admin'
+import { useAuth } from '../../app/auth'
 
 // L'entraînement se distingue de la rencontre par une couleur qui n'est prise
 // par aucun autre badge de l'écran (le vert vaut victoire/en direct, l'ambre
@@ -20,7 +20,7 @@ type CalItem = { key: string; time: string } & ({ kind: 'match'; match: Match } 
 
 export function Calendrier() {
   const { clubId } = useClub()
-  const { guard } = useAdmin()
+  const { guard } = useAuth()
   const [matches, setMatches] = useState<Match[] | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [trainings, setTrainings] = useState<Training[] | null>(null)
@@ -71,13 +71,13 @@ export function Calendrier() {
 
   const ajouter = () => {
     if (!date || !clubId) return
-    guard(async () => {
+    guard('manage', async () => {
       await saveTraining({ id: newId(), clubId, date, time: time.trim() || undefined, place: place.trim() || undefined, theme: theme.trim() || undefined })
       setDate(''); setTime(''); setPlace(''); setTheme('')
       refreshTrainings()
     })
   }
-  const supprimer = (id: string) => guard(async () => { await deleteTraining(id); refreshTrainings() })
+  const supprimer = (id: string) => guard('manage', async () => { await deleteTraining(id); refreshTrainings() })
 
   return (
     <div className="p-6">

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
+import { ROLE_KEY } from './app/auth'
 import { db } from './persistence/db'
 import { saveTeam } from './persistence/repositories'
 
@@ -32,7 +33,7 @@ describe('App', () => {
     // ClubProvider ne revalide sa liste d'équipes qu'à un changement de club :
     // sans le clear() dans TeamDetail, le tableau de bord resterait épinglé
     // sur ce club supprimé avec un effectif vide.
-    sessionStorage.setItem('admin-unlocked', '1')
+    sessionStorage.setItem(ROLE_KEY, 'admin')
     render(<App />)
     // « Mon équipe » apparaît deux fois dans le DOM (barre latérale + nav basse
     // mobile) : jsdom ne masque pas la seconde via `lg:hidden`, faute de media
@@ -57,7 +58,7 @@ describe('premier lancement (appareil vierge)', () => {
     await db.teams.clear()
     // La création d'équipe est une action admin (guard) : on la déverrouille
     // pour tester le parcours plutôt que la boîte de mot de passe.
-    sessionStorage.setItem('admin-unlocked', '1')
+    sessionStorage.setItem(ROLE_KEY, 'admin')
   })
 
   it('mène de l’écran de bienvenue jusqu’au tableau de bord, en passant par la création d’équipe', async () => {

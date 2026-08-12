@@ -4,13 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { Championnat } from './Championnat'
-import { AdminProvider } from '../../app/admin'
+import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { listResults, saveMatch, saveResult, saveTeam } from '../../persistence/repositories'
 
 beforeEach(async () => {
-  sessionStorage.setItem('admin-unlocked', '1')
+  sessionStorage.setItem(ROLE_KEY, 'admin')
   localStorage.clear()
   await db.teams.clear(); await db.matches.clear(); await db.results.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
@@ -20,7 +20,7 @@ beforeEach(async () => {
 })
 
 const renderChamp = () =>
-  render(<MemoryRouter><ClubProvider><AdminProvider><Championnat /></AdminProvider></ClubProvider></MemoryRouter>)
+  render(<MemoryRouter><ClubProvider><AuthProvider><Championnat /></AuthProvider></ClubProvider></MemoryRouter>)
 
 /** Sélectionne les équipes et scores du formulaire de saisie, sans valider.
  *  Les équipes du club viennent d'un chargement asynchrone : on attend qu'elles
