@@ -131,6 +131,11 @@ export function Calendrier() {
         <button onClick={ajouter} disabled={!date || !clubId} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: ENTR_COLOR }}>
           Ajouter l'entraînement
         </button>
+
+        {/* Comme les convocations et les résultats extérieurs : même formulation que sur
+            les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux
+            limites différentes — la décision couvrait aussi bien les entraînements. */}
+        <p className="mt-4 text-[11px]" style={{ color: C.faint }}>Ces entraînements restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
       </section>
     </div>
   )

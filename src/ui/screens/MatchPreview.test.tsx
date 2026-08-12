@@ -95,6 +95,26 @@ describe('MatchPreview — convocation', () => {
     expect(screen.getByText(/1 convoqué/i)).toBeInTheDocument()
   })
 
+  it('guérit une convocation dont un joueur convoqué a depuis été retiré de l’effectif', async () => {
+    // Une convocation enregistrée avant la suppression du joueur peut encore le
+    // mentionner (la cascade de `deletePlayer` ne répare que l'avenir) : le compte
+    // affiché doit se limiter à l'effectif réel, et décocher le seul joueur restant
+    // ne doit jamais réenregistrer le joueur disparu.
+    await saveConvocation({ matchId: 'm1', playerIds: ['p2', 'p9-supprimé'] })
+    renderPreview()
+    const caseBertrand = await screen.findByLabelText(/BERTRAND/i)
+    await waitFor(() => expect(caseBertrand).toBeChecked())
+    expect(screen.getByText(/1 convoqué/i)).toBeInTheDocument()
+
+    await userEvent.click(caseBertrand)
+    await userEvent.click(screen.getByRole('button', { name: /enregistrer la convocation/i }))
+
+    await waitFor(async () => {
+      const conv = await getConvocation('m1')
+      expect(conv?.playerIds).toEqual([])
+    })
+  })
+
   it('signale que la convocation reste sur cet appareil', async () => {
     renderPreview()
     expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()

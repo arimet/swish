@@ -4,6 +4,7 @@ import { seedDevData } from './seed'
 import { db } from '../persistence/db'
 import { getConvocation, listMatches, listPlayers, listResults, listTeams, listTrainings, saveConvocation, saveTraining } from '../persistence/repositories'
 import { playingTimes } from '../domain/playingtime'
+import { nextFixture } from '../domain/fixtures'
 
 beforeEach(async () => {
   localStorage.clear()
@@ -69,6 +70,24 @@ describe('données de démonstration', () => {
     for (const jouee of matches.filter((m) => m.status === 'finished')) {
       expect(await getConvocation(jouee.id)).toBeUndefined()
     }
+  })
+
+  it('la prochaine échéance juste après un seed est la rencontre convoquée, pas un entraînement', async () => {
+    // Les entraînements de la dernière journée sont posés après la rencontre (pas
+    // avant, comme les autres journées) : sans quoi, plus proches dans le temps que
+    // la rencontre convoquée, ils masqueraient le bloc « convoqués » pendant plusieurs
+    // jours après un seed — précisément quand on regarde la démonstration.
+    const matches = await listMatches()
+    const trainings = await listTrainings()
+    const aVenir = matches.find((m) => m.status === 'setup')!
+    // Comme le tableau de bord (`Dashboard.tsx`) : la rencontre en direct occupe déjà
+    // le bandeau, `nextFixture` ne l'écarte pas lui-même (ce n'est pas son rôle, elle
+    // n'est pas « terminée ») — c'est l'appelant qui la retire avant de l'appeler.
+    const fixture = nextFixture(matches.filter((m) => m.status !== 'live'), trainings, new Date())
+    console.log('nextFixture(seedé) =', JSON.stringify(fixture && { kind: fixture.kind, id: fixture.id, date: fixture.date }))
+    expect(fixture?.kind).toBe('match')
+    expect(fixture?.id).toBe(aVenir.id)
+    expect(await getConvocation(fixture!.id)).toBeDefined()
   })
 
   it('vide entraînements et convocations avant de re-seeder, pour ne pas laisser d’orphelins', async () => {

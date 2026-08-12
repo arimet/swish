@@ -75,6 +75,11 @@ describe('Calendrier', () => {
     expect(texte.indexOf('Départage')).toBeGreaterThan(texte.indexOf('METZ'))
   })
 
+  it('signale que les entraînements restent sur cet appareil', async () => {
+    renderCal()
+    expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
+  })
+
   it('crée un entraînement depuis le formulaire et l’ajoute au calendrier', async () => {
     renderCal()
     await userEvent.type(await screen.findByLabelText(/date de l'entraînement/i), '2026-02-03')

@@ -62,9 +62,20 @@ describe('Dashboard', () => {
   })
 
   it('annonce la prochaine rencontre quand aucun match n’est en cours', async () => {
-    await saveMatch({ ...finished('m3', 0, 0), id: 'm3', status: 'setup' })
+    await saveMatch({ ...finished('m3', 0, 0), id: 'm3', status: 'setup', meta: { championshipLabel: 'Poule A', date: dansNJours(5), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByText(/prochaine rencontre/i)).toBeInTheDocument()
+  })
+
+  it('n’annonce pas au bandeau une rencontre planifiée puis jamais jouée, alors que le bloc échéance l’écarte déjà', async () => {
+    // Statut resté à `setup` mais date passée : une rencontre planifiée puis jamais
+    // jouée. Le bandeau doit appliquer la même règle que `nextFixture` (qui écarte le
+    // passé), sans quoi il annoncerait « Prochaine rencontre » à côté d'un bloc
+    // « Rien de planifié pour l'instant » contradictoire.
+    await saveMatch({ ...finished('m3', 0, 0), id: 'm3', status: 'setup', meta: { championshipLabel: 'Poule A', date: '2020-01-10', clubId: 'ta', opponentId: 'tb' } })
+    renderDash()
+    expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
+    expect(screen.queryByText(/prochaine rencontre/i)).not.toBeInTheDocument()
   })
 
   it('n’affiche pas de hot zone vide sans explication', async () => {
@@ -110,6 +121,18 @@ describe('Dashboard', () => {
     // Aucune autre échéance que la rencontre en direct : le bloc doit inviter à
     // planifier plutôt que répéter l'adversaire déjà affiché dans le bandeau.
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(0), clubId: 'ta', opponentId: 'tb' } })
+    renderDash()
+    expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
+    expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
+  })
+
+  it('écarte toutes les rencontres en direct de la prochaine échéance, pas seulement la première', async () => {
+    // Rien n'empêche une seconde rencontre `live` sans que la première soit terminée
+    // (démarrée par erreur) : les deux doivent rester exclues des échéances à venir,
+    // sans quoi la seconde serait annoncée comme « prochaine échéance » alors qu'elle
+    // a déjà commencé.
+    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(0), clubId: 'ta', opponentId: 'tb' } })
+    await saveMatch({ ...finished('m5', 2, 1), id: 'm5', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(1), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
