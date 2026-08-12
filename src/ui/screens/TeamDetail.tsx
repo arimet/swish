@@ -24,7 +24,7 @@ const toHeight = (s: string): number | undefined => {
 export function TeamDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { guard } = useAuth()
+  const { can, guard } = useAuth()
   const { clubId, clear } = useClub()
   const [askDelete, setAskDelete] = useState(false)
   const [team, setTeam] = useState<Team | null | undefined>(undefined)
@@ -56,6 +56,10 @@ export function TeamDetail() {
     if (coach === (team.coach ?? '')) return
     guard('manage', () => saveTeam({ ...team, coach: coach.trim() || undefined }).then(() => setTeam({ ...team, coach: coach.trim() || undefined })))
   }
+  // Garder d'abord, muter ensuite : le champ ne s'ouvre à la frappe qu'une fois le
+  // droit acquis. Garder au seul enregistrement laisserait le nom refusé affiché
+  // alors que la base a gardé l'ancien entraîneur.
+  const demanderCode = () => guard('manage', () => {})
   const addPlayer = () => guard('manage', async () => {
     if (!num || !ln.trim()) return
     await savePlayer({
@@ -162,6 +166,7 @@ export function TeamDetail() {
           <Panel title="Effectif">
             <label htmlFor="coach" className="mb-1.5 block text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Entraîneur</label>
             <input id="coach" value={coach} onChange={(e) => setCoach(e.target.value)} onBlur={saveCoach} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+              readOnly={!can('manage')} onFocus={demanderCode}
               placeholder="Nom de l'entraîneur" style={{ ...field, width: '100%' }} className="mb-4" />
             <ul className="mb-4 space-y-1.5">
               {[...players].sort((a, b) => a.number - b.number).map((p) => (

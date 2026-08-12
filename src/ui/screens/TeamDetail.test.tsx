@@ -7,7 +7,7 @@ import { TeamDetail } from './TeamDetail'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
-import { listPlayers, savePlayer, saveTeam } from '../../persistence/repositories'
+import { getTeam, listPlayers, savePlayer, saveTeam } from '../../persistence/repositories'
 
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
@@ -95,5 +95,19 @@ describe('TeamDetail — droits', () => {
 
     expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
     expect(await listPlayers('ta')).toHaveLength(1) // MARTIN seul, DUPONT n'a pas été ajouté
+  })
+
+  it('ne laisse pas à l’écran un entraîneur que le refus du code n’a pas enregistré', async () => {
+    // Même exigence que sur le champ de score du championnat : après un refus,
+    // ce que l'écran affiche et ce que contient la base disent la même chose.
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    renderTeam()
+    const coach = await screen.findByLabelText(/entraîneur/i)
+    await userEvent.type(coach, 'DURAND')
+    await userEvent.tab()
+    await userEvent.click(await screen.findByRole('button', { name: 'Annuler' }))
+
+    expect(coach).toHaveValue('')
+    expect((await getTeam('ta'))?.coach).toBeUndefined()
   })
 })

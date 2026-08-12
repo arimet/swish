@@ -131,6 +131,23 @@ describe('Championnat — droits', () => {
     expect(await listResults()).toHaveLength(0)
   })
 
+  it('ne laisse pas à l’écran un score corrigé que le refus du code n’a pas enregistré', async () => {
+    // Le champ n'est pas contrôlé : React ne le réinitialise pas tout seul. Si la
+    // correction pouvait être frappée avant la demande de code, un refus laisserait
+    // à l'écran une valeur que la base n'a pas — et le classement juste au-dessus
+    // continuerait de compter l'ancienne.
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
+    renderChamp()
+    const scoreHome = await screen.findByLabelText(/score verdun/i)
+    await userEvent.type(scoreHome, '99')
+    await userEvent.tab()
+    await userEvent.click(await screen.findByRole('button', { name: 'Annuler' }))
+
+    expect(scoreHome).toHaveValue(70)
+    expect((await listResults())[0].homeScore).toBe(70)
+  })
+
   it('un visiteur consulte le classement sans qu’aucun code lui soit demandé', async () => {
     sessionStorage.removeItem(ROLE_KEY)
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
