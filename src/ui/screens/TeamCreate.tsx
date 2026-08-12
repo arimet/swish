@@ -4,7 +4,7 @@ import { newId } from '../../domain/ids'
 import { saveTeam, savePlayer } from '../../persistence/repositories'
 import type { Player } from '../../domain/types'
 import { C, bd, PageTitle } from '../olive/kit'
-import { useAdmin } from '../../app/admin'
+import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 
 type Draft = Omit<Player, 'id' | 'teamId'>
@@ -13,7 +13,7 @@ const Label = ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: str
 
 export function TeamCreate() {
   const navigate = useNavigate()
-  const { guard } = useAdmin()
+  const { guard } = useAuth()
   const { clubId, setClub } = useClub()
   const [name, setName] = useState(''); const [coach, setCoach] = useState('')
   const [roster, setRoster] = useState<Draft[]>([])
@@ -74,7 +74,7 @@ export function TeamCreate() {
 
       <div className="mt-6 flex justify-end gap-3">
         <Link to="/teams" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>Annuler</Link>
-        <button onClick={() => guard(create)} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>Créer l'équipe →</button>
+        <button onClick={() => guard('manage', create)} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>Créer l'équipe →</button>
       </div>
     </div>
   )

@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SummaryScreen } from './SummaryScreen'
-import { AdminProvider } from '../../app/admin'
+import { AuthProvider } from '../../app/auth'
 import { db } from '../../persistence/db'
 import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { Match } from '../../domain/types'
@@ -34,11 +34,11 @@ beforeEach(async () => {
 describe('SummaryScreen', () => {
   it('affiche le score adverse réel et la mention de saisie globale, pas un total à 0', async () => {
     render(
-      <AdminProvider>
+      <AuthProvider>
         <MemoryRouter>
           <SummaryScreen matchId={MATCH_ID} onHome={vi.fn()} />
         </MemoryRouter>
-      </AdminProvider>,
+      </AuthProvider>,
     )
 
     // L'encart adverse remplace le tableau (la feuille imprimable, cachée mais présente dans le
@@ -73,11 +73,11 @@ describe('SummaryScreen — colonne %Tirs', () => {
     await saveMatch(m)
 
     render(
-      <AdminProvider>
+      <AuthProvider>
         <MemoryRouter>
           <SummaryScreen matchId={matchId} onHome={vi.fn()} />
         </MemoryRouter>
-      </AdminProvider>,
+      </AuthProvider>,
     )
 
     await screen.findByText('DUPONT Marc')

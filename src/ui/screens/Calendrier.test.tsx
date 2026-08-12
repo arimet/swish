@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { Calendrier } from './Calendrier'
-import { AdminProvider } from '../../app/admin'
+import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { listTrainings, saveMatch, saveTeam, saveTraining } from '../../persistence/repositories'
@@ -16,7 +16,7 @@ const mk = (id: string, clubId: string, opponentId: string, date = '2026-01-10')
 })
 
 beforeEach(async () => {
-  sessionStorage.setItem('admin-unlocked', '1')
+  sessionStorage.setItem(ROLE_KEY, 'admin')
   localStorage.clear()
   await db.matches.clear(); await db.teams.clear(); await db.trainings.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
@@ -28,7 +28,7 @@ beforeEach(async () => {
 })
 
 const renderCal = () =>
-  render(<MemoryRouter><ClubProvider><AdminProvider><Calendrier /></AdminProvider></ClubProvider></MemoryRouter>)
+  render(<MemoryRouter><ClubProvider><AuthProvider><Calendrier /></AuthProvider></ClubProvider></MemoryRouter>)
 
 describe('Calendrier', () => {
   it('n’affiche que les rencontres du club', async () => {

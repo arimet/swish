@@ -5,7 +5,7 @@ import { getTeam, listPlayers, listMatches, listTeams, savePlayer, deletePlayer,
 import { teamRecord, teamMatches, teamScorers } from '../../domain/teamRecord'
 import type { Match, Player, Team } from '../../domain/types'
 import { C, bd, TeamBadge, fmtDate } from '../olive/kit'
-import { useAdmin } from '../../app/admin'
+import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { refresh as refreshRemote } from '../../persistence/remote'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -24,7 +24,7 @@ const toHeight = (s: string): number | undefined => {
 export function TeamDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { guard } = useAdmin()
+  const { guard } = useAuth()
   const { clubId, clear } = useClub()
   const [askDelete, setAskDelete] = useState(false)
   const [team, setTeam] = useState<Team | null | undefined>(undefined)
@@ -54,9 +54,9 @@ export function TeamDetail() {
 
   const saveCoach = () => {
     if (coach === (team.coach ?? '')) return
-    guard(() => saveTeam({ ...team, coach: coach.trim() || undefined }).then(() => setTeam({ ...team, coach: coach.trim() || undefined })))
+    guard('manage', () => saveTeam({ ...team, coach: coach.trim() || undefined }).then(() => setTeam({ ...team, coach: coach.trim() || undefined })))
   }
-  const addPlayer = () => guard(async () => {
+  const addPlayer = () => guard('manage', async () => {
     if (!num || !ln.trim()) return
     await savePlayer({
       id: newId(), teamId: id, number: Number(num), lastName: ln.trim().toUpperCase(), firstName: fn.trim(),
@@ -64,11 +64,11 @@ export function TeamDetail() {
     })
     setNum(''); setLn(''); setFn(''); setBirth(''); setHeight(''); refresh()
   })
-  const removePlayer = (pid: string) => guard(async () => { await deletePlayer(pid); refresh() })
+  const removePlayer = (pid: string) => guard('manage', async () => { await deletePlayer(pid); refresh() })
   const startEdit = (p: Player) => { setEditingId(p.id); setEditBirth(p.birthDate ?? ''); setEditHeight(p.height ? String(p.height) : '') }
   // L'identifiant du joueur survit à la modification : c'est lui qui porte tout
   // son historique de tirs et de statistiques, le recréer le lui ferait perdre.
-  const saveEdit = (p: Player) => guard(async () => {
+  const saveEdit = (p: Player) => guard('manage', async () => {
     await savePlayer({ ...p, birthDate: toUndef(editBirth), height: toHeight(editHeight) })
     setEditingId(null); refresh()
   })
@@ -97,7 +97,7 @@ export function TeamDetail() {
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{team.name}</h1>
           <p className="text-sm" style={{ color: C.muted }}>{players.length} joueur{players.length > 1 ? 's' : ''}{team.coach ? ` · Coach ${team.coach}` : ''}</p>
         </div>
-        <button onClick={() => guard(() => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.pink}55`, color: C.pink }}>Supprimer</button>
+        <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.pink}55`, color: C.pink }}>Supprimer</button>
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
         title="Supprimer l'équipe ?" message={`« ${team.name} » et tous ses joueurs seront supprimés. Cette action est définitive.`} confirmLabel="Supprimer" danger />

@@ -4,14 +4,14 @@ import { standings, clefConfrontation } from '../../domain/standings'
 import { listMatches, listResults, saveResult, deleteResult } from '../../persistence/repositories'
 import type { Match, ReportedResult } from '../../domain/types'
 import { C, bd, champLabel, TeamBadge, PageTitle } from '../olive/kit'
-import { useAdmin } from '../../app/admin'
+import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
 export function Championnat() {
   const { clubId, teams } = useClub()
-  const { guard } = useAdmin()
+  const { guard } = useAuth()
   const [matches, setMatches] = useState<Match[]>([])
   const [results, setResults] = useState<ReportedResult[]>([])
   const [erreur, setErreur] = useState('')
@@ -91,7 +91,7 @@ export function Championnat() {
       return
     }
     setErreur('')
-    guard(async () => {
+    guard('manage', async () => {
       await saveResult({
         id: newId(), championshipLabel: champLbl, date,
         homeId, awayId, homeScore: Number(homeScore), awayScore: Number(awayScore),
@@ -101,11 +101,11 @@ export function Championnat() {
     })
   }
 
-  const majScore = (r: ReportedResult, patch: Partial<ReportedResult>) => guard(async () => {
+  const majScore = (r: ReportedResult, patch: Partial<ReportedResult>) => guard('manage', async () => {
     await saveResult({ ...r, ...patch })
     rafraichir()
   })
-  const supprimer = (id: string) => guard(async () => { await deleteResult(id); rafraichir() })
+  const supprimer = (id: string) => guard('manage', async () => { await deleteResult(id); rafraichir() })
 
   return (
     <div className="p-6">

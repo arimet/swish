@@ -1,15 +1,19 @@
 import { Link } from 'react-router-dom'
+import { NOM_ROLE, REQUIS, type Ability } from '../../app/auth'
 
 /**
- * Écran de verrouillage de la table de marque : la saisie du match est
- * réservée à l'admin, les spectateurs passent par /watch (lecture seule).
+ * Écran de verrouillage : la saisie du match est réservée à qui détient
+ * l'accès requis, les spectateurs passent par /watch (lecture seule). Le
+ * libellé nomme l'accès manquant, pour qu'un bénévole comprenne qu'il lui
+ * faut un autre code plutôt que de croire le sien cassé.
  */
-export function AdminGate({ matchId, onUnlock, onExit }: { matchId: string; onUnlock: () => void; onExit: () => void }) {
+export function AdminGate({ ability, matchId, onUnlock, onExit }: { ability: Ability; matchId: string; onUnlock: () => void; onExit: () => void }) {
+  const nomAccès = NOM_ROLE[REQUIS[ability]]
   return (
     <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
       <div className="text-5xl">🔒</div>
-      <h2 className="text-xl font-extrabold tracking-tight">Accès table de marque</h2>
-      <p className="max-w-sm text-sm text-muted-foreground">Le mot de passe administrateur est requis pour saisir la rencontre.</p>
+      <h2 className="text-xl font-extrabold tracking-tight">Accès {nomAccès} requis</h2>
+      <p className="max-w-sm text-sm text-muted-foreground">Le code {nomAccès.toLowerCase()} est requis pour saisir la rencontre.</p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
         <button onClick={onUnlock} className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110">
           🔓 Déverrouiller

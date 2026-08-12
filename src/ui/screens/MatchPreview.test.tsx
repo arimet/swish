@@ -4,13 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MatchPreview } from './MatchPreview'
-import { AdminProvider } from '../../app/admin'
+import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { saveTeam, savePlayer, saveMatch, getConvocation, saveConvocation } from '../../persistence/repositories'
 
 beforeEach(async () => {
-  sessionStorage.setItem('admin-unlocked', '1') // actions protégées débloquées pour le test
+  sessionStorage.setItem(ROLE_KEY, 'admin') // actions protégées débloquées pour le test
   localStorage.setItem('swish-club-id', 'ta')
   await db.teams.clear(); await db.players.clear(); await db.matches.clear(); await db.convocations.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
@@ -26,7 +26,7 @@ beforeEach(async () => {
 })
 
 const renderPreview = () =>
-  render(<MemoryRouter><ClubProvider><AdminProvider><MatchPreview matchId="m1" /></AdminProvider></ClubProvider></MemoryRouter>)
+  render(<MemoryRouter><ClubProvider><AuthProvider><MatchPreview matchId="m1" /></AuthProvider></ClubProvider></MemoryRouter>)
 
 describe('MatchPreview — convocation', () => {
   it('cocher deux joueurs puis enregistrer crée une convocation contenant leurs deux identifiants', async () => {

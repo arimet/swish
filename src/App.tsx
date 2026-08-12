@@ -13,7 +13,7 @@ import { MatchPreview } from './ui/screens/MatchPreview'
 import { LiveMatch } from './ui/screens/LiveMatch'
 import { SummaryScreen } from './ui/screens/SummaryScreen'
 import { SpectatorMatch } from './ui/screens/SpectatorMatch'
-import { AdminProvider } from './app/admin'
+import { AuthProvider } from './app/auth'
 import { ClubProvider, useClub } from './app/club'
 import { Welcome } from './ui/screens/Welcome'
 
@@ -60,7 +60,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ClubProvider>
-        <AdminProvider>
+        <AuthProvider>
           <Routes>
             {/* Suivi spectateur : plein écran, hors du shell (projetable) */}
             <Route path="/match/:id/watch" element={<SpectatorRoute />} />
@@ -82,7 +82,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
-        </AdminProvider>
+        </AuthProvider>
       </ClubProvider>
     </BrowserRouter>
   )

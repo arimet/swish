@@ -3,7 +3,7 @@ import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import { listPlayers } from '../../persistence/repositories'
 import type { Player } from '../../domain/types'
 import { C, bd, Ic, ICON } from './kit'
-import { useAdmin } from '../../app/admin'
+import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 
 // « Mon équipe » s'intercale entre les deux : lien à part car sa cible dépend
@@ -30,7 +30,8 @@ const TITLES: Record<string, string> = {
 
 export function OliveShell() {
   const { pathname } = useLocation()
-  const { isAdmin, lock, guard } = useAdmin()
+  const { can, lock, guard } = useAuth()
+  const isAdmin = can('manage')
   const title = TITLES[pathname] ?? (pathname.startsWith('/teams') ? 'Équipes' : pathname.startsWith('/match') ? 'Rencontre' : 'Rencontres')
   return (
     <div className="min-h-dvh lg:p-4" style={{ background: C.page }}>
@@ -41,7 +42,7 @@ export function OliveShell() {
             <div className="flex items-center gap-2 text-base font-extrabold sm:text-lg"><span>🏀</span><span style={{ color: C.orange }}>{title}</span></div>
             <div className="ml-auto flex items-center gap-2">
               <button
-                onClick={() => (isAdmin ? lock() : guard(() => {}))}
+                onClick={() => (isAdmin ? lock() : guard('manage', () => {}))}
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm lg:hidden"
                 style={{ background: C.card, border: bd, color: isAdmin ? C.green : C.muted }}
                 title={isAdmin ? 'Admin déverrouillé' : 'Accès admin'}
@@ -98,7 +99,8 @@ function NavGroup({ items }: { items: { icon: string; label: string; to: string;
 }
 
 function Sidebar() {
-  const { isAdmin, lock, guard } = useAdmin()
+  const { can, lock, guard } = useAuth()
+  const isAdmin = can('manage')
   const { clubId, clear } = useClub()
   const [players, setPlayers] = useState<Player[]>([])
   useEffect(() => { if (clubId) listPlayers(clubId).then(setPlayers); else setPlayers([]) }, [clubId])
@@ -150,7 +152,7 @@ function Sidebar() {
           Changer de club
         </button>
         <button
-          onClick={() => (isAdmin ? lock() : guard(() => {}))}
+          onClick={() => (isAdmin ? lock() : guard('manage', () => {}))}
           className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition"
           style={{ background: C.card, border: bd, color: isAdmin ? C.green : C.muted }}
           title={isAdmin ? 'Verrouiller l’accès admin' : 'Déverrouiller l’accès admin'}

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { getMatch, listTeams, deleteMatch, listPlayers, getConvocation, saveConvocation } from '../../persistence/repositories'
 import type { Match, Team, Player } from '../../domain/types'
 import { C, bd, PageTitle, TeamBadge, fmtDate, champLabel } from '../olive/kit'
-import { useAdmin } from '../../app/admin'
+import { useAuth } from '../../app/auth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
@@ -12,7 +12,7 @@ const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
  * avec démarrage et suppression. Redirige live/terminé vers leur écran dédié. */
 export function MatchPreview({ matchId }: { matchId: string }) {
   const navigate = useNavigate()
-  const { guard } = useAdmin()
+  const { guard } = useAuth()
   const [match, setMatch] = useState<Match | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [askDelete, setAskDelete] = useState(false)
@@ -66,17 +66,17 @@ export function MatchPreview({ matchId }: { matchId: string }) {
 
   const nameOf = (id: string) => teams[id]?.name ?? '—'
   const f = fmtDate(match.meta.date)
-  const start = () => guard(() => navigate(`/match/${match.id}/live`))
+  const start = () => guard('manage', () => navigate(`/match/${match.id}/live`))
   const remove = async () => { await deleteMatch(match.id); navigate('/calendrier') }
 
-  const basculerConvoqué = (id: string) => guard(() => {
+  const basculerConvoqué = (id: string) => guard('manage', () => {
     setConvoqués((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id); else next.add(id)
       return next
     })
   })
-  const enregistrerConvocation = () => guard(async () => {
+  const enregistrerConvocation = () => guard('manage', async () => {
     await saveConvocation({
       matchId: match.id, playerIds: [...convoqués],
       meetTime: meetTime.trim() || undefined, meetPlace: meetPlace.trim() || undefined, note: note.trim() || undefined,
@@ -149,7 +149,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <button onClick={() => guard(() => setAskDelete(true))} className="rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: `1px solid ${C.border}`, color: C.muted }}>
+        <button onClick={() => guard('manage', () => setAskDelete(true))} className="rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: `1px solid ${C.border}`, color: C.muted }}>
           Supprimer
         </button>
         <div className="flex flex-wrap items-center gap-3">

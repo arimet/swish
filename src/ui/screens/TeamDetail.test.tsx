@@ -4,13 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { TeamDetail } from './TeamDetail'
-import { AdminProvider } from '../../app/admin'
+import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { listPlayers, savePlayer, saveTeam } from '../../persistence/repositories'
 
 beforeEach(async () => {
-  sessionStorage.setItem('admin-unlocked', '1')
+  sessionStorage.setItem(ROLE_KEY, 'admin')
   await db.teams.clear(); await db.players.clear(); await db.matches.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas' })
@@ -20,9 +20,9 @@ const renderTeam = () =>
   render(
     <MemoryRouter initialEntries={['/teams/ta']}>
       <ClubProvider>
-        <AdminProvider>
+        <AuthProvider>
           <Routes><Route path="/teams/:id" element={<TeamDetail />} /></Routes>
-        </AdminProvider>
+        </AuthProvider>
       </ClubProvider>
     </MemoryRouter>,
   )
