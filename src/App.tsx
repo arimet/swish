@@ -16,6 +16,7 @@ import { SpectatorMatch } from './ui/screens/SpectatorMatch'
 import { AuthProvider } from './app/auth'
 import { ClubProvider, useClub } from './app/club'
 import { Welcome } from './ui/screens/Welcome'
+import { SchemaEdit } from './ui/screens/SchemaEdit'
 
 const Padded = ({ children }: { children: ReactNode }) => <div className="p-6">{children}</div>
 
@@ -76,6 +77,8 @@ export default function App() {
               <Route path="/teams" element={<Padded><TeamsList /></Padded>} />
               <Route path="/teams/:id" element={<TeamDetail />} />
               <Route path="/players/:id" element={<PlayerDetail />} />
+              {/* L'éditeur du tableau tactique ; la bibliothèque suivra. */}
+              <Route path="/schemas/:id/edit" element={<SchemaEdit />} />
               <Route path="/match/new" element={<Padded><MatchSetupRoute /></Padded>} />
               <Route path="/match/:id/summary" element={<SummaryRoute />} />
               <Route path="/match/:id" element={<Padded><MatchPreviewRoute /></Padded>} />

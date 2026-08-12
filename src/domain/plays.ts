@@ -89,8 +89,9 @@ export function tempsSuivant(t: Temps): Temps {
   return { pions: structuredClone(t.pions), ballon: structuredClone(t.ballon), fleches: [] }
 }
 
-/** Distance de `p` au segment [a, b], au point le plus proche. */
-function distanceAuSegment(p: Point, a: Point, b: Point): number {
+/** Distance de `p` au segment [a, b], au point le plus proche. Exportée parce que
+ *  la gomme de l'éditeur cherche la flèche sous le doigt avec la même mesure. */
+export function distanceAuSegment(p: Point, a: Point, b: Point): number {
   const dx = b.x - a.x
   const dy = b.y - a.y
   const l2 = dx * dx + dy * dy
