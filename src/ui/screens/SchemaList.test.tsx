@@ -80,6 +80,26 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
     expect(crees[0].temps).toHaveLength(1)
   })
 
+  it('dupliquer ajoute une copie nommée, sans toucher à l’original', async () => {
+    await savePlay(schema('s1', 'Pick and roll haut'))
+    renderList()
+    await userEvent.click(within((await screen.findAllByRole('article'))[0]).getByRole('button', { name: 'Dupliquer' }))
+
+    await waitFor(async () => expect(await listPlays('ta')).toHaveLength(2))
+    const noms = (await listPlays('ta')).map((s) => s.nom).sort()
+    expect(noms).toEqual(['Pick and roll haut', 'Pick and roll haut (copie)'])
+  })
+
+  it('dupliquer est administratif : la table de marque se voit demander le code admin', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    await savePlay(schema('s1', 'Pick and roll haut'))
+    renderList()
+    await userEvent.click(within((await screen.findAllByRole('article'))[0]).getByRole('button', { name: 'Dupliquer' }))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(await listPlays('ta')).toHaveLength(1)
+  })
+
   it('supprimer un schéma est confirmé puis effectif', async () => {
     await savePlay(schema('s1', 'Pick and roll haut'))
     renderList()

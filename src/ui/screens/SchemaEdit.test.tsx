@@ -109,6 +109,26 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     expect((await getPlay('s1'))!.terrain).toBe('complet')
   })
 
+  it('n’annule pas dans l’ancienne échelle après un changement de terrain', async () => {
+    // Les étapes empilées portent les coordonnées d'avant le remappage. Les
+    // restaurer telles quelles replacerait les pions n'importe où — au pire dans
+    // la moitié arrière, celle que le demi-terrain refuse justement.
+    renderEdit('s1')
+    const svg = await tableau()
+    // Un déplacement de pion, pour avoir quelque chose à annuler.
+    fireEvent.pointerDown(svg, { clientX: 150, clientY: 174 })
+    fireEvent.pointerMove(svg, { clientX: 120, clientY: 240 })
+    fireEvent.pointerUp(svg, { clientX: 120, clientY: 240 })
+    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].pions[0].at.y).toBeCloseTo(0.857, 2))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Terrain complet' }))
+    await waitFor(async () => expect((await getPlay('s1'))!.terrain).toBe('complet'))
+
+    // La pile est vidée : plus rien à annuler, donc rien à restaurer de travers.
+    expect(screen.getByRole('button', { name: /↩ Annuler/ })).toBeDisabled()
+    expect((await getPlay('s1'))!.temps[0].pions[0].at.y).toBeCloseTo(0.4285, 3)
+  })
+
   it('la table de marque ne peut pas modifier : le tracé demande le code admin', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     const { container } = renderEdit('s1')
