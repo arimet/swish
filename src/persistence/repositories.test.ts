@@ -1,12 +1,13 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
-import { saveTeam, listTeams, saveMatch, getMatch, listMatches, deleteMatch, deleteTeam, saveResult, listResults, savePlayer, deletePlayer, saveTraining, listTrainings, saveConvocation, getConvocation } from './repositories'
+import { saveTeam, listTeams, saveMatch, getMatch, listMatches, deleteMatch, deleteTeam, saveResult, listResults, savePlayer, deletePlayer, saveTraining, listTrainings, saveConvocation, getConvocation, savePlay, listPlays, getPlay, deletePlay } from './repositories'
+import { nouveauSchema } from '../domain/plays'
 import type { Match } from '../domain/types'
 
 beforeEach(async () => {
   await db.teams.clear(); await db.players.clear(); await db.matches.clear(); await db.results.clear()
-  await db.trainings.clear(); await db.convocations.clear()
+  await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear(); await db.outbox.clear()
 })
 
 const match = (id: string): Match => ({
@@ -69,5 +70,30 @@ describe('repositories', () => {
 
     expect((await getConvocation('m1'))?.playerIds).toEqual(['p1'])
     expect((await getConvocation('m2'))?.playerIds).toEqual([])
+  })
+
+  it('enregistre, liste par club et supprime un schéma', async () => {
+    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'PnR haut' })
+    await savePlay({ id: 's2', ...nouveauSchema('tb', 'demi', false), nom: 'Autre club' })
+    expect((await listPlays('ta')).map((s) => s.id)).toEqual(['s1'])
+    expect((await getPlay('s1'))?.nom).toBe('PnR haut')
+    await deletePlay('s1')
+    expect(await listPlays('ta')).toEqual([])
+    expect(await getPlay('s1')).toBeUndefined()
+  })
+
+  it('supprimer une équipe emporte ses schémas', async () => {
+    await saveTeam({ id: 'ta', name: 'VIGNOT' })
+    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'PnR haut' })
+    await savePlay({ id: 's2', ...nouveauSchema('tb', 'demi', false), nom: 'Autre club' })
+    await deleteTeam('ta')
+    expect(await listPlays('ta')).toEqual([])
+    expect((await listPlays('tb')).map((s) => s.id)).toEqual(['s2'])
+  })
+
+  it('les schémas ne passent pas par la file de synchronisation', async () => {
+    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'PnR haut' })
+    await deletePlay('s1')
+    expect(await db.outbox.count()).toBe(0)
   })
 })

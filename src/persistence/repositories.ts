@@ -1,6 +1,7 @@
 import { db } from './db'
 import { enqueuePut, enqueueDel, remoteEnabled, hydrate } from './remote'
 import type { Team, Player, Match, ReportedResult, Convocation, Training } from '../domain/types'
+import type { Schema } from '../domain/plays'
 
 // Écritures : cache local (immédiat, offline-ok) + mise en file pour le serveur.
 export const saveTeam = async (t: Team) => { await db.teams.put(t); await enqueuePut('team', t.id, t) }
@@ -19,11 +20,14 @@ export const deleteTeam = async (id: string) => {
   // resteraient en base sous un `clubId` qui ne reviendra jamais, donc invisibles sur
   // tous les écrans et impossibles à supprimer — même sort que les résultats ci-dessus.
   const entraînements = (await db.trainings.toArray()).filter((t) => t.clubId === id)
-  await db.transaction('rw', db.teams, db.players, db.results, db.trainings, async () => {
+  await db.transaction('rw', db.teams, db.players, db.results, db.trainings, db.plays, async () => {
     await db.players.where('teamId').equals(id).delete()
     await db.teams.delete(id)
     await db.results.bulkDelete(résultats.map((r) => r.id))
     await db.trainings.bulkDelete(entraînements.map((t) => t.id))
+    // Les schémas sont propres au club, comme les entraînements : même purge, mais
+    // via l'index `clubId` de la table, qui évite de relire tout le tableau tactique.
+    await db.plays.where('clubId').equals(id).delete()
   })
   for (const p of players) await enqueueDel('player', p.id)
   await enqueueDel('team', id)
@@ -75,3 +79,12 @@ export const saveConvocation = async (c: Convocation) => { await db.convocations
 export const listTrainings = () => db.trainings.toArray()
 export const saveTraining = async (t: Training) => { await db.trainings.put(t) }
 export const deleteTraining = async (id: string) => { await db.trainings.delete(id) }
+
+/** Les schémas du tableau tactique restent locaux à l'appareil, comme les résultats,
+ *  les convocations et les entraînements : la file de synchronisation ne transporte
+ *  qu'équipes, joueurs et rencontres. Supprimer une équipe emporte ses schémas
+ *  (cf. `deleteTeam`). */
+export const listPlays = (clubId: string) => db.plays.where('clubId').equals(clubId).toArray()
+export const getPlay = (id: string) => db.plays.get(id)
+export const savePlay = async (s: Schema) => { await db.plays.put(s) }
+export const deletePlay = async (id: string) => { await db.plays.delete(id) }
