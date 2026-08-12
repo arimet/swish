@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -7,7 +7,8 @@ import { Calendrier } from './Calendrier'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
-import { listTrainings, saveMatch, saveTeam, saveTraining } from '../../persistence/repositories'
+import { listTrainings, saveMatch, savePlay, saveTeam, saveTraining } from '../../persistence/repositories'
+import { nouveauSchema, type Schema } from '../../domain/plays'
 import type { Match } from '../../domain/types'
 
 const mk = (id: string, clubId: string, opponentId: string, date = '2026-01-10'): Match => ({
@@ -15,10 +16,12 @@ const mk = (id: string, clubId: string, opponentId: string, date = '2026-01-10')
   roster: [], events: [], status: 'setup',
 })
 
+const schema = (id: string, nom: string): Schema => ({ id, ...nouveauSchema('ta', 'demi', false), nom })
+
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
   localStorage.clear()
-  await db.matches.clear(); await db.teams.clear(); await db.trainings.clear()
+  await db.matches.clear(); await db.teams.clear(); await db.trainings.clear(); await db.plays.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await saveTeam({ id: 'tb', name: 'VERDUN' })
   await saveTeam({ id: 'tc', name: 'METZ' })
@@ -103,6 +106,69 @@ describe('Calendrier', () => {
     // l'effacement du DOM et de la base est asynchrone après le clic.
     await waitFor(async () => expect(await listTrainings()).toHaveLength(0))
     expect(screen.queryByText('Défense sur écran')).not.toBeInTheDocument()
+  })
+})
+
+describe('Calendrier — les schémas de la séance', () => {
+  const ouvrirLesSchemas = async () =>
+    userEvent.click(await screen.findByText(/schémas travaillés/i))
+
+  it('attache un schéma à l’entraînement, l’annonce sur la ligne, et le décochage le retire', async () => {
+    await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })
+    await savePlay(schema('s1', 'Pick and roll haut'))
+    renderCal()
+    await ouvrirLesSchemas()
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: /pick and roll haut/i }))
+    // L'attache passe par `guard()`, qui déclenche l'action sans l'attendre.
+    await waitFor(async () => expect((await listTrainings())[0].playIds).toEqual(['s1']))
+    expect(await screen.findByText(/1 schéma$/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /pick and roll haut/i }))
+    await waitFor(async () => expect((await listTrainings())[0].playIds).toEqual([]))
+    expect(screen.queryByText(/1 schéma$/)).not.toBeInTheDocument()
+  })
+
+  it('ne compte et ne coche que les schémas qui existent encore', async () => {
+    // Un entraînement peut citer un schéma supprimé par une base plus ancienne que la
+    // cascade de `deletePlay` : la lecture filtre sur ce qui existe, sans quoi le
+    // compte affiché mentirait — la faute corrigée au projet 6 sur les convocations.
+    await savePlay(schema('s1', 'Pick and roll haut'))
+    await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Séance', playIds: ['s1', 'disparu'] })
+    renderCal()
+    await ouvrirLesSchemas()
+
+    expect(await screen.findByText(/1 schéma$/)).toBeInTheDocument()
+    expect(screen.queryByText(/2 schémas/)).not.toBeInTheDocument()
+    expect(screen.getAllByRole('checkbox')).toHaveLength(1)
+    expect(screen.getByRole('checkbox', { name: /pick and roll haut/i })).toBeChecked()
+  })
+
+  it('garde les deux schémas cochés coup sur coup, sans attendre le rechargement', async () => {
+    // Au bord du terrain on coche vite : si chaque bascule partait de la séance telle
+    // qu'elle était au rendu, la seconde écriture effacerait la première.
+    await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Séance' })
+    await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(schema('s2', 'Corner pour le 4'))
+    renderCal()
+    await ouvrirLesSchemas()
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: /pick and roll haut/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /corner pour le 4/i }))
+    await waitFor(async () => expect((await listTrainings())[0].playIds).toHaveLength(2))
+    expect([...(await listTrainings())[0].playIds!].sort()).toEqual(['s1', 's2'])
+  })
+
+  it('attacher un schéma est administratif : la table de marque se voit demander le code admin', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })
+    await savePlay(schema('s1', 'Pick and roll haut'))
+    renderCal()
+    await ouvrirLesSchemas()
+    await userEvent.click(await screen.findByRole('checkbox', { name: /pick and roll haut/i }))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect((await listTrainings())[0].playIds).toBeUndefined()
   })
 })
 

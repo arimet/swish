@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
-import { getConvocation, listMatches, listPlayers, listTeams, listTrainings } from '../../persistence/repositories'
+import { getConvocation, listMatches, listPlayers, listPlays, listTeams, listTrainings } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
 import { teamMatches, teamRecord, teamScorers } from '../../domain/teamRecord'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
@@ -11,6 +11,7 @@ import { liveState } from '../../rules/ffbb'
 import { ShotChart } from '../components/ShotCourt'
 import { C, bd, TeamBadge, Vous, displayClock, fmtDate } from '../olive/kit'
 import type { Convocation, Match, Player, Team, Training } from '../../domain/types'
+import type { Schema } from '../../domain/plays'
 
 export function Dashboard() {
   const { clubId, club } = useClub()
@@ -19,6 +20,7 @@ export function Dashboard() {
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [players, setPlayers] = useState<Player[]>([])
   const [trainings, setTrainings] = useState<Training[]>([])
+  const [schemas, setSchemas] = useState<Schema[]>([])
   const [convocation, setConvocation] = useState<Convocation | null>(null)
   const [openPlayer, setOpenPlayer] = useState<string | null>(null)
 
@@ -26,13 +28,14 @@ export function Dashboard() {
     if (!clubId) return
     let cancelled = false
     refresh()
-      .then(() => Promise.all([listMatches(), listTeams(), listPlayers(clubId), listTrainings()]))
-      .then(([ms, ts, ps, trs]) => {
+      .then(() => Promise.all([listMatches(), listTeams(), listPlayers(clubId), listTrainings(), listPlays(clubId)]))
+      .then(([ms, ts, ps, trs, sch]) => {
         if (cancelled) return
         setTeams(Object.fromEntries(ts.map((t) => [t.id, t])))
         setPlayers(ps)
         setMatches(ms)
         setTrainings(trs)
+        setSchemas(sch)
       })
     return () => { cancelled = true }
   }, [clubId])
@@ -105,7 +108,7 @@ export function Dashboard() {
 
         <Banner live={live} next={next} teams={teams} />
 
-        <Echeance fixture={fixture} teams={teams} players={players} convocation={convocation} />
+        <Echeance fixture={fixture} teams={teams} players={players} convocation={convocation} schemas={schemas} />
 
         <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat label="Bilan" value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? `${rec.played} rencontres` : 'aucune'} accent={rec.wins >= rec.losses ? C.green : C.pink} />
@@ -214,7 +217,7 @@ function Banner({ live, next, teams }: { live?: Match; next?: Match; teams: Reco
 /** Bloc « prochaine échéance » : rencontre ou entraînement, convocation comprise.
  *  `fixture` exclut déjà le match en direct (voir le calcul dans `Dashboard`) : ce
  *  composant n'a donc jamais à s'en soucier, il affiche simplement ce qu'on lui donne. */
-function Echeance({ fixture, teams, players, convocation }: { fixture: Fixture | null; teams: Record<string, Team>; players: Player[]; convocation: Convocation | null }) {
+function Echeance({ fixture, teams, players, convocation, schemas }: { fixture: Fixture | null; teams: Record<string, Team>; players: Player[]; convocation: Convocation | null; schemas: Schema[] }) {
   if (!fixture) {
     return (
       <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
@@ -228,12 +231,30 @@ function Echeance({ fixture, teams, players, convocation }: { fixture: Fixture |
   if (fixture.kind === 'training') {
     const t = fixture.training
     const f = fmtDate(t.date)
+    // Résolus dans la bibliothèque plutôt que pris tels quels : un identifiant qui
+    // ne correspond à aucun schéma (supprimé depuis) n'ouvrirait qu'un lecteur vide.
+    const prévus = schemas.filter((s) => t.playIds?.includes(s.id))
     return (
       <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
         <p className="mt-1 text-sm font-bold">Entraînement</p>
         <p className="text-sm" style={{ color: C.muted }}>{[f.long, t.time, t.place].filter(Boolean).join(' · ') || '—'}</p>
         <p className="mt-1 text-sm" style={{ color: C.muted }}>Thème : {t.theme ?? '—'}</p>
+        {prévus.length > 0 && (
+          <div className="mt-3 border-t pt-3" style={{ borderColor: C.border }}>
+            {/* Le chemin le plus court entre « c'est mardi » et « voilà ce qu'on
+                travaille » : chaque schéma prévu ouvre directement son lecteur. */}
+            <p className="text-sm font-bold">Au programme</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {prévus.map((s) => (
+                <Link key={s.id} to={`/schemas/${s.id}/lecteur`} className="rounded-lg px-2.5 py-1 text-[12px] font-bold"
+                  style={{ background: C.accentBg, color: C.accent }}>
+                  ▶ {s.nom}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     )
   }

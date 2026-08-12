@@ -6,8 +6,11 @@ import { Dashboard } from './Dashboard'
 import { AuthProvider, PLAYER_ID_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
-import { saveConvocation, saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
+import { saveConvocation, saveMatch, savePlay, savePlayer, saveTeam, saveTraining } from '../../persistence/repositories'
+import { nouveauSchema, type Schema } from '../../domain/plays'
 import type { GameEvent, Match } from '../../domain/types'
+
+const schema = (id: string, nom: string): Schema => ({ id, ...nouveauSchema('ta', 'demi', false), nom })
 
 const TOP3 = { x: 0.5, y: 0.65 }
 
@@ -42,7 +45,7 @@ const renderDash = () =>
 beforeEach(async () => {
   localStorage.clear()
   await db.matches.clear(); await db.players.clear(); await db.teams.clear()
-  await db.trainings.clear(); await db.convocations.clear()
+  await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' }); await saveTeam({ id: 'tb', name: 'VERDUN' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
   localStorage.setItem('swish-club-id', 'ta')
@@ -137,6 +140,41 @@ describe('Dashboard', () => {
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
+  })
+})
+
+describe('Dashboard — les schémas de la prochaine séance', () => {
+  const lecteurs = () => screen.getAllByRole('link').filter((l) => l.getAttribute('href')?.endsWith('/lecteur'))
+
+  it('mène au lecteur de chaque schéma prévu à la prochaine séance', async () => {
+    // Le chemin le plus court entre « c'est mardi » et « voilà ce qu'on travaille ».
+    await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(schema('s2', 'Corner pour le 4'))
+    await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes', playIds: ['s1', 's2'] })
+    renderDash()
+
+    expect(await screen.findByText(/prochaine échéance/i)).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /pick and roll haut/i })).toHaveAttribute('href', '/schemas/s1/lecteur')
+    expect(screen.getByRole('link', { name: /corner pour le 4/i })).toHaveAttribute('href', '/schemas/s2/lecteur')
+  })
+
+  it('ignore un schéma supprimé que la séance cite encore', async () => {
+    await savePlay(schema('s1', 'Pick and roll haut'))
+    await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes', playIds: ['disparu', 's1'] })
+    renderDash()
+
+    expect(await screen.findByRole('link', { name: /pick and roll haut/i })).toBeInTheDocument()
+    // Un identifiant orphelin ne doit ni casser l'écran, ni ouvrir un lecteur vide.
+    expect(lecteurs()).toHaveLength(1)
+  })
+
+  it('n’annonce aucun schéma quand la séance n’en porte pas', async () => {
+    await savePlay(schema('s1', 'Pick and roll haut'))
+    await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes' })
+    renderDash()
+
+    expect(await screen.findByText(/prochaine échéance/i)).toBeInTheDocument()
+    expect(lecteurs()).toHaveLength(0)
   })
 })
 
