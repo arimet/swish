@@ -37,6 +37,9 @@ export function OliveShell() {
   // garde ci-dessous prendrait le tableau vide du premier rendu pour un effectif
   // réel et effacerait l'identité à chaque ouverture.
   const [players, setPlayers] = useState<Player[] | null>(null)
+  // La branche sans club est inatteignable tant que `ClubGate` ne monte cette
+  // coquille qu'avec un club résolu ; la garder revient à dire « effectif vide »,
+  // ce qui effacerait l'identité si l'on montait un jour ce composant sans club.
   useEffect(() => { if (clubId) listPlayers(clubId).then(setPlayers); else setPlayers([]) }, [clubId])
 
   // Joueur retiré de l'effectif alors que son identifiant survit dans le
