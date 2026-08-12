@@ -1,41 +1,62 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useClub } from '../../app/club'
-import { listMatches, listPlayers, listTeams } from '../../persistence/repositories'
+import { getConvocation, listMatches, listPlayers, listTeams, listTrainings } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
 import { teamMatches, teamRecord, teamScorers } from '../../domain/teamRecord'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
+import { nextFixture, type Fixture } from '../../domain/fixtures'
 import { liveState } from '../../rules/ffbb'
 import { ShotChart } from '../components/ShotCourt'
 import { C, bd, TeamBadge, displayClock, fmtDate } from '../olive/kit'
-import type { Match, Player, Team } from '../../domain/types'
+import type { Convocation, Match, Player, Team, Training } from '../../domain/types'
 
 export function Dashboard() {
   const { clubId, club } = useClub()
   const [matches, setMatches] = useState<Match[] | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [players, setPlayers] = useState<Player[]>([])
+  const [trainings, setTrainings] = useState<Training[]>([])
+  const [convocation, setConvocation] = useState<Convocation | null>(null)
   const [openPlayer, setOpenPlayer] = useState<string | null>(null)
 
   useEffect(() => {
     if (!clubId) return
     let cancelled = false
     refresh()
-      .then(() => Promise.all([listMatches(), listTeams(), listPlayers(clubId)]))
-      .then(([ms, ts, ps]) => {
+      .then(() => Promise.all([listMatches(), listTeams(), listPlayers(clubId), listTrainings()]))
+      .then(([ms, ts, ps, trs]) => {
         if (cancelled) return
         setTeams(Object.fromEntries(ts.map((t) => [t.id, t])))
         setPlayers(ps)
         setMatches(ms)
+        setTrainings(trs)
       })
     return () => { cancelled = true }
   }, [clubId])
 
+  // Calculs dérivés placés avant les sorties anticipées ci-dessous, pour que l'effet
+  // qui suit (chargement de la convocation) respecte les règles des hooks : toujours
+  // appelé, dans le même ordre, à chaque rendu.
+  const mine = (matches ?? []).filter((m) => m.meta.clubId === clubId)
+  const live = mine.find((m) => m.status === 'live')
+  const nosEntrainements = trainings.filter((t) => t.clubId === clubId)
+  // Un match en direct occupe déjà le bandeau ci-dessous : le bloc « prochaine
+  // échéance » doit alors annoncer la suivante, pas répéter celle déjà affichée.
+  const matchesPourEcheance = live ? mine.filter((m) => m.id !== live.id) : mine
+  const fixture = nextFixture(matchesPourEcheance, nosEntrainements, new Date())
+  const fixtureMatchId = fixture?.kind === 'match' ? fixture.match.id : null
+
+  useEffect(() => {
+    if (!fixtureMatchId) { setConvocation(null); return }
+    let cancelled = false
+    getConvocation(fixtureMatchId).then((c) => { if (!cancelled) setConvocation(c ?? null) })
+    return () => { cancelled = true }
+  }, [fixtureMatchId])
+
   if (!clubId || !club) return null
   if (!matches) return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
 
-  const mine = matches.filter((m) => m.meta.clubId === clubId)
-  const live = mine.find((m) => m.status === 'live')
   const next = mine.filter((m) => m.status === 'setup').sort((a, b) => (a.meta.date ?? '').localeCompare(b.meta.date ?? ''))[0]
   // `teamRecord`/`teamMatches` savent aussi lire côté adversaire (légitime pour
   // la fiche d'une équipe adverse) : sur ce tableau de bord, seul `mine` compte,
@@ -65,6 +86,8 @@ export function Dashboard() {
         </div>
 
         <Banner live={live} next={next} teams={teams} />
+
+        <Echeance fixture={fixture} teams={teams} players={players} convocation={convocation} />
 
         <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat label="Bilan" value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? `${rec.played} rencontres` : 'aucune'} accent={rec.wins >= rec.losses ? C.green : C.pink} />
@@ -163,6 +186,61 @@ function Banner({ live, next, teams }: { live?: Match; next?: Match; teams: Reco
     <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
       <span className="text-sm" style={{ color: C.muted }}>Aucune rencontre prévue.</span>
       <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Planifier une rencontre</Link>
+    </div>
+  )
+}
+
+/** Bloc « prochaine échéance » : rencontre ou entraînement, convocation comprise.
+ *  `fixture` exclut déjà le match en direct (voir le calcul dans `Dashboard`) : ce
+ *  composant n'a donc jamais à s'en soucier, il affiche simplement ce qu'on lui donne. */
+function Echeance({ fixture, teams, players, convocation }: { fixture: Fixture | null; teams: Record<string, Team>; players: Player[]; convocation: Convocation | null }) {
+  if (!fixture) {
+    return (
+      <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
+        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
+        <span className="text-sm" style={{ color: C.muted }}>Rien de planifié pour l’instant.</span>
+        <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Planifier →</Link>
+      </div>
+    )
+  }
+
+  if (fixture.kind === 'training') {
+    const t = fixture.training
+    const f = fmtDate(t.date)
+    return (
+      <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
+        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
+        <p className="mt-1 text-sm font-bold">Entraînement</p>
+        <p className="text-sm" style={{ color: C.muted }}>{[f.long, t.time, t.place].filter(Boolean).join(' · ') || '—'}</p>
+        <p className="mt-1 text-sm" style={{ color: C.muted }}>Thème : {t.theme ?? '—'}</p>
+      </div>
+    )
+  }
+
+  const m = fixture.match
+  const f = fmtDate(m.meta.date)
+  const opponent = teams[m.meta.opponentId]?.name ?? 'Adversaire'
+  const convoqués = (convocation?.playerIds ?? [])
+    .map((id) => players.find((p) => p.id === id))
+    .filter((p): p is Player => !!p)
+  const rdv = [convocation?.meetTime, convocation?.meetPlace].filter(Boolean).join(' · ')
+
+  return (
+    <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
+      <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
+      <p className="mt-1 text-sm font-bold">contre {opponent}</p>
+      <p className="text-sm" style={{ color: C.muted }}>{[f.long, m.meta.time, m.meta.venue].filter(Boolean).join(' · ') || '—'}</p>
+      {convocation ? (
+        <div className="mt-3 border-t pt-3" style={{ borderColor: C.border }}>
+          <p className="text-sm font-bold">{convoqués.length} convoqué{convoqués.length > 1 ? 's' : ''}</p>
+          {rdv && <p className="mt-0.5 text-sm" style={{ color: C.muted }}>Rendez-vous {rdv}</p>}
+          {convoqués.length > 0 && (
+            <p className="mt-1 text-sm" style={{ color: C.muted }}>{convoqués.map((p) => `${p.lastName} ${p.firstName}`).join(', ')}</p>
+          )}
+        </div>
+      ) : (
+        <p className="mt-3 text-sm" style={{ color: C.muted }}>Convocation à préparer.</p>
+      )}
     </div>
   )
 }

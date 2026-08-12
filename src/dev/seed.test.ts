@@ -2,12 +2,13 @@ import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { seedDevData } from './seed'
 import { db } from '../persistence/db'
-import { listMatches, listPlayers, listResults, listTeams } from '../persistence/repositories'
+import { getConvocation, listMatches, listPlayers, listResults, listTeams, listTrainings, saveConvocation, saveTraining } from '../persistence/repositories'
 import { playingTimes } from '../domain/playingtime'
 
 beforeEach(async () => {
   localStorage.clear()
   await db.matches.clear(); await db.players.clear(); await db.teams.clear(); await db.results.clear()
+  await db.trainings.clear(); await db.convocations.clear()
   await seedDevData()
 })
 
@@ -49,5 +50,33 @@ describe('données de démonstration', () => {
   it('ne produit aucune égalité (un match de basket ne se termine jamais à égalité)', async () => {
     const results = await listResults()
     expect(results.every((r) => r.homeScore !== r.awayScore)).toBe(true)
+  })
+
+  it('crée des entraînements pour notre club, aux semaines des rencontres', async () => {
+    const trainings = await listTrainings()
+    const matches = await listMatches()
+    const clubId = matches[0].meta.clubId
+    expect(trainings.length).toBeGreaterThan(0)
+    // Sans clubId, un entraînement fuiterait dans le calendrier de n'importe quel autre club.
+    expect(trainings.every((t) => t.clubId === clubId)).toBe(true)
+  })
+
+  it('pose la convocation de démonstration sur la rencontre à venir, jamais sur une rencontre déjà jouée', async () => {
+    const matches = await listMatches()
+    const aVenir = matches.find((m) => m.status === 'setup')!
+    const convocation = await getConvocation(aVenir.id)
+    expect(convocation?.playerIds.length).toBeGreaterThan(0)
+    for (const jouee of matches.filter((m) => m.status === 'finished')) {
+      expect(await getConvocation(jouee.id)).toBeUndefined()
+    }
+  })
+
+  it('vide entraînements et convocations avant de re-seeder, pour ne pas laisser d’orphelins', async () => {
+    await saveTraining({ id: 'orphelin', clubId: 'zzz', date: '2000-01-01' })
+    await saveConvocation({ matchId: 'inexistant', playerIds: ['x'] })
+    localStorage.removeItem('seed-version') // force le re-seed au prochain appel
+    await seedDevData()
+    expect((await listTrainings()).some((t) => t.id === 'orphelin')).toBe(false)
+    expect(await getConvocation('inexistant')).toBeUndefined()
   })
 })

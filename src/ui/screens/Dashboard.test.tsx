@@ -5,10 +5,21 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { Dashboard } from './Dashboard'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
-import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
+import { saveConvocation, saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { GameEvent, Match } from '../../domain/types'
 
 const TOP3 = { x: 0.5, y: 0.65 }
+
+// Les dates codées en dur ('2026-01-10' etc.) servent aux tests qui ne regardent
+// jamais « aujourd'hui » (bilan, hot zone) : `nextFixture` compare bien à la date
+// réelle du moment où le test tourne, donc les échéances qu'on veut voir retenues
+// doivent être calculées par rapport à elle, pas à une date fixe qui finirait par
+// être dans le passé.
+const dansNJours = (n: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 const ev = (e: Partial<GameEvent>, i: number) =>
   ({ id: `e${i}`, wallClock: i, period: 1, gameClock: 600, ...e } as GameEvent)
@@ -30,6 +41,7 @@ const renderDash = () =>
 beforeEach(async () => {
   localStorage.clear()
   await db.matches.clear(); await db.players.clear(); await db.teams.clear()
+  await db.trainings.clear(); await db.convocations.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' }); await saveTeam({ id: 'tb', name: 'VERDUN' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
   localStorage.setItem('swish-club-id', 'ta')
@@ -73,5 +85,33 @@ describe('Dashboard', () => {
     localStorage.setItem('swish-club-id', 'tb')
     renderDash()
     expect(await screen.findByText('Aucune rencontre jouée')).toBeInTheDocument()
+  })
+
+  it('affiche le nombre de convoqués et le rendez-vous de la prochaine échéance convoquée', async () => {
+    await saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: dansNJours(5), clubId: 'ta', opponentId: 'tb' } })
+    await saveConvocation({ matchId: 'm4', playerIds: ['p1'], meetTime: '18:00', meetPlace: 'Gymnase Colette' })
+    renderDash()
+    expect(await screen.findByText(/prochaine échéance/i)).toBeInTheDocument()
+    expect(await screen.findByText(/1 convoqué/i)).toBeInTheDocument()
+    expect(await screen.findByText(/18:00/)).toBeInTheDocument()
+    expect(await screen.findByText(/gymnase colette/i)).toBeInTheDocument()
+    expect(await screen.findByText(/MARTIN Lucas/)).toBeInTheDocument()
+  })
+
+  it('invite à planifier quand aucune échéance n’est prévue', async () => {
+    renderDash()
+    expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
+  })
+
+  it('n’annonce pas deux fois la même rencontre quand elle est déjà en direct', async () => {
+    // Le match en direct a la date du jour (donc « à venir » pour `nextFixture` s'il
+    // n'était pas explicitement exclu) : sans l'exclusion, ce test ne discriminerait
+    // rien, `nextFixture` ignorant de toute façon une date passée comme '2026-01-10'.
+    // Aucune autre échéance que la rencontre en direct : le bloc doit inviter à
+    // planifier plutôt que répéter l'adversaire déjà affiché dans le bandeau.
+    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(0), clubId: 'ta', opponentId: 'tb' } })
+    renderDash()
+    expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
+    expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
   })
 })
