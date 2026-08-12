@@ -19,6 +19,7 @@ import { Welcome } from './ui/screens/Welcome'
 import { SchemaEdit } from './ui/screens/SchemaEdit'
 import { SchemaList } from './ui/screens/SchemaList'
 import { SchemaView } from './ui/screens/SchemaView'
+import { SchemaPlayer } from './ui/screens/SchemaPlayer'
 
 const Padded = ({ children }: { children: ReactNode }) => <div className="p-6">{children}</div>
 
@@ -67,6 +68,9 @@ export default function App() {
           <Routes>
             {/* Suivi spectateur : plein écran, hors du shell (projetable) */}
             <Route path="/match/:id/watch" element={<SpectatorRoute />} />
+            {/* Le lecteur du temps-mort : plein écran, hors du shell et hors de
+                la garde club — un joueur ouvre la combinaison chez lui. */}
+            <Route path="/schemas/:id/lecteur" element={<SchemaPlayer />} />
             {/* Création d'équipe : hors garde, c'est l'issue proposée par l'écran de
                 bienvenue quand aucune équipe n'existe encore pour choisir un club. */}
             <Route path="/teams/new" element={<TeamCreate />} />
