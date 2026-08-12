@@ -126,7 +126,10 @@ describe('Calendrier — les schémas de la séance', () => {
 
     await userEvent.click(screen.getByRole('checkbox', { name: /pick and roll haut/i }))
     await waitFor(async () => expect((await listTrainings())[0].playIds).toEqual([]))
-    expect(screen.queryByText(/1 schéma$/)).not.toBeInTheDocument()
+    // La base gagne la course sur le re-rendu : interroger le DOM dans la foulée
+    // le lit parfois avant que React l'ait mis à jour. On attend l'écran, pas la
+    // base — c'est ce qu'on prétend vérifier ici.
+    await waitFor(() => expect(screen.queryByText(/1 schéma$/)).not.toBeInTheDocument())
   })
 
   it('ne compte et ne coche que les schémas qui existent encore', async () => {
