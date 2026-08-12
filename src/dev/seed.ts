@@ -8,7 +8,7 @@ import { CLUB_ID_KEY } from '../app/club'
  * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
  * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v16'
+const SEED_VERSION = 'v17'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
@@ -158,12 +158,21 @@ const THEMES = ['Défense sur écran', 'Tirs extérieurs', 'Transition rapide', 
 
 /** Deux séances par semaine de rencontre (lundi et mercredi précédant le match du
  *  samedi), pour que le calendrier et le bloc « prochaine échéance » aient de quoi
- *  montrer un entraînement sans rien saisir. */
+ *  montrer un entraînement sans rien saisir. Exception pour la toute dernière
+ *  journée — celle qui porte la convocation de démo (`buildConvocation`) : ses deux
+ *  séances sont posées APRÈS la rencontre plutôt qu'avant. Sans cela, plus proches
+ *  dans le temps que la rencontre convoquée, elles deviendraient la prochaine
+ *  échéance juste après un seed, et le bloc « convoqués, rendez-vous, noms » — la
+ *  raison d'être de cette convocation de démo — resterait invisible plusieurs jours. */
 function buildTrainings(): Training[] {
-  return FIXTURES.flatMap((f, idx) => [
-    { id: `seed-tr${idx}-0`, clubId: teamId(0), date: addDays(f.date, -5), time: '19:00', place: 'Gymnase de Vignot', theme: THEMES[idx % THEMES.length] },
-    { id: `seed-tr${idx}-1`, clubId: teamId(0), date: addDays(f.date, -3), time: '19:00', place: 'Gymnase de Vignot', theme: THEMES[(idx + 1) % THEMES.length] },
-  ])
+  return FIXTURES.flatMap((f, idx) => {
+    const dernière = idx === FIXTURES.length - 1
+    const [d0, d1] = dernière ? [3, 5] : [-5, -3]
+    return [
+      { id: `seed-tr${idx}-0`, clubId: teamId(0), date: addDays(f.date, d0), time: '19:00', place: 'Gymnase de Vignot', theme: THEMES[idx % THEMES.length] },
+      { id: `seed-tr${idx}-1`, clubId: teamId(0), date: addDays(f.date, d1), time: '19:00', place: 'Gymnase de Vignot', theme: THEMES[(idx + 1) % THEMES.length] },
+    ]
+  })
 }
 
 /** Convocation complète sur la rencontre « à venir » (statut `setup`), jamais sur

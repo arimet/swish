@@ -49,7 +49,12 @@ export function MatchPreview({ matchId }: { matchId: string }) {
     Promise.all([listPlayers(match.meta.clubId), getConvocation(match.id)]).then(([ps, conv]) => {
       if (cancel) return
       setPlayers(ps)
-      setConvoqués(new Set(conv?.playerIds ?? []))
+      // Confronte les identifiants chargés à l'effectif réel : un joueur retiré de
+      // l'effectif depuis peut encore figurer dans une convocation déjà enregistrée
+      // (la cascade de `deletePlayer` ne répare que l'avenir), et resterait sinon
+      // compté sans case à décocher.
+      const rosterIds = new Set(ps.map((p) => p.id))
+      setConvoqués(new Set((conv?.playerIds ?? []).filter((id) => rosterIds.has(id))))
       setMeetTime(conv?.meetTime ?? '')
       setMeetPlace(conv?.meetPlace ?? '')
       setNote(conv?.note ?? '')

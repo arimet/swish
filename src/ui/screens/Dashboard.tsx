@@ -43,7 +43,10 @@ export function Dashboard() {
   const nosEntrainements = trainings.filter((t) => t.clubId === clubId)
   // Un match en direct occupe déjà le bandeau ci-dessous : le bloc « prochaine
   // échéance » doit alors annoncer la suivante, pas répéter celle déjà affichée.
-  const matchesPourEcheance = live ? mine.filter((m) => m.id !== live.id) : mine
+  // Filtré sur le statut, pas sur l'identité de `live` : rien n'empêche deux
+  // rencontres `live` à la fois (une seconde démarrée sans terminer la première),
+  // et chacune doit rester exclue des échéances à venir.
+  const matchesPourEcheance = mine.filter((m) => m.status !== 'live')
   const fixture = nextFixture(matchesPourEcheance, nosEntrainements, new Date())
   const fixtureMatchId = fixture?.kind === 'match' ? fixture.match.id : null
 
@@ -57,7 +60,11 @@ export function Dashboard() {
   if (!clubId || !club) return null
   if (!matches) return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
 
-  const next = mine.filter((m) => m.status === 'setup').sort((a, b) => (a.meta.date ?? '').localeCompare(b.meta.date ?? ''))[0]
+  // Dérivé de la même échéance que le bloc ci-dessous (`fixture`), qui écarte déjà le
+  // passé et les rencontres terminées : sans ce partage, une rencontre planifiée puis
+  // jamais jouée ferait annoncer ici « Prochaine rencontre » alors que le bloc dit
+  // « Rien de planifié », à quelques pixels d'écart.
+  const next = fixture?.kind === 'match' ? fixture.match : undefined
   // `teamRecord`/`teamMatches` savent aussi lire côté adversaire (légitime pour
   // la fiche d'une équipe adverse) : sur ce tableau de bord, seul `mine` compte,
   // sans quoi un club qui n'est que `opponentId` d'une rencontre récupérerait le
