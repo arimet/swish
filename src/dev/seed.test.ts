@@ -2,14 +2,14 @@ import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { seedDevData } from './seed'
 import { db } from '../persistence/db'
-import { getConvocation, listMatches, listPlayers, listResults, listTeams, listTrainings, saveConvocation, saveTraining } from '../persistence/repositories'
+import { getConvocation, listMatches, listPlayers, listPlays, listResults, listTeams, listTrainings, saveConvocation, saveTraining } from '../persistence/repositories'
 import { playingTimes } from '../domain/playingtime'
 import { nextFixture } from '../domain/fixtures'
 
 beforeEach(async () => {
   localStorage.clear()
   await db.matches.clear(); await db.players.clear(); await db.teams.clear(); await db.results.clear()
-  await db.trainings.clear(); await db.convocations.clear()
+  await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear()
   await seedDevData()
 })
 
@@ -88,6 +88,18 @@ describe('données de démonstration', () => {
     expect(fixture?.kind).toBe('match')
     expect(fixture?.id).toBe(aVenir.id)
     expect(await getConvocation(fixture!.id)).toBeDefined()
+  })
+
+  it('la démonstration contient trois schémas, dont un sur terrain complet et un ballon posé', async () => {
+    const matches = await listMatches()
+    const schemas = await listPlays(matches[0].meta.clubId)
+    expect(schemas).toHaveLength(3)
+    expect(schemas.filter((s) => s.terrain === 'complet')).toHaveLength(1)
+    // Un ballon au sol est un Point ; porté, c'est un pion désigné.
+    expect(schemas.filter((s) => 'x' in s.temps[0].ballon)).toHaveLength(1)
+    // Chaque temps garde son effectif complet — la défense n'apparaît que là où
+    // le schéma la demande.
+    for (const s of schemas) for (const t of s.temps) expect(t.pions).toHaveLength(s.defense ? 10 : 5)
   })
 
   it('vide entraînements et convocations avant de re-seeder, pour ne pas laisser d’orphelins', async () => {

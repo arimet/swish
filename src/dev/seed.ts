@@ -1,14 +1,16 @@
 import { db } from '../persistence/db'
-import { saveTeam, savePlayer, saveMatch, saveResult, saveTraining, saveConvocation } from '../persistence/repositories'
+import { saveTeam, savePlayer, saveMatch, saveResult, saveTraining, saveConvocation, savePlay } from '../persistence/repositories'
 import type { Convocation, GameEvent, Match, Period, Player, ReportedResult, ScoreKind, Training } from '../domain/types'
 import { kindAt } from '../domain/shotzones'
+import { nouveauSchema, tempsSuivant } from '../domain/plays'
+import type { Camp, Fleche, Poste, Schema, Temps, Terrain, Trait } from '../domain/plays'
 import { CLUB_ID_KEY } from '../app/club'
 
 /**
  * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
  * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v17'
+const SEED_VERSION = 'v23'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
@@ -269,6 +271,136 @@ function buildResult(g: OutsideGame, idx: number): ReportedResult {
   }
 }
 
+// ── Les combinaisons de démonstration ────────────────────────────────────────
+// Construites avec le domaine (`nouveauSchema`, `tempsSuivant`) et non recopiées
+// d'un JSON figé : un JSON se désynchronise du modèle à la première évolution.
+// Coordonnées normalisées, ligne de fond du panier attaqué en y = 0 ; sur terrain
+// complet, tout est divisé par deux (la moitié avant est y ≤ 0,5).
+
+/** Un pion déplacé à ce temps : camp, poste, puis sa nouvelle position. */
+type Mvt = [Camp, Poste, number, number]
+
+/** Une flèche, écrite comme on la lit : qui, quel trait, par où elle passe. */
+const fl = (poste: Poste, trait: Trait, points: [number, number][]): Fleche =>
+  ({ depuis: { camp: 'attaque', poste }, trait, points: points.map(([x, y]) => ({ x, y })) })
+
+/** Un temps de la démonstration : ce qui bouge, à qui est le ballon, ce qui se trace. */
+interface Etape { deplace?: Mvt[]; ballon?: Temps['ballon']; fleches?: Fleche[] }
+
+/**
+ * Un schéma de démonstration : on part de la mise en place du domaine, puis
+ * chaque étape hérite du temps précédent (`tempsSuivant` : positions et ballon,
+ * jamais les flèches) et n'écrit que ce qui change. Les flèches d'un temps
+ * mènent là où les pions se trouvent au temps suivant — sans quoi le coach lit
+ * une combinaison qui ne se joue pas.
+ */
+function schemaDemo(
+  idx: number, clubId: string, nom: string, note: string,
+  terrain: Terrain, defense: boolean, etapes: Etape[],
+): Schema {
+  const base = nouveauSchema(clubId, terrain, defense)
+  let t = base.temps[0]
+  const temps = etapes.map((e, i) => {
+    t = i === 0 ? t : tempsSuivant(t)
+    for (const [camp, poste, x, y] of e.deplace ?? []) {
+      const pion = t.pions.find((p) => p.camp === camp && p.poste === poste)
+      if (pion) pion.at = { x, y }
+    }
+    if (e.ballon) t.ballon = e.ballon
+    t.fleches = e.fleches ?? []
+    return t
+  })
+  return { ...base, id: `seed-sch${idx}`, nom, note, temps }
+}
+
+function buildSchemas(clubId: string): Schema[] {
+  return [
+    // Le classique du haut : le 5 monte prendre l'écran, le 1 tourne autour par
+    // l'extérieur, le 5 plonge dans le dos de son défenseur et reçoit.
+    schemaDemo(0, clubId, 'Pick and roll haut', 'Écran du 5 au sommet, le 1 tourne autour, passe au 5 qui plonge.', 'demi', true, [
+      {
+        deplace: [
+          ['attaque', 1, 0.50, 0.66], ['attaque', 2, 0.05, 0.16], ['attaque', 3, 0.95, 0.16],
+          ['attaque', 4, 0.16, 0.46], ['attaque', 5, 0.68, 0.38],
+          ['defense', 1, 0.50, 0.55], ['defense', 2, 0.15, 0.16], ['defense', 3, 0.85, 0.16],
+          ['defense', 4, 0.24, 0.40], ['defense', 5, 0.63, 0.32],
+        ],
+        fleches: [fl(5, 'ecran', [[0.68, 0.38], [0.63, 0.52], [0.585, 0.625]])],
+      },
+      {
+        // L'écran est posé contre l'épaule droite du porteur ; le défenseur du 5
+        // recule à hauteur de la raquette (il ne sort pas au contact), celui du 1
+        // reste sur ses appuis.
+        deplace: [['attaque', 5, 0.585, 0.625], ['defense', 5, 0.635, 0.495], ['defense', 1, 0.50, 0.56]],
+        fleches: [fl(1, 'dribble', [[0.50, 0.66], [0.60, 0.685], [0.685, 0.575], [0.70, 0.44]])],
+      },
+      {
+        // Le 1 est ressorti côté droit, son défenseur le poursuit ; celui du 5 est
+        // resté haut, la voie du plongeon est ouverte.
+        deplace: [['attaque', 1, 0.70, 0.44], ['defense', 1, 0.73, 0.57], ['defense', 5, 0.60, 0.52]],
+        fleches: [
+          fl(5, 'course', [[0.585, 0.625], [0.55, 0.42], [0.52, 0.21]]),
+          fl(1, 'passe', [[0.70, 0.44], [0.63, 0.34], [0.555, 0.255]]),
+        ],
+      },
+    ]),
+
+    // Renversement d'un côté à l'autre : le 4 sort du poste bas et va prendre le
+    // corner, le ballon y arrive par l'aile.
+    schemaDemo(1, clubId, 'Corner pour le 4', 'Le 4 sort du poste bas vers le corner, le ballon suit par l’aile.', 'demi', false, [
+      {
+        deplace: [
+          ['attaque', 1, 0.50, 0.64], ['attaque', 2, 0.82, 0.46], ['attaque', 3, 0.18, 0.46],
+          ['attaque', 4, 0.31, 0.21], ['attaque', 5, 0.66, 0.36],
+        ],
+        fleches: [
+          fl(1, 'passe', [[0.50, 0.64], [0.34, 0.55], [0.19, 0.47]]),
+          fl(4, 'course', [[0.31, 0.21], [0.22, 0.15], [0.06, 0.135]]),
+        ],
+      },
+      {
+        // Le ballon a changé de main : c'est le 3 qui sert le corner, et le 5
+        // traverse la raquette pour le rebond du côté du tir.
+        deplace: [['attaque', 4, 0.06, 0.135]],
+        ballon: { camp: 'attaque', poste: 3 },
+        fleches: [
+          fl(3, 'passe', [[0.18, 0.46], [0.10, 0.30], [0.065, 0.17]]),
+          fl(5, 'course', [[0.66, 0.36], [0.60, 0.22], [0.44, 0.17]]),
+        ],
+      },
+    ]),
+
+    // Remise en jeu en boîte, sur terrain complet : le remetteur est derrière la
+    // ligne de fond et le ballon attend au sol tant que l'arbitre ne l'a pas donné.
+    schemaDemo(2, clubId, 'Remise ligne de fond', 'Boîte à quatre : écran du 5, le 3 coupe au panier, le 4 assure derrière.', 'complet', false, [
+      {
+        deplace: [
+          ['attaque', 1, 0.62, 0.025], ['attaque', 2, 0.36, 0.20], ['attaque', 3, 0.64, 0.20],
+          ['attaque', 4, 0.64, 0.09], ['attaque', 5, 0.36, 0.09],
+        ],
+        // Le ballon attend au sol, à l'écart du remetteur : posé sur la ligne, il
+        // ne doit pas se lire comme un ballon déjà en main.
+        ballon: { x: 0.82, y: 0.035 },
+        fleches: [
+          fl(5, 'ecran', [[0.36, 0.09], [0.47, 0.13], [0.565, 0.165]]),
+          fl(3, 'course', [[0.64, 0.20], [0.585, 0.135], [0.50, 0.09]]),
+          fl(2, 'course', [[0.36, 0.20], [0.20, 0.145], [0.065, 0.085]]),
+          // Le 4 remonte en sécurité vers la ligne médiane : sans lui, une perte
+          // de balle sur la remise part seule au panier. Sa course contourne le 3
+          // par l'extérieur plutôt que de lui passer dessus.
+          fl(4, 'course', [[0.64, 0.09], [0.73, 0.22], [0.60, 0.41]]),
+        ],
+      },
+      {
+        // Le ballon est en main : la remise part vers le 3, sorti de l'écran du 5.
+        deplace: [['attaque', 2, 0.065, 0.085], ['attaque', 3, 0.50, 0.09], ['attaque', 4, 0.60, 0.41], ['attaque', 5, 0.565, 0.165]],
+        ballon: { camp: 'attaque', poste: 1 },
+        fleches: [fl(1, 'passe', [[0.62, 0.025], [0.57, 0.055], [0.505, 0.085]])],
+      },
+    ]),
+  ]
+}
+
 export async function seedDevData(): Promise<void> {
   const already = (await db.teams.count()) > 0
   if (already && localStorage.getItem('seed-version') === SEED_VERSION) return
@@ -276,7 +408,7 @@ export async function seedDevData(): Promise<void> {
   // aussi : sans quoi un re-seed laisserait des orphelins rattachés à des
   // rencontres qui n'existent plus.
   await db.matches.clear(); await db.players.clear(); await db.teams.clear(); await db.results.clear()
-  await db.trainings.clear(); await db.convocations.clear()
+  await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear()
 
   for (let t = 0; t < TEAMS.length; t++) await saveTeam({ id: teamId(t), name: TEAMS[t][0], coach: TEAMS[t][1] })
   for (const p of PLAYERS) await savePlayer(p)
@@ -284,6 +416,7 @@ export async function seedDevData(): Promise<void> {
   for (let idx = 0; idx < OUTSIDE_GAMES.length; idx++) await saveResult(buildResult(OUTSIDE_GAMES[idx], idx))
   for (const tr of buildTrainings()) await saveTraining(tr)
   await saveConvocation(buildConvocation())
+  for (const s of buildSchemas(teamId(0))) await savePlay(s)
 
   localStorage.setItem('seed-version', SEED_VERSION)
   // L'Avenir de Vignot est le club de démonstration : sans cela, la démo s'ouvre
