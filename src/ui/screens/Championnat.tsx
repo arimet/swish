@@ -11,7 +11,7 @@ const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
 
 export function Championnat() {
   const { clubId, teams } = useClub()
-  const { guard } = useAuth()
+  const { can, guard } = useAuth()
   const [matches, setMatches] = useState<Match[]>([])
   const [results, setResults] = useState<ReportedResult[]>([])
   const [erreur, setErreur] = useState('')
@@ -105,6 +105,13 @@ export function Championnat() {
     await saveResult({ ...r, ...patch })
     rafraichir()
   })
+  // Garder d'abord, muter ensuite : les champs de score ne s'ouvrent à la frappe
+  // qu'une fois le droit acquis. Garder à la validation ne suffirait pas — ils ne
+  // sont pas contrôlés, React ne réinitialise pas un `defaultValue`, et un code
+  // refusé laisserait à l'écran une valeur que la base n'a pas, sous un classement
+  // qui continue de compter l'ancienne.
+  const peutCorriger = can('manage')
+  const demanderCode = () => guard('manage', () => {})
   const supprimer = (id: string) => guard('manage', async () => { await deleteResult(id); rafraichir() })
 
   return (
@@ -192,6 +199,7 @@ export function Championnat() {
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">{teamsById[r.homeId]?.name ?? '—'}</span>
                 <label htmlFor={`score-home-${r.id}`} className="sr-only">Score {teamsById[r.homeId]?.name ?? 'équipe reçue'}</label>
                 <input id={`score-home-${r.id}`} type="number" min={0} defaultValue={r.homeScore} style={{ ...field, width: 64, height: 36 }} className="text-center text-sm"
+                  readOnly={!peutCorriger} onFocus={demanderCode}
                   onBlur={(e) => {
                     // Un champ vidé n'est pas une saisie de 0 : c'est le premier geste de qui
                     // corrige une faute de frappe. `Number('')` vaut 0, pas NaN — sans ce garde
@@ -203,6 +211,7 @@ export function Championnat() {
                 <span className="text-xs font-bold" style={{ color: C.faint }}>–</span>
                 <label htmlFor={`score-away-${r.id}`} className="sr-only">Score {teamsById[r.awayId]?.name ?? 'équipe visiteuse'}</label>
                 <input id={`score-away-${r.id}`} type="number" min={0} defaultValue={r.awayScore} style={{ ...field, width: 64, height: 36 }} className="text-center text-sm"
+                  readOnly={!peutCorriger} onFocus={demanderCode}
                   onBlur={(e) => {
                     if (e.target.value === '') { e.target.value = String(r.awayScore); return }
                     const n = Number(e.target.value)
