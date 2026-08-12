@@ -7,7 +7,7 @@ import { NOM_ROLE, REQUIS, type Ability } from '../../app/auth'
  * libellé nomme l'accès manquant, pour qu'un bénévole comprenne qu'il lui
  * faut un autre code plutôt que de croire le sien cassé.
  */
-export function AdminGate({ ability, matchId, onUnlock, onExit }: { ability: Ability; matchId: string; onUnlock: () => void; onExit: () => void }) {
+export function AccessGate({ ability, matchId, onUnlock, onExit }: { ability: Ability; matchId: string; onUnlock: () => void; onExit: () => void }) {
   const nomAccès = NOM_ROLE[REQUIS[ability]]
   return (
     <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">

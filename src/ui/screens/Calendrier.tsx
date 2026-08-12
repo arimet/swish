@@ -119,7 +119,7 @@ export function Calendrier() {
         </div>
       )}
 
-      {/* Saisie réservée à l'admin : le mot de passe est demandé à la validation. */}
+      {/* Saisie réservée à l'admin : le code d'accès est demandé à la validation. */}
       <section className="mt-8 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <p className="mb-4 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Nouvel entraînement</p>
         <div className="grid gap-4 sm:grid-cols-2">

@@ -26,8 +26,9 @@ export const NOM_ROLE: Record<Role, string> = {
 /** L'accès minimal qui accorde chaque droit — sert à nommer ce qu'il faut saisir. */
 export const REQUIS: Record<Ability, Role> = { score: 'marque', manage: 'admin' }
 
-const CODES: Record<Role, string> = {
-  visiteur: '',
+/** Seuls les rôles qui s'acquièrent ont un code : « visiteur » est l'état par
+ *  défaut, pas quelque chose qu'on déverrouille. */
+const CODES: Record<Exclude<Role, 'visiteur'>, string> = {
   marque: (import.meta.env.VITE_SCORER_PASSWORD as string | undefined)?.trim() || 'marque',
   admin: (import.meta.env.VITE_ADMIN_PASSWORD as string | undefined)?.trim() || 'admin',
 }
@@ -76,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const unlock = useCallback((value: string): Role | 'joueur' | null => {
     if (value === CODE_JOUEUR) return 'joueur'
-    const obtained = (Object.keys(CODES) as Role[]).find((r) => r !== 'visiteur' && CODES[r] === value)
+    const obtained = (Object.keys(CODES) as (keyof typeof CODES)[]).find((r) => CODES[r] === value)
     if (!obtained) return null
     sessionStorage.setItem(ROLE_KEY, obtained)
     setRole(obtained)

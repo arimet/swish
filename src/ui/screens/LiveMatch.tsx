@@ -6,7 +6,7 @@ import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { ClockEditDialog } from '../components/ClockEditDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { StartingFiveGate } from '../components/StartingFiveGate'
-import { AdminGate } from '../components/AdminGate'
+import { AccessGate } from '../components/AccessGate'
 import { SubstitutionDialog } from '../components/SubstitutionDialog'
 import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
 import { useAuth } from '../../app/auth'
@@ -81,7 +81,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     return <div className="grid min-h-dvh place-items-center text-muted-foreground">Chargement…</div>
 
   if (!can('score'))
-    return <AdminGate ability="score" matchId={matchId} onUnlock={() => guard('score', () => {})} onExit={() => navigate('/')} />
+    return <AccessGate ability="score" matchId={matchId} onUnlock={() => guard('score', () => {})} onExit={() => navigate('/')} />
 
   const rosterPlayers = match.roster.map((id) => players[id]).filter(Boolean)
 
@@ -95,7 +95,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         rosterA={rosterPlayers} requiredA={required}
         selected={starters} onToggle={toggle}
         canStart={starters.length === required}
-        onStart={() => guard('score', () => dispatch({ type: 'STARTING_FIVE', team: 'A', playerIds: byNumber(starters), period: ls.period, gameClock: periodLength(ls.period) }))}
+        onStart={() => dispatch({ type: 'STARTING_FIVE', team: 'A', playerIds: byNumber(starters), period: ls.period, gameClock: periodLength(ls.period) })}
         onExit={() => navigate('/')}
       />
     )
