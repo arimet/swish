@@ -118,3 +118,25 @@ describe('Championnat', () => {
     expect(await screen.findByText(/correspond déjà à une de nos rencontres/i)).toBeInTheDocument()
   })
 })
+
+describe('Championnat — droits', () => {
+  it('saisir un résultat est administratif : la table de marque se voit demander le code admin', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    renderChamp()
+    await remplirFormulaire('tb', 'tc', '70', '60')
+    await userEvent.type(screen.getByLabelText('Date de la rencontre'), '2026-01-10')
+    await userEvent.click(screen.getByRole('button', { name: /ajouter le résultat/i }))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(await listResults()).toHaveLength(0)
+  })
+
+  it('un visiteur consulte le classement sans qu’aucun code lui soit demandé', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
+    await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
+    renderChamp()
+    const table = await screen.findByRole('table')
+    expect(within(table).getByText('VERDUN')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
+  })
+})

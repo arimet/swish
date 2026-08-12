@@ -105,3 +105,24 @@ describe('Calendrier', () => {
     expect(screen.queryByText('Défense sur écran')).not.toBeInTheDocument()
   })
 })
+
+describe('Calendrier — droits', () => {
+  it('créer un entraînement est administratif : la table de marque se voit demander le code admin', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    renderCal()
+    await userEvent.type(await screen.findByLabelText(/date de l'entraînement/i), '2026-02-03')
+    await userEvent.click(screen.getByRole('button', { name: /ajouter l'entraînement/i }))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(await listTrainings()).toHaveLength(0)
+  })
+
+  it('un visiteur consulte le calendrier sans qu’aucun code lui soit demandé', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
+    await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })
+    renderCal()
+    expect(await screen.findByText('Défense sur écran')).toBeInTheDocument()
+    expect(await screen.findByText(/VERDUN/)).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
+  })
+})

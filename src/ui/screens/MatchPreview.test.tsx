@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MatchPreview } from './MatchPreview'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
@@ -27,6 +27,20 @@ beforeEach(async () => {
 
 const renderPreview = () =>
   render(<MemoryRouter><ClubProvider><AuthProvider><MatchPreview matchId="m1" /></AuthProvider></ClubProvider></MemoryRouter>)
+
+/** Même écran, mais avec la route de saisie derrière : démarrer la rencontre y
+ *  navigue, et c'est l'arrivée sur cet écran qui prouve que le geste est passé. */
+const renderAvecSaisie = () =>
+  render(
+    <MemoryRouter initialEntries={['/match/m1']}>
+      <ClubProvider><AuthProvider>
+        <Routes>
+          <Route path="/match/:id" element={<MatchPreview matchId="m1" />} />
+          <Route path="/match/:id/live" element={<p>Écran de saisie</p>} />
+        </Routes>
+      </AuthProvider></ClubProvider>
+    </MemoryRouter>,
+  )
 
 describe('MatchPreview — convocation', () => {
   it('cocher deux joueurs puis enregistrer crée une convocation contenant leurs deux identifiants', async () => {
@@ -130,5 +144,36 @@ describe('MatchPreview — convocation', () => {
 
     expect(await screen.findByLabelText(/ANTOINE/i)).toBeInTheDocument()
     expect(screen.queryByLabelText(/DUPONT/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('MatchPreview — droits', () => {
+  it('la table de marque démarre la rencontre sans qu’aucun code lui soit demandé', async () => {
+    // Le bénévole du samedi doit pouvoir lancer le match qu'il va tenir : démarrer
+    // relève de la table de marque, pas de l'administration du club.
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    renderAvecSaisie()
+    await userEvent.click(await screen.findByRole('button', { name: /démarrer la rencontre/i }))
+
+    expect(await screen.findByText('Écran de saisie')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
+  })
+
+  it('la convocation reste administrative : la table de marque se voit demander le code admin, et rien n’est enregistré', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    renderPreview()
+    await userEvent.click(await screen.findByRole('button', { name: /enregistrer la convocation/i }))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(await getConvocation('m1')).toBeUndefined()
+  })
+
+  it('cocher un convoqué est déjà un geste administratif : la case reste décochée pour la table de marque', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    renderPreview()
+    await userEvent.click(await screen.findByLabelText(/ANTOINE/i))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(screen.getByLabelText(/ANTOINE/i)).not.toBeChecked()
   })
 })

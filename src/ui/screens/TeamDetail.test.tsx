@@ -84,3 +84,16 @@ describe('TeamDetail — fiche signalétique', () => {
     })
   })
 })
+
+describe('TeamDetail — droits', () => {
+  it('modifier l’effectif est administratif : la table de marque se voit demander le code admin', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    renderTeam()
+    await userEvent.type(await screen.findByPlaceholderText('N°'), '9')
+    await userEvent.type(screen.getByPlaceholderText('Nom'), 'DUPONT')
+    await userEvent.click(screen.getByRole('button', { name: /ajouter le joueur/i }))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(await listPlayers('ta')).toHaveLength(1) // MARTIN seul, DUPONT n'a pas été ajouté
+  })
+})

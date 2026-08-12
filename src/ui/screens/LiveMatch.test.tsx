@@ -168,3 +168,25 @@ describe('parcours complet', () => {
     expect((await getMatch(ID))!.status).toBe('finished')
   })
 })
+
+describe('LiveMatch — droits', () => {
+  it('la table de marque saisit le match sans qu’aucun code lui soit demandé', async () => {
+    // Le cœur du modèle : le bénévole tient la feuille sans détenir le code admin.
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    renderLive()
+    await userEvent.click(await screen.findByRole('button', { name: 'Ajouter 2 points à VERDUN' }))
+
+    expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
+    await waitFor(async () => {
+      const saved = await getMatch(MATCH_ID)
+      expect(saved!.events.filter((e) => e.type === 'SCORE' && e.team === 'B')).toHaveLength(1)
+    })
+  })
+
+  it('un visiteur ne saisit rien : l’écran annonce l’accès table de marque au lieu de la feuille', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
+    renderLive()
+    expect(await screen.findByRole('heading', { name: /Accès Table de marque requis/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Ajouter 2 points à VERDUN' })).not.toBeInTheDocument()
+  })
+})
