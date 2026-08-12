@@ -20,6 +20,7 @@ import { SchemaEdit } from './ui/screens/SchemaEdit'
 import { SchemaList } from './ui/screens/SchemaList'
 import { SchemaView } from './ui/screens/SchemaView'
 import { SchemaPlayer } from './ui/screens/SchemaPlayer'
+import { SchemaRecu } from './ui/screens/SchemaRecu'
 
 const Padded = ({ children }: { children: ReactNode }) => <div className="p-6">{children}</div>
 
@@ -71,6 +72,10 @@ export default function App() {
             {/* Le lecteur du temps-mort : plein écran, hors du shell et hors de
                 la garde club — un joueur ouvre la combinaison chez lui. */}
             <Route path="/schemas/:id/lecteur" element={<SchemaPlayer />} />
+            {/* Une combinaison reçue par lien : hors du shell et hors de la garde
+                club, puisque tout le schéma est dans le fragment de l'URL — celui
+                qui reçoit le lien n'a peut-être jamais ouvert l'application. */}
+            <Route path="/schemas/recu" element={<SchemaRecu />} />
             {/* Création d'équipe : hors garde, c'est l'issue proposée par l'écran de
                 bienvenue quand aucune équipe n'existe encore pour choisir un club. */}
             <Route path="/teams/new" element={<TeamCreate />} />
