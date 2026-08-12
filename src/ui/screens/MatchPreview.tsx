@@ -4,7 +4,6 @@ import { getMatch, listTeams, deleteMatch, listPlayers, getConvocation, saveConv
 import type { Match, Team, Player } from '../../domain/types'
 import { C, bd, PageTitle, TeamBadge, fmtDate, champLabel } from '../olive/kit'
 import { useAdmin } from '../../app/admin'
-import { useClub } from '../../app/club'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
@@ -14,7 +13,6 @@ const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
 export function MatchPreview({ matchId }: { matchId: string }) {
   const navigate = useNavigate()
   const { guard } = useAdmin()
-  const { clubId } = useClub()
   const [match, setMatch] = useState<Match | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [askDelete, setAskDelete] = useState(false)
@@ -40,11 +38,15 @@ export function MatchPreview({ matchId }: { matchId: string }) {
   // rencontre. Un rechargement déclenché par une frappe en cours (ex. un effet qui se
   // fie à « le champ est vide ») écraserait la saisie dès que l'utilisateur efface
   // pour retaper — on applique donc ces valeurs une fois, jamais en cours de saisie.
+  // L'effectif est celui du club de LA RENCONTRE (`match.meta.clubId`, jamais absent),
+  // pas celui du réglage d'appareil (`useClub`, préférence locale qui peut désigner un
+  // autre club si l'on a changé de club depuis) : une rencontre ancienne, rouverte par
+  // un lien direct après un changement de club, doit garder l'effectif à qui elle
+  // appartient.
   useEffect(() => {
     if (!match) return
     let cancel = false
-    const id = clubId ?? match.meta.clubId
-    Promise.all([listPlayers(id), getConvocation(match.id)]).then(([ps, conv]) => {
+    Promise.all([listPlayers(match.meta.clubId), getConvocation(match.id)]).then(([ps, conv]) => {
       if (cancel) return
       setPlayers(ps)
       setConvoqués(new Set(conv?.playerIds ?? []))
@@ -53,7 +55,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
       setNote(conv?.note ?? '')
     })
     return () => { cancel = true }
-  }, [match?.id, clubId])
+  }, [match?.id])
 
   if (match === null) return <p className="py-16 text-center text-sm" style={{ color: C.muted }}>Rencontre introuvable.</p>
 

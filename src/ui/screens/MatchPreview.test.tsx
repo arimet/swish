@@ -99,4 +99,16 @@ describe('MatchPreview — convocation', () => {
     renderPreview()
     expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
   })
+
+  it("affiche l'effectif du club de la rencontre, pas celui du réglage d'appareil s'ils diffèrent", async () => {
+    // Rencontre ancienne rouverte après un changement de club sur cet appareil : le
+    // réglage local pointe maintenant vers VERDUN, mais la rencontre appartient à
+    // VIGNOT — c'est son effectif qui doit apparaître, jamais celui de VERDUN.
+    await savePlayer({ id: 'p9', teamId: 'tb', number: 1, lastName: 'DUPONT', firstName: 'Zoé' })
+    localStorage.setItem('swish-club-id', 'tb')
+    renderPreview()
+
+    expect(await screen.findByLabelText(/ANTOINE/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/DUPONT/i)).not.toBeInTheDocument()
+  })
 })
