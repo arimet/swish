@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { newId } from '../../domain/ids'
-import { listMatches, listTeams, listTrainings, saveTraining, deleteTraining } from '../../persistence/repositories'
+import { listMatches, listPlays, listTeams, listTrainings, saveTraining, deleteTraining, toggleTrainingPlay } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
 import type { Match, Team, Training } from '../../domain/types'
+import type { Schema } from '../../domain/plays'
 import { C, bd, MatchCard, PageTitle, fmtDate } from '../olive/kit'
 import { useClub } from '../../app/club'
 import { useAuth } from '../../app/auth'
@@ -24,6 +25,8 @@ export function Calendrier() {
   const [matches, setMatches] = useState<Match[] | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [trainings, setTrainings] = useState<Training[] | null>(null)
+  // La bibliothèque du club : c'est elle qui dit quels schémas existent encore.
+  const [schemas, setSchemas] = useState<Schema[]>([])
 
   const refreshTrainings = () => listTrainings().then(setTrainings)
 
@@ -37,6 +40,15 @@ export function Calendrier() {
     })
     return () => { cancel = true }
   }, [])
+
+  // Les schémas suivent le club de l'appareil, comme les entraînements ci-dessous :
+  // effet séparé, car celui du dessus ne dépend pas de `clubId`.
+  useEffect(() => {
+    if (!clubId) { setSchemas([]); return }
+    let cancel = false
+    listPlays(clubId).then((s) => { if (!cancel) setSchemas(s) })
+    return () => { cancel = true }
+  }, [clubId])
 
   const nos = useMemo(() => matches?.filter((m) => m.meta.clubId === clubId) ?? null, [matches, clubId])
   // Comme les rencontres : un appareil qui change de club ne doit garder au calendrier
@@ -79,6 +91,14 @@ export function Calendrier() {
   }
   const supprimer = (id: string) => guard('manage', async () => { await deleteTraining(id); refreshTrainings() })
 
+  // Attacher un schéma à une séance est administratif : garder d'abord, écrire
+  // ensuite. Le va-et-vient lui-même est transactionnel (cf. `toggleTrainingPlay`),
+  // pour que deux cases cochées coup sur coup ne s'effacent pas l'une l'autre.
+  const basculerSchema = (id: string, playId: string) => guard('manage', async () => {
+    await toggleTrainingPlay(id, playId)
+    refreshTrainings()
+  })
+
   return (
     <div className="p-6">
       <PageTitle title="Calendrier" subtitle="Les rencontres et entraînements de votre équipe, par date." />
@@ -111,7 +131,9 @@ export function Calendrier() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
                   {items.map((it) => it.kind === 'match'
                     ? <MatchCard key={it.key} m={it.match} teams={teams} />
-                    : <TrainingCard key={it.key} t={it.training} onDelete={() => supprimer(it.training.id)} />)}
+                    : <TrainingCard key={it.key} t={it.training} schemas={schemas}
+                        onToggleSchema={(playId) => basculerSchema(it.training.id, playId)}
+                        onDelete={() => supprimer(it.training.id)} />)}
                 </div>
               </section>
             )
@@ -152,8 +174,14 @@ function Field({ id, label, value, onChange, type = 'text' }: { id: string; labe
 
 /** Carte d'entraînement : même gabarit que `MatchCard` pour se mêler à la
  *  grille, mais une pastille et une bordure bleues la distinguent d'une
- *  rencontre sans qu'il faille lire un seul mot. */
-function TrainingCard({ t, onDelete }: { t: Training; onDelete: () => void }) {
+ *  rencontre sans qu'il faille lire un seul mot. Elle se déplie sur les schémas
+ *  qu'on y travaille — mêmes cases à cocher que la convocation d'une rencontre. */
+function TrainingCard({ t, schemas, onToggleSchema, onDelete }: { t: Training; schemas: Schema[]; onToggleSchema: (playId: string) => void; onDelete: () => void }) {
+  // Le compte affiché est celui des schémas qui existent : un entraînement peut
+  // citer un schéma supprimé (base antérieure à la cascade de `deletePlay`), et
+  // le compter ferait mentir la ligne — la faute corrigée au projet 6 sur les
+  // convocations et leurs joueurs retirés.
+  const attachés = schemas.filter((s) => t.playIds?.includes(s.id))
   return (
     <div className="flex gap-3 rounded-2xl p-3" style={{ background: C.card, border: `1px solid ${ENTR_COLOR}55` }}>
       <div className="flex w-11 shrink-0 flex-col items-center justify-center gap-1 rounded-xl" style={{ background: ENTR_BG }}>
@@ -165,6 +193,35 @@ function TrainingCard({ t, onDelete }: { t: Training; onDelete: () => void }) {
           {t.time && <span className="ml-auto text-[11px] font-bold" style={{ color: C.muted }}>{t.time}</span>}
         </div>
         <p className="mt-2 truncate text-sm font-bold">{t.theme || 'Séance libre'}</p>
+
+        {/* `<details>` plutôt qu'un état local : le navigateur sait déjà déplier, et
+            vingt schémas dépliés d'office noieraient le calendrier. */}
+        <details className="mt-2">
+          <summary className="flex cursor-pointer items-center gap-2 text-[11px] font-bold" style={{ color: ENTR_COLOR }}>
+            Schémas travaillés
+            {attachés.length > 0 && (
+              <span className="rounded-md px-1.5 py-0.5 font-black" style={{ background: ENTR_BG, color: ENTR_COLOR }}>
+                {attachés.length} schéma{attachés.length > 1 ? 's' : ''}
+              </span>
+            )}
+          </summary>
+          {schemas.length === 0 ? (
+            <p className="mt-2 text-[11px]" style={{ color: C.faint }}>Aucun schéma dans la bibliothèque.</p>
+          ) : (
+            <div className="mt-2 grid gap-1.5">
+              {schemas.map((s) => {
+                const id = `schema-${t.id}-${s.id}`
+                return (
+                  <label key={s.id} htmlFor={id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold" style={{ background: C.panel }}>
+                    <input id={id} type="checkbox" checked={attachés.some((a) => a.id === s.id)} onChange={() => onToggleSchema(s.id)} />
+                    <span className="truncate">{s.nom}</span>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+        </details>
+
         <div className="mt-2.5 flex items-center justify-between border-t pt-2.5 text-[11px] font-semibold" style={{ borderColor: C.border, color: C.faint }}>
           <span className="truncate">{t.place || '—'}</span>
           <button onClick={onDelete} aria-label="Supprimer cet entraînement" className="shrink-0 rounded-lg px-1.5 py-0.5 font-black" style={{ color: C.pink }}>✕</button>

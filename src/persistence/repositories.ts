@@ -80,6 +80,22 @@ export const listTrainings = () => db.trainings.toArray()
 export const saveTraining = async (t: Training) => { await db.trainings.put(t) }
 export const deleteTraining = async (id: string) => { await db.trainings.delete(id) }
 
+/** Attache un schéma à un entraînement, ou l'en retire. Le va-et-vient se fait dans
+ *  une transaction, à partir de la séance relue : deux cases cochées coup sur coup
+ *  partiraient sinon toutes deux de la même séance périmée, et la seconde écriture
+ *  effacerait la première. Les identifiants qui ne désignent plus aucun schéma
+ *  tombent au passage — même garde que la lecture, appliquée ici à l'écriture. */
+export const toggleTrainingPlay = async (trainingId: string, playId: string) => {
+  await db.transaction('rw', db.trainings, db.plays, async () => {
+    const t = await db.trainings.get(trainingId)
+    if (!t) return
+    const ids = t.playIds ?? []
+    const suivants = ids.includes(playId) ? ids.filter((id) => id !== playId) : [...ids, playId]
+    const existants = await db.plays.bulkGet(suivants)
+    await db.trainings.put({ ...t, playIds: suivants.filter((_, i) => !!existants[i]) })
+  })
+}
+
 /** Les schémas du tableau tactique restent locaux à l'appareil, comme les résultats,
  *  les convocations et les entraînements : la file de synchronisation ne transporte
  *  qu'équipes, joueurs et rencontres. Supprimer une équipe emporte ses schémas
