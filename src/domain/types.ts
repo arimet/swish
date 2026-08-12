@@ -103,4 +103,8 @@ export interface Training {
   place?: string
   /** Thème de la séance : « défense sur écran », « tirs extérieurs »… */
   theme?: string
+  /** Les schémas travaillés à cette séance. Sous-ensemble de la bibliothèque : un
+   *  schéma supprimé depuis en est retiré par `deletePlay`, et la lecture filtre
+   *  quand même sur ce qui existe. */
+  playIds?: string[]
 }
