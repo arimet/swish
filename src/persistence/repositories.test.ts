@@ -91,6 +91,21 @@ describe('repositories', () => {
     expect((await listPlays('tb')).map((s) => s.id)).toEqual(['s2'])
   })
 
+  it('horodate chaque enregistrement de schéma', async () => {
+    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
+    const relu = (await getPlay('s1'))!
+    expect(relu.majLe).toBeTruthy()
+    expect(Number.isNaN(Date.parse(relu.majLe!))).toBe(false)
+  })
+
+  it('supprimer un schéma le retire des entraînements qui le citaient', async () => {
+    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
+    await savePlay({ id: 's2', ...nouveauSchema('ta', 'demi', false), nom: 'B' })
+    await saveTraining({ id: 't1', clubId: 'ta', date: '2026-09-01', playIds: ['s1', 's2'] })
+    await deletePlay('s1')
+    expect((await listTrainings())[0].playIds).toEqual(['s2'])
+  })
+
   it('les schémas ne passent pas par la file de synchronisation', async () => {
     await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'PnR haut' })
     await deletePlay('s1')

@@ -86,5 +86,16 @@ export const deleteTraining = async (id: string) => { await db.trainings.delete(
  *  (cf. `deleteTeam`). */
 export const listPlays = (clubId: string) => db.plays.where('clubId').equals(clubId).toArray()
 export const getPlay = (id: string) => db.plays.get(id)
-export const savePlay = async (s: Schema) => { await db.plays.put(s) }
-export const deletePlay = async (id: string) => { await db.plays.delete(id) }
+/** Horodate à l'enregistrement : sans `majLe`, la bibliothèque n'aurait que l'ordre
+ *  de la base, c'est-à-dire aucun, et paraîtrait mélangée à chaque ouverture. */
+export const savePlay = async (s: Schema) => { await db.plays.put({ ...s, majLe: new Date().toISOString() }) }
+/** Supprime un schéma et le retire des entraînements qui le citaient, dans la même
+ *  transaction : même cascade que `deletePlayer` sur les convocations, et pour la
+ *  même raison — un identifiant orphelin fausserait le compte affiché sur la séance. */
+export const deletePlay = async (id: string) => {
+  const séances = (await db.trainings.toArray()).filter((t) => t.playIds?.includes(id))
+  await db.transaction('rw', db.plays, db.trainings, async () => {
+    await db.plays.delete(id)
+    await db.trainings.bulkPut(séances.map((t) => ({ ...t, playIds: t.playIds!.filter((pid) => pid !== id) })))
+  })
+}

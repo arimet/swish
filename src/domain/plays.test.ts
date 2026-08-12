@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nouveauSchema, tempsSuivant, reduireTrace, versTerrain, type Schema } from './plays'
+import { dossiers, nouveauSchema, tempsSuivant, reduireTrace, versTerrain, type Schema } from './plays'
 
 describe('nouveauSchema', () => {
   it('pose un 1-2-2 de cinq attaquants, ballon au meneur, sur demi-terrain', () => {
@@ -101,5 +101,18 @@ describe('versTerrain', () => {
     const s: Schema = { id: 'x', ...nouveauSchema('c1', 'demi', false) }
     const r = versTerrain(s, 'demi')
     expect('ok' in r && r.ok).toEqual(s)
+  })
+})
+
+describe('dossiers', () => {
+  it('déduit la liste des dossiers des schémas, triée et sans doublon', () => {
+    const s = (nom: string, dossier?: string): Schema => ({ id: nom, ...nouveauSchema('c1', 'demi', false), nom, dossier })
+    expect(dossiers([s('a', 'Remises en jeu'), s('b', 'Attaque placée'), s('c', 'Remises en jeu'), s('d')]))
+      .toEqual(['Attaque placée', 'Remises en jeu'])
+  })
+
+  it('ne rend aucun dossier quand aucun schéma n’en déclare', () => {
+    const s: Schema = { id: 'a', ...nouveauSchema('c1', 'demi', false) }
+    expect(dossiers([s])).toEqual([])
   })
 })

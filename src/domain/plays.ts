@@ -35,6 +35,21 @@ export interface Schema {
   defense: boolean
   objets: ObjetPose[]                             // communs à tous les temps
   temps: Temps[]                                  // au moins un
+  /** Étiquette de rangement. Absent = « Sans dossier ». Un seul niveau : la liste
+   *  des dossiers se déduit des schémas, il n'y a ni table ni entité. */
+  dossier?: string
+  /** Date ISO du dernier enregistrement, écrite par la persistance. Sert à ranger
+   *  la bibliothèque du plus récent au plus ancien. Absente sur les schémas
+   *  enregistrés avant qu'on l'horodate. */
+  majLe?: string
+}
+
+/** Les dossiers déclarés par ces schémas : valeurs distinctes non vides, triées à
+ *  la française (« Écran » avant « Remise »). Un dossier vidé de ses schémas
+ *  disparaît de lui-même, puisque rien ne le stocke ailleurs. */
+export function dossiers(schemas: Schema[]): string[] {
+  const noms = new Set(schemas.map((s) => s.dossier?.trim()).filter((d): d is string => !!d))
+  return [...noms].sort((a, b) => a.localeCompare(b, 'fr'))
 }
 
 /** Position du panier, normalisée, par terrain (1,575 m de la ligne de fond). */
