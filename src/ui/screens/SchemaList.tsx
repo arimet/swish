@@ -90,6 +90,9 @@ export function SchemaList() {
                 {s.note && <p className="mt-1 truncate text-[11px]" style={{ color: C.faint }}>{s.note}</p>}
               </Link>
               <div className="mt-2.5 flex items-center justify-end gap-2 border-t pt-2.5 text-[11px] font-bold" style={{ borderColor: C.border }}>
+                {/* Jouer depuis la carte : au bord du terrain on ouvre le lecteur
+                    sans passer par la fiche. */}
+                <Link to={`/schemas/${s.id}/lecteur`} className="mr-auto rounded-lg px-2 py-1" style={{ color: C.accent }}>▶ Jouer</Link>
                 <button onClick={() => dupliquer(s)} className="rounded-lg px-2 py-1" style={{ color: C.muted }}>Dupliquer</button>
                 <button onClick={() => guard('manage', () => setASupprimer(s))} className="rounded-lg px-2 py-1" style={{ color: C.pink }}>Supprimer</button>
               </div>

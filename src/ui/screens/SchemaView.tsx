@@ -47,7 +47,10 @@ export function SchemaView() {
             {schema.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'} · {schema.temps.length} temps{schema.defense ? ' · défense' : ''}
           </p>
         </div>
-        <button onClick={modifier} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.accent }}>Modifier</button>
+        {/* Jouer d'abord : c'est ce qu'on vient chercher au bord du terrain, et
+            c'est libre. Modifier reste derrière le code administrateur. */}
+        <Link to={`/schemas/${id}/lecteur`} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.accent }}>▶ Jouer</Link>
+        <button onClick={modifier} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: bd, color: C.text }}>Modifier</button>
       </div>
 
       {schema.note && <p className="mb-4 rounded-2xl p-4 text-sm" style={{ background: C.card, border: bd, color: C.muted }}>{schema.note}</p>}

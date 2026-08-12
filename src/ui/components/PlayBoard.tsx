@@ -183,9 +183,12 @@ function Objet({ o, h }: { o: ObjetPose; h: number }) {
  * sur le premier — un schéma a toujours au moins un temps, une vignette ne doit
  * jamais rendre un terrain vide. `apercu` coupe toute interaction (vignettes).
  */
-export function PlayBoard({ schema, tempsIndex, onPointerDown, onPointerMove, onPointerUp, children, apercu }: {
+export function PlayBoard({ schema, tempsIndex, temps, onPointerDown, onPointerMove, onPointerUp, children, apercu }: {
   schema: Schema
   tempsIndex: number
+  /** Un temps calculé — l'instantané du lecteur — à afficher au lieu de celui du
+   *  schéma. Le rendu ne change pas : l'animation n'est qu'une suite d'états. */
+  temps?: Temps
   onPointerDown?: (e: React.PointerEvent<SVGSVGElement>) => void
   onPointerMove?: (e: React.PointerEvent<SVGSVGElement>) => void
   onPointerUp?: (e: React.PointerEvent<SVGSVGElement>) => void
@@ -193,7 +196,7 @@ export function PlayBoard({ schema, tempsIndex, onPointerDown, onPointerMove, on
   apercu?: boolean
 }) {
   const h = profondeur(schema)
-  const t = schema.temps[tempsIndex] ?? schema.temps[0]
+  const t = temps ?? schema.temps[tempsIndex] ?? schema.temps[0]
   const interactif = !apercu && !!(onPointerDown || onPointerMove || onPointerUp)
   return (
     <svg
