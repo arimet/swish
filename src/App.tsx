@@ -17,6 +17,8 @@ import { AuthProvider } from './app/auth'
 import { ClubProvider, useClub } from './app/club'
 import { Welcome } from './ui/screens/Welcome'
 import { SchemaEdit } from './ui/screens/SchemaEdit'
+import { SchemaList } from './ui/screens/SchemaList'
+import { SchemaView } from './ui/screens/SchemaView'
 
 const Padded = ({ children }: { children: ReactNode }) => <div className="p-6">{children}</div>
 
@@ -77,8 +79,11 @@ export default function App() {
               <Route path="/teams" element={<Padded><TeamsList /></Padded>} />
               <Route path="/teams/:id" element={<TeamDetail />} />
               <Route path="/players/:id" element={<PlayerDetail />} />
-              {/* L'éditeur du tableau tactique ; la bibliothèque suivra. */}
+              {/* Le tableau tactique : la bibliothèque, la consultation (libre),
+                  puis l'éditeur — la route la plus précise d'abord. */}
+              <Route path="/schemas" element={<SchemaList />} />
               <Route path="/schemas/:id/edit" element={<SchemaEdit />} />
+              <Route path="/schemas/:id" element={<SchemaView />} />
               <Route path="/match/new" element={<Padded><MatchSetupRoute /></Padded>} />
               <Route path="/match/:id/summary" element={<SummaryRoute />} />
               <Route path="/match/:id" element={<Padded><MatchPreviewRoute /></Padded>} />

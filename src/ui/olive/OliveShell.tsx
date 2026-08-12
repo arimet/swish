@@ -16,6 +16,7 @@ const NAV_REST = [
   { icon: ICON.cal, label: 'Calendrier', to: '/calendrier', end: false },
   { icon: ICON.trophy, label: 'Championnat', to: '/championnat', end: false },
   { icon: ICON.users, label: 'Équipes', to: '/teams', end: false },
+  { icon: ICON.matches, label: 'Schémas', to: '/schemas', end: false },
 ]
 const NAV_MOBILE = [
   { icon: ICON.trophy, label: 'Tableau de bord', to: '/', end: true },
@@ -26,7 +27,7 @@ const NAV_MOBILE = [
 // vers `/teams/undefined` — l'entrée n'est ajoutée qu'une fois le club connu.
 const TITLES: Record<string, string> = {
   '/': 'Tableau de bord', '/calendrier': 'Calendrier', '/championnat': 'Championnat',
-  '/teams': 'Équipes', '/match/new': 'Nouvelle rencontre',
+  '/teams': 'Équipes', '/schemas': 'Schémas', '/match/new': 'Nouvelle rencontre',
 }
 
 export function OliveShell() {
@@ -50,7 +51,7 @@ export function OliveShell() {
   }, [players, playerId, setPlayer])
 
   const effectif = players ?? []
-  const title = TITLES[pathname] ?? (pathname.startsWith('/teams') ? 'Équipes' : pathname.startsWith('/match') ? 'Rencontre' : 'Rencontres')
+  const title = TITLES[pathname] ?? (pathname.startsWith('/teams') ? 'Équipes' : pathname.startsWith('/schemas') ? 'Schémas' : pathname.startsWith('/match') ? 'Rencontre' : 'Rencontres')
   return (
     <div className="min-h-dvh lg:p-4" style={{ background: C.page }}>
       <div className="mx-auto flex h-dvh w-full max-w-[1680px] overflow-hidden lg:h-[calc(100dvh-2rem)] lg:rounded-[26px] lg:shadow-2xl" style={{ background: C.frame, color: C.text }}>
