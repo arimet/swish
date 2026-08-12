@@ -1,6 +1,6 @@
 import { db } from '../persistence/db'
-import { saveTeam, savePlayer, saveMatch, saveResult } from '../persistence/repositories'
-import type { GameEvent, Match, Period, Player, ReportedResult, ScoreKind } from '../domain/types'
+import { saveTeam, savePlayer, saveMatch, saveResult, saveTraining, saveConvocation } from '../persistence/repositories'
+import type { Convocation, GameEvent, Match, Period, Player, ReportedResult, ScoreKind, Training } from '../domain/types'
 import { kindAt } from '../domain/shotzones'
 import { CLUB_ID_KEY } from '../app/club'
 
@@ -8,7 +8,7 @@ import { CLUB_ID_KEY } from '../app/club'
  * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
  * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v14'
+const SEED_VERSION = 'v15'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
@@ -139,6 +139,38 @@ const FIXTURES: Fixture[] = [
   { opponent: 5, date: '2026-02-07', time: '18:30', status: 'setup' },
 ]
 
+const addDays = (iso: string, delta: number): string => {
+  const d = new Date(iso + 'T00:00:00')
+  d.setDate(d.getDate() + delta)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const THEMES = ['Défense sur écran', 'Tirs extérieurs', 'Transition rapide', 'Jeu sans ballon', 'Rebond et boxout']
+
+/** Deux séances par semaine de rencontre (lundi et mercredi précédant le match du
+ *  samedi), pour que le calendrier et le bloc « prochaine échéance » aient de quoi
+ *  montrer un entraînement sans rien saisir. */
+function buildTrainings(): Training[] {
+  return FIXTURES.flatMap((f, idx) => [
+    { id: `seed-tr${idx}-0`, clubId: teamId(0), date: addDays(f.date, -5), time: '19:00', place: 'Gymnase de Vignot', theme: THEMES[idx % THEMES.length] },
+    { id: `seed-tr${idx}-1`, clubId: teamId(0), date: addDays(f.date, -3), time: '19:00', place: 'Gymnase de Vignot', theme: THEMES[(idx + 1) % THEMES.length] },
+  ])
+}
+
+/** Convocation complète sur la rencontre « à venir » (statut `setup`), jamais sur
+ *  une rencontre déjà jouée : c'est elle que le bloc « prochaine échéance » du
+ *  tableau de bord doit trouver remplie sans rien saisir. */
+function buildConvocation(): Convocation {
+  const idx = FIXTURES.findIndex((f) => f.status === 'setup')
+  return {
+    matchId: `seed-m${idx}`,
+    playerIds: ROSTER,
+    meetTime: '17:30',
+    meetPlace: 'Gymnase de Vignot',
+    note: 'Tenue blanche, covoiturage depuis le club à 17h.',
+  }
+}
+
 function buildMatch(f: Fixture, idx: number): Match {
   seq = idx * 1000
   const sa = 56 + ((idx * 13 + 7) % 26) // score final de l'Avenir, rencontre complète
@@ -222,13 +254,18 @@ function buildResult(g: OutsideGame, idx: number): ReportedResult {
 export async function seedDevData(): Promise<void> {
   const already = (await db.teams.count()) > 0
   if (already && localStorage.getItem('seed-version') === SEED_VERSION) return
-  // Re-seed (schéma/données de démo mis à jour)
+  // Re-seed (schéma/données de démo mis à jour). Convocations et entraînements
+  // aussi : sans quoi un re-seed laisserait des orphelins rattachés à des
+  // rencontres qui n'existent plus.
   await db.matches.clear(); await db.players.clear(); await db.teams.clear(); await db.results.clear()
+  await db.trainings.clear(); await db.convocations.clear()
 
   for (let t = 0; t < TEAMS.length; t++) await saveTeam({ id: teamId(t), name: TEAMS[t][0], coach: TEAMS[t][1] })
   for (const p of PLAYERS) await savePlayer(p)
   for (let idx = 0; idx < FIXTURES.length; idx++) await saveMatch(buildMatch(FIXTURES[idx], idx))
   for (let idx = 0; idx < OUTSIDE_GAMES.length; idx++) await saveResult(buildResult(OUTSIDE_GAMES[idx], idx))
+  for (const tr of buildTrainings()) await saveTraining(tr)
+  await saveConvocation(buildConvocation())
 
   localStorage.setItem('seed-version', SEED_VERSION)
   // L'Avenir de Vignot est le club de démonstration : sans cela, la démo s'ouvre
