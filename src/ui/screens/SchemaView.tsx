@@ -9,6 +9,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { Schema } from '../../domain/plays'
 import { getPlay } from '../../persistence/repositories'
 import { useAuth } from '../../app/auth'
+import { ExportSchema } from '../components/ExportSchema'
 import { PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
 
@@ -18,6 +19,7 @@ export function SchemaView() {
   const navigate = useNavigate()
   const [schema, setSchema] = useState<Schema | null | undefined>(undefined)
   const [index, setIndex] = useState(0)
+  const [partage, setPartage] = useState(false)
 
   useEffect(() => { if (id) getPlay(id).then((s) => setSchema(s ?? null)) }, [id])
 
@@ -48,10 +50,16 @@ export function SchemaView() {
           </p>
         </div>
         {/* Jouer d'abord : c'est ce qu'on vient chercher au bord du terrain, et
-            c'est libre. Modifier reste derrière le code administrateur. */}
+            c'est libre. Partager l'est aussi — rien n'est modifié, un joueur doit
+            pouvoir envoyer la combinaison à un coéquipier. Modifier reste derrière
+            le code administrateur. */}
         <Link to={`/schemas/${id}/lecteur`} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold text-white" style={{ background: C.accent }}>▶ Jouer</Link>
+        <button onClick={() => setPartage(true)} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: bd, color: C.text }}>Partager</button>
         <button onClick={modifier} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: bd, color: C.text }}>Modifier</button>
       </div>
+
+      {/* Le temps affiché est celui que l'image reprendra : on partage ce qu'on regarde. */}
+      <ExportSchema schema={schema} tempsIndex={index} open={partage} onClose={() => setPartage(false)} />
 
       {schema.note && <p className="mb-4 rounded-2xl p-4 text-sm" style={{ background: C.card, border: bd, color: C.muted }}>{schema.note}</p>}
 
