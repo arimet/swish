@@ -43,3 +43,15 @@ describe('MatchSetup', () => {
     expect(created!.roster).toEqual(['p1']) // notre effectif seulement, l'adversaire n'en a pas
   })
 })
+
+describe('MatchSetup — droits', () => {
+  it('planifier une rencontre est administratif : la table de marque se voit demander le code admin', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    render(<MemoryRouter><ClubProvider><AuthProvider><MatchSetup onCreated={vi.fn()} /></AuthProvider></ClubProvider></MemoryRouter>)
+    await waitFor(() => expect(screen.getAllByText('VIGNOT').length).toBeGreaterThan(0))
+    await userEvent.click(screen.getByRole('button', { name: /planifier la rencontre/i }))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(await db.matches.count()).toBe(0)
+  })
+})

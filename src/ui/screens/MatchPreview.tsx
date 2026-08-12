@@ -66,7 +66,10 @@ export function MatchPreview({ matchId }: { matchId: string }) {
 
   const nameOf = (id: string) => teams[id]?.name ?? '—'
   const f = fmtDate(match.meta.date)
-  const start = () => guard('manage', () => navigate(`/match/${match.id}/live`))
+  // Démarrer (ou reprendre) relève de la table de marque, pas de l'administration :
+  // le bénévole du samedi doit pouvoir lancer la rencontre qu'il va tenir, sans le
+  // code admin. Convoquer et supprimer, juste en dessous, restent administratifs.
+  const start = () => guard('score', () => navigate(`/match/${match.id}/live`))
   const remove = async () => { await deleteMatch(match.id); navigate('/calendrier') }
 
   const basculerConvoqué = (id: string) => guard('manage', () => {

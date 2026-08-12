@@ -1,9 +1,10 @@
 import 'fake-indexeddb/auto'
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SummaryScreen } from './SummaryScreen'
-import { AuthProvider } from '../../app/auth'
+import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { db } from '../../persistence/db'
 import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { Match } from '../../domain/types'
@@ -11,6 +12,7 @@ import type { Match } from '../../domain/types'
 const MATCH_ID = 'match-finished'
 
 beforeEach(async () => {
+  sessionStorage.clear() // le résumé se consulte sans rôle : chaque test repart visiteur
   await db.matches.clear(); await db.players.clear(); await db.teams.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await saveTeam({ id: 'tb', name: 'VERDUN' })
@@ -85,5 +87,27 @@ describe('SummaryScreen — colonne %Tirs', () => {
     // sur ce match, on ne peut pas savoir si c'est 100 % ou juste « pas suivi ».
     expect(screen.queryByText('100 %')).not.toBeInTheDocument()
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+  })
+})
+
+describe('SummaryScreen — droits', () => {
+  const renderRésumé = () =>
+    render(<AuthProvider><MemoryRouter><SummaryScreen matchId={MATCH_ID} onHome={vi.fn()} /></MemoryRouter></AuthProvider>)
+
+  it('la correction des statistiques après match est refusée à la table de marque', async () => {
+    // Corriger une feuille close n'est pas le travail du bénévole du samedi : le
+    // code administrateur est demandé, et le mode correction ne s'ouvre pas.
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    renderRésumé()
+    await userEvent.click(await screen.findByRole('button', { name: /corriger stats/i }))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(screen.queryByText(/Mode correction/)).not.toBeInTheDocument()
+  })
+
+  it('un visiteur consulte le résumé sans qu’aucun code lui soit demandé', async () => {
+    renderRésumé()
+    await screen.findByText('Visiteurs · VERDUN')
+    expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
   })
 })
