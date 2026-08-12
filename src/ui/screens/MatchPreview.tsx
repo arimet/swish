@@ -152,6 +152,11 @@ export function MatchPreview({ matchId }: { matchId: string }) {
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        {/* Le droit est vérifié à l'ouverture du dialogue, pas redérivé ensuite : qui se
+            verrouille pendant que la confirmation est ouverte peut encore la confirmer.
+            C'est assumé — le scénario suppose de rendre la tablette en pleine action, et
+            `LiveMatch` réévalue `can()` à chaque rendu parce que la saisie du match dure
+            deux heures, pas parce que les autres écrans auraient oublié de le faire. */}
         <button onClick={() => guard('manage', () => setAskDelete(true))} className="rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: `1px solid ${C.border}`, color: C.muted }}>
           Supprimer
         </button>

@@ -101,6 +101,9 @@ export function TeamDetail() {
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{team.name}</h1>
           <p className="text-sm" style={{ color: C.muted }}>{players.length} joueur{players.length > 1 ? 's' : ''}{team.coach ? ` · Coach ${team.coach}` : ''}</p>
         </div>
+        {/* Comme sur le résumé et la fiche de rencontre : le droit est vérifié à l'ouverture
+            du dialogue, pas redérivé ensuite. Assumé — se verrouiller entre l'ouverture et la
+            confirmation n'arrive qu'en rendant l'appareil en pleine action. */}
         <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.pink}55`, color: C.pink }}>Supprimer</button>
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}

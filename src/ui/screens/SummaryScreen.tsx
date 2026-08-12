@@ -109,6 +109,12 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         <div className="flex flex-wrap items-center gap-2.5">
           <Link to={`/match/${match.id}/watch`} target="_blank" className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.muted }}>👁 Suivi</Link>
           <button onClick={() => guard('manage', () => setShowEdit(true))} className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>✎ Infos</button>
+          {/* Le droit est vérifié à l'ouverture du mode correction, pas redérivé ensuite :
+              un administrateur qui ouvre « Corriger stats » puis se verrouille garde un mode
+              correction écrivant jusqu'à ce qu'il en sorte. C'est assumé — il faudrait rendre
+              la tablette en pleine correction pour que ça compte. `LiveMatch` réévalue `can()`
+              à chaque rendu parce que la saisie du match dure deux heures et change de mains,
+              pas parce que cet écran-ci aurait oublié de le faire. */}
           <button onClick={() => (editStats ? setEditStats(false) : guard('manage', () => setEditStats(true)))}
             className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={editStats ? { background: C.accent, color: '#fff' } : { border: bd, color: C.text }}>
             {editStats ? '✓ Terminer' : '✎ Corriger stats'}
