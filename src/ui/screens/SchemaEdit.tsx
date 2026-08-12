@@ -114,7 +114,7 @@ const OUTILS: { cle: Outil; libelle: string }[] = [
   { cle: 'passe', libelle: 'Passe' },
   { cle: 'dribble', libelle: 'Dribble' },
   { cle: 'ballon', libelle: 'Ballon' },
-  { cle: 'objet', libelle: 'Objet' },
+  { cle: 'objet', libelle: 'Objets' },
   { cle: 'gomme', libelle: 'Gomme' },
 ]
 const SORTES: { cle: ObjetPose['sorte']; libelle: string }[] = [
@@ -251,6 +251,10 @@ export function SchemaEdit() {
     const r = versTerrain(vivant, terrain)
     if ('refus' in r) { setRefus(r.refus); return }
     setRefus('')
+    // Le changement de terrain remappe toutes les coordonnées : les étapes empilées
+    // sont dans l'ancienne échelle et les restaurer replacerait les pions n'importe
+    // où — au pire dans la moitié arrière. On vide, comme au réordonnancement.
+    setPile([])
     setSchema(r.ok)
     savePlay(r.ok)
   })
