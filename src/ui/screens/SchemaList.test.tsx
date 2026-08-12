@@ -10,7 +10,8 @@ import { db } from '../../persistence/db'
 import { listPlays, savePlay, saveTeam } from '../../persistence/repositories'
 import { nouveauSchema, type Schema } from '../../domain/plays'
 
-const schema = (id: string, nom: string): Schema => ({ id, ...nouveauSchema('ta', 'demi', false), nom })
+const schema = (id: string, nom: string, extra: Partial<Schema> = {}): Schema =>
+  ({ id, ...nouveauSchema('ta', 'demi', false), nom, ...extra })
 
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
@@ -113,5 +114,121 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
 
     await userEvent.click(within(dialogue).getByRole('button', { name: 'Supprimer' }))
     await waitFor(async () => expect(await listPlays('ta')).toHaveLength(0))
+  })
+})
+
+describe('SchemaList — le rangement de la bibliothèque', () => {
+  it('déduit la barre de dossiers des schémas, « Sans dossier » en dernier', async () => {
+    await savePlay(schema('s1', 'Pick and roll haut', { dossier: 'Attaque placée' }))
+    await savePlay(schema('s2', 'Remise ligne de fond', { dossier: 'Remises en jeu' }))
+    await savePlay(schema('s3', 'Brouillon'))
+    renderList()
+
+    const barre = await screen.findByRole('group', { name: 'Dossiers' })
+    expect(within(barre).getAllByRole('button').map((b) => b.textContent))
+      .toEqual(['Tous', 'Attaque placée', 'Remises en jeu', 'Sans dossier'])
+  })
+
+  it('n’offre « Sans dossier » que s’il reste des schémas non rangés', async () => {
+    await savePlay(schema('s1', 'Pick and roll haut', { dossier: 'Attaque placée' }))
+    renderList()
+
+    const barre = await screen.findByRole('group', { name: 'Dossiers' })
+    expect(within(barre).getAllByRole('button').map((b) => b.textContent)).toEqual(['Tous', 'Attaque placée'])
+  })
+
+  it('choisir un dossier ne laisse que ses schémas dans la grille', async () => {
+    await savePlay(schema('s1', 'Pick and roll haut', { dossier: 'Attaque placée' }))
+    await savePlay(schema('s2', 'Remise ligne de fond', { dossier: 'Remises en jeu' }))
+    await savePlay(schema('s3', 'Brouillon'))
+    renderList()
+
+    const barre = await screen.findByRole('group', { name: 'Dossiers' })
+    await userEvent.click(within(barre).getByRole('button', { name: 'Remises en jeu' }))
+    expect(screen.getAllByRole('article').map((c) => within(c).getByRole('heading').textContent))
+      .toEqual(['Remise ligne de fond'])
+
+    // « Sans dossier » ne montre que les schémas non rangés, jamais les autres.
+    await userEvent.click(within(barre).getByRole('button', { name: 'Sans dossier' }))
+    expect(screen.getAllByRole('article').map((c) => within(c).getByRole('heading').textContent))
+      .toEqual(['Brouillon'])
+
+    await userEvent.click(within(barre).getByRole('button', { name: 'Tous' }))
+    expect(screen.getAllByRole('article')).toHaveLength(3)
+  })
+
+  it('la recherche filtre sur le nom', async () => {
+    await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(schema('s2', 'Remise ligne de fond'))
+    renderList()
+
+    await userEvent.type(await screen.findByRole('searchbox'), 'PICK')
+    expect(screen.getAllByRole('article').map((c) => within(c).getByRole('heading').textContent))
+      .toEqual(['Pick and roll haut'])
+  })
+
+  it('la recherche filtre aussi sur la note, sans se soucier des accents', async () => {
+    // Le mot cherché n'est dans aucun nom : seule la note peut le rendre.
+    await savePlay(schema('s1', 'Pick and roll haut', { note: 'Sortie contre une défense en zone' }))
+    await savePlay(schema('s2', 'Remise ligne de fond', { note: 'Sur panier encaissé' }))
+    renderList()
+
+    await userEvent.type(await screen.findByRole('searchbox'), 'defense')
+    expect(screen.getAllByRole('article').map((c) => within(c).getByRole('heading').textContent))
+      .toEqual(['Pick and roll haut'])
+  })
+
+  it('range du plus récemment modifié au plus ancien, les schémas jamais horodatés en dernier', async () => {
+    // Écriture directe : `savePlay` horodate à l'instant, on ne pourrait pas
+    // fabriquer trois dates distinctes ni un schéma d'avant l'horodatage.
+    await db.plays.put(schema('s1', 'Ancien', { majLe: '2026-01-01T10:00:00.000Z' }))
+    await db.plays.put(schema('s2', 'Récent', { majLe: '2026-06-01T10:00:00.000Z' }))
+    await db.plays.put(schema('s3', 'Jamais horodaté'))
+    renderList()
+
+    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(3))
+    expect(screen.getAllByRole('article').map((c) => within(c).getByRole('heading').textContent))
+      .toEqual(['Récent', 'Ancien', 'Jamais horodaté'])
+  })
+
+  it('l’administrateur range un schéma dans un dossier, qui apparaît dans la barre', async () => {
+    await savePlay(schema('s1', 'Pick and roll haut'))
+    renderList()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Dossier de « Pick and roll haut »' }))
+    await userEvent.type(screen.getByRole('combobox', { name: 'Dossier' }), 'Attaque placée')
+    await userEvent.click(screen.getByRole('button', { name: 'Ranger' }))
+
+    await waitFor(async () => expect((await listPlays('ta'))[0].dossier).toBe('Attaque placée'))
+    expect(within(await screen.findByRole('group', { name: 'Dossiers' })).getByRole('button', { name: 'Attaque placée' }))
+      .toBeInTheDocument()
+  })
+
+  it('changer le dossier est administratif : la table de marque se voit demander le code', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    await savePlay(schema('s1', 'Pick and roll haut', { dossier: 'Attaque placée' }))
+    renderList()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Dossier de « Pick and roll haut »' }))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    // Garder d'abord, muter ensuite : ni saisie ouverte, ni écriture en base.
+    expect(screen.queryByRole('combobox', { name: 'Dossier' })).not.toBeInTheDocument()
+    expect((await listPlays('ta'))[0].dossier).toBe('Attaque placée')
+  })
+
+  it('un visiteur cherche et filtre sans qu’aucun code lui soit demandé', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
+    await savePlay(schema('s1', 'Pick and roll haut', { dossier: 'Attaque placée' }))
+    await savePlay(schema('s2', 'Remise ligne de fond', { dossier: 'Remises en jeu' }))
+    renderList()
+
+    const barre = await screen.findByRole('group', { name: 'Dossiers' })
+    await userEvent.click(within(barre).getByRole('button', { name: 'Remises en jeu' }))
+    await userEvent.type(screen.getByRole('searchbox'), 'remise')
+
+    expect(screen.getAllByRole('article').map((c) => within(c).getByRole('heading').textContent))
+      .toEqual(['Remise ligne de fond'])
+    expect(screen.queryByRole('heading', { name: /Accès/ })).not.toBeInTheDocument()
   })
 })
