@@ -9,6 +9,7 @@ import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { ShotChart } from '../components/ShotCourt'
 import { fmt } from '../components/GameClock'
 import { C, bd, TeamBadge, champLabel, fmtDate } from '../olive/kit'
+import { useAuth } from '../../app/auth'
 import type { Match, Player, Team } from '../../domain/types'
 
 /** Moyenne par rencontre, à une décimale. `—` quand aucune rencontre n'a été jouée :
@@ -21,6 +22,7 @@ const plur = (n: number) => (n > 1 ? 's' : '')
 
 export function PlayerDetail() {
   const { id } = useParams<{ id: string }>()
+  const { playerId } = useAuth()
   const [player, setPlayer] = useState<Player | null | undefined>(undefined)
   const [team, setTeam] = useState<Team | null>(null)
   const [matches, setMatches] = useState<Match[]>([])
@@ -73,7 +75,15 @@ export function PlayerDetail() {
           {player.number}
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-2xl font-extrabold tracking-tight">{player.lastName} {player.firstName}</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+            <span className="truncate">{player.lastName} {player.firstName}</span>
+            {/* L'identité met en avant, elle ne protège rien : la fiche est
+                identique pour tout le monde, à cette mention près. */}
+            {playerId === player.id && (
+              <span className="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-black uppercase tracking-wide"
+                style={{ background: C.accentBg, color: C.accent }}>C’est vous</span>
+            )}
+          </h1>
           {team && (
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm" style={{ color: C.muted }}>
               <span className="flex items-center gap-2"><TeamBadge id={team.id} name={team.name} size="h-5 w-5 text-[8px]" />{team.name}</span>

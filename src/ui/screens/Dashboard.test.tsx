@@ -1,8 +1,9 @@
 import 'fake-indexeddb/auto'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { Dashboard } from './Dashboard'
+import { AuthProvider, PLAYER_ID_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { saveConvocation, saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
@@ -36,7 +37,7 @@ const finished = (id: string, pa: number, pb: number, events: Partial<GameEvent>
 })
 
 const renderDash = () =>
-  render(<MemoryRouter><ClubProvider><Dashboard /></ClubProvider></MemoryRouter>)
+  render(<MemoryRouter><ClubProvider><AuthProvider><Dashboard /></AuthProvider></ClubProvider></MemoryRouter>)
 
 beforeEach(async () => {
   localStorage.clear()
@@ -136,5 +137,36 @@ describe('Dashboard', () => {
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
+  })
+})
+
+describe('identité du joueur', () => {
+  it('met en évidence la ligne du joueur identifié et propose un raccourci vers sa fiche', async () => {
+    localStorage.setItem(PLAYER_ID_KEY, 'p1')
+    await savePlayer({ id: 'p2', teamId: 'ta', number: 9, lastName: 'DURAND', firstName: 'Théo' })
+    await saveMatch({ ...finished('m1', 10, 4, [{ type: 'SCORE', team: 'A', playerId: 'p2', kind: '2int' }]), roster: ['p1', 'p2'] })
+    renderDash()
+
+    const marqueurs = (await screen.findByText('Meilleurs marqueurs')).closest('section')!
+    const ligne = within(marqueurs).getByText('MARTIN Lucas').closest('a')!
+    expect(within(ligne).getByText('vous')).toBeInTheDocument()
+    // Le coéquipier figure dans la même liste sans hériter de la marque.
+    const autre = within(marqueurs).getByText('DURAND Théo').closest('a')!
+    expect(within(autre).queryByText('vous')).not.toBeInTheDocument()
+
+    expect(await screen.findByRole('link', { name: /ma fiche/i })).toBeInTheDocument()
+  })
+
+  it('ignore un identifiant qui ne correspond à aucun joueur de l’effectif', async () => {
+    // Joueur retiré de l'effectif, identifiant survivant dans le localStorage :
+    // ni mise en évidence fantôme, ni raccourci vers une fiche inexistante.
+    localStorage.setItem(PLAYER_ID_KEY, 'parti')
+    await saveMatch(finished('m1', 10, 4))
+    renderDash()
+
+    const marqueurs = (await screen.findByText('Meilleurs marqueurs')).closest('section')!
+    expect(within(marqueurs).getByText('MARTIN Lucas')).toBeInTheDocument()
+    expect(within(marqueurs).queryByText('vous')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /ma fiche/i })).not.toBeInTheDocument()
   })
 })
