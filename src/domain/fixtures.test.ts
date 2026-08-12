@@ -6,7 +6,7 @@ const match = (id: string, date: string): Match => ({
   id, meta: { championshipLabel: 'Poule A', date, clubId: 'ta', opponentId: 'tb' },
   roster: [], events: [], status: 'setup',
 })
-const entrainement = (id: string, date: string): Training => ({ id, date })
+const entrainement = (id: string, date: string): Training => ({ id, date, clubId: 'ta' })
 
 describe('nextFixture', () => {
   it('choisit la première échéance à venir', () => {

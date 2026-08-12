@@ -39,19 +39,27 @@ export function Calendrier() {
   }, [])
 
   const nos = useMemo(() => matches?.filter((m) => m.meta.clubId === clubId) ?? null, [matches, clubId])
+  // Comme les rencontres : un appareil qui change de club ne doit garder au calendrier
+  // que les entraînements de ce club, pas ceux laissés en mémoire par le club précédent.
+  const nosEntrainements = useMemo(() => trainings?.filter((t) => t.clubId === clubId) ?? null, [trainings, clubId])
 
   // Rencontres et entraînements partagent les mêmes groupes par date : le calendrier
   // sert à repérer d'un coup d'œil, pas à parcourir deux listes séparées pour
   // reconstituer la semaine.
   const groups = useMemo(() => {
-    if (!nos || !trainings) return []
+    if (!nos || !nosEntrainements) return []
     const map = new Map<string, CalItem[]>()
     const push = (k: string, item: CalItem) => { if (!map.has(k)) map.set(k, []); map.get(k)!.push(item) }
     for (const m of nos) push(m.meta.date ?? '—', { key: m.id, kind: 'match', match: m, time: m.meta.time ?? '' })
-    for (const t of trainings) push(t.date ?? '—', { key: t.id, kind: 'training', training: t, time: t.time ?? '' })
-    for (const items of map.values()) items.sort((a, b) => a.time.localeCompare(b.time))
+    for (const t of nosEntrainements) push(t.date ?? '—', { key: t.id, kind: 'training', training: t, time: t.time ?? '' })
+    // À heure égale, la rencontre passe avant l'entraînement — même règle de
+    // départage explicite que `nextFixture` (src/domain/fixtures.ts), pour la même
+    // raison : un tri stable sans départage masquerait sa propre absence tant que
+    // personne n'inverse l'ordre des deux boucles ci-dessus.
+    for (const items of map.values())
+      items.sort((a, b) => a.time.localeCompare(b.time) || (a.kind === b.kind ? 0 : a.kind === 'match' ? -1 : 1))
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
-  }, [nos, trainings])
+  }, [nos, nosEntrainements])
 
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
@@ -59,9 +67,9 @@ export function Calendrier() {
   const [theme, setTheme] = useState('')
 
   const ajouter = () => {
-    if (!date) return
+    if (!date || !clubId) return
     guard(async () => {
-      await saveTraining({ id: newId(), date, time: time.trim() || undefined, place: place.trim() || undefined, theme: theme.trim() || undefined })
+      await saveTraining({ id: newId(), clubId, date, time: time.trim() || undefined, place: place.trim() || undefined, theme: theme.trim() || undefined })
       setDate(''); setTime(''); setPlace(''); setTheme('')
       refreshTrainings()
     })
@@ -71,7 +79,7 @@ export function Calendrier() {
   return (
     <div className="p-6">
       <PageTitle title="Calendrier" subtitle="Les rencontres et entraînements de votre équipe, par date." />
-      {!nos || !trainings ? (
+      {!nos || !nosEntrainements ? (
         <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
       ) : groups.length === 0 ? (
         <p className="rounded-2xl border border-dashed py-16 text-center text-sm" style={{ borderColor: C.border, color: C.muted }}>Aucune rencontre ni entraînement planifié.</p>
@@ -117,7 +125,7 @@ export function Calendrier() {
           <Field id="entr-place" label="Lieu" value={place} onChange={setPlace} />
           <Field id="entr-theme" label="Thème" value={theme} onChange={setTheme} />
         </div>
-        <button onClick={ajouter} disabled={!date} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: ENTR_COLOR }}>
+        <button onClick={ajouter} disabled={!date || !clubId} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: ENTR_COLOR }}>
           Ajouter l'entraînement
         </button>
       </section>

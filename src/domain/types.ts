@@ -94,6 +94,10 @@ export interface Convocation {
 /** Séance d'entraînement. Existe seule, sans rencontre associée. */
 export interface Training {
   id: string
+  /** Club auquel appartient la séance : obligatoire, car changer de club (le hub
+   *  en gère plusieurs) doit filtrer les entraînements comme les rencontres. Un
+   *  entraînement sans club se mêlerait au calendrier de n'importe quel autre. */
+  clubId: string
   date: string        // ISO AAAA-MM-JJ
   time?: string
   place?: string
