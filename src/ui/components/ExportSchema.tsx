@@ -93,12 +93,16 @@ async function fabriquerPng(schema: Schema, temps: Temps): Promise<Blob> {
 
 const octetsDe = (s: string) => Uint8Array.from(s, (c) => c.charCodeAt(0) & 0xff)
 
-/** La ponctuation typographique du dépôt — tirets cadratins, apostrophes
- *  courbes, guillemets français — vit au-dessus de latin-1 mais existe bien dans
- *  `WinAnsiEncoding`. Sans cette table, un titre s'imprimerait « Pick and roll ?
- *  temps 1 / 4 ». */
+/** Ce que le dépôt écrit et que latin-1 ne sait pas coder : la ponctuation
+ *  typographique — tirets cadratins, apostrophes courbes — et l'`œ`, seule lettre
+ *  française au-dessus de latin-1. Tout cela existe dans `WinAnsiEncoding`. Sans
+ *  cette table, un titre s'imprimerait « Pick and roll ? temps 1 / 4 » et une
+ *  « combinaison cœur » deviendrait « c?ur ».
+ *  Les guillemets français n'y sont pas : `«` et `»` tombent déjà sur les bons
+ *  codes par latin-1. */
 const WINANSI: Record<string, number> = {
   '…': 0x85, '‘': 0x91, '’': 0x92, '“': 0x93, '”': 0x94, '•': 0x95, '–': 0x96, '—': 0x97,
+  'Œ': 0x8c, 'œ': 0x9c, 'Š': 0x8a, 'š': 0x9a, 'Ÿ': 0x9f, '€': 0x80,
 }
 
 /** Une chaîne littérale PDF. Ce qui n'a pas de place dans `WinAnsiEncoding` — un
