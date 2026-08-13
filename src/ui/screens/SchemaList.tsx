@@ -143,7 +143,7 @@ export function SchemaList() {
               Aucun schéma ne correspond à cette recherche.
             </p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
               {visibles.map((s) => (
                 <article key={s.id} className="flex flex-col rounded-2xl p-3" style={{ background: C.card, border: bd }}>
                   {/* La vignette et le nom mènent à la consultation ; les boutons

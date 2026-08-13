@@ -119,7 +119,7 @@ export function TeamDetail() {
         <StatCard label="Différentiel" value={rec.played ? (diff > 0 ? `+${diff}` : String(diff)) : '—'} hint={rec.played ? `${rec.avgAgainst} encaissés/match` : 'pour – contre'} accent={diff > 0 ? C.green : diff < 0 ? C.pink : undefined} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_380px] [&>*]:min-w-0">
         <div className="space-y-6">
           <Panel title="Derniers matchs">
             {lines.length === 0 ? (

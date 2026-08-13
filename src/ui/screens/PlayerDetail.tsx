@@ -102,7 +102,7 @@ export function PlayerDetail() {
         <StatCard label="Temps de jeu moyen" value={played ? fmt(Math.round(career.seconds / played)) : '—'} hint="par match" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[420px_1fr] [&>*]:min-w-0">
         <div className="space-y-6">
           <Panel title="Hot zone — carrière">
             {shotsCareer.length === 0 ? (
