@@ -107,11 +107,15 @@ export function PlayerActionDialog({
           ⚠ Faute personnelle
         </button>
 
-        {/* CORRECTIONS */}
+        {/* CORRECTIONS — repliées : on ouvre cette popup pour saisir, pas pour
+            défaire. Déployées d'emblée, elles poussaient la moitié du dialogue
+            sous la ligne de flottaison et forçaient un défilement à chaque tir. */}
         {hasCorrections && (
-          <div className="mt-4 border-t border-white/10 pt-3">
-            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-white/40">Corriger — retirer une action</p>
-            <div className="grid grid-cols-2 gap-2">
+          <details className="mt-4 border-t border-white/10 pt-3">
+            <summary className="cursor-pointer list-none text-[11px] font-bold uppercase tracking-wide text-white/40 transition hover:text-white/70">
+              ▾ Corriger — retirer une action
+            </summary>
+            <div className="mt-2 grid grid-cols-2 gap-2">
               {SCORES.map((s) => (
                 <RemoveBtn key={s.k} label={s.label} value={`−${s.pts}`} disabled={sc[s.k] <= 0} onClick={() => { onRemoveScore(s.k); close() }} />
               ))}
@@ -127,7 +131,7 @@ export function PlayerActionDialog({
               className="mt-2 w-full rounded-xl border border-white/10 bg-[#202024] py-2.5 text-sm font-bold text-white/80 transition hover:border-white/25 hover:bg-[#26262b] disabled:opacity-35 disabled:hover:border-white/10">
               − Retirer une faute {fouls > 0 && <span className="text-white/40">({fouls})</span>}
             </button>
-          </div>
+          </details>
         )}
       </DialogContent>
     </Dialog>

@@ -106,6 +106,37 @@ export function Calendrier() {
   return (
     <div className="p-6">
       <PageTitle title="Calendrier" subtitle="Les rencontres et entraînements de votre équipe, par date." />
+
+      {/* Les actions en tête d'écran, pas en pied : une saison fait des milliers de
+          pixels de dates, et un bouton placé après ne se trouve jamais. C'est une
+          barre d'actions de page — l'en-tête de l'application, lui, reste dégagé. */}
+      <div className="mb-6 mt-4 flex flex-wrap items-center gap-2">
+        <button onClick={() => guard('manage', () => setSaisieOuverte(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: ENTR_COLOR }}>
+          + Nouvel entraînement
+        </button>
+        <Link to="/match/new" className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.orange }}>
+          + Nouvelle rencontre
+        </Link>
+      </div>
+
+      {saisieOuverte && (
+        <section className="mb-6 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
+          <div className="mb-4 flex items-center gap-3">
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Nouvel entraînement</p>
+            <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>Fermer</button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field id="entr-date" label="Date de l'entraînement" type="date" value={date} onChange={setDate} />
+            <Field id="entr-time" label="Heure" type="time" value={time} onChange={setTime} />
+            <Field id="entr-place" label="Lieu" value={place} onChange={setPlace} />
+            <Field id="entr-theme" label="Thème" value={theme} onChange={setTheme} />
+          </div>
+          <button onClick={ajouter} disabled={!date || !clubId} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: ENTR_COLOR }}>
+            Ajouter l'entraînement
+          </button>
+        </section>
+      )}
+
       {!nos || !nosEntrainements ? (
         <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
       ) : groups.length === 0 ? (
@@ -145,45 +176,10 @@ export function Calendrier() {
         </div>
       )}
 
-      {/* Saisie réservée à l'admin, repliée derrière son bouton. Ouvrir le formulaire
-          est déjà une écriture : la garde est ici, pas seulement à la validation — un
-          visiteur voit la demande de code, pas les champs.
-          « Nouvelle rencontre » l'accompagne : le bouton a quitté l'en-tête, où il
-          n'avait rien à faire. C'est au calendrier que vivent les choses datées, et
-          c'est là qu'on va quand on prépare la saison. */}
-      <section className="mt-8 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        {!saisieOuverte ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => guard('manage', () => setSaisieOuverte(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: ENTR_COLOR }}>
-              + Nouvel entraînement
-            </button>
-            <Link to="/match/new" className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.orange }}>
-              + Nouvelle rencontre
-            </Link>
-          </div>
-        ) : (
-        <>
-        <div className="mb-4 flex items-center gap-3">
-          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Nouvel entraînement</p>
-          <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>Fermer</button>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="entr-date" label="Date de l'entraînement" type="date" value={date} onChange={setDate} />
-          <Field id="entr-time" label="Heure" type="time" value={time} onChange={setTime} />
-          <Field id="entr-place" label="Lieu" value={place} onChange={setPlace} />
-          <Field id="entr-theme" label="Thème" value={theme} onChange={setTheme} />
-        </div>
-        <button onClick={ajouter} disabled={!date || !clubId} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: ENTR_COLOR }}>
-          Ajouter l'entraînement
-        </button>
-        </>
-        )}
-
-        {/* Comme les convocations et les résultats extérieurs : même formulation que sur
-            les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux
-            limites différentes — la décision couvrait aussi bien les entraînements. */}
-        <p className="mt-4 text-[11px]" style={{ color: C.faint }}>Ces entraînements restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
-      </section>
+      {/* Comme les convocations et les résultats extérieurs : même formulation que sur
+          les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux
+          limites différentes — la décision couvrait aussi bien les entraînements. */}
+      <p className="mt-8 text-[11px]" style={{ color: C.faint }}>Ces entraînements restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
     </div>
   )
 }
