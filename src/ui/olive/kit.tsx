@@ -56,6 +56,18 @@ export function Vous() {
   )
 }
 
+/** Le numéro de maillot, marqué partout de la même façon : un carré arrondi, du
+ *  rose sur fond rose, et surtout des chiffres à chasse fixe (`nums`) centrés —
+ *  un « 4 » et un « 12 » tiennent alors la même place et se lisent pareil.
+ *  Reprend la pastille de la fiche joueur : trois écrans la recopiaient chacun
+ *  de son côté, avec trois tailles de texte et deux arrondis. */
+export function NumBadge({ n, size = 'h-8 w-8 rounded-xl text-sm' }: { n: number | string; size?: string }) {
+  return (
+    <span className={`nums grid shrink-0 place-items-center font-extrabold ${size}`}
+      style={{ background: C.accentBg, color: C.accent }}>{n}</span>
+  )
+}
+
 export function TeamBadge({ id, name, size = 'h-8 w-8 text-[9px]' }: { id: string; name: string; size?: string }) {
   return <span className={`grid shrink-0 place-items-center rounded-full font-black text-white ${size}`} style={{ background: teamColor(id) }}>{initials(name)}</span>
 }

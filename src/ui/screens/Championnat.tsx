@@ -210,33 +210,50 @@ export function Championnat() {
         ) : (
           <ul className="space-y-1.5">
             {results.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center gap-2 rounded-xl px-3 py-2" style={{ background: C.panel }}>
-                <TeamBadge id={r.homeId} name={teamsById[r.homeId]?.name ?? '—'} size="h-6 w-6 text-[8px]" />
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{teamsById[r.homeId]?.name ?? '—'}</span>
-                <label htmlFor={`score-home-${r.id}`} className="sr-only">Score {teamsById[r.homeId]?.name ?? 'équipe reçue'}</label>
-                <input id={`score-home-${r.id}`} type="number" min={0} defaultValue={r.homeScore} style={{ ...field, width: 64, height: 36 }} className="text-center text-sm"
-                  readOnly={!peutCorriger} onFocus={demanderCode}
-                  onBlur={(e) => {
-                    // Un champ vidé n'est pas une saisie de 0 : c'est le premier geste de qui
-                    // corrige une faute de frappe. `Number('')` vaut 0, pas NaN — sans ce garde
-                    // explicite, un clic ailleurs enregistrerait 0 en silence.
-                    if (e.target.value === '') { e.target.value = String(r.homeScore); return }
-                    const n = Number(e.target.value)
-                    if (!Number.isNaN(n) && n >= 0 && n !== r.homeScore) majScore(r, { homeScore: n })
-                  }} />
-                <span className="text-xs font-bold" style={{ color: C.faint }}>–</span>
-                <label htmlFor={`score-away-${r.id}`} className="sr-only">Score {teamsById[r.awayId]?.name ?? 'équipe visiteuse'}</label>
-                <input id={`score-away-${r.id}`} type="number" min={0} defaultValue={r.awayScore} style={{ ...field, width: 64, height: 36 }} className="text-center text-sm"
-                  readOnly={!peutCorriger} onFocus={demanderCode}
-                  onBlur={(e) => {
-                    if (e.target.value === '') { e.target.value = String(r.awayScore); return }
-                    const n = Number(e.target.value)
-                    if (!Number.isNaN(n) && n >= 0 && n !== r.awayScore) majScore(r, { awayScore: n })
-                  }} />
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold">{teamsById[r.awayId]?.name ?? '—'}</span>
-                <TeamBadge id={r.awayId} name={teamsById[r.awayId]?.name ?? '—'} size="h-6 w-6 text-[8px]" />
-                <span className="text-[11px] font-semibold" style={{ color: C.faint }}>{r.championshipLabel}</span>
-                <button onClick={() => supprimer(r.id)} aria-label="Supprimer ce résultat" className="shrink-0 rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.pink }}>✕</button>
+              <li key={r.id} className="rounded-xl px-3 py-2" style={{ background: C.panel }}>
+                {/* Trois colonnes, dont deux égales : le bloc des scores garde donc la
+                    même place au milieu d'une ligne à l'autre, quelle que soit la
+                    longueur des noms. Le libellé du championnat et la suppression
+                    passent en dessous — dans la même rangée, ils poussaient la
+                    colonne centrale vers la gauche et faisaient passer le reste
+                    à la ligne. Les noms sont serrés contre les scores (l'équipe
+                    reçue alignée à droite), pour qu'on lise la rencontre d'un trait. */}
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                  <span className="flex min-w-0 items-center justify-end gap-2">
+                    <TeamBadge id={r.homeId} name={teamsById[r.homeId]?.name ?? '—'} size="h-6 w-6 text-[8px]" />
+                    <span className="truncate text-sm font-semibold">{teamsById[r.homeId]?.name ?? '—'}</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <label htmlFor={`score-home-${r.id}`} className="sr-only">Score {teamsById[r.homeId]?.name ?? 'équipe reçue'}</label>
+                    <input id={`score-home-${r.id}`} type="number" min={0} defaultValue={r.homeScore} style={{ ...field, width: 64, height: 36 }} className="nums text-center text-sm"
+                      readOnly={!peutCorriger} onFocus={demanderCode}
+                      onBlur={(e) => {
+                        // Un champ vidé n'est pas une saisie de 0 : c'est le premier geste de qui
+                        // corrige une faute de frappe. `Number('')` vaut 0, pas NaN — sans ce garde
+                        // explicite, un clic ailleurs enregistrerait 0 en silence.
+                        if (e.target.value === '') { e.target.value = String(r.homeScore); return }
+                        const n = Number(e.target.value)
+                        if (!Number.isNaN(n) && n >= 0 && n !== r.homeScore) majScore(r, { homeScore: n })
+                      }} />
+                    <span className="text-xs font-bold" style={{ color: C.faint }}>–</span>
+                    <label htmlFor={`score-away-${r.id}`} className="sr-only">Score {teamsById[r.awayId]?.name ?? 'équipe visiteuse'}</label>
+                    <input id={`score-away-${r.id}`} type="number" min={0} defaultValue={r.awayScore} style={{ ...field, width: 64, height: 36 }} className="nums text-center text-sm"
+                      readOnly={!peutCorriger} onFocus={demanderCode}
+                      onBlur={(e) => {
+                        if (e.target.value === '') { e.target.value = String(r.awayScore); return }
+                        const n = Number(e.target.value)
+                        if (!Number.isNaN(n) && n >= 0 && n !== r.awayScore) majScore(r, { awayScore: n })
+                      }} />
+                  </span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-semibold">{teamsById[r.awayId]?.name ?? '—'}</span>
+                    <TeamBadge id={r.awayId} name={teamsById[r.awayId]?.name ?? '—'} size="h-6 w-6 text-[8px]" />
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="min-w-0 truncate text-[11px] font-semibold" style={{ color: C.faint }}>{r.championshipLabel}</span>
+                  <button onClick={() => supprimer(r.id)} aria-label="Supprimer ce résultat" className="ml-auto shrink-0 rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.pink }}>✕</button>
+                </div>
               </li>
             ))}
           </ul>

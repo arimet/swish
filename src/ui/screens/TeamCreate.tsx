@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { saveTeam, savePlayer } from '../../persistence/repositories'
 import type { Player } from '../../domain/types'
-import { C, bd, PageTitle } from '../olive/kit'
+import { C, bd, NumBadge, PageTitle } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 
@@ -55,7 +55,7 @@ export function TeamCreate() {
             <ul className="mb-3 grid gap-1.5 sm:grid-cols-2">
               {roster.map((p, i) => (
                 <li key={i} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: C.panel }}>
-                  <span className="grid h-7 w-7 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
+                  <NumBadge n={p.number} size="h-7 w-7 rounded-lg text-xs" />
                   <span className="font-semibold">{p.lastName}</span><span style={{ color: C.muted }}>{p.firstName}</span>
                   <button onClick={() => setRoster((r) => r.filter((_, j) => j !== i))} className="ml-auto text-xs font-semibold" style={{ color: C.pink }}>retirer</button>
                 </li>
