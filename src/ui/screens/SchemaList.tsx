@@ -149,7 +149,15 @@ export function SchemaList() {
                   {/* La vignette et le nom mènent à la consultation ; les boutons
                       restent hors du lien, un bouton dans un lien n'est pas cliquable. */}
                   <Link to={`/schemas/${s.id}`} className="block transition hover:-translate-y-0.5">
-                    <PlayBoard schema={s} tempsIndex={0} apercu />
+                    {/* Hauteur fixe, quel que soit le terrain : à suivre son rapport, la
+                        vignette d'un terrain complet ferait le double des autres, la grille
+                        alignerait la rangée sur elle et la couperait en bas. Le SVG se cale
+                        dans la boîte sans distorsion (`preserveAspectRatio`) — un terrain
+                        complet apparaît donc plus étroit, ce qui se lit très bien. Aucune
+                        conversion de pointeur ici : `remplit` est sans danger. */}
+                    <div className="h-[150px]">
+                      <PlayBoard schema={s} tempsIndex={0} apercu remplit />
+                    </div>
                     <h3 className="mt-2.5 truncate text-[15px] font-extrabold tracking-tight">{s.nom}</h3>
                     <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-bold" style={{ color: C.muted }}>
                       <span className="rounded-md px-1.5 py-0.5" style={{ background: C.card2 }}>
