@@ -7,6 +7,10 @@ import { C } from '../olive/kit'
 // viewBox en centimètres, ligne de fond en haut. Voir les repères du plan.
 // Exportés parce que le tableau tactique dessine sur le même demi-terrain — et,
 // pour le terrain complet, sur son miroir : une seule géométrie pour tous.
+/** Rayon des coins, en unités de terrain : 110 sur 1500 de large, soit environ
+ *  7 % — assez pour se voir à toute taille, ce qu'un rayon en pixels ne fait pas. */
+export const RAYON = 110
+
 export const W = 1500
 export const D = 1400
 
@@ -57,7 +61,7 @@ export function CourtLines({ bord = true }: { bord?: boolean }) {
           à bout avec son miroir (terrain complet), il doublerait la ligne médiane
           et y planterait deux coins arrondis — l'appelant le trace alors lui-même. */}
       <path d="M 90 0 L 90 299.01 A 675 675 0 0 0 1410 299.01 L 1410 0" {...major} />
-      {bord && <rect x={4} y={4} width={W - 8} height={D - 8} rx={60} {...major} />}
+      {bord && <rect x={4} y={4} width={W - 8} height={D - 8} rx={RAYON} {...major} />}
     </g>
   )
 }
@@ -70,8 +74,8 @@ function Court({ children, label, onClick }: { children: ReactNode; label: strin
       role={onClick ? 'application' : 'img'}
       aria-label={label}
       onClick={onClick}
-      className={`w-full rounded-2xl ${onClick ? 'cursor-crosshair' : ''}`}
-      style={{ border: `1px solid ${C.border}`, touchAction: 'manipulation' }}
+      className={`w-full ${onClick ? 'cursor-crosshair' : ''}`}
+      style={{ touchAction: 'manipulation' }}
     >
       <defs>
         <radialGradient id={gid} cx="50%" cy="10%" r="95%">
@@ -79,7 +83,10 @@ function Court({ children, label, onClick }: { children: ReactNode; label: strin
           <stop offset="100%" stopColor={C.panel} />
         </radialGradient>
       </defs>
-      <rect width={W} height={D} fill={`url(#${gid})`} />
+      {/* Le fond porte l'arrondi, pas un masque CSS : un rayon en pixels ne suit
+          pas la taille du terrain et laisse le cadre dessiné, coté en unités de
+          terrain, dépasser ou se faire couper. Ici les deux coïncident toujours. */}
+      <rect x={2} y={2} width={W - 4} height={D - 4} rx={RAYON} fill={`url(#${gid})`} />
       {children}
     </svg>
   )

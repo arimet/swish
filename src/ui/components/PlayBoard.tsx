@@ -7,25 +7,33 @@
 import type { ReactNode } from 'react'
 import type { Fleche, ObjetPose, Pion, Point, Schema, Temps } from '../../domain/plays'
 import { C } from '../olive/kit'
-import { clamp01, CourtLines, D, W } from './ShotCourt'
+import { clamp01, CourtLines, D, RAYON, W } from './ShotCourt'
 
 /** Profondeur du viewBox : le terrain complet, c'est le demi et son miroir. */
 const profondeur = (s: Schema) => (s.terrain === 'complet' ? D * 2 : D)
 
 /**
- * Largeur maximale d'un terrain affiché. Deux bornes, et il faut les deux.
+ * Largeur maximale d'un terrain affiché. C'est **la hauteur** qui commande : un
+ * tableau tactique se lit d'un coup d'œil, et ce qui le limite est la place
+ * verticale — au-delà, il déborde et l'écran se met à défiler. La largeur suit
+ * le rapport du terrain, donc on la déduit de la hauteur qu'on s'autorise.
  *
- * `46vh` suit la hauteur : c'est ce qui laisse le terrain, sa barre d'outils et
- * ses commandes tenir ensemble sur un écran bas. Sur un téléphone, cette borne
- * seule donne à peu près la largeur de l'écran, ce qu'on veut.
+ * `72vh` pour un demi-terrain (rapport 15/14, donc ~77vh de large) : il occupe
+ * l'essentiel de la hauteur, l'en-tête et les commandes tiennent dans le reste.
+ * Le terrain complet est deux fois plus profond, donc deux fois moins large à
+ * hauteur égale.
  *
- * La borne en pixels est celle qui manquait : sur un grand écran, `46vh` laisse
- * le terrain grossir jusqu'à occuper la fenêtre, et un tableau de mille pixels ne
- * se lit pas mieux — l'œil doit le balayer au lieu de l'embrasser. Le terrain
- * complet est deux fois plus profond, donc deux fois moins large à hauteur égale.
+ * Le plafond en pixels n'est là que pour les très grands écrans, où suivre la
+ * hauteur donnerait un terrain de plus d'un mètre : passé une certaine taille
+ * l'œil balaie au lieu d'embrasser, et rien n'est gagné.
  */
-export const largeurTerrain = (terrain: Schema['terrain']) =>
-  terrain === 'complet' ? 'min(23vh, 260px)' : 'min(46vh, 520px)'
+export const largeurTerrain = (terrain: Schema['terrain'], place: 'lecture' | 'edition' = 'lecture') => {
+  // L'édition a plus à loger sous le terrain — barre d'outils, bande des temps —
+  // que la lecture, qui n'a qu'un rang de commandes. D'où deux réserves.
+  const vh = place === 'edition' ? 52 : 77
+  const max = place === 'edition' ? 560 : 840
+  return terrain === 'complet' ? `min(${vh / 2}vh, ${max / 2}px)` : `min(${vh}vh, ${max}px)`
+}
 
 /** Coordonnées normalisées → unités du viewBox (des centimètres). */
 const enUnites = (p: Point, h: number): Point => ({ x: p.x * W, y: p.y * h })
@@ -118,7 +126,7 @@ function Milieu() {
     <g>
       <line x1={4} y1={D} x2={W - 4} y2={D} {...trait} />
       <circle cx={W / 2} cy={D} r={180} {...trait} strokeWidth={6} opacity={0.4} />
-      <rect x={4} y={4} width={W - 8} height={D * 2 - 8} rx={60} {...trait} />
+      <rect x={4} y={4} width={W - 8} height={D * 2 - 8} rx={RAYON} {...trait} />
     </g>
   )
 }
@@ -225,9 +233,12 @@ export function PlayBoard({ schema, tempsIndex, temps, onPointerDown, onPointerM
       onPointerDown={apercu ? undefined : onPointerDown}
       onPointerMove={apercu ? undefined : onPointerMove}
       onPointerUp={apercu ? undefined : onPointerUp}
-      className={`rounded-2xl ${remplit ? 'h-full w-full' : 'w-full'} ${interactif ? 'cursor-crosshair' : ''}`}
-      style={{ border: `1px solid ${C.border}`, background: C.panel, touchAction: interactif ? 'none' : 'manipulation' }}
+      className={`${remplit ? 'h-full w-full' : 'w-full'} ${interactif ? 'cursor-crosshair' : ''}`}
+      style={{ touchAction: interactif ? 'none' : 'manipulation' }}
     >
+      {/* Le fond porte l'arrondi, pas un masque CSS : coté en unités de terrain,
+          il suit la taille du tableau et coïncide toujours avec le cadre dessiné. */}
+      <rect x={2} y={2} width={W - 4} height={h - 4} rx={RAYON} fill={C.panel} />
       <CourtLines bord={schema.terrain === 'demi'} />
       {schema.terrain === 'complet' && (
         <>
