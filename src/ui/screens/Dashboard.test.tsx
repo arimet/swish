@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -241,6 +241,10 @@ describe('Dashboard — le message à l’équipe', () => {
     await saveMessage({ clubId: 'ta', texte: '   ', écritLe: new Date().toISOString() })
     renderDash()
     await screen.findByText('VIGNOT')
+    // On laisse la lecture du message se poser avant de conclure à l'absence :
+    // sans cette attente, le test passerait aussi bien sans la garde qu'avec,
+    // faute d'avoir laissé le message blanc arriver jusqu'au rendu.
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
     expect(screen.queryByTestId('message-equipe')).not.toBeInTheDocument()
   })
 
@@ -263,11 +267,12 @@ describe('Dashboard — le message à l’équipe', () => {
     await userEvent.type(await screen.findByLabelText(/message à l’équipe/i), 'Gymnase fermé mardi.')
     await userEvent.click(screen.getByRole('button', { name: /publier/i }))
 
-    // `guard()` déclenche l'action sans l'attendre : l'écriture en base puis le
-    // re-rendu sont asynchrones après le clic, et la suite complète charge la
-    // machine — d'où un délai plus large que la seconde par défaut.
+    // `guard()` déclenche l'action sans l'attendre : après le clic, l'écriture en
+    // base puis le re-rendu sont asynchrones. On attend la base d'abord — sous la
+    // charge de la suite complète, la seconde par défaut ne lui suffit pas
+    // toujours — puis l'écran, qui ne peut que suivre.
+    await waitFor(async () => expect((await getMessage('ta'))?.texte).toBe('Gymnase fermé mardi.'), { timeout: 5000 })
     expect(await screen.findByText('Gymnase fermé mardi.', {}, { timeout: 5000 })).toBeInTheDocument()
-    await waitFor(async () => expect((await getMessage('ta'))?.texte).toBe('Gymnase fermé mardi.'))
   })
 
   it('en écrire un second remplace le premier', async () => {
