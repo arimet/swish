@@ -170,18 +170,15 @@ function PionDessine({ pion, h }: { pion: Pion; h: number }) {
   const { x, y } = enUnites(pion.at, h)
   const commun = { textAnchor: 'middle', dominantBaseline: 'central', fontWeight: 900 } as const
   if (pion.camp === 'defense') {
-    const cx = x - 46
-    const b = 40 // demi-diagonale de la croix : même encombrement que le disque d'en face
-    const croix = `M ${n1(cx - b)} ${n1(y - b)} L ${n1(cx + b)} ${n1(y + b)} M ${n1(cx - b)} ${n1(y + b)} L ${n1(cx + b)} ${n1(y - b)}`
+    // Même encombrement que l'attaquant, et un seul glyphe : la croix posée à côté
+    // de son chiffre s'étalait sur deux fois la largeur d'un disque et se lisait
+    // comme deux choses. Ici le numéro est là où l'œil le cherche, au centre du pion.
+    // La distinction tient sans la couleur — disque plein contre disque ouvert —
+    // et le fond opaque détache le pion des lignes du terrain.
     return (
       <g data-pion="defense">
-        {/* Deux passes : le liseré sombre détache le pion des lignes du terrain,
-            le trait clair lui donne le poids du disque adverse. */}
-        <path d={croix} stroke={C.frame} strokeWidth={34} strokeLinecap="round" fill="none" />
-        <path d={croix} stroke={C.text} strokeWidth={17} strokeLinecap="round" fill="none" />
-        <text x={x + 46} y={y} {...commun} fontSize={78} fill={C.text} stroke={C.frame} strokeWidth={12} paintOrder="stroke">
-          {String(pion.poste)}
-        </text>
+        <circle cx={x} cy={y} r={54} fill={C.frame} stroke={C.def} strokeWidth={13} />
+        <text x={x} y={y} {...commun} fontSize={62} fill={C.def}>{String(pion.poste)}</text>
       </g>
     )
   }

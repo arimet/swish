@@ -15,6 +15,9 @@ export const C = {
   // accent principal = rose (comme Olive)
   orange: '#ff4d6d', accent: '#ff4d6d', accentBg: 'rgba(255,77,109,0.14)',
   amber: '#ffb44d', amberBg: 'rgba(255,180,77,0.14)',
+  // La défense du tableau tactique : ni le rose de l'attaque, ni l'ambre du
+  // ballon, ni le blanc des flèches — un pion qu'on ne confond avec rien.
+  def: '#6ab7ff', defBg: 'rgba(106,183,255,0.14)',
 }
 export const bd = `1px solid ${'#262629'}`
 const TEAM_COLORS = ['#552583', '#0072CE', '#98002E', '#007A33', '#E56020', '#1D1160', '#0C2340', '#C8102E']
