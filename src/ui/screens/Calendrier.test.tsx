@@ -85,6 +85,8 @@ describe('Calendrier', () => {
 
   it('crée un entraînement depuis le formulaire et l’ajoute au calendrier', async () => {
     renderCal()
+    // Le formulaire est replié : il apparaît sur un clic, jamais d'emblée.
+    await userEvent.click(await screen.findByRole('button', { name: /nouvel entraînement/i }))
     await userEvent.type(await screen.findByLabelText(/date de l'entraînement/i), '2026-02-03')
     await userEvent.type(screen.getByLabelText(/^heure$/i), '19:00')
     await userEvent.type(screen.getByLabelText(/^lieu$/i), 'Gymnase des Tilleuls')
@@ -177,14 +179,25 @@ describe('Calendrier — les schémas de la séance', () => {
 
 describe('Calendrier — droits', () => {
   it('créer un entraînement est administratif : la table de marque se voit demander le code admin', async () => {
+    // Le formulaire étant replié, la garde se déclenche dès son ouverture : la table
+    // de marque voit la demande de code, pas les champs.
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderCal()
-    await userEvent.type(await screen.findByLabelText(/date de l'entraînement/i), '2026-02-03')
-    await userEvent.click(screen.getByRole('button', { name: /ajouter l'entraînement/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /nouvel entraînement/i }))
 
     expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(screen.queryByLabelText(/date de l'entraînement/i)).not.toBeInTheDocument()
     expect(await listTrainings()).toHaveLength(0)
   })
+
+  it('n’affiche le formulaire d’entraînement qu’après un clic', async () => {
+    renderCal()
+    await screen.findByRole('button', { name: /nouvel entraînement/i })
+    expect(screen.queryByLabelText(/date de l'entraînement/i)).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /nouvel entraînement/i }))
+    expect(await screen.findByLabelText(/date de l'entraînement/i)).toBeInTheDocument()
+  })
+
 
   it('un visiteur consulte le calendrier sans qu’aucun code lui soit demandé', async () => {
     sessionStorage.removeItem(ROLE_KEY)

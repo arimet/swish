@@ -33,6 +33,9 @@ export function Championnat() {
 
   const groups = useMemo(() => standings(matches, results, teamsById), [matches, results, teamsById])
 
+  // Un formulaire de saisie apparaît sur un clic, jamais d'emblée : le classement
+  // est ce qu'on vient lire, la saisie d'un résultat extérieur est l'exception.
+  const [saisieOuverte, setSaisieOuverte] = useState(false)
   const [champ, setChamp] = useState('')
   const [champTouché, setChampTouché] = useState(false)
   const [homeId, setHomeId] = useState('')
@@ -160,9 +163,20 @@ export function Championnat() {
         ))}
       </div>
 
-      {/* 2. La saisie, réservée à l'admin. */}
+      {/* 2. La saisie, réservée à l'admin, repliée derrière son bouton. Ouvrir le
+          formulaire est déjà une écriture : la garde est ici, pas seulement à
+          l'enregistrement — un visiteur voit la demande de code, pas les champs. */}
       <section className="mt-8 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <p className="mb-4 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Saisir un résultat extérieur</p>
+        {!saisieOuverte ? (
+          <button onClick={() => guard('manage', () => setSaisieOuverte(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+            + Saisir un résultat
+          </button>
+        ) : (
+        <>
+        <div className="mb-4 flex items-center gap-3">
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Saisir un résultat extérieur</p>
+          <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>Fermer</button>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Picker id="champ-home" label="Équipe reçue" value={homeId} onChange={changeHomeId} teams={teams} />
           <Picker id="champ-away" label="Équipe visiteuse" value={awayId} onChange={changeAwayId} teams={teams} />
@@ -184,6 +198,8 @@ export function Championnat() {
         <button onClick={ajouter} disabled={!peutAjouter} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>
           Ajouter le résultat
         </button>
+        </>
+        )}
       </section>
 
       {/* 3. La liste des résultats saisis, corrigeables et supprimables. */}
