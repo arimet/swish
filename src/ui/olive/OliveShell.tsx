@@ -199,14 +199,20 @@ function MobileNav() {
 }
 
 /** Liens d'un groupe de menu de la barre latérale. */
-function NavGroup({ items }: { items: { icon: string; label: string; to: string; end: boolean }[] }) {
+function NavGroup({ items, inactifSur }: { items: { icon: string; label: string; to: string; end: boolean }[]; inactifSur?: string }) {
+  const { pathname } = useLocation()
+  /** « Équipes » s'allumait sur la fiche de mon équipe, qui est sous `/teams/` :
+   *  deux entrées du menu se seraient éclairées pour une seule page. L'entrée qui
+   *  possède la route la garde ; celle qui ne fait que la préfixer s'éteint. */
+  const actif = (isActive: boolean, to: string) =>
+    isActive && !(inactifSur && inactifSur !== to && pathname === inactifSur)
   return (
     <nav className="mt-1.5 flex flex-col gap-0.5">
       {items.map((n) => (
         <NavLink key={n.label} to={n.to} end={n.end}
           className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
-          style={({ isActive }) => ({ background: isActive ? C.card2 : 'transparent', color: isActive ? C.orange : C.muted })}>
-          {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.orange }} />}<Ic d={n.icon} />{n.label}</>)}
+          style={({ isActive }) => ({ background: actif(isActive, n.to) ? C.card2 : 'transparent', color: actif(isActive, n.to) ? C.orange : C.muted })}>
+          {({ isActive }) => (<>{actif(isActive, n.to) && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.orange }} />}<Ic d={n.icon} />{n.label}</>)}
         </NavLink>
       ))}
     </nav>
@@ -214,7 +220,7 @@ function NavGroup({ items }: { items: { icon: string; label: string; to: string;
 }
 
 function Sidebar({ players }: { players: Player[] }) {
-  const { clubId, clear } = useClub()
+  const { clubId } = useClub()
   const { can } = useAuth()
   return (
     <aside className="hidden w-[236px] shrink-0 flex-col overflow-y-auto px-4 py-5 lg:flex" style={{ background: C.panel, borderRight: `1px solid ${C.border}` }}>
@@ -235,23 +241,17 @@ function Sidebar({ players }: { players: Player[] }) {
           {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.orange }} />}<Ic d={ICON.users} />Mon équipe</>)}
         </NavLink>
       )}
-      <NavGroup items={NAV_REST} />
+      <NavGroup items={NAV_REST} inactifSur={clubId ? `/teams/${clubId}` : undefined} />
 
       {/* L'effectif n'est plus dans le menu : treize noms y poussaient la navigation
           hors de l'écran et faisaient défiler la barre. Il est à sa place sur la
           fiche d'équipe, où l'on va pour le consulter. Le joueur identifié se
           reconnaît toujours au tableau de bord et sur sa propre fiche. */}
 
+      {/* Plus de « changer de club » : l'application est celle d'une équipe, pas
+          un annuaire qu'on parcourt. Le club se règle une fois, au premier
+          lancement, et ne se rechoisit que s'il disparaît. */}
       <div className="mt-auto space-y-2.5">
-        <button
-          onClick={clear}
-          className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition"
-          style={{ background: C.card, border: bd, color: C.muted }}
-          title="Revenir à l’écran de bienvenue pour suivre un autre club"
-        >
-          <span>🔁</span>
-          Changer de club
-        </button>
         <AccesMenu players={players} />
         {/* Le ménage des données, sous l'accès et seulement pour l'administrateur :
             un visiteur n'a pas à voir une porte qu'il ne peut pas ouvrir. L'entrée

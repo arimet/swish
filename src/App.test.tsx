@@ -22,11 +22,12 @@ describe('App', () => {
     expect(screen.getAllByText(/Swish/i).length).toBeGreaterThan(0)
   })
 
-  it('« Changer de club » ramène à l’écran de bienvenue, pas à une page vide', async () => {
+  it('n’offre plus de changer de club : l’application est celle d’une équipe', async () => {
+    // Le club se règle une fois, au premier lancement. Le rechoisir n'a de sens
+    // que s'il disparaît — c'est le test suivant.
     render(<App />)
-    const button = await screen.findByRole('button', { name: /changer de club/i })
-    await userEvent.click(button)
-    expect(await screen.findByText(/bienvenue sur swish/i)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getAllByText(/Tableau de bord/i).length).toBeGreaterThan(0))
+    expect(screen.queryByRole('button', { name: /changer de club/i })).not.toBeInTheDocument()
   })
 
   it('supprimer sa propre équipe ramène à l’écran de bienvenue, pas à un club fantôme', async () => {
