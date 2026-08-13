@@ -238,6 +238,21 @@ describe('Calendrier — droits', () => {
   })
 
 
+  it('donne accès à la convocation depuis la carte d’une rencontre à venir', async () => {
+    // Le coach regarde le calendrier, pas la fiche : c'est de là qu'il doit pouvoir
+    // convoquer, sans avoir à deviner que la convocation vit sur la fiche.
+    renderCal()
+    expect(await screen.findByRole('link', { name: /convoquer/i })).toHaveAttribute('href', '/match/m1#convocation')
+  })
+
+  it('ne propose pas de convoquer pour une rencontre déjà jouée', async () => {
+    await db.matches.clear()
+    await saveMatch({ ...mk('m9', 'ta', 'tb'), status: 'finished' })
+    renderCal()
+    await screen.findByText(/VERDUN/)
+    expect(screen.queryByRole('link', { name: /convoquer/i })).not.toBeInTheDocument()
+  })
+
   it('un visiteur consulte le calendrier sans qu’aucun code lui soit demandé', async () => {
     sessionStorage.removeItem(ROLE_KEY)
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })

@@ -91,6 +91,21 @@ export interface Convocation {
   note?: string
 }
 
+/**
+ * Le message du coach à son équipe : un texte court que tout le monde lit en
+ * ouvrant l'application. Ce n'est pas une messagerie — ni fil, ni réponses, ni
+ * destinataires : **un seul message à la fois par club**, et en écrire un
+ * nouveau remplace le précédent. La clé est donc le club, pas le message.
+ */
+export interface MessageEquipe {
+  clubId: string
+  /** Le texte, tel qu'il a été écrit. Vide = pas de message (rien à afficher). */
+  texte: string
+  /** Date ISO complète de l'écriture : l'âge s'affiche en relatif (`depuis`),
+   *  car « il y a deux jours » ne pèse pas comme « il y a trois semaines ». */
+  écritLe: string
+}
+
 /** Séance d'entraînement. Existe seule, sans rencontre associée. */
 export interface Training {
   id: string

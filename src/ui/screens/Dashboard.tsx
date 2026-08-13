@@ -2,15 +2,15 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
-import { getConvocation, listMatches, listPlayers, listPlays, listTeams, listTrainings } from '../../persistence/repositories'
+import { deleteMessage, getConvocation, getMessage, listMatches, listPlayers, listPlays, listTeams, listTrainings, saveMessage } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
 import { teamMatches, teamRecord, teamScorers } from '../../domain/teamRecord'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
-import { nextFixture, type Fixture } from '../../domain/fixtures'
+import { depuis, nextFixture, type Fixture } from '../../domain/fixtures'
 import { liveState } from '../../rules/ffbb'
 import { ShotChart } from '../components/ShotCourt'
 import { C, bd, TeamBadge, Vous, displayClock, fmtDate } from '../olive/kit'
-import type { Convocation, Match, Player, Team, Training } from '../../domain/types'
+import type { Convocation, Match, MessageEquipe, Player, Team, Training } from '../../domain/types'
 import type { Schema } from '../../domain/plays'
 
 export function Dashboard() {
@@ -106,6 +106,8 @@ export function Dashboard() {
           )}
         </div>
 
+        <MessageDuCoach clubId={clubId} />
+
         <Banner live={live} next={next} teams={teams} />
 
         <Echeance fixture={fixture} teams={teams} players={players} convocation={convocation} schemas={schemas} />
@@ -171,6 +173,99 @@ export function Dashboard() {
         </div>
       </div>
     </div>
+  )
+}
+
+/** Au-delà de deux semaines, un message n'informe plus : il traîne. Le badge d'âge
+ *  passe alors à l'ambre — le même code couleur que « à venir » ailleurs, ici pour
+ *  dire « ceci date ». */
+const OUBLI_MS = 14 * 24 * 3600_000
+
+/**
+ * Le message du coach à son équipe, en tête du tableau de bord — l'écran que tout
+ * le monde ouvre, joueurs compris. Un seul message à la fois : en écrire un
+ * nouveau remplace le précédent (cf. `MessageEquipe`). Ce n'est pas une
+ * messagerie : ni fil, ni réponse, ni destinataire.
+ *
+ * Lire est libre, comme tout le reste : c'est un message pour l'équipe, y compris
+ * pour un joueur qui n'a aucun droit d'écriture. Écrire et effacer relèvent de
+ * l'administration, et se gardent d'abord : la saisie ne s'ouvre même pas sans le
+ * droit, comme le formulaire d'entraînement du calendrier.
+ */
+function MessageDuCoach({ clubId }: { clubId: string }) {
+  const { guard } = useAuth()
+  const [message, setMessage] = useState<MessageEquipe | null>(null)
+  const [saisieOuverte, setSaisieOuverte] = useState(false)
+  const [texte, setTexte] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    getMessage(clubId).then((m) => { if (!cancelled) setMessage(m ?? null) })
+    return () => { cancelled = true }
+  }, [clubId])
+
+  // Un blanc n'est pas un message : il n'occupe pas le tableau de bord, et rien
+  // ne se publie tant que le champ ne porte que des espaces.
+  const affiché = message && message.texte.trim() ? message : null
+
+  const ouvrir = () => guard('manage', () => { setTexte(affiché?.texte ?? ''); setSaisieOuverte(true) })
+  const publier = () => guard('manage', async () => {
+    const écrit = { clubId, texte: texte.trim(), écritLe: new Date().toISOString() }
+    await saveMessage(écrit)
+    setMessage(écrit)
+    setSaisieOuverte(false)
+  })
+  const effacer = () => guard('manage', async () => {
+    await deleteMessage(clubId)
+    setMessage(null)
+    setSaisieOuverte(false)
+  })
+
+  // Un formulaire de saisie apparaît sur un clic, jamais d'emblée : le tableau de
+  // bord est ce qu'on vient lire, écrire à l'équipe est l'exception.
+  if (saisieOuverte) {
+    return (
+      <section className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accent}44` }}>
+        <div className="mb-3 flex items-center gap-3">
+          <label htmlFor="message-equipe" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>Message à l’équipe</label>
+          <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>Fermer</button>
+        </div>
+        <textarea id="message-equipe" rows={3} value={texte} onChange={(e) => setTexte(e.target.value)}
+          placeholder="Pas d’entraînement mardi, gymnase fermé."
+          className="w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
+        <button onClick={publier} disabled={!texte.trim()} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>
+          Publier le message
+        </button>
+        {/* Comme les convocations, les entraînements et les schémas : même
+            formulation, pour ne pas laisser croire à deux limites différentes. */}
+        <p className="mt-3 text-[11px]" style={{ color: C.faint }}>Ce message reste sur cet appareil : il n’est pas synchronisé avec vos autres appareils.</p>
+      </section>
+    )
+  }
+
+  if (!affiché) {
+    return (
+      <button onClick={ouvrir} className="mb-5 rounded-xl px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>
+        + Message à l’équipe
+      </button>
+    )
+  }
+
+  const oublié = Date.now() - Date.parse(affiché.écritLe) > OUBLI_MS
+  return (
+    <section data-testid="message-equipe" className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${oublié ? C.amber : C.accent}55` }}>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Message à l’équipe</span>
+        <span className="rounded-md px-2 py-0.5 text-[11px] font-black"
+          style={oublié ? { background: C.amberBg, color: C.amber } : { background: C.accentBg, color: C.accent }}>
+          {depuis(affiché.écritLe)}
+        </span>
+        <button onClick={ouvrir} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>Modifier</button>
+        <button onClick={effacer} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.pink }}>Effacer</button>
+      </div>
+      {/* `whitespace-pre-wrap` : deux consignes sur deux lignes restent sur deux lignes. */}
+      <p className="whitespace-pre-wrap text-[15px] font-semibold">{affiché.texte}</p>
+    </section>
   )
 }
 
@@ -272,17 +367,29 @@ function Echeance({ fixture, teams, players, convocation, schemas }: { fixture: 
       <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
       <p className="mt-1 text-sm font-bold">contre {opponent}</p>
       <p className="text-sm" style={{ color: C.muted }}>{[f.long, m.meta.time, m.meta.venue].filter(Boolean).join(' · ') || '—'}</p>
-      {convocation ? (
-        <div className="mt-3 border-t pt-3" style={{ borderColor: C.border }}>
-          <p className="text-sm font-bold">{convoqués.length} convoqué{convoqués.length > 1 ? 's' : ''}</p>
-          {rdv && <p className="mt-0.5 text-sm" style={{ color: C.muted }}>Rendez-vous {rdv}</p>}
-          {convoqués.length > 0 && (
-            <p className="mt-1 text-sm" style={{ color: C.muted }}>{convoqués.map((p) => `${p.lastName} ${p.firstName}`).join(', ')}</p>
+      {/* La convocation vit sur la fiche de la rencontre, à sa place — mais c'est
+          ici qu'on la regarde. Le lien y mène directement, à l'ancre : sans lui,
+          rien nulle part ne disait où l'on convoque. Le compte se juge sur les
+          convoqués retenus, pas sur l'existence de l'enregistrement : une
+          convocation vidée de ses joueurs est une absence de convoqués, et c'est
+          justement le moment où l'on veut agir. */}
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3" style={{ borderColor: C.border }}>
+        <div className="min-w-0 flex-1">
+          {convoqués.length === 0 ? (
+            <p className="text-sm font-bold" style={{ color: C.amber }}>Personne n’est convoqué.</p>
+          ) : (
+            <>
+              <p className="text-sm font-bold">{convoqués.length} convoqué{convoqués.length > 1 ? 's' : ''}</p>
+              {rdv && <p className="mt-0.5 text-sm" style={{ color: C.muted }}>Rendez-vous {rdv}</p>}
+              <p className="mt-1 text-sm" style={{ color: C.muted }}>{convoqués.map((p) => `${p.lastName} ${p.firstName}`).join(', ')}</p>
+            </>
           )}
         </div>
-      ) : (
-        <p className="mt-3 text-sm" style={{ color: C.muted }}>Convocation à préparer.</p>
-      )}
+        <Link to={`/match/${m.id}#convocation`} className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
+          style={convoqués.length === 0 ? { background: C.accent, color: '#fff' } : { border: bd, color: C.text }}>
+          {convoqués.length === 0 ? 'Convoquer l’équipe →' : 'Modifier la convocation →'}
+        </Link>
+      </div>
     </div>
   )
 }

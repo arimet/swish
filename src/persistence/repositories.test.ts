@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
-import { saveTeam, listTeams, saveMatch, getMatch, listMatches, deleteMatch, deleteTeam, saveResult, listResults, savePlayer, deletePlayer, saveTraining, listTrainings, saveConvocation, getConvocation, savePlay, listPlays, getPlay, deletePlay, deleteMatchesWhere, clearClubStats, deleteAllResults, deleteTrainingsOfClub, deletePlaysOfClub, wipeAll } from './repositories'
+import { saveTeam, listTeams, saveMatch, getMatch, listMatches, deleteMatch, deleteTeam, saveResult, listResults, savePlayer, deletePlayer, saveTraining, listTrainings, saveConvocation, getConvocation, savePlay, listPlays, getPlay, deletePlay, deleteMatchesWhere, clearClubStats, deleteAllResults, deleteTrainingsOfClub, deletePlaysOfClub, wipeAll, getMessage, saveMessage, deleteMessage } from './repositories'
 import { nouveauSchema } from '../domain/plays'
 import { aVider, deLAnnee, duChampionnat } from '../domain/menage'
 import type { GameEvent, Match } from '../domain/types'
@@ -9,6 +9,7 @@ import type { GameEvent, Match } from '../domain/types'
 beforeEach(async () => {
   await db.teams.clear(); await db.players.clear(); await db.matches.clear(); await db.results.clear()
   await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear(); await db.outbox.clear()
+  await db.messages.clear()
 })
 
 const match = (id: string): Match => ({
@@ -128,6 +129,59 @@ describe('repositories', () => {
   })
 })
 
+// ── Le message d'équipe ─────────────────────────────────────────────────────
+// Un seul message à la fois par club : la clé est le club, pas le message. En
+// écrire un nouveau remplace le précédent, il n'y a rien à ranger ni à purger.
+
+describe('message d’équipe', () => {
+  it('enregistre un message et le relit tel quel', async () => {
+    await saveMessage({ clubId: 'ta', texte: 'Pas d’entraînement mardi, gymnase fermé.', écritLe: '2026-08-10T18:00:00.000Z' })
+    const relu = await getMessage('ta')
+    expect(relu?.texte).toBe('Pas d’entraînement mardi, gymnase fermé.')
+    expect(relu?.écritLe).toBe('2026-08-10T18:00:00.000Z')
+  })
+
+  it('n’en garde qu’un par club : le second remplace le premier', async () => {
+    await saveMessage({ clubId: 'ta', texte: 'Premier', écritLe: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'ta', texte: 'Second', écritLe: '2026-08-12T18:00:00.000Z' })
+    expect((await getMessage('ta'))?.texte).toBe('Second')
+    expect(await db.messages.count()).toBe(1)
+  })
+
+  it('garde les messages de deux clubs séparés', async () => {
+    await saveMessage({ clubId: 'ta', texte: 'Chez nous', écritLe: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'tb', texte: 'Chez eux', écritLe: '2026-08-10T18:00:00.000Z' })
+    expect((await getMessage('ta'))?.texte).toBe('Chez nous')
+    expect((await getMessage('tb'))?.texte).toBe('Chez eux')
+  })
+
+  it('efface le message d’un club sans toucher à celui du voisin', async () => {
+    await saveMessage({ clubId: 'ta', texte: 'Chez nous', écritLe: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'tb', texte: 'Chez eux', écritLe: '2026-08-10T18:00:00.000Z' })
+    await deleteMessage('ta')
+    expect(await getMessage('ta')).toBeUndefined()
+    expect(await getMessage('tb')).toBeDefined()
+  })
+
+  it('supprimer l’équipe emporte son message', async () => {
+    await saveTeam({ id: 'ta', name: 'VIGNOT' })
+    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'tb', texte: 'Chez eux', écritLe: '2026-08-10T18:00:00.000Z' })
+
+    await deleteTeam('ta')
+
+    expect(await getMessage('ta')).toBeUndefined()
+    expect(await getMessage('tb')).toBeDefined()
+  })
+
+  it('le message ne passe pas par la file de synchronisation', async () => {
+    // Comme les convocations, les entraînements et les schémas : local à l'appareil.
+    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: '2026-08-10T18:00:00.000Z' })
+    await deleteMessage('ta')
+    expect(await db.outbox.count()).toBe(0)
+  })
+})
+
 // ── Ménage d'administration : suppressions groupées, irréversibles ───────────
 // Chacune ne doit emporter QUE son périmètre : une opération de ménage qui
 // déborde ne se rattrape pas, il n'y a pas de corbeille et rien n'est synchronisé.
@@ -231,6 +285,7 @@ describe('ménage groupé', () => {
     await saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
     await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
     await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
+    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: '2026-08-10T18:00:00.000Z' })
     // Une mutation en attente d'envoi : elle ne doit pas survivre à la remise à zéro.
     await db.outbox.add({ kind: 'match', op: 'put', id: 'm1', ts: Date.now() })
 
@@ -238,9 +293,9 @@ describe('ménage groupé', () => {
 
     const comptes = await Promise.all([
       db.teams.count(), db.players.count(), db.matches.count(), db.results.count(),
-      db.convocations.count(), db.trainings.count(), db.plays.count(), db.outbox.count(),
+      db.convocations.count(), db.trainings.count(), db.plays.count(), db.messages.count(), db.outbox.count(),
     ])
-    expect(comptes).toEqual([0, 0, 0, 0, 0, 0, 0, 0])
+    expect(comptes).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0])
   })
 
   it('ne compte comme feuille à vider qu’une rencontre qui porte des évènements', async () => {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getMatch, listTeams, deleteMatch, listPlayers, getConvocation, saveConvocation } from '../../persistence/repositories'
 import type { Match, Team, Player } from '../../domain/types'
 import { C, bd, PageTitle, TeamBadge, fmtDate, champLabel } from '../olive/kit'
@@ -12,6 +12,7 @@ const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
  * avec démarrage et suppression. Redirige live/terminé vers leur écran dédié. */
 export function MatchPreview({ matchId }: { matchId: string }) {
   const navigate = useNavigate()
+  const { hash } = useLocation()
   const { guard } = useAuth()
   const [match, setMatch] = useState<Match | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
@@ -61,6 +62,14 @@ export function MatchPreview({ matchId }: { matchId: string }) {
     })
     return () => { cancel = true }
   }, [match?.id])
+
+  // Arrivé par un lien « Convoquer » (tableau de bord, calendrier) : la convocation
+  // est en bas de la fiche, on l'amène sous les yeux. Le défilement attend l'effectif,
+  // car la section n'existe pas encore au moment du clic — les données arrivent après.
+  // `scrollIntoView` est appelé prudemment : jsdom ne l'implémente pas.
+  useEffect(() => {
+    if (hash === '#convocation' && players.length) document.getElementById('convocation')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  }, [hash, players.length])
 
   if (match === null) return <p className="py-16 text-center text-sm" style={{ color: C.muted }}>Rencontre introuvable.</p>
 
@@ -116,7 +125,8 @@ export function MatchPreview({ matchId }: { matchId: string }) {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl p-6" style={{ background: C.card, border: bd }}>
+      {/* `scroll-mt-6` : l'ancre s'arrête sous le bord haut, pas collée à lui. */}
+      <div id="convocation" className="mt-6 scroll-mt-6 rounded-2xl p-6" style={{ background: C.card, border: bd }}>
         <div className="mb-4 flex items-center justify-between">
           <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Convocation</p>
           {/* Affiché en permanence, pas seulement après enregistrement : douze convoqués

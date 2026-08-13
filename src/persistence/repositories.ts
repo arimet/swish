@@ -1,7 +1,7 @@
 import { db } from './db'
 import { enqueuePut, enqueueDel, remoteEnabled, hydrate } from './remote'
 import { aVider } from '../domain/menage'
-import type { Team, Player, Match, ReportedResult, Convocation, Training } from '../domain/types'
+import type { Team, Player, Match, ReportedResult, Convocation, Training, MessageEquipe } from '../domain/types'
 import type { Schema } from '../domain/plays'
 
 // Écritures : cache local (immédiat, offline-ok) + mise en file pour le serveur.
@@ -21,9 +21,12 @@ export const deleteTeam = async (id: string) => {
   // resteraient en base sous un `clubId` qui ne reviendra jamais, donc invisibles sur
   // tous les écrans et impossibles à supprimer — même sort que les résultats ci-dessus.
   const entraînements = (await db.trainings.toArray()).filter((t) => t.clubId === id)
-  await db.transaction('rw', db.teams, db.players, db.results, db.trainings, db.plays, async () => {
+  await db.transaction('rw', [db.teams, db.players, db.results, db.trainings, db.plays, db.messages], async () => {
     await db.players.where('teamId').equals(id).delete()
     await db.teams.delete(id)
+    // Le message est celui du club : sans cette purge il survivrait à l'équipe,
+    // invisible (plus aucun écran ne porte ce `clubId`) et impossible à effacer.
+    await db.messages.delete(id)
     await db.results.bulkDelete(résultats.map((r) => r.id))
     await db.trainings.bulkDelete(entraînements.map((t) => t.id))
     // Les schémas sont propres au club, comme les entraînements : même purge, mais
@@ -80,6 +83,15 @@ export const saveConvocation = async (c: Convocation) => { await db.convocations
 export const listTrainings = () => db.trainings.toArray()
 export const saveTraining = async (t: Training) => { await db.trainings.put(t) }
 export const deleteTraining = async (id: string) => { await db.trainings.delete(id) }
+
+/** Le message du coach à son équipe : un seul par club, local à l'appareil comme
+ *  les convocations, les entraînements et les schémas — il ne passe pas par la
+ *  file de synchronisation. En écrire un nouveau remplace le précédent : c'est le
+ *  `put` sur la clé du club qui le garantit, aucun ménage n'est nécessaire.
+ *  Supprimer l'équipe emporte son message (cf. `deleteTeam`). */
+export const getMessage = (clubId: string) => db.messages.get(clubId)
+export const saveMessage = async (m: MessageEquipe) => { await db.messages.put(m) }
+export const deleteMessage = async (clubId: string) => { await db.messages.delete(clubId) }
 
 /** Attache un schéma à un entraînement, ou l'en retire. Le va-et-vient se fait dans
  *  une transaction, à partir de la séance relue : deux cases cochées coup sur coup
@@ -178,9 +190,9 @@ export const deletePlaysOfClub = async (clubId: string) =>
  *  doit pas se propager au serveur et vider du même coup les autres appareils. */
 export const wipeAll = () =>
   // Les tables passent par un tableau : au-delà de cinq, Dexie ne les prend plus une à une.
-  db.transaction('rw', [db.teams, db.players, db.matches, db.results, db.convocations, db.trainings, db.plays, db.outbox], async () => {
+  db.transaction('rw', [db.teams, db.players, db.matches, db.results, db.convocations, db.trainings, db.plays, db.messages, db.outbox], async () => {
     await Promise.all([
       db.teams.clear(), db.players.clear(), db.matches.clear(), db.results.clear(),
-      db.convocations.clear(), db.trainings.clear(), db.plays.clear(), db.outbox.clear(),
+      db.convocations.clear(), db.trainings.clear(), db.plays.clear(), db.messages.clear(), db.outbox.clear(),
     ])
   })

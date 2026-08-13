@@ -15,6 +15,32 @@ export type Fixture =
 export const jourISO = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
+/** Les âges en toutes lettres, en français, sans dépendre de la locale du
+ *  navigateur : un club français lit « il y a 3 semaines » sur une machine en
+ *  anglais, comme le calendrier écrit ses mois lui-même. `numeric: 'always'`
+ *  plutôt que `'auto'` : « il y a 2 jours » se compare d'un coup d'œil à « il y a
+ *  3 semaines », là où « avant-hier » demande de convertir. */
+const RELATIF = new Intl.RelativeTimeFormat('fr', { numeric: 'always' })
+
+/**
+ * L'âge d'une date, en toutes lettres : « il y a 2 jours » n'a pas le même poids
+ * que « il y a 3 semaines », et un message oublié depuis un mois doit se lire
+ * comme tel.
+ *
+ * Une date à venir (horloge de l'appareil reculée depuis l'écriture) est ramenée
+ * à « à l'instant » : « dans deux heures » n'a aucun sens sous un texte déjà écrit.
+ */
+export function depuis(iso: string, maintenant = new Date()): string {
+  const sec = Math.max(0, Math.round((maintenant.getTime() - new Date(iso).getTime()) / 1000))
+  const [n, unité]: [number, Intl.RelativeTimeFormatUnit] =
+    sec < 3600 ? [Math.floor(sec / 60), 'minute']
+    : sec < 86400 ? [Math.floor(sec / 3600), 'hour']
+    : sec < 7 * 86400 ? [Math.floor(sec / 86400), 'day']
+    : sec < 30 * 86400 ? [Math.floor(sec / (7 * 86400)), 'week']
+    : [Math.floor(sec / (30 * 86400)), 'month']
+  return n < 1 ? 'à l’instant' : RELATIF.format(-n, unité)
+}
+
 /**
  * Prochaine échéance à venir, rencontres et entraînements confondus.
  * `null` quand rien n'est prévu.

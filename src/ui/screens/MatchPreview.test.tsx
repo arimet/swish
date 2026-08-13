@@ -129,6 +129,15 @@ describe('MatchPreview — convocation', () => {
     })
   })
 
+  it('porte l’ancre où mènent le tableau de bord et le calendrier', async () => {
+    // Les deux écrans où le coach regarde pointent sur `/match/:id#convocation` :
+    // sans cette ancre, le lien tomberait en haut de la fiche, exactement le
+    // problème qu'il devait résoudre.
+    renderPreview()
+    await screen.findByLabelText(/ANTOINE/i)
+    expect(document.getElementById('convocation')).not.toBeNull()
+  })
+
   it('signale que la convocation reste sur cet appareil', async () => {
     renderPreview()
     expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
