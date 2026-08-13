@@ -63,6 +63,13 @@
   --c-info: #1a5fb8;
   --c-info-bg: #e8f1fc;
 
+  /* La faute, l'effacement, le refus. Un jeton plutôt que les rouges 400-500
+     de Tailwind : ceux-là sont calibrés pour du charcoal et il fallait les
+     approfondir en clair, ce qui les crevait en sombre. 5,3:1 sur son propre
+     fond, 7,0:1 sur blanc. */
+  --c-danger: #b91c1c;
+  --c-danger-bg: #fbe4e4;
+
   /* Le voile neutre (survol, pastille « Final ») : il assombrit en clair, il
      éclaircit en sombre. Un `rgba(255,255,255,…)` en dur faisait donc
      disparaître ces fonds dès que la page passait au blanc. */
@@ -124,9 +131,12 @@
   --c-card2: #1e1e21;
   --c-border: #262629;
 
+  /* Éclaircis : sur la carte (#161618), l'ancien gris secondaire ne donnait
+     que 3,3:1 et le tertiaire 2,9:1. Ils tiennent maintenant 6,1:1 et 5,0:1,
+     tout en restant distincts l'un de l'autre. */
   --c-text: #f4f4f5;
-  --c-muted: #8a8a90;
-  --c-faint: #75757d;
+  --c-muted: #9a9aa2;
+  --c-faint: #8a8a92;
 
   --c-accent: #ff4d6d;
   --c-accent-bg: rgba(255, 77, 109, 0.14);
@@ -141,6 +151,9 @@
 
   --c-info: #4d9fff;
   --c-info-bg: rgba(77, 159, 255, 0.16);
+
+  --c-danger: #ff8080;
+  --c-danger-bg: rgba(255, 128, 128, 0.15);
 
   --c-hover: rgba(255, 255, 255, 0.06);
   --c-neutral-bg: rgba(255, 255, 255, 0.08);

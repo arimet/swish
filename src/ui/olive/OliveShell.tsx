@@ -163,7 +163,7 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
                 onKeyDown={(e) => e.key === 'Enter' && valider()}
                 className={`w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${erreur ? 'border-red-500/60' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
               />
-              {erreur && <p className="text-xs font-semibold text-red-700">{erreur}</p>}
+              {erreur && <p className="text-xs font-semibold text-[var(--c-danger)]">{erreur}</p>}
               <button onClick={valider} className="rounded-xl bg-[var(--c-accent)] py-2.5 text-sm font-bold text-white transition hover:brightness-110">Déverrouiller</button>
             </>
           )}

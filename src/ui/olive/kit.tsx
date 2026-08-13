@@ -27,6 +27,7 @@ export const C = {
   accentBg: 'var(--c-accent-bg)',
   amber: 'var(--c-amber)', amberBg: 'var(--c-amber-bg)',
   info: 'var(--c-info)', infoBg: 'var(--c-info-bg)',
+  danger: 'var(--c-danger)', dangerBg: 'var(--c-danger-bg)',
   // Les liserés teintés. Ils remplacent les deux chiffres hexadécimaux qu'on
   // collait autrefois derrière l'accent pour l'affaiblir : le procédé cessait
   // de marcher dès que la valeur devenait un `var(…)`.
