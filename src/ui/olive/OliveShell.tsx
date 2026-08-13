@@ -59,11 +59,10 @@ export function OliveShell() {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex shrink-0 items-center gap-3 px-4 py-3 sm:px-6 sm:py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
             <div className="flex items-center gap-2 text-base font-extrabold sm:text-lg"><span>🏀</span><span style={{ color: C.orange }}>{title}</span></div>
+            {/* L'en-tête ne garde que le titre et le menu d'accès. « Nouvelle
+                rencontre » est parti au calendrier, où vivent les choses datées. */}
             <div className="ml-auto flex items-center gap-2">
               <AccesMenu players={effectif} compact />
-              <Link to="/match/new" className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-white sm:px-4" style={{ background: C.orange }}>
-                <Ic d={ICON.plus} className="h-4 w-4" /> <span className="hidden sm:inline">Nouvelle rencontre</span>
-              </Link>
             </div>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto">
