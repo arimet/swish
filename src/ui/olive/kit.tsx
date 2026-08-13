@@ -118,13 +118,13 @@ function ScoreRow({ name, score, lead, dim }: { name: string; score: number | nu
   )
 }
 
-/** Barre de sous-titre + action (le titre est déjà affiché dans le header du shell). */
-export function PageTitle({ subtitle, action }: { title?: string; subtitle?: string; action?: ReactNode }) {
-  if (!subtitle && !action) return null
-  return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-      {subtitle ? <p className="text-sm" style={{ color: C.muted }}>{subtitle}</p> : <span />}
-      {action}
-    </div>
-  )
+/** Barre d'action de l'écran (le titre est déjà affiché dans le header du shell).
+ *  Plus de sous-titre : la phrase d'explication sous le titre n'apprenait rien à
+ *  qui ouvrait la page, et le paramètre part avec elle — un paramètre que plus
+ *  personne ne passe finit par être repassé par erreur. Sans action — le cas d'un
+ *  visiteur à qui les boutons d'écriture sont masqués — la barre ne se rend pas,
+ *  plutôt que de garder une place vide en haut de l'écran. */
+export function PageTitle({ action }: { action?: ReactNode }) {
+  if (!action) return null
+  return <div className="mb-6 flex flex-wrap items-center justify-end gap-3">{action}</div>
 }

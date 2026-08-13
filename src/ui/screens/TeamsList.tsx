@@ -22,7 +22,7 @@ export function TeamsList() {
 
   return (
     <div>
-      <PageTitle title="Équipes" subtitle="Vos équipes et leurs joueurs, réutilisables pour toutes vos rencontres."
+      <PageTitle
         action={<Link to="/teams/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Nouvelle équipe</Link>} />
 
       {teams === null ? (

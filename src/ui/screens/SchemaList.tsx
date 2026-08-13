@@ -103,7 +103,6 @@ export function SchemaList() {
   return (
     <div className="p-6">
       <PageTitle
-        title="Schémas" subtitle="Les combinaisons de votre club, à revoir avant l’entraînement."
         action={
           <button onClick={creer} className="rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
             + Nouveau schéma

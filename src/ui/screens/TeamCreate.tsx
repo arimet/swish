@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { saveTeam, savePlayer } from '../../persistence/repositories'
 import type { Player } from '../../domain/types'
-import { C, bd, NumBadge, PageTitle } from '../olive/kit'
+import { C, bd, NumBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 
@@ -38,7 +38,9 @@ export function TeamCreate() {
   return (
     <div className="p-6">
       <Link to="/teams" className="text-sm font-semibold" style={{ color: C.muted }}>← Équipes</Link>
-      <PageTitle title="Nouvelle équipe" subtitle="Nommez l’équipe, son entraîneur, et ajoutez ses joueurs." />
+      {/* Un vrai titre, et non plus le sous-titre qui en tenait lieu : cet écran
+          vit hors de la coquille, son en-tête ne le nomme donc pas à sa place. */}
+      <h1 className="mb-6 mt-2 text-2xl font-extrabold tracking-tight">Nouvelle équipe</h1>
 
       <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
         <div className="space-y-5 self-start rounded-2xl p-5" style={{ background: C.card, border: bd }}>

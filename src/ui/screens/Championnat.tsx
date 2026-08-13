@@ -3,7 +3,7 @@ import { newId } from '../../domain/ids'
 import { standings, clefConfrontation } from '../../domain/standings'
 import { listMatches, listResults, saveResult, deleteResult } from '../../persistence/repositories'
 import type { Match, ReportedResult } from '../../domain/types'
-import { C, bd, champLabel, TeamBadge, PageTitle } from '../olive/kit'
+import { C, bd, champLabel, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 
@@ -119,8 +119,6 @@ export function Championnat() {
 
   return (
     <div className="p-6">
-      <PageTitle subtitle="Le classement de nos poules, à partir de nos rencontres et des résultats relevés à la main." />
-
       {/* 1. Le classement d'abord : c'est ce qu'on ouvre l'écran pour voir. */}
       <div className="space-y-6">
         {results.length === 0 && (
