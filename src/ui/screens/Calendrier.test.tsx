@@ -18,6 +18,14 @@ const mk = (id: string, clubId: string, opponentId: string, date = '2026-01-10')
 
 const schema = (id: string, nom: string): Schema => ({ id, ...nouveauSchema('ta', 'demi', false), nom })
 
+/** Une date relative au jour d'exécution : le passé et le futur du calendrier se
+ *  jugent sur l'horloge, une date en dur finirait par basculer d'un côté. */
+const jour = (décalage: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() + décalage)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
   localStorage.clear()
@@ -76,6 +84,31 @@ describe('Calendrier', () => {
     const texte = groupe!.textContent ?? ''
     expect(texte.indexOf('METZ')).toBeGreaterThanOrEqual(0)
     expect(texte.indexOf('Départage')).toBeGreaterThan(texte.indexOf('METZ'))
+  })
+
+  it('estompe le passé, marque le jour même, et laisse le futur en pleine lumière', async () => {
+    // Le calendrier se lit du plus ancien au plus récent : sans ce partage, une
+    // saison entière de rencontres jouées disputerait l'œil à ce qui reste à jouer.
+    await saveTraining({ id: 'hier', clubId: 'ta', date: jour(-3), theme: 'Séance passée' })
+    await saveTraining({ id: 'auj', clubId: 'ta', date: jour(0), theme: 'Séance du jour' })
+    renderCal()
+
+    const passé = (await screen.findByText('Séance passée')).closest('section')
+    expect(passé).toHaveClass('opacity-60')
+
+    const jourMême = screen.getByText('Séance du jour').closest('section')
+    expect(jourMême).not.toHaveClass('opacity-60')
+    expect(within(jourMême!).getByText(/^aujourd/i)).toBeInTheDocument()
+  })
+
+  it('désigne la prochaine échéance quand rien n’est prévu le jour même', async () => {
+    // Même règle qu'au tableau de bord : c'est `nextFixture` qui dit « la suite ».
+    await db.matches.clear() // les rencontres du jeu d'essai sont datées, elles fausseraient l'échéance
+    await saveTraining({ id: 'plus-tard', clubId: 'ta', date: jour(10), theme: 'Séance à venir' })
+    renderCal()
+
+    const groupe = (await screen.findByText('Séance à venir')).closest('section')
+    expect(within(groupe!).getByText(/prochaine échéance/i)).toBeInTheDocument()
   })
 
   it('signale que les entraînements restent sur cet appareil', async () => {
