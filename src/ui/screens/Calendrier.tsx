@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { listMatches, listPlays, listTeams, listTrainings, saveTraining, deleteTraining, toggleTrainingPlay } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
 import type { Match, Team, Training } from '../../domain/types'
 import type { Schema } from '../../domain/plays'
-import { C, bd, MatchCard, PageTitle, fmtDate } from '../olive/kit'
+import { jourISO, nextFixture } from '../../domain/fixtures'
+import { C, bd, Ic, ICON, MatchCard, PageTitle, fmtDate } from '../olive/kit'
 import { useClub } from '../../app/club'
 import { useAuth } from '../../app/auth'
 
@@ -15,6 +16,11 @@ import { useAuth } from '../../app/auth'
 // bleu ne peut désigner qu'une séance d'entraînement.
 const ENTR_COLOR = '#4d9fff'
 const ENTR_BG = 'rgba(77,159,255,0.16)'
+
+// Les mois en toutes lettres, comme le kit tient déjà ses jours et ses mois
+// abrégés : la locale du navigateur n'est pas celle de l'application, et un
+// calendrier français doit dire « août » sur une machine en anglais.
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
@@ -77,6 +83,15 @@ export function Calendrier() {
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
   }, [nos, nosEntrainements])
 
+  // Le repère qui coupe la page en deux : ce qui précède est joué, ce qui suit
+  // reste à faire. Et la prochaine échéance est celle du domaine — la même qu'au
+  // tableau de bord, pour qu'il n'y ait pas deux règles pour désigner « la suite ».
+  const aujourdhui = jourISO(new Date())
+  const prochaine = useMemo(
+    () => (nos && nosEntrainements ? nextFixture(nos, nosEntrainements, new Date()) : null),
+    [nos, nosEntrainements],
+  )
+
   // Un formulaire de saisie apparaît sur un clic, jamais d'emblée : le calendrier
   // est ce qu'on vient lire, planifier une séance est l'exception.
   const [saisieOuverte, setSaisieOuverte] = useState(false)
@@ -105,24 +120,30 @@ export function Calendrier() {
 
   return (
     <div className="p-6">
-      <PageTitle title="Calendrier" subtitle="Les rencontres et entraînements de votre équipe, par date." />
-
-      {/* Les actions en tête d'écran, pas en pied : une saison fait des milliers de
-          pixels de dates, et un bouton placé après ne se trouve jamais. C'est une
-          barre d'actions de page — l'en-tête de l'application, lui, reste dégagé. */}
-      <div className="mb-6 mt-4 flex flex-wrap items-center gap-2">
-        <button onClick={() => guard('manage', () => setSaisieOuverte(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: ENTR_COLOR }}>
-          + Nouvel entraînement
-        </button>
-        <Link to="/match/new" className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.orange }}>
-          + Nouvelle rencontre
-        </Link>
-      </div>
+      {/* Les actions dans la barre de sous-titre, comme la bibliothèque de schémas :
+          une saison fait des milliers de pixels de dates, et un bouton placé après
+          ne se trouve jamais. Un seul bouton plein — la rencontre, ce qu'on planifie
+          le plus souvent ; la séance reste en second, marquée par son bleu. */}
+      <PageTitle
+        title="Calendrier" subtitle="Les rencontres et entraînements de votre équipe, par date."
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => guard('manage', () => setSaisieOuverte(true))}
+              className="rounded-xl px-4 py-2.5 text-sm font-bold"
+              style={{ background: ENTR_BG, color: ENTR_COLOR, border: `1px solid ${ENTR_COLOR}55` }}>
+              + Nouvel entraînement
+            </button>
+            <Link to="/match/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+              + Nouvelle rencontre
+            </Link>
+          </div>
+        }
+      />
 
       {saisieOuverte && (
-        <section className="mb-6 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
+        <section className="mb-6 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${ENTR_COLOR}44` }}>
           <div className="mb-4 flex items-center gap-3">
-            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Nouvel entraînement</p>
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: ENTR_COLOR }}>Nouvel entraînement</p>
             <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>Fermer</button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -140,13 +161,17 @@ export function Calendrier() {
       {!nos || !nosEntrainements ? (
         <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
       ) : groups.length === 0 ? (
-        <p className="rounded-2xl border border-dashed py-16 text-center text-sm" style={{ borderColor: C.border, color: C.muted }}>Aucune rencontre ni entraînement planifié.</p>
+        <div className="rounded-2xl py-16 text-center" style={{ border: `1px dashed ${C.border}` }}>
+          <p className="text-sm font-bold">La saison est encore vierge.</p>
+          <p className="mt-1 text-sm" style={{ color: C.muted }}>Planifiez une rencontre ou une séance : elles se rangeront ici, par date.</p>
+        </div>
       ) : (
         // Deux dates par ligne dès qu'on a la largeur : une saison fait une colonne
         // interminable sur un écran de bureau, où la place est à côté et pas en
-        // dessous. Sur téléphone, une seule colonne, comme avant.
-        <div className="grid gap-8 xl:grid-cols-2 [&>*]:min-w-0">
-          {groups.map(([iso, items]) => {
+        // dessous. Sur téléphone, une seule colonne, comme avant. La barre de mois
+        // occupe la largeur entière et ouvre donc toujours une nouvelle rangée.
+        <div className="grid gap-x-8 gap-y-7 xl:grid-cols-2 [&>*]:min-w-0">
+          {groups.map(([iso, items], i) => {
             const f = fmtDate(iso === '—' ? undefined : iso)
             const nbRencontres = items.filter((i) => i.kind === 'match').length
             const nbEntrainements = items.filter((i) => i.kind === 'training').length
@@ -154,26 +179,50 @@ export function Calendrier() {
               nbRencontres ? `${nbRencontres} rencontre${nbRencontres > 1 ? 's' : ''}` : '',
               nbEntrainements ? `${nbEntrainements} entraînement${nbEntrainements > 1 ? 's' : ''}` : '',
             ].filter(Boolean).join(' · ')
+            // Le passé est estompé plutôt que masqué : on veut pouvoir remonter la
+            // saison, mais rien de joué ne doit disputer l'œil à ce qui reste à jouer.
+            const passé = iso !== '—' && iso < aujourdhui
+            const estAujourdhui = iso === aujourdhui
+            // La date qui porte la prochaine échéance, ou le jour même : les deux
+            // seules du calendrier à mériter l'accent.
+            const vedette = estAujourdhui || prochaine?.date === iso
+            const nouveauMois = i === 0 || groups[i - 1][0].slice(0, 7) !== iso.slice(0, 7)
             return (
-              <section key={iso}>
-                <div className="mb-3 flex items-center gap-3">
-                  <span className="grid h-11 w-11 place-items-center rounded-xl text-center leading-none" style={{ background: C.card2 }}>
-                    <span className="block text-base font-black">{f.day}</span>
-                    <span className="block text-[9px] font-bold" style={{ color: C.muted }}>{f.wd}</span>
-                  </span>
-                  <div>
-                    <p className="text-sm font-extrabold capitalize">{f.long || 'Date inconnue'}</p>
-                    <p className="text-[11px] font-semibold" style={{ color: C.muted }}>{résumé}</p>
+              <Fragment key={iso}>
+                {nouveauMois && <BarreDeMois iso={iso} />}
+                <section className={passé ? 'opacity-60 transition-opacity hover:opacity-100' : undefined}>
+                  <header className="mb-3 flex items-center gap-3">
+                    {/* Le cartouche de date : jour de la semaine et quantième, en gros.
+                        Le mois est dans la barre au-dessus, il n'a pas à être répété. */}
+                    <span className="grid h-14 w-14 shrink-0 place-content-center rounded-2xl text-center leading-none"
+                      style={vedette ? { background: C.accentBg, border: `1px solid ${C.accent}66` } : { background: C.card2, border: bd }}>
+                      <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: vedette ? C.accent : C.faint }}>{f.wd || '—'}</span>
+                      <span className="mt-1 text-xl font-black tabular-nums" style={{ color: vedette ? C.accent : C.text }}>{f.day}</span>
+                    </span>
+                    <div className="min-w-0">
+                      {vedette && (
+                        <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: C.accent }}>
+                          {estAujourdhui ? 'Aujourd’hui' : 'Prochaine échéance'}
+                        </p>
+                      )}
+                      <p className="truncate text-sm font-extrabold">{résumé}</p>
+                    </div>
+                    {/* Le filet prolonge l'en-tête jusqu'au bord et referme le groupe ;
+                        sur téléphone la largeur est trop précieuse pour le garder. */}
+                    <span className="hidden h-px flex-1 sm:block" style={{ background: C.border }} />
+                  </header>
+                  {/* `auto-fit` plutôt qu'un nombre fixe de colonnes : une date qui ne
+                      porte qu'une carte l'étale sur toute la largeur du groupe, au lieu
+                      de laisser une demi-colonne vide à sa droite. */}
+                  <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
+                    {items.map((it) => it.kind === 'match'
+                      ? <MatchCard key={it.key} m={it.match} teams={teams} />
+                      : <TrainingCard key={it.key} t={it.training} schemas={schemas}
+                          onToggleSchema={(playId) => basculerSchema(it.training.id, playId)}
+                          onDelete={() => supprimer(it.training.id)} />)}
                   </div>
-                </div>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
-                  {items.map((it) => it.kind === 'match'
-                    ? <MatchCard key={it.key} m={it.match} teams={teams} />
-                    : <TrainingCard key={it.key} t={it.training} schemas={schemas}
-                        onToggleSchema={(playId) => basculerSchema(it.training.id, playId)}
-                        onDelete={() => supprimer(it.training.id)} />)}
-                </div>
-              </section>
+                </section>
+              </Fragment>
             )
           })}
         </div>
@@ -183,6 +232,20 @@ export function Calendrier() {
           les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux
           limites différentes — la décision couvrait aussi bien les entraînements. */}
       <p className="mt-8 text-[11px]" style={{ color: C.faint }}>Ces entraînements restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
+    </div>
+  )
+}
+
+/** Le mois en toutes lettres, en travers de la grille : sans lui, une saison n'est
+ *  qu'une suite de quantièmes, et l'on ne sait plus si le 3 suit le 30 de justesse
+ *  ou de cinq semaines. */
+function BarreDeMois({ iso }: { iso: string }) {
+  const d = new Date(iso + 'T00:00:00')
+  const label = Number.isNaN(d.getTime()) ? 'Sans date' : `${MOIS[d.getMonth()]} ${d.getFullYear()}`
+  return (
+    <div className="flex items-center gap-3 xl:col-span-2">
+      <h2 className="text-[12px] font-black uppercase tracking-[0.18em]" style={{ color: C.muted }}>{label}</h2>
+      <span className="h-px flex-1" style={{ background: C.border }} />
     </div>
   )
 }
@@ -197,9 +260,10 @@ function Field({ id, label, value, onChange, type = 'text' }: { id: string; labe
 }
 
 /** Carte d'entraînement : même gabarit que `MatchCard` pour se mêler à la
- *  grille, mais une pastille et une bordure bleues la distinguent d'une
- *  rencontre sans qu'il faille lire un seul mot. Elle se déplie sur les schémas
- *  qu'on y travaille — mêmes cases à cocher que la convocation d'une rencontre. */
+ *  grille, mais un rail bleu à silhouette — là où la rencontre montre deux écussons
+ *  et son « VS » — la distingue sans qu'il faille lire un seul mot. Elle se déplie
+ *  sur les schémas qu'on y travaille — mêmes cases à cocher que la convocation
+ *  d'une rencontre. */
 function TrainingCard({ t, schemas, onToggleSchema, onDelete }: { t: Training; schemas: Schema[]; onToggleSchema: (playId: string) => void; onDelete: () => void }) {
   // Le compte affiché est celui des schémas qui existent : un entraînement peut
   // citer un schéma supprimé (base antérieure à la cascade de `deletePlay`), et
@@ -208,8 +272,8 @@ function TrainingCard({ t, schemas, onToggleSchema, onDelete }: { t: Training; s
   const attachés = schemas.filter((s) => t.playIds?.includes(s.id))
   return (
     <div className="flex gap-3 rounded-2xl p-3" style={{ background: C.card, border: `1px solid ${ENTR_COLOR}55` }}>
-      <div className="flex w-11 shrink-0 flex-col items-center justify-center gap-1 rounded-xl" style={{ background: ENTR_BG }}>
-        <span className="h-2.5 w-2.5 rounded-full" style={{ background: ENTR_COLOR }} />
+      <div className="flex w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: ENTR_BG }}>
+        <Ic d={ICON.users} className="h-6 w-6" style={{ color: ENTR_COLOR }} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">

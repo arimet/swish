@@ -6,6 +6,16 @@ export type Fixture =
   | { kind: 'training'; id: string; date: string; training: Training }
 
 /**
+ * Le jour d'une date, au format ISO, lu sur l'horloge locale.
+ *
+ * `toISOString()` convertit en UTC : entre minuit et l'heure du décalage local
+ * (ex. 0h-2h en France), elle renvoie encore la veille. On dérive donc le jour
+ * des composantes locales, pas de la représentation UTC.
+ */
+export const jourISO = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+/**
  * Prochaine échéance à venir, rencontres et entraînements confondus.
  * `null` quand rien n'est prévu.
  *
@@ -14,10 +24,7 @@ export type Fixture =
  * de la semaine suivante.
  */
 export function nextFixture(matches: Match[], trainings: Training[], today: Date): Fixture | null {
-  // `toISOString()` convertit en UTC : entre minuit et l'heure du décalage local
-  // (ex. 0h-2h en France), elle renvoie encore la veille. On dérive donc le jour
-  // des composantes locales, pas de la représentation UTC.
-  const jour = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const jour = jourISO(today)
   const echeances: Fixture[] = []
   // Les entraînements sont ajoutés avant les rencontres : le tri ci-dessous est stable,
   // donc si l'ordre d'insertion décidait des égalités de date, il faudrait qu'il coïncide
