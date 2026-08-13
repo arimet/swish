@@ -216,7 +216,7 @@ export function Calendrier() {
                       de laisser une demi-colonne vide à sa droite. */}
                   <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
                     {items.map((it) => it.kind === 'match'
-                      ? <MatchCard key={it.key} m={it.match} teams={teams} />
+                      ? <CarteRencontre key={it.key} m={it.match} teams={teams} />
                       : <TrainingCard key={it.key} t={it.training} schemas={schemas}
                           onToggleSchema={(playId) => basculerSchema(it.training.id, playId)}
                           onDelete={() => supprimer(it.training.id)} />)}
@@ -232,6 +232,25 @@ export function Calendrier() {
           les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux
           limites différentes — la décision couvrait aussi bien les entraînements. */}
       <p className="mt-8 text-[11px]" style={{ color: C.faint }}>Ces entraînements restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
+    </div>
+  )
+}
+
+/** La carte d'une rencontre, et — tant qu'elle est à venir — l'accès direct à sa
+ *  convocation. La convocation reste sur la fiche de la rencontre, à sa place ;
+ *  ce qui manquait, c'est un chemin depuis là où le coach regarde. Le lien est
+ *  posé À CÔTÉ de la carte et non dedans : `MatchCard` est elle-même un lien, et
+ *  un lien dans un lien n'est pas du HTML valide. */
+function CarteRencontre({ m, teams }: { m: Match; teams: Record<string, Team> }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <MatchCard m={m} teams={teams} />
+      {m.status === 'setup' && (
+        <Link to={`/match/${m.id}#convocation`} className="rounded-xl px-3 py-1.5 text-center text-[12px] font-bold"
+          style={{ background: C.accentBg, color: C.accent }}>
+          Convoquer →
+        </Link>
+      )}
     </div>
   )
 }

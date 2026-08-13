@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type { Team, Player, Match, ReportedResult, Convocation, Training } from '../domain/types'
+import type { Team, Player, Match, ReportedResult, Convocation, Training, MessageEquipe } from '../domain/types'
 import type { Schema } from '../domain/plays'
 
 /** File d'attente de synchronisation (offline-first) : mutations à pousser vers le serveur. */
@@ -21,6 +21,7 @@ export class ScoreSheetDB extends Dexie {
   convocations!: Table<Convocation, string>
   trainings!: Table<Training, string>
   plays!: Table<Schema, string>
+  messages!: Table<MessageEquipe, string>
   constructor() {
     super('score-sheet')
     this.version(1).stores({
@@ -44,6 +45,13 @@ export class ScoreSheetDB extends Dexie {
     // v5 : schémas du tableau tactique, propres au club (index sur `clubId`).
     this.version(5).stores({
       plays: 'id, clubId',
+    })
+    // v6 : le message du coach à son équipe. Un seul par club : le club EST la
+    // clé, ce qui rend le remplacement gratuit (un `put` suffit) et rend
+    // impossible la messagerie qu'on ne veut pas. Strictement additif : aucune
+    // donnée existante n'est touchée.
+    this.version(6).stores({
+      messages: 'clubId',
     })
   }
 }

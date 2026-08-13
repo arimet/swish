@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nextFixture } from './fixtures'
+import { depuis, nextFixture } from './fixtures'
 import type { Match, Training } from './types'
 
 const match = (id: string, date: string): Match => ({
@@ -60,5 +60,37 @@ describe('nextFixture', () => {
 
   it('renvoie null quand rien n’est prévu', () => {
     expect(nextFixture([], [], new Date('2026-02-01'))).toBeNull()
+  })
+})
+
+describe('depuis', () => {
+  const t0 = new Date('2026-08-13T12:00:00')
+  const ilYA = (ms: number) => depuis(new Date(t0.getTime() - ms).toISOString(), t0)
+  const MIN = 60_000, HEURE = 60 * MIN, JOUR = 24 * HEURE
+
+  it('dit « à l’instant » pour ce qui vient d’être écrit', () => {
+    expect(ilYA(30_000)).toBe('à l’instant')
+  })
+
+  it('compte en minutes, puis en heures', () => {
+    expect(ilYA(5 * MIN)).toBe('il y a 5 minutes')
+    expect(ilYA(3 * HEURE)).toBe('il y a 3 heures')
+  })
+
+  it('distingue « il y a deux jours » de « il y a trois semaines »', () => {
+    // Tout le poids du message est là : deux jours se lisent encore, trois
+    // semaines sentent l'oubli.
+    expect(ilYA(2 * JOUR)).toBe('il y a 2 jours')
+    expect(ilYA(21 * JOUR)).toBe('il y a 3 semaines')
+  })
+
+  it('passe au mois au-delà de trente jours', () => {
+    expect(ilYA(40 * JOUR)).toBe('il y a 1 mois')
+  })
+
+  it('ne renvoie jamais un âge négatif pour une date à venir', () => {
+    // Horloge de l'appareil reculée depuis l'écriture : « dans 2 heures » n'aurait
+    // aucun sens sous un message déjà écrit.
+    expect(ilYA(-2 * HEURE)).toBe('à l’instant')
   })
 })

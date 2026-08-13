@@ -1,12 +1,13 @@
 import 'fake-indexeddb/auto'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { Dashboard } from './Dashboard'
-import { AuthProvider, PLAYER_ID_KEY } from '../../app/auth'
+import { AuthProvider, PLAYER_ID_KEY, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
-import { saveConvocation, saveMatch, savePlay, savePlayer, saveTeam, saveTraining } from '../../persistence/repositories'
+import { getMessage, saveConvocation, saveMatch, saveMessage, savePlay, savePlayer, saveTeam, saveTraining } from '../../persistence/repositories'
 import { nouveauSchema, type Schema } from '../../domain/plays'
 import type { GameEvent, Match } from '../../domain/types'
 
@@ -44,8 +45,12 @@ const renderDash = () =>
 
 beforeEach(async () => {
   localStorage.clear()
+  // Le rôle vit dans la session de l'onglet : sans ce nettoyage, un test qui
+  // déverrouille l'administration laisserait les suivants déjà déverrouillés.
+  sessionStorage.clear()
   await db.matches.clear(); await db.players.clear(); await db.teams.clear()
   await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear()
+  await db.messages.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' }); await saveTeam({ id: 'tb', name: 'VERDUN' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
   localStorage.setItem('swish-club-id', 'ta')
@@ -206,5 +211,152 @@ describe('identité du joueur', () => {
     expect(within(marqueurs).getByText('MARTIN Lucas')).toBeInTheDocument()
     expect(within(marqueurs).queryByText('vous')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /ma fiche/i })).not.toBeInTheDocument()
+  })
+})
+
+// ── Le message d'équipe ─────────────────────────────────────────────────────
+// Le seul canal du coach vers son équipe : un texte court, un seul à la fois,
+// lu par tout le monde en ouvrant l'application, écrit et effacé par le seul
+// administrateur.
+
+describe('Dashboard — le message à l’équipe', () => {
+  const ouvrirLaSaisie = async () => userEvent.click(await screen.findByRole('button', { name: /message à l’équipe/i }))
+
+  it('affiche le message écrit, avec son âge', async () => {
+    const avantHier = new Date(Date.now() - 2 * 86400_000).toISOString()
+    await saveMessage({ clubId: 'ta', texte: 'Pas d’entraînement mardi, gymnase fermé.', écritLe: avantHier })
+    renderDash()
+
+    expect(await screen.findByText(/gymnase fermé/)).toBeInTheDocument()
+    expect(await screen.findByText(/il y a 2 jours/i)).toBeInTheDocument()
+  })
+
+  it('n’occupe pas le tableau de bord quand il n’y a pas de message', async () => {
+    renderDash()
+    await screen.findByText('VIGNOT')
+    expect(screen.queryByTestId('message-equipe')).not.toBeInTheDocument()
+  })
+
+  it('n’occupe pas le tableau de bord pour un message vide : un blanc n’est pas un message', async () => {
+    await saveMessage({ clubId: 'ta', texte: '   ', écritLe: new Date().toISOString() })
+    renderDash()
+    await screen.findByText('VIGNOT')
+    expect(screen.queryByTestId('message-equipe')).not.toBeInTheDocument()
+  })
+
+  it('un visiteur le lit sans qu’aucun code lui soit demandé', async () => {
+    // C'est un message pour l'équipe, joueurs compris : lire est libre.
+    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: new Date().toISOString() })
+    renderDash()
+
+    expect(await screen.findByText('Maillot blanc samedi.')).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
+  })
+
+  it('n’affiche le formulaire qu’après un clic, et l’écrit rend le message visible', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'admin')
+    renderDash()
+    await screen.findByText('VIGNOT')
+    expect(screen.queryByLabelText(/message à l’équipe/i)).not.toBeInTheDocument()
+
+    await ouvrirLaSaisie()
+    await userEvent.type(await screen.findByLabelText(/message à l’équipe/i), 'Gymnase fermé mardi.')
+    await userEvent.click(screen.getByRole('button', { name: /publier/i }))
+
+    // `guard()` déclenche l'action sans l'attendre : l'écriture en base puis le
+    // re-rendu sont asynchrones après le clic, et la suite complète charge la
+    // machine — d'où un délai plus large que la seconde par défaut.
+    expect(await screen.findByText('Gymnase fermé mardi.', {}, { timeout: 5000 })).toBeInTheDocument()
+    await waitFor(async () => expect((await getMessage('ta'))?.texte).toBe('Gymnase fermé mardi.'))
+  })
+
+  it('en écrire un second remplace le premier', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'admin')
+    await saveMessage({ clubId: 'ta', texte: 'Ancien message.', écritLe: new Date(Date.now() - 3 * 86400_000).toISOString() })
+    renderDash()
+
+    await userEvent.click(await screen.findByRole('button', { name: /modifier/i }))
+    const champ = await screen.findByLabelText(/message à l’équipe/i)
+    await userEvent.clear(champ)
+    await userEvent.type(champ, 'Nouveau message.')
+    await userEvent.click(screen.getByRole('button', { name: /publier/i }))
+
+    expect(await screen.findByText('Nouveau message.', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.queryByText('Ancien message.')).not.toBeInTheDocument()
+    await waitFor(async () => expect((await getMessage('ta'))?.texte).toBe('Nouveau message.'))
+    // Un seul message à la fois : ce n'est pas un fil, il n'y a rien à empiler.
+    expect(await db.messages.count()).toBe(1)
+  })
+
+  it('l’effacer fait disparaître l’encart', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'admin')
+    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: new Date().toISOString() })
+    renderDash()
+
+    await userEvent.click(await screen.findByRole('button', { name: /effacer/i }))
+
+    await waitFor(() => expect(screen.queryByTestId('message-equipe')).not.toBeInTheDocument())
+    expect(await getMessage('ta')).toBeUndefined()
+  })
+
+  it('écrire est administratif : la table de marque se voit demander le code, et rien n’est enregistré', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    renderDash()
+    await ouvrirLaSaisie()
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    // Garder d'abord, muter ensuite : les champs ne s'ouvrent même pas.
+    expect(screen.queryByLabelText(/message à l’équipe/i)).not.toBeInTheDocument()
+    expect(await getMessage('ta')).toBeUndefined()
+  })
+
+  it('effacer est administratif : la table de marque se voit demander le code, et le message reste', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: new Date().toISOString() })
+    renderDash()
+    await userEvent.click(await screen.findByRole('button', { name: /effacer/i }))
+
+    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(await getMessage('ta')).toBeDefined()
+  })
+
+  it('signale que le message reste sur cet appareil', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'admin')
+    renderDash()
+    await ouvrirLaSaisie()
+    expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
+  })
+})
+
+describe('Dashboard — atteindre la convocation', () => {
+  const rencontreAVenir = async () =>
+    saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: dansNJours(5), clubId: 'ta', opponentId: 'tb' } })
+
+  it('mène à la convocation de la prochaine rencontre depuis le bloc « prochaine échéance »', async () => {
+    await rencontreAVenir()
+    await saveConvocation({ matchId: 'm4', playerIds: ['p1'], meetTime: '18:00' })
+    renderDash()
+
+    expect(await screen.findByRole('link', { name: /convocation/i })).toHaveAttribute('href', '/match/m4#convocation')
+  })
+
+  it('dit clairement que personne n’est convoqué, et propose de convoquer', async () => {
+    // C'est justement le moment où l'on veut agir : « convocation à préparer » ne
+    // se distinguait pas assez d'un simple libellé, et ne menait nulle part.
+    await rencontreAVenir()
+    renderDash()
+
+    expect(await screen.findByText(/personne n’est convoqué/i)).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /convoquer/i })).toHaveAttribute('href', '/match/m4#convocation')
+  })
+
+  it('traite une convocation enregistrée sans aucun joueur comme une absence de convoqués', async () => {
+    // Une convocation vidée de ses joueurs (ou dont l'effectif a été supprimé) est
+    // un enregistrement sans convoqué : l'écran doit le dire, pas afficher « 0 ».
+    await rencontreAVenir()
+    await saveConvocation({ matchId: 'm4', playerIds: [] })
+    renderDash()
+
+    expect(await screen.findByText(/personne n’est convoqué/i)).toBeInTheDocument()
   })
 })
