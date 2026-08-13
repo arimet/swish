@@ -119,19 +119,26 @@ export function SchemaPlayer() {
   return (
     <Ecran>
       <div className="flex min-h-dvh flex-col gap-2 p-3">
-        <div className="flex shrink-0 items-center gap-3">
-          <h1 className="min-w-0 flex-1 truncate text-sm font-extrabold tracking-tight" style={{ color: C.muted }}>{schema.nom}</h1>
+        {/* L'en-tête ne dispute pas la place au terrain : la sortie est un carré à
+            gauche, là où le pouce la cherche, le nom prend tout le reste, et
+            « Partager » reste en contour — le seul bouton plein du lecteur est
+            « Lecture », en bas. */}
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            to={`/schemas/${id}`} aria-label="Quitter le lecteur" title="Quitter le lecteur"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-base font-black" style={{ border: bd, color: C.muted }}
+          >
+            ✕
+          </Link>
+          <h1 className="min-w-0 flex-1 truncate text-sm font-extrabold tracking-tight">{schema.nom}</h1>
           {/* La lecture s'arrête pendant le partage : on ne fabrique pas une image
               du temps qu'on est en train de quitter. */}
           <button
             onClick={() => { setEnLecture(false); setPartage(true) }}
-            className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: bd, color: C.text }}
+            className="h-10 shrink-0 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}
           >
             Partager
           </button>
-          <Link to={`/schemas/${id}`} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: bd, color: C.text }}>
-            Quitter ✕
-          </Link>
         </div>
         <ExportSchema schema={schema} tempsIndex={courant} open={partage} onClose={() => setPartage(false)} />
 

@@ -455,11 +455,18 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
           </>
         )}
 
+        {/* Les trois sorties fichier sont une seconde famille, pas trois boutons de
+            plus : un filet et un titre disent qu'on change de moyen, et chaque
+            bouton annonce ce qu'il produit — un temps, tous les temps, l'animation. */}
+        <div className="flex items-center gap-3 pt-1">
+          <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: C.faint }}>Ou envoyer un fichier</span>
+          <span className="h-px flex-1" style={{ background: C.border }} />
+        </div>
         <div className="grid grid-cols-3 gap-2">
-          <Sortie label="Image PNG" disabled={occupe} onClick={sortie('L’image', () => fabriquerPng(schema, schema.temps[tempsIndex] ?? schema.temps[0]), 'png', 'image/png')} />
-          <Sortie label="PDF" disabled={occupe} onClick={sortie('Le PDF', () => fabriquerPdf(schema), 'pdf', 'application/pdf')} />
+          <Sortie label="Image PNG" quoi="ce temps" disabled={occupe} onClick={sortie('L’image', () => fabriquerPng(schema, schema.temps[tempsIndex] ?? schema.temps[0]), 'png', 'image/png')} />
+          <Sortie label="PDF" quoi="tous les temps" disabled={occupe} onClick={sortie('Le PDF', () => fabriquerPdf(schema), 'pdf', 'application/pdf')} />
           <Sortie
-            label="GIF animé" disabled={occupe}
+            label="GIF animé" quoi="l’animation" disabled={occupe}
             onClick={sortie('Le GIF', () => fabriquerGif(schema, (fait, total) => setEtat(`Le GIF en préparation… ${fait} / ${total}`)), 'gif', 'image/gif')}
           />
         </div>
@@ -470,14 +477,17 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
   )
 }
 
-function Sortie({ label, onClick, disabled }: { label: string; onClick: () => void; disabled: boolean }) {
+/** `aria-label` explicite : la précision sous le titre aide l'œil, elle n'a rien
+ *  à faire dans le nom du bouton — qui reste « PDF », pas « PDF tous les temps ». */
+function Sortie({ label, quoi, onClick, disabled }: { label: string; quoi: string; onClick: () => void; disabled: boolean }) {
   return (
     <button
-      onClick={onClick} disabled={disabled}
-      className="rounded-xl py-3 text-[13px] font-bold transition hover:brightness-125 disabled:opacity-40"
+      onClick={onClick} disabled={disabled} aria-label={label}
+      className="flex flex-col items-center gap-0.5 rounded-xl px-1 py-2.5 transition hover:brightness-125 disabled:opacity-40"
       style={{ background: C.card2, border: bd, color: C.text }}
     >
-      {label}
+      <span className="text-[13px] font-bold">{label}</span>
+      <span className="text-[10px] font-semibold" style={{ color: C.muted }}>{quoi}</span>
     </button>
   )
 }

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { PlayBoard } from './PlayBoard'
+import { largeurTerrain, PlayBoard } from './PlayBoard'
 import { nouveauSchema } from '../../domain/plays'
 
 const demi = { id: 'x', ...nouveauSchema('c1', 'demi', true) }
@@ -30,5 +30,24 @@ describe('PlayBoard', () => {
     const s = { id: 'y', ...nouveauSchema('c1', 'complet', false) }
     const { container } = render(<PlayBoard schema={s} tempsIndex={0} />)
     expect(container.querySelector('svg')!.getAttribute('viewBox')).toBe('0 0 1500 2800')
+  })
+})
+
+describe('largeurTerrain — la borne du tableau', () => {
+  it('borne d’abord par la largeur disponible, dans les quatre cas', () => {
+    // La faute mesurée : en édition, 52 % de 812 px de haut valent 422 px. Sans
+    // `100%`, un téléphone de 375 px se voyait imposer un terrain plus large que
+    // sa colonne, qui se faisait couper à droite. Une hauteur d'écran ne dit rien
+    // de la largeur disponible ; il faut les deux, et le plafond en pixels.
+    for (const place of ['lecture', 'edition'] as const)
+      for (const terrain of ['demi', 'complet'] as const)
+        expect(largeurTerrain(terrain, place)).toMatch(/^min\(100%, /)
+  })
+
+  it('donne au terrain complet, deux fois plus profond, deux fois moins de largeur', () => {
+    expect(largeurTerrain('demi', 'edition')).toBe('min(100%, 52vh, 560px)')
+    expect(largeurTerrain('complet', 'edition')).toBe('min(100%, 26vh, 280px)')
+    expect(largeurTerrain('demi')).toBe('min(100%, 77vh, 840px)')
+    expect(largeurTerrain('complet')).toBe('min(100%, 38.5vh, 420px)')
   })
 })

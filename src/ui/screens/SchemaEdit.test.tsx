@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -46,6 +46,27 @@ const renderEdit = (id: string) =>
 const tableau = async () => await screen.findByRole('application')
 
 describe('SchemaEdit — l’éditeur du tableau tactique', () => {
+  it('range les outils par famille et dit lequel est actif', async () => {
+    // Huit pastilles de même poids ne disaient pas qu'elles font trois choses
+    // différentes. Les quatre traits s'excluent : ils forment leur propre segment,
+    // et chacun garde son nom accessible — c'est le mot qui cède la place au
+    // pictogramme, pas l'étiquette.
+    renderEdit('s1')
+    const tracer = await screen.findByRole('group', { name: 'Tracer' })
+    expect(within(tracer).getAllByRole('button').map((b) => b.getAttribute('aria-label')))
+      .toEqual(['Course', 'Écran', 'Passe', 'Dribble'])
+    expect(within(screen.getByRole('group', { name: 'Manipuler' })).getAllByRole('button')
+      .map((b) => b.getAttribute('aria-label'))).toEqual(['Déplacer', 'Gomme'])
+    expect(within(screen.getByRole('group', { name: 'Poser' })).getAllByRole('button')
+      .map((b) => b.getAttribute('aria-label'))).toEqual(['Ballon', 'Objets'])
+
+    // Un seul outil actif à la fois, et il le dit — sans quoi on trace sans savoir quoi.
+    expect(screen.getByRole('button', { name: 'Déplacer' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'Passe' }))
+    expect(screen.getByRole('button', { name: 'Passe' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Déplacer' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
   it('trace une flèche de course depuis un pion et l’enregistre', async () => {
     renderEdit('s1')
     await userEvent.click(await screen.findByRole('button', { name: 'Course' }))
@@ -80,7 +101,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     fireEvent.pointerDown(await tableau(), { clientX: 150, clientY: 126 })
     await waitFor(async () => expect((await getPlay('s1'))!.temps[0].fleches).toHaveLength(0))
 
-    await userEvent.click(screen.getByRole('button', { name: /annuler/i }))
+    await userEvent.click(screen.getByRole('button', { name: 'Annuler la dernière action' }))
     // Annuler restaure la base, pas seulement l'écran.
     await waitFor(async () => expect((await getPlay('s1'))!.temps[0].fleches).toHaveLength(1))
   })
@@ -90,7 +111,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     s.temps[0].fleches = [course]
     await savePlay(s)
     renderEdit('s1')
-    await userEvent.click(await screen.findByRole('button', { name: '+ Temps' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Ajouter un temps' }))
     await waitFor(async () => expect((await getPlay('s1'))!.temps).toHaveLength(2))
     const apres = (await getPlay('s1'))!
     expect(apres.temps[1].pions).toEqual(apres.temps[0].pions)
@@ -125,7 +146,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     await waitFor(async () => expect((await getPlay('s1'))!.terrain).toBe('complet'))
 
     // La pile est vidée : plus rien à annuler, donc rien à restaurer de travers.
-    expect(screen.getByRole('button', { name: /↩ Annuler/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Annuler la dernière action' })).toBeDisabled()
     expect((await getPlay('s1'))!.temps[0].pions[0].at.y).toBeCloseTo(0.4285, 3)
   })
 
@@ -146,7 +167,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Retirer' }))
     await waitFor(async () => expect((await getPlay('s2'))!.temps[0].pions).toHaveLength(5))
 
-    expect(screen.getByRole('button', { name: /↩ Annuler/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Annuler la dernière action' })).toBeDisabled()
     const apres = (await getPlay('s2'))!
     expect(apres.defense).toBe(false)
     expect(apres.temps[0].pions).toHaveLength(5)

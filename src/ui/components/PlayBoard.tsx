@@ -13,26 +13,33 @@ import { clamp01, CourtLines, D, RAYON, W } from './ShotCourt'
 const profondeur = (s: Schema) => (s.terrain === 'complet' ? D * 2 : D)
 
 /**
- * Largeur maximale d'un terrain affiché. C'est **la hauteur** qui commande : un
- * tableau tactique se lit d'un coup d'œil, et ce qui le limite est la place
- * verticale — au-delà, il déborde et l'écran se met à défiler. La largeur suit
- * le rapport du terrain, donc on la déduit de la hauteur qu'on s'autorise.
+ * Largeur maximale d'un terrain affiché. Trois bornes, et c'est la plus petite
+ * qui l'emporte :
  *
- * `72vh` pour un demi-terrain (rapport 15/14, donc ~77vh de large) : il occupe
- * l'essentiel de la hauteur, l'en-tête et les commandes tiennent dans le reste.
- * Le terrain complet est deux fois plus profond, donc deux fois moins large à
- * hauteur égale.
+ * — `100%`, la largeur réellement disponible. Elle est la seule à ne jamais
+ *   mentir : sans elle, un téléphone de 375 px se voyait imposer un terrain de
+ *   422 px (52 % de 812 px de haut), qui débordait de la colonne et se faisait
+ *   couper à droite. La hauteur d'écran ne dit rien de la largeur d'une colonne.
+ * — la place verticale qu'on s'autorise, exprimée en `vh` : un tableau tactique
+ *   se lit d'un coup d'œil, et ce qui le limite d'ordinaire est la hauteur.
+ *   Comme la largeur suit le rapport du terrain, on la déduit de cette hauteur.
+ *   Un demi-terrain fait 15/14, donc 77vh de haut valent ~77vh de large ; le
+ *   terrain complet est deux fois plus profond, donc deux fois moins large.
+ * — un plafond en pixels, pour les très grands écrans où suivre la hauteur
+ *   donnerait un terrain de plus d'un mètre : passé une certaine taille l'œil
+ *   balaie au lieu d'embrasser, et rien n'est gagné.
  *
- * Le plafond en pixels n'est là que pour les très grands écrans, où suivre la
- * hauteur donnerait un terrain de plus d'un mètre : passé une certaine taille
- * l'œil balaie au lieu d'embrasser, et rien n'est gagné.
+ * C'est bien la **largeur** qui est bornée, jamais la hauteur : la boîte du SVG
+ * doit garder exactement le rapport du viewBox, sinon il se centre dans des
+ * marges et `versSvg` convertit les gestes de travers.
  */
 export const largeurTerrain = (terrain: Schema['terrain'], place: 'lecture' | 'edition' = 'lecture') => {
   // L'édition a plus à loger sous le terrain — barre d'outils, bande des temps —
   // que la lecture, qui n'a qu'un rang de commandes. D'où deux réserves.
   const vh = place === 'edition' ? 52 : 77
   const max = place === 'edition' ? 560 : 840
-  return terrain === 'complet' ? `min(${vh / 2}vh, ${max / 2}px)` : `min(${vh}vh, ${max}px)`
+  const part = terrain === 'complet' ? 2 : 1
+  return `min(100%, ${vh / part}vh, ${max / part}px)`
 }
 
 /** Coordonnées normalisées → unités du viewBox (des centimètres). */
