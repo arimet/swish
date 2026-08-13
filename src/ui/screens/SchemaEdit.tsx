@@ -129,9 +129,9 @@ const TRACER: { cle: Trait; libelle: string }[] = [
   { cle: 'passe', libelle: 'Passe' },
   { cle: 'dribble', libelle: 'Dribble' },
 ]
-const POSER: { cle: Outil; libelle: string; icone: string }[] = [
-  { cle: 'ballon', libelle: 'Ballon', icone: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M3.2 12h17.6M12 3.2a14 14 0 0 0 0 17.6M12 3.2a14 14 0 0 1 0 17.6' },
-  { cle: 'objet', libelle: 'Objets', icone: 'M12 3.5 20.5 20.5H3.5zM8 14h8' },
+const POSER: { cle: Outil; libelle: string }[] = [
+  { cle: 'ballon', libelle: 'Ballon' },
+  { cle: 'objet', libelle: 'Objets' },
 ]
 const SORTES: { cle: ObjetPose['sorte']; libelle: string }[] = [
   { cle: 'plot', libelle: 'Plot' },
@@ -379,7 +379,7 @@ export function SchemaEdit() {
             <Famille titre="Poser">
               {POSER.map((o) => (
                 <OutilBouton key={o.cle} libelle={o.libelle} actif={outil === o.cle} onClick={() => setOutil(o.cle)}>
-                  <Ic d={o.icone} className="h-[19px] w-[19px]" />
+                  <PoserDessine quoi={o.cle} actif={outil === o.cle} />
                 </OutilBouton>
               ))}
             </Famille>
@@ -533,6 +533,20 @@ function OutilBouton({ libelle, actif, onClick, children }: { libelle: string; a
     >
       {children}
     </button>
+  )
+}
+
+/** Ce que le bouton pose, dessiné comme le tableau le dessine : le ballon est le
+ *  disque ambre qu'on voit sur le terrain, le plot son triangle ambre. Un contour
+ *  générique se lisait « globe » ; ici le bouton montre littéralement son effet. */
+function PoserDessine({ quoi, actif }: { quoi: Outil; actif: boolean }) {
+  const teinte = actif ? '#fff' : C.amber
+  return (
+    <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]">
+      {quoi === 'ballon'
+        ? <circle cx={12} cy={12} r={7} fill={teinte} />
+        : <path d="M12 4.5 20 19.5H4z" fill={teinte} />}
+    </svg>
   )
 }
 
