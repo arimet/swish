@@ -5,7 +5,7 @@
  * un coach au bord du terrain n'a pas une main pour ça.
  */
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
 import {
   PANIER, distanceAuSegment, reduireTrace, tempsSuivant, versTerrain,
   type Camp, type Fleche, type ObjetPose, type Pion, type Point, type Poste, type Schema, type Temps, type Terrain, type Trait,
@@ -164,6 +164,12 @@ export function SchemaEdit() {
   }, [id])
 
   if (!id) return null
+  // L'éditeur écrit de bout en bout : poser un pion, tirer une flèche, ajouter un
+  // temps, tout passe par la garde. Sans le droit, il ne resterait à l'écran qu'un
+  // tableau qui réclame un code à chaque geste — on renvoie donc à la consultation,
+  // qui est libre et montre la même combinaison. Les gardes ci-dessous ne bougent
+  // pas : ce renvoi est un confort d'affichage, pas la protection.
+  if (!can('manage')) return <Navigate to={`/schemas/${id}`} replace />
   if (schema === undefined) return <div className="p-4 sm:p-6"><div className="h-96 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
   if (schema === null) return (
     <div className="p-4 sm:p-6">
@@ -314,9 +320,9 @@ export function SchemaEdit() {
     return { ...s, temps: s.temps.filter((_, i) => i !== index) }
   }, false)
 
-  // Garder d'abord ici aussi : les champs ne s'ouvrent à la frappe qu'une fois le
-  // droit acquis, sinon le nom refusé resterait affiché à la place de l'enregistré.
-  const demanderCode = () => guard('manage', () => {})
+  // Les champs n'ont plus à réclamer un code à la frappe : on n'entre dans
+  // l'éditeur qu'avec le droit (cf. le renvoi ci-dessus). L'enregistrement reste
+  // gardé — `modifier` est la seule porte vers la base.
   const enregistrerNom = () => { if (nom.trim() && nom !== vivant.nom) modifier((s) => ({ ...s, nom: nom.trim() }), false) }
   const enregistrerNote = () => { if ((note.trim() || undefined) !== vivant.note) modifier((s) => ({ ...s, note: note.trim() || undefined }), false) }
 
@@ -337,7 +343,7 @@ export function SchemaEdit() {
         <Link to="/schemas" aria-label="Retour aux schémas" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
         <input
           aria-label="Nom du schéma" value={nom} onChange={(e) => setNom(e.target.value)}
-          onFocus={demanderCode} readOnly={!can('manage')} onBlur={enregistrerNom}
+          onBlur={enregistrerNom}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           style={{ ...champ, flex: '1 1 180px', minWidth: 0, fontWeight: 800 }}
         />
@@ -491,7 +497,7 @@ export function SchemaEdit() {
             <label htmlFor="schema-note" className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Note</label>
             <input
               id="schema-note" value={note} onChange={(e) => setNote(e.target.value)}
-              onFocus={demanderCode} readOnly={!can('manage')} onBlur={enregistrerNote}
+              onBlur={enregistrerNote}
               placeholder="Consigne, variante, rappel…" style={{ ...champ, width: '100%' }}
             />
             <p className="mt-4 text-[11px]" style={{ color: C.faint }}>Ces schémas restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>

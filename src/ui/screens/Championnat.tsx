@@ -108,13 +108,12 @@ export function Championnat() {
     await saveResult({ ...r, ...patch })
     rafraichir()
   })
-  // Garder d'abord, muter ensuite : les champs de score ne s'ouvrent à la frappe
-  // qu'une fois le droit acquis. Garder à la validation ne suffirait pas — ils ne
-  // sont pas contrôlés, React ne réinitialise pas un `defaultValue`, et un code
-  // refusé laisserait à l'écran une valeur que la base n'a pas, sous un classement
-  // qui continue de compter l'ancienne.
+  // Corriger un score est administratif : sans le droit, le résultat s'affiche en
+  // toutes lettres plutôt que dans un champ. Un champ ouvert à la frappe puis
+  // refusé à l'envoi laisserait à l'écran une valeur que la base n'a pas (les
+  // champs ne sont pas contrôlés, React ne réinitialise pas un `defaultValue`),
+  // sous un classement qui continue de compter l'ancienne.
   const peutCorriger = can('manage')
-  const demanderCode = () => guard('manage', () => {})
   const supprimer = (id: string) => guard('manage', async () => { await deleteResult(id); rafraichir() })
 
   return (
@@ -161,9 +160,11 @@ export function Championnat() {
         ))}
       </div>
 
-      {/* 2. La saisie, réservée à l'admin, repliée derrière son bouton. Ouvrir le
-          formulaire est déjà une écriture : la garde est ici, pas seulement à
-          l'enregistrement — un visiteur voit la demande de code, pas les champs. */}
+      {/* 2. La saisie, réservée à l'admin, repliée derrière son bouton — et le
+          bloc entier disparaît pour qui n'a pas le droit d'écrire : une carte
+          vide, sans bouton, ne dirait rien. La garde reste à l'ouverture du
+          formulaire comme à l'enregistrement. */}
+      {peutCorriger && (
       <section className="mt-8 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         {!saisieOuverte ? (
           <button onClick={() => guard('manage', () => setSaisieOuverte(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
@@ -199,8 +200,10 @@ export function Championnat() {
         </>
         )}
       </section>
+      )}
 
-      {/* 3. La liste des résultats saisis, corrigeables et supprimables. */}
+      {/* 3. La liste des résultats saisis. Elle se lit par tout le monde ; la
+          correction et la suppression restent à l'administration. */}
       <section className="mt-6 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Résultats saisis</p>
         {results.length === 0 ? (
@@ -221,10 +224,14 @@ export function Championnat() {
                     <TeamBadge id={r.homeId} name={teamsById[r.homeId]?.name ?? '—'} size="h-6 w-6 text-[8px]" />
                     <span className="truncate text-sm font-semibold">{teamsById[r.homeId]?.name ?? '—'}</span>
                   </span>
+                  {!peutCorriger ? (
+                    <span className="nums flex items-center gap-2 text-sm font-black tabular-nums">
+                      {r.homeScore}<span className="text-xs font-bold" style={{ color: C.faint }}>–</span>{r.awayScore}
+                    </span>
+                  ) : (
                   <span className="flex items-center gap-2">
                     <label htmlFor={`score-home-${r.id}`} className="sr-only">Score {teamsById[r.homeId]?.name ?? 'équipe reçue'}</label>
                     <input id={`score-home-${r.id}`} type="number" min={0} defaultValue={r.homeScore} style={{ ...field, width: 64, height: 36 }} className="nums text-center text-sm"
-                      readOnly={!peutCorriger} onFocus={demanderCode}
                       onBlur={(e) => {
                         // Un champ vidé n'est pas une saisie de 0 : c'est le premier geste de qui
                         // corrige une faute de frappe. `Number('')` vaut 0, pas NaN — sans ce garde
@@ -236,13 +243,13 @@ export function Championnat() {
                     <span className="text-xs font-bold" style={{ color: C.faint }}>–</span>
                     <label htmlFor={`score-away-${r.id}`} className="sr-only">Score {teamsById[r.awayId]?.name ?? 'équipe visiteuse'}</label>
                     <input id={`score-away-${r.id}`} type="number" min={0} defaultValue={r.awayScore} style={{ ...field, width: 64, height: 36 }} className="nums text-center text-sm"
-                      readOnly={!peutCorriger} onFocus={demanderCode}
                       onBlur={(e) => {
                         if (e.target.value === '') { e.target.value = String(r.awayScore); return }
                         const n = Number(e.target.value)
                         if (!Number.isNaN(n) && n >= 0 && n !== r.awayScore) majScore(r, { awayScore: n })
                       }} />
                   </span>
+                  )}
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate text-sm font-semibold">{teamsById[r.awayId]?.name ?? '—'}</span>
                     <TeamBadge id={r.awayId} name={teamsById[r.awayId]?.name ?? '—'} size="h-6 w-6 text-[8px]" />
@@ -250,7 +257,7 @@ export function Championnat() {
                 </div>
                 <div className="mt-1 flex items-center gap-2">
                   <span className="min-w-0 truncate text-[11px] font-semibold" style={{ color: C.faint }}>{r.championshipLabel}</span>
-                  <button onClick={() => supprimer(r.id)} aria-label="Supprimer ce résultat" className="ml-auto shrink-0 rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.pink }}>✕</button>
+                  {peutCorriger && <button onClick={() => supprimer(r.id)} aria-label="Supprimer ce résultat" className="ml-auto shrink-0 rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.pink }}>✕</button>}
                 </div>
               </li>
             ))}

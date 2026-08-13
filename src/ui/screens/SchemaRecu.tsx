@@ -7,6 +7,12 @@
  *
  * Lire est libre. Seul « Ajouter à ma bibliothèque » écrit, et passe donc par le
  * code administrateur.
+ *
+ * C'est le seul bouton d'écriture du dépôt qui reste visible sans le droit, et
+ * c'est délibéré : cet écran vit hors de la coquille, il n'a donc pas le menu
+ * d'accès sous la main. Le masquer condamnerait l'import — un coach qui reçoit
+ * le lien sur un téléphone où sa session est neuve n'aurait plus aucune porte
+ * pour saisir son code. Ici, le bouton EST la porte.
  */
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'

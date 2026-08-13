@@ -123,16 +123,16 @@ describe('Championnat', () => {
 })
 
 describe('Championnat — droits', () => {
-  it('saisir un résultat est administratif : la table de marque se voit demander le code admin', async () => {
-    // Le formulaire étant replié, la garde se déclenche dès son ouverture : la table
-    // de marque ne remplit pas des champs pour se voir refuser à l'envoi, elle voit
-    // la demande de code et les champs restent fermés.
+  it('saisir un résultat est administratif : la table de marque ne voit ni bouton ni champs, et rien n’est enregistré', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderChamp()
-    await userEvent.click(await screen.findByRole('button', { name: /saisir un résultat/i }))
+    await screen.findByText(/aucun résultat saisi/i)
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    // Le bloc de saisie entier disparaît : une carte vide, sans bouton, ne dirait
+    // rien — et plus rien ne réclame de code au clic.
+    expect(screen.queryByRole('button', { name: /saisir un résultat/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Équipe reçue')).not.toBeInTheDocument()
+    // Ce qui compte : rien n'est écrit en base.
     expect(await listResults()).toHaveLength(0)
   })
 
@@ -144,20 +144,20 @@ describe('Championnat — droits', () => {
     expect(screen.getByLabelText('Équipe reçue')).toBeInTheDocument()
   })
 
-  it('ne laisse pas à l’écran un score corrigé que le refus du code n’a pas enregistré', async () => {
-    // Le champ n'est pas contrôlé : React ne le réinitialise pas tout seul. Si la
-    // correction pouvait être frappée avant la demande de code, un refus laisserait
-    // à l'écran une valeur que la base n'a pas — et le classement juste au-dessus
-    // continuerait de compter l'ancienne.
+  it('ne laisse pas à l’écran un score corrigé que le droit n’autorise pas : la table de marque n’a pas de champ', async () => {
+    // Le champ n'est pas contrôlé : React ne le réinitialise pas tout seul. S'il
+    // s'ouvrait à la frappe sans le droit, un refus laisserait à l'écran une valeur
+    // que la base n'a pas — et le classement juste au-dessus continuerait de compter
+    // l'ancienne. Le score s'affiche donc en toutes lettres, sans champ à frapper.
     sessionStorage.setItem(ROLE_KEY, 'marque')
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     renderChamp()
-    const scoreHome = await screen.findByLabelText(/score verdun/i)
-    await userEvent.type(scoreHome, '99')
-    await userEvent.tab()
-    await userEvent.click(await screen.findByRole('button', { name: 'Annuler' }))
+    await screen.findByRole('table')
 
-    expect(scoreHome).toHaveValue(70)
+    expect(screen.queryByLabelText(/score verdun/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /supprimer ce résultat/i })).not.toBeInTheDocument()
+    // Le résultat reste lisible dans sa ligne, et la base intacte.
+    expect(within(screen.getByRole('listitem')).getByText(/70/)).toBeInTheDocument()
     expect((await listResults())[0].homeScore).toBe(70)
   })
 

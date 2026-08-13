@@ -60,13 +60,17 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
     expect(screen.queryByText('Combinaison de Metz')).not.toBeInTheDocument()
   })
 
-  it('créer un schéma est administratif', async () => {
+  it('créer un schéma est administratif : la table de marque ne voit aucun bouton de création', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderList()
-    await userEvent.click(await screen.findByRole('button', { name: /Nouveau schéma/ }))
+    await screen.findByText(/la bibliothèque est vide/i)
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
-    // Garder d'abord, écrire ensuite : rien en base, et l'éditeur reste fermé.
+    // Ni dans la barre d'action, ni dans l'état vide, qui lui dit plutôt ce qu'il
+    // attend — au lieu de l'inviter à dessiner ce qu'elle n'a pas le droit d'écrire.
+    expect(screen.queryByRole('button', { name: /Nouveau schéma/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /dessiner ma première combinaison/i })).not.toBeInTheDocument()
+    expect(screen.getByText(/apparaîtront ici/i)).toBeInTheDocument()
+    // Ce qui compte : rien en base, et l'éditeur reste fermé.
     expect(await listPlays('ta')).toHaveLength(0)
     expect(screen.queryByText('éditeur')).not.toBeInTheDocument()
   })
@@ -91,13 +95,17 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
     expect(noms).toEqual(['Pick and roll haut', 'Pick and roll haut (copie)'])
   })
 
-  it('dupliquer est administratif : la table de marque se voit demander le code admin', async () => {
+  it('dupliquer et supprimer sont administratifs : la table de marque n’a que « Jouer », et rien n’est écrit', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     await savePlay(schema('s1', 'Pick and roll haut'))
     renderList()
-    await userEvent.click(within((await screen.findAllByRole('article'))[0]).getByRole('button', { name: 'Dupliquer' }))
+    const carte = (await screen.findAllByRole('article'))[0]
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(within(carte).queryByRole('button', { name: 'Dupliquer' })).not.toBeInTheDocument()
+    expect(within(carte).queryByRole('button', { name: 'Supprimer' })).not.toBeInTheDocument()
+    // Jouer reste, c'est ce qu'on vient chercher au bord du terrain.
+    expect(within(carte).getByRole('link', { name: /jouer/i })).toBeInTheDocument()
+    // Ce qui compte : la bibliothèque n'a pas bougé.
     expect(await listPlays('ta')).toHaveLength(1)
   })
 
@@ -204,15 +212,17 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
       .toBeInTheDocument()
   })
 
-  it('changer le dossier est administratif : la table de marque se voit demander le code', async () => {
+  it('changer le dossier est administratif : la table de marque le lit sans pouvoir le changer', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     await savePlay(schema('s1', 'Pick and roll haut', { dossier: 'Attaque placée' }))
     renderList()
+    const carte = (await screen.findAllByRole('article'))[0]
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Dossier de « Pick and roll haut »' }))
-
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
-    // Garder d'abord, muter ensuite : ni saisie ouverte, ni écriture en base.
+    // Le rangement reste lisible — c'est un classement, pas une action — mais il
+    // n'y a plus de bouton à presser pour se voir réclamer un code.
+    expect(within(carte).getByText('Attaque placée')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Dossier de « Pick and roll haut »' })).not.toBeInTheDocument()
+    // Ni saisie ouverte, ni écriture en base.
     expect(screen.queryByRole('combobox', { name: 'Dossier' })).not.toBeInTheDocument()
     expect((await listPlays('ta'))[0].dossier).toBe('Attaque placée')
   })

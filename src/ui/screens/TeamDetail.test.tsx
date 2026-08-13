@@ -88,15 +88,19 @@ describe('TeamDetail — fiche signalétique', () => {
 })
 
 describe('TeamDetail — droits', () => {
-  it('modifier l’effectif est administratif : la table de marque se voit demander le code admin', async () => {
-    // Le formulaire étant replié, la garde se déclenche dès son ouverture : la table
-    // de marque voit la demande de code, pas les champs.
+  it('modifier l’effectif est administratif : la table de marque n’en voit aucun bouton, et rien n’est écrit', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderTeam()
-    await userEvent.click(await screen.findByRole('button', { name: /ajouter un joueur/i }))
+    await screen.findByText(/MARTIN/)
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    // Elle consulte la fiche entière — bilan, marqueurs, effectif — sans qu'aucune
+    // action d'écriture lui soit proposée, donc sans demande de code au clic.
+    expect(screen.queryByRole('button', { name: /ajouter un joueur/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^supprimer$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /modifier MARTIN/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /retirer/i })).not.toBeInTheDocument()
     expect(screen.queryByPlaceholderText('N°')).not.toBeInTheDocument()
+    // Ce qui compte : l'effectif n'a pas bougé.
     expect(await listPlayers('ta')).toHaveLength(1) // MARTIN seul, DUPONT n'a pas été ajouté
   })
 
@@ -108,17 +112,16 @@ describe('TeamDetail — droits', () => {
     expect(await screen.findByPlaceholderText('N°')).toBeInTheDocument()
   })
 
-  it('ne laisse pas à l’écran un entraîneur que le refus du code n’a pas enregistré', async () => {
-    // Même exigence que sur le champ de score du championnat : après un refus,
-    // ce que l'écran affiche et ce que contient la base disent la même chose.
+  it('ne laisse pas frapper un entraîneur que le droit n’autorise pas à enregistrer', async () => {
+    // Même exigence que sur le champ de score du championnat : ce que l'écran
+    // affiche et ce que contient la base doivent dire la même chose. Le champ ne
+    // s'affiche donc pas du tout sans le droit, plutôt que de s'ouvrir à la frappe
+    // pour se voir refuser à l'envoi.
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderTeam()
-    const coach = await screen.findByLabelText(/entraîneur/i)
-    await userEvent.type(coach, 'DURAND')
-    await userEvent.tab()
-    await userEvent.click(await screen.findByRole('button', { name: 'Annuler' }))
+    await screen.findByText(/MARTIN/)
 
-    expect(coach).toHaveValue('')
+    expect(screen.queryByLabelText(/entraîneur/i)).not.toBeInTheDocument()
     expect((await getTeam('ta'))?.coach).toBeUndefined()
   })
 })

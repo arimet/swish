@@ -3,8 +3,10 @@
  * premier temps : un coach reconnaît sa combinaison à sa forme, pas à son nom.
  * Vingt combinaisons, c'est le moment où l'on range : une barre de dossiers, une
  * recherche, et le plus récemment modifié en tête.
- * La lecture est libre — chercher et filtrer ne demandent aucun code ; créer,
- * dupliquer, ranger et supprimer passent par le code administrateur.
+ * La lecture est libre — chercher, filtrer et jouer ne demandent aucun code ;
+ * créer, dupliquer, ranger et supprimer sont administratifs, et leurs boutons
+ * ne se rendent que pour qui en a le droit. Les gardes restent en place : un
+ * bouton masqué est un confort d'affichage, pas une protection.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -35,7 +37,8 @@ const DATALIST = 'dossiers-connus'
 
 export function SchemaList() {
   const { clubId } = useClub()
-  const { guard } = useAuth()
+  const { can, guard } = useAuth()
+  const gere = can('manage')
   const navigate = useNavigate()
   const [schemas, setSchemas] = useState<Schema[] | null>(null)
   // Le schéma dont on a demandé la suppression : le droit est vérifié à
@@ -103,11 +106,11 @@ export function SchemaList() {
   return (
     <div className="p-6">
       <PageTitle
-        action={
+        action={gere && (
           <button onClick={creer} className="rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
             + Nouveau schéma
           </button>
-        }
+        )}
       />
 
       {schemas === null ? (
@@ -115,18 +118,29 @@ export function SchemaList() {
       ) : schemas.length === 0 ? (
         // L'état vide dit ce qu'on y range et ce qu'on y gagne, pas seulement
         // qu'il n'y a rien : « aucun schéma » n'a jamais donné envie d'en faire un.
+        // Encore faut-il pouvoir en faire un : à qui n'a pas le droit d'écrire,
+        // l'invitation à dessiner ne dirait rien qu'un refus. Il lit alors qui
+        // remplit cette bibliothèque, et attend qu'elle le soit.
         <div className="rounded-2xl px-6 py-14 text-center" style={{ border: `1px dashed ${C.border}` }}>
           <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl" style={{ background: C.accentBg, color: C.accent }}>
             <Ic d={ICON.matches} className="h-7 w-7" />
           </span>
           <p className="text-base font-extrabold">La bibliothèque est vide.</p>
-          <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
-            Posez vos cinq joueurs, tirez leurs trajectoires au doigt, empilez les temps : la combinaison
-            se rejoue ensuite au temps-mort, animée, sur le téléphone.
-          </p>
-          <button onClick={creer} className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
-            Dessiner ma première combinaison →
-          </button>
+          {gere ? (
+            <>
+              <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
+                Posez vos cinq joueurs, tirez leurs trajectoires au doigt, empilez les temps : la combinaison
+                se rejoue ensuite au temps-mort, animée, sur le téléphone.
+              </p>
+              <button onClick={creer} className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+                Dessiner ma première combinaison →
+              </button>
+            </>
+          ) : (
+            <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
+              Les combinaisons dessinées par le coach apparaîtront ici, à revoir avant l’entraînement.
+            </p>
+          )}
         </div>
       ) : (
         <>
@@ -190,8 +204,15 @@ export function SchemaList() {
                     {s.note && <p className="mt-1 truncate text-[11px]" style={{ color: C.faint }}>{s.note}</p>}
                   </Link>
 
+                  {/* Le dossier reste lisible par tout le monde — c'est un
+                      classement, pas une action — mais seul qui peut ranger
+                      obtient un bouton pour le changer. */}
                   <div className="mt-2 text-[11px] font-bold">
-                    {enRangement?.id === s.id ? (
+                    {!gere ? (
+                      <span className="inline-block rounded-md px-1.5 py-0.5" style={{ background: C.card2, color: s.dossier ? C.accent : C.faint }}>
+                        {s.dossier || 'Sans dossier'}
+                      </span>
+                    ) : enRangement?.id === s.id ? (
                       <form
                         className="flex items-center gap-1.5"
                         onSubmit={(e) => { e.preventDefault(); ranger(s) }}
@@ -218,7 +239,8 @@ export function SchemaList() {
                       bord du terrain, sans passer par la fiche — occupe la ligne et
                       porte l'accent ; dupliquer et supprimer se retirent en carrés,
                       la destruction seule en rose bordé. Leur nom accessible reste
-                      entier : c'est le mot qui s'efface, pas l'étiquette. */}
+                      entier : c'est le mot qui s'efface, pas l'étiquette. Les deux
+                      carrés écrivent : sans le droit, « Jouer » occupe seul la ligne. */}
                   <div className="mt-2.5 flex items-center gap-2 border-t pt-2.5" style={{ borderColor: C.border }}>
                     <Link
                       to={`/schemas/${s.id}/lecteur`}
@@ -227,20 +249,24 @@ export function SchemaList() {
                     >
                       ▶ Jouer
                     </Link>
-                    <button
-                      onClick={() => dupliquer(s)} aria-label="Dupliquer" title="Dupliquer"
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-                      style={{ background: C.card2, border: bd, color: C.muted }}
-                    >
-                      <Ic d={ICONE_COPIE} className="h-[17px] w-[17px]" />
-                    </button>
-                    <button
-                      onClick={() => guard('manage', () => setASupprimer(s))} aria-label="Supprimer" title="Supprimer"
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-                      style={{ border: `1px solid ${C.pink}55`, color: C.pink }}
-                    >
-                      <Ic d={ICONE_POUBELLE} className="h-[17px] w-[17px]" />
-                    </button>
+                    {gere && (
+                      <>
+                        <button
+                          onClick={() => dupliquer(s)} aria-label="Dupliquer" title="Dupliquer"
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+                          style={{ background: C.card2, border: bd, color: C.muted }}
+                        >
+                          <Ic d={ICONE_COPIE} className="h-[17px] w-[17px]" />
+                        </button>
+                        <button
+                          onClick={() => guard('manage', () => setASupprimer(s))} aria-label="Supprimer" title="Supprimer"
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+                          style={{ border: `1px solid ${C.pink}55`, color: C.pink }}
+                        >
+                          <Ic d={ICONE_POUBELLE} className="h-[17px] w-[17px]" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </article>
               ))}

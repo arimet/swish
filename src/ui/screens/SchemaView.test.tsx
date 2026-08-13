@@ -63,10 +63,21 @@ describe('SchemaView — la consultation d’un schéma', () => {
     expect(screen.getByText('Temps 2 / 2')).toBeInTheDocument()
   })
 
-  it('modifier demande le code administrateur', async () => {
+  it('« Modifier » est réservé à l’administration : un visiteur ne le voit pas et n’atteint pas l’éditeur', async () => {
+    renderView()
+    await screen.findByRole('heading', { name: /corner pour le 4/i })
+
+    expect(screen.queryByRole('button', { name: 'Modifier' })).not.toBeInTheDocument()
+    expect(screen.queryByText('éditeur')).not.toBeInTheDocument()
+    // Ce qui reste libre le reste : jouer et partager ne modifient rien.
+    expect(screen.getByRole('link', { name: /jouer/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Partager' })).toBeInTheDocument()
+  })
+
+  it('l’administrateur, lui, atteint l’éditeur depuis « Modifier »', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'admin')
     renderView()
     await userEvent.click(await screen.findByRole('button', { name: 'Modifier' }))
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
-    expect(screen.queryByText('éditeur')).not.toBeInTheDocument()
+    expect(await screen.findByText('éditeur')).toBeInTheDocument()
   })
 })

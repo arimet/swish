@@ -25,6 +25,9 @@ export function TeamDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { can, guard } = useAuth()
+  // Tenir l'effectif relève du club : rien de ce qui l'écrit ne s'affiche à qui
+  // ne le gère pas. La fiche, elle, se lit entièrement.
+  const gere = can('manage')
   const { clubId, clear } = useClub()
   const [askDelete, setAskDelete] = useState(false)
   const [team, setTeam] = useState<Team | null | undefined>(undefined)
@@ -59,10 +62,6 @@ export function TeamDetail() {
     if (coach === (team.coach ?? '')) return
     guard('manage', () => saveTeam({ ...team, coach: coach.trim() || undefined }).then(() => setTeam({ ...team, coach: coach.trim() || undefined })))
   }
-  // Garder d'abord, muter ensuite : le champ ne s'ouvre à la frappe qu'une fois le
-  // droit acquis. Garder au seul enregistrement laisserait le nom refusé affiché
-  // alors que la base a gardé l'ancien entraîneur.
-  const demanderCode = () => guard('manage', () => {})
   const addPlayer = () => guard('manage', async () => {
     if (!num || !ln.trim()) return
     await savePlayer({
@@ -107,7 +106,7 @@ export function TeamDetail() {
         {/* Comme sur le résumé et la fiche de rencontre : le droit est vérifié à l'ouverture
             du dialogue, pas redérivé ensuite. Assumé — se verrouiller entre l'ouverture et la
             confirmation n'arrive qu'en rendant l'appareil en pleine action. */}
-        <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.pink}55`, color: C.pink }}>Supprimer</button>
+        {gere && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.pink}55`, color: C.pink }}>Supprimer</button>}
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
         title="Supprimer l'équipe ?" message={`« ${team.name} » et tous ses joueurs seront supprimés. Cette action est définitive.`} confirmLabel="Supprimer" danger />
@@ -170,10 +169,15 @@ export function TeamDetail() {
 
         <div className="space-y-6">
           <Panel title="Effectif">
-            <label htmlFor="coach" className="mb-1.5 block text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Entraîneur</label>
-            <input id="coach" value={coach} onChange={(e) => setCoach(e.target.value)} onBlur={saveCoach} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-              readOnly={!can('manage')} onFocus={demanderCode}
-              placeholder="Nom de l'entraîneur" style={{ ...field, width: '100%' }} className="mb-4" />
+            {/* Le champ de l'entraîneur écrit : sans le droit il ne s'affiche pas.
+                Le nom reste lisible en tête de fiche, à côté du nombre de joueurs. */}
+            {gere && (
+              <>
+                <label htmlFor="coach" className="mb-1.5 block text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Entraîneur</label>
+                <input id="coach" value={coach} onChange={(e) => setCoach(e.target.value)} onBlur={saveCoach} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                  placeholder="Nom de l'entraîneur" style={{ ...field, width: '100%' }} className="mb-4" />
+              </>
+            )}
             <ul className="mb-4 space-y-1.5">
               {[...players].sort((a, b) => a.number - b.number).map((p) => (
                 <li key={p.id} className="space-y-2 rounded-xl px-3 py-2" style={{ background: C.panel }}>
@@ -187,16 +191,22 @@ export function TeamDetail() {
                         <span className="font-semibold">{p.lastName}</span> <span style={{ color: C.muted }}>{p.firstName}</span>
                       </span>
                     </Link>
-                    {/* Le nom du joueur reste dans le nom accessible du bouton — sans lui,
+                    {/* Modifier et retirer écrivent : la ligne se réduit au joueur et à
+                        son lien de fiche pour qui ne gère pas l'effectif.
+                        Le nom du joueur reste dans le nom accessible du bouton — sans lui,
                         dix boutons « modifier » identiques dans la même liste — mais il
                         sort du libellé visible, qui chevauchait le nom sur un téléphone. */}
-                    <button aria-label={editingId === p.id ? `fermer ${p.lastName}` : `modifier ${p.lastName}`}
-                      onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.muted }}>
-                      {editingId === p.id ? 'fermer' : 'modifier'}
-                    </button>
-                    {/* Le retrait reste hors de la zone dépliée : c'est une action destructrice,
-                        elle ne doit pas se retrouver mêlée aux champs d'édition. */}
-                    <button onClick={() => removePlayer(p.id)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.pink }}>retirer</button>
+                    {gere && (
+                      <>
+                        <button aria-label={editingId === p.id ? `fermer ${p.lastName}` : `modifier ${p.lastName}`}
+                          onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.muted }}>
+                          {editingId === p.id ? 'fermer' : 'modifier'}
+                        </button>
+                        {/* Le retrait reste hors de la zone dépliée : c'est une action destructrice,
+                            elle ne doit pas se retrouver mêlée aux champs d'édition. */}
+                        <button onClick={() => removePlayer(p.id)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.pink }}>retirer</button>
+                      </>
+                    )}
                   </div>
                   {editingId === p.id && (
                     <div className="grid grid-cols-2 gap-2 pt-1">
@@ -213,12 +223,12 @@ export function TeamDetail() {
                   )}
                 </li>
               ))}
-              {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>Aucun joueur. Ajoutez-en ci-dessous.</li>}
+              {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>{gere ? 'Aucun joueur. Ajoutez-en ci-dessous.' : 'Aucun joueur dans l’effectif.'}</li>}
             </ul>
-            {/* Ouvrir le formulaire est déjà une écriture : la garde est ici, pas
-                seulement à l'enregistrement — un visiteur voit la demande de code,
-                pas les champs. */}
-            {!ajoutOuvert ? (
+            {/* Recruter est administratif : le bouton ne s'affiche pas sans le
+                droit. Ouvrir le formulaire est déjà une écriture, la garde reste
+                donc ici et pas seulement à l'enregistrement. */}
+            {!gere ? null : !ajoutOuvert ? (
               <button onClick={() => guard('manage', () => setAjoutOuvert(true))} className="w-full rounded-xl py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
                 + Ajouter un joueur
               </button>

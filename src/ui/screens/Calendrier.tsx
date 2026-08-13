@@ -28,7 +28,9 @@ type CalItem = { key: string; time: string } & ({ kind: 'match'; match: Match } 
 
 export function Calendrier() {
   const { clubId } = useClub()
-  const { guard } = useAuth()
+  const { can, guard } = useAuth()
+  // Planifier relève du club : ce qui l'écrit ne s'affiche que pour qui le gère.
+  const gere = can('manage')
   const [matches, setMatches] = useState<Match[] | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [trainings, setTrainings] = useState<Training[] | null>(null)
@@ -125,7 +127,7 @@ export function Calendrier() {
           ne se trouve jamais. Un seul bouton plein — la rencontre, ce qu'on planifie
           le plus souvent ; la séance reste en second, marquée par son bleu. */}
       <PageTitle
-        action={
+        action={gere && (
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => guard('manage', () => setSaisieOuverte(true))}
               className="rounded-xl px-4 py-2.5 text-sm font-bold"
@@ -136,7 +138,7 @@ export function Calendrier() {
               + Nouvelle rencontre
             </Link>
           </div>
-        }
+        )}
       />
 
       {saisieOuverte && (
@@ -160,9 +162,15 @@ export function Calendrier() {
       {!nos || !nosEntrainements ? (
         <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
       ) : groups.length === 0 ? (
+        // L'invitation à planifier ne s'adresse qu'à qui le peut ; les autres
+        // lisent simplement qu'il n'y a rien de prévu.
         <div className="rounded-2xl py-16 text-center" style={{ border: `1px dashed ${C.border}` }}>
           <p className="text-sm font-bold">La saison est encore vierge.</p>
-          <p className="mt-1 text-sm" style={{ color: C.muted }}>Planifiez une rencontre ou une séance : elles se rangeront ici, par date.</p>
+          <p className="mt-1 text-sm" style={{ color: C.muted }}>
+            {gere
+              ? 'Planifiez une rencontre ou une séance : elles se rangeront ici, par date.'
+              : 'Les rencontres et les séances apparaîtront ici, par date, dès qu’elles seront planifiées.'}
+          </p>
         </div>
       ) : (
         // Deux dates par ligne dès qu'on a la largeur : une saison fait une colonne
@@ -215,8 +223,8 @@ export function Calendrier() {
                       de laisser une demi-colonne vide à sa droite. */}
                   <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
                     {items.map((it) => it.kind === 'match'
-                      ? <CarteRencontre key={it.key} m={it.match} teams={teams} />
-                      : <TrainingCard key={it.key} t={it.training} schemas={schemas}
+                      ? <CarteRencontre key={it.key} m={it.match} teams={teams} gere={gere} />
+                      : <TrainingCard key={it.key} t={it.training} schemas={schemas} gere={gere}
                           onToggleSchema={(playId) => basculerSchema(it.training.id, playId)}
                           onDelete={() => supprimer(it.training.id)} />)}
                   </div>
@@ -240,11 +248,13 @@ export function Calendrier() {
  *  ce qui manquait, c'est un chemin depuis là où le coach regarde. Le lien est
  *  posé À CÔTÉ de la carte et non dedans : `MatchCard` est elle-même un lien, et
  *  un lien dans un lien n'est pas du HTML valide. */
-function CarteRencontre({ m, teams }: { m: Match; teams: Record<string, Team> }) {
+function CarteRencontre({ m, teams, gere }: { m: Match; teams: Record<string, Team>; gere: boolean }) {
   return (
     <div className="flex flex-col gap-1.5">
       <MatchCard m={m} teams={teams} />
-      {m.status === 'setup' && (
+      {/* Convoquer écrit : le raccourci est celui du coach. La carte, elle, mène à
+          la fiche de la rencontre, où la convocation se lit par tout le monde. */}
+      {gere && m.status === 'setup' && (
         <Link to={`/match/${m.id}#convocation`} className="rounded-xl px-3 py-1.5 text-center text-[12px] font-bold"
           style={{ background: C.accentBg, color: C.accent }}>
           Convoquer →
@@ -281,8 +291,9 @@ function Field({ id, label, value, onChange, type = 'text' }: { id: string; labe
  *  grille, mais un rail bleu à silhouette — là où la rencontre montre deux écussons
  *  et son « VS » — la distingue sans qu'il faille lire un seul mot. Elle se déplie
  *  sur les schémas qu'on y travaille — mêmes cases à cocher que la convocation
- *  d'une rencontre. */
-function TrainingCard({ t, schemas, onToggleSchema, onDelete }: { t: Training; schemas: Schema[]; onToggleSchema: (playId: string) => void; onDelete: () => void }) {
+ *  d'une rencontre, pour qui peut les cocher. Les autres lisent le programme de
+ *  la séance sans pouvoir le changer : c'est ce qui les intéresse. */
+function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Training; schemas: Schema[]; gere: boolean; onToggleSchema: (playId: string) => void; onDelete: () => void }) {
   // Le compte affiché est celui des schémas qui existent : un entraînement peut
   // citer un schéma supprimé (base antérieure à la cascade de `deletePlay`), et
   // le compter ferait mentir la ligne — la faute corrigée au projet 6 sur les
@@ -311,7 +322,17 @@ function TrainingCard({ t, schemas, onToggleSchema, onDelete }: { t: Training; s
               </span>
             )}
           </summary>
-          {schemas.length === 0 ? (
+          {!gere ? (
+            attachés.length === 0 ? (
+              <p className="mt-2 text-[11px]" style={{ color: C.faint }}>Aucun schéma prévu pour cette séance.</p>
+            ) : (
+              <div className="mt-2 grid gap-1.5">
+                {attachés.map((s) => (
+                  <span key={s.id} className="truncate rounded-lg px-2 py-1.5 text-[11px] font-semibold" style={{ background: C.panel }}>{s.nom}</span>
+                ))}
+              </div>
+            )
+          ) : schemas.length === 0 ? (
             <p className="mt-2 text-[11px]" style={{ color: C.faint }}>Aucun schéma dans la bibliothèque.</p>
           ) : (
             <div className="mt-2 grid gap-1.5">
@@ -330,7 +351,7 @@ function TrainingCard({ t, schemas, onToggleSchema, onDelete }: { t: Training; s
 
         <div className="mt-2.5 flex items-center justify-between border-t pt-2.5 text-[11px] font-semibold" style={{ borderColor: C.border, color: C.faint }}>
           <span className="truncate">{t.place || '—'}</span>
-          <button onClick={onDelete} aria-label="Supprimer cet entraînement" className="shrink-0 rounded-lg px-1.5 py-0.5 font-black" style={{ color: C.pink }}>✕</button>
+          {gere && <button onClick={onDelete} aria-label="Supprimer cet entraînement" className="shrink-0 rounded-lg px-1.5 py-0.5 font-black" style={{ color: C.pink }}>✕</button>}
         </div>
       </div>
     </div>

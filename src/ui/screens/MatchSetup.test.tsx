@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MatchSetup } from './MatchSetup'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
@@ -45,13 +45,26 @@ describe('MatchSetup', () => {
 })
 
 describe('MatchSetup — droits', () => {
-  it('planifier une rencontre est administratif : la table de marque se voit demander le code admin', async () => {
+  it('planifier une rencontre est administratif : la table de marque ne voit pas le formulaire, et rien n’est enregistré', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
-    render(<MemoryRouter><ClubProvider><AuthProvider><MatchSetup onCreated={vi.fn()} /></AuthProvider></ClubProvider></MemoryRouter>)
-    await waitFor(() => expect(screen.getAllByText('VIGNOT').length).toBeGreaterThan(0))
-    await userEvent.click(screen.getByRole('button', { name: /planifier la rencontre/i }))
+    const onCreated = vi.fn()
+    render(
+      <MemoryRouter initialEntries={['/match/new']}>
+        <ClubProvider><AuthProvider>
+          <Routes>
+            <Route path="/match/new" element={<MatchSetup onCreated={onCreated} />} />
+            <Route path="/calendrier" element={<p>Calendrier</p>} />
+          </Routes>
+        </AuthProvider></ClubProvider>
+      </MemoryRouter>,
+    )
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    // Cet écran n'existe que pour écrire : sans le droit, l'URL directe renvoie au
+    // calendrier plutôt que d'ouvrir un formulaire sans bouton d'envoi.
+    expect(await screen.findByText('Calendrier')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /planifier la rencontre/i })).not.toBeInTheDocument()
+    // Ce qui compte : aucune rencontre n'est créée.
     expect(await db.matches.count()).toBe(0)
+    expect(onCreated).not.toHaveBeenCalled()
   })
 })

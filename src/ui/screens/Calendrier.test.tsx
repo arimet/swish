@@ -197,29 +197,37 @@ describe('Calendrier — les schémas de la séance', () => {
     expect([...(await listTrainings())[0].playIds!].sort()).toEqual(['s1', 's2'])
   })
 
-  it('attacher un schéma est administratif : la table de marque se voit demander le code admin', async () => {
+  it('attacher un schéma est administratif : la table de marque n’a pas de case à cocher, et rien n’est enregistré', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
-    await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })
+    await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran', playIds: ['s1'] })
     await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(schema('s2', 'Corner pour le 4'))
     renderCal()
     await ouvrirLesSchemas()
-    await userEvent.click(await screen.findByRole('checkbox', { name: /pick and roll haut/i }))
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
-    expect((await listTrainings())[0].playIds).toBeUndefined()
+    // Elle lit le programme de la séance — c'est ce qui l'intéresse — mais aucune
+    // case ne lui est offerte, donc plus aucune demande de code au clic.
+    expect(await screen.findByText('Pick and roll haut')).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    // Et la bibliothèque entière ne s'étale pas : seuls les schémas prévus.
+    expect(screen.queryByText('Corner pour le 4')).not.toBeInTheDocument()
+    // Ce qui compte : la séance n'a pas bougé.
+    expect((await listTrainings())[0].playIds).toEqual(['s1'])
   })
 })
 
 describe('Calendrier — droits', () => {
-  it('créer un entraînement est administratif : la table de marque se voit demander le code admin', async () => {
-    // Le formulaire étant replié, la garde se déclenche dès son ouverture : la table
-    // de marque voit la demande de code, pas les champs.
+  it('planifier est administratif : la table de marque ne voit ni bouton ni formulaire, et rien n’est enregistré', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderCal()
-    await userEvent.click(await screen.findByRole('button', { name: /nouvel entraînement/i }))
+    await screen.findByText(/VERDUN/)
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    // Aucun des deux boutons de planification ne lui est proposé, donc plus de
+    // demande de code au clic. Le calendrier, lui, se lit entièrement.
+    expect(screen.queryByRole('button', { name: /nouvel entraînement/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /nouvelle rencontre/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/date de l'entraînement/i)).not.toBeInTheDocument()
+    // Ce qui compte : rien n'est écrit en base.
     expect(await listTrainings()).toHaveLength(0)
   })
 
@@ -260,5 +268,9 @@ describe('Calendrier — droits', () => {
     expect(await screen.findByText('Défense sur écran')).toBeInTheDocument()
     expect(await screen.findByText(/VERDUN/)).toBeInTheDocument()
     expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
+    // Rien de ce qui écrit ne lui est montré : ni planifier, ni convoquer, ni
+    // supprimer une séance.
+    expect(screen.queryByRole('link', { name: /convoquer/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /supprimer cet entraînement/i })).not.toBeInTheDocument()
   })
 })

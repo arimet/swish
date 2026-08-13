@@ -65,9 +65,24 @@ describe('Dashboard', () => {
   })
 
   it('met le match en direct en tête', async () => {
+    // Le raccourci vers la table de marque est réservé à qui la tient : ce test se
+    // place de son côté, le cas du visiteur est vérifié juste en dessous.
+    sessionStorage.setItem(ROLE_KEY, 'marque')
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live' })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
+  })
+
+  it('un visiteur lit le score en direct sans se voir proposer d’ouvrir la table de marque', async () => {
+    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live' })
+    renderDash()
+    // Le bandeau du direct reste entier — l'état, l'adversaire, le score : c'est
+    // exactement ce qu'un joueur ou un parent vient regarder.
+    expect(await screen.findByText(/en direct/i)).toBeInTheDocument()
+    expect(screen.getByText(/contre VERDUN/i)).toBeInTheDocument()
+    // Six paniers à deux points contre quatre : le bandeau affiche bien 12 – 8.
+    expect(screen.getByText(/12/, { selector: '.nums' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /table de marque/i })).not.toBeInTheDocument()
   })
 
   it('annonce la prochaine rencontre quand aucun match n’est en cours', async () => {
@@ -129,6 +144,7 @@ describe('Dashboard', () => {
     // rien, `nextFixture` ignorant de toute façon une date passée comme '2026-01-10'.
     // Aucune autre échéance que la rencontre en direct : le bloc doit inviter à
     // planifier plutôt que répéter l'adversaire déjà affiché dans le bandeau.
+    sessionStorage.setItem(ROLE_KEY, 'marque')
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(0), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
@@ -140,6 +156,7 @@ describe('Dashboard', () => {
     // (démarrée par erreur) : les deux doivent rester exclues des échéances à venir,
     // sans quoi la seconde serait annoncée comme « prochaine échéance » alors qu'elle
     // a déjà commencé.
+    sessionStorage.setItem(ROLE_KEY, 'marque')
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(0), clubId: 'ta', opponentId: 'tb' } })
     await saveMatch({ ...finished('m5', 2, 1), id: 'm5', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(1), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
@@ -149,7 +166,10 @@ describe('Dashboard', () => {
 })
 
 describe('Dashboard — les schémas de la prochaine séance', () => {
-  const lecteurs = () => screen.getAllByRole('link').filter((l) => l.getAttribute('href')?.endsWith('/lecteur'))
+  // `queryAll` et non `getAll` : sans droit d'écriture, un tableau de bord sans
+  // rencontre à venir n'a plus le moindre lien — « + Planifier » est réservé à
+  // qui gère le club — et `getAllByRole` lèverait au lieu de rendre une liste vide.
+  const lecteurs = () => screen.queryAllByRole('link').filter((l) => l.getAttribute('href')?.endsWith('/lecteur'))
 
   it('mène au lecteur de chaque schéma prévu à la prochaine séance', async () => {
     // Le chemin le plus court entre « c'est mardi » et « voilà ce qu'on travaille ».
@@ -317,24 +337,29 @@ describe('Dashboard — le message à l’équipe', () => {
     expect(await getMessage('ta')).toBeUndefined()
   })
 
-  it('écrire est administratif : la table de marque se voit demander le code, et rien n’est enregistré', async () => {
+  it('écrire est administratif : la table de marque ne voit pas le bouton, et rien n’est enregistré', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderDash()
-    await ouvrirLaSaisie()
+    await screen.findByText('VIGNOT')
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
-    // Garder d'abord, muter ensuite : les champs ne s'ouvrent même pas.
+    // Le bouton n'existe pas pour elle : plus de demande de code au clic sur une
+    // action qu'elle n'a pas le droit de mener.
+    expect(screen.queryByRole('button', { name: /message à l’équipe/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/message à l’équipe/i)).not.toBeInTheDocument()
+    // Ce qui compte reste vrai : rien n'est écrit en base.
     expect(await getMessage('ta')).toBeUndefined()
   })
 
-  it('effacer est administratif : la table de marque se voit demander le code, et le message reste', async () => {
+  it('effacer est administratif : la table de marque ne voit pas le bouton, et le message reste', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: new Date().toISOString() })
     renderDash()
-    await userEvent.click(await screen.findByRole('button', { name: /effacer/i }))
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    // Elle lit le message — c'en est un pour toute l'équipe — mais ni « Modifier »
+    // ni « Effacer » ne lui sont proposés.
+    expect(await screen.findByText('Maillot blanc samedi.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /effacer/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /modifier/i })).not.toBeInTheDocument()
     expect(await getMessage('ta')).toBeDefined()
   })
 
@@ -350,12 +375,28 @@ describe('Dashboard — atteindre la convocation', () => {
   const rencontreAVenir = async () =>
     saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: dansNJours(5), clubId: 'ta', opponentId: 'tb' } })
 
+  // Convoquer écrit : le raccourci est celui du coach, ces tests se placent donc
+  // de son côté. L'affichage des convoqués, lui, est vérifié sans droit plus bas.
+  beforeEach(() => sessionStorage.setItem(ROLE_KEY, 'admin'))
+
   it('mène à la convocation de la prochaine rencontre depuis le bloc « prochaine échéance »', async () => {
     await rencontreAVenir()
     await saveConvocation({ matchId: 'm4', playerIds: ['p1'], meetTime: '18:00' })
     renderDash()
 
     expect(await screen.findByRole('link', { name: /convocation/i })).toHaveAttribute('href', '/match/m4#convocation')
+  })
+
+  it('un visiteur lit les convoqués sans se voir proposer de convoquer', async () => {
+    await rencontreAVenir()
+    await saveConvocation({ matchId: 'm4', playerIds: ['p1'], meetTime: '18:00' })
+    sessionStorage.removeItem(ROLE_KEY)
+    renderDash()
+
+    // Ce qu'un joueur vient chercher — suis-je convoqué, à quelle heure — reste là.
+    expect(await screen.findByText(/1 convoqué/i)).toBeInTheDocument()
+    expect(screen.getByText(/rendez-vous 18:00/i)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /convocation|convoquer/i })).not.toBeInTheDocument()
   })
 
   it('dit clairement que personne n’est convoqué, et propose de convoquer', async () => {

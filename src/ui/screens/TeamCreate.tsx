@@ -74,6 +74,12 @@ export function TeamCreate() {
         </div>
       </div>
 
+      {/* Le bouton de création reste visible sans le droit, contrairement au reste
+          du dépôt : c'est le premier lancement qui passe par ici, quand aucune
+          équipe n'existe et qu'aucun accès n'a encore été saisi. Cet écran vit
+          hors de la coquille, sans menu d'accès — masquer le bouton rendrait
+          l'application impossible à démarrer. La garde fait le travail : elle
+          réclame le code au moment de créer. */}
       <div className="mt-6 flex justify-end gap-3">
         <Link to="/teams" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>Annuler</Link>
         <button onClick={() => guard('manage', create)} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>Créer l'équipe →</button>
