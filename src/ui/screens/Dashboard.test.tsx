@@ -280,17 +280,28 @@ describe('Dashboard — le message à l’équipe', () => {
     await saveMessage({ clubId: 'ta', texte: 'Ancien message.', écritLe: new Date(Date.now() - 3 * 86400_000).toISOString() })
     renderDash()
 
+    // On attend que l'ancien message soit affiché avant d'ouvrir la saisie : le
+    // chargement est asynchrone, et ouvrir avant qu'il aboutisse laissait sa
+    // résolution écraser le texte fraîchement publié — d'où l'instabilité.
+    await screen.findByText('Ancien message.')
     await userEvent.click(await screen.findByRole('button', { name: /modifier/i }))
     const champ = await screen.findByLabelText(/message à l’équipe/i)
     // Un seul événement plutôt que seize frappes : c'est exactement ce que le champ
     // contrôlé écoute, et la frappe caractère par caractère rendait ce test instable
     // sous la charge de la suite complète — il échouait une fois sur trois.
     fireEvent.change(champ, { target: { value: 'Nouveau message.' } })
+    // « Publier » reste éteint tant que le texte est vide : cliquer avant que React
+    // ait validé la saisie ne faisait rien, et le test échouait sans rien prouver.
+    await waitFor(() => expect(champ).toHaveValue('Nouveau message.'))
     await userEvent.click(screen.getByRole('button', { name: /publier/i }))
 
-    expect(await screen.findByText('Nouveau message.')).toBeInTheDocument()
-    expect(screen.queryByText('Ancien message.')).not.toBeInTheDocument()
+    // La base d'abord — c'est elle qui fait foi —, puis l'écran. Assertion sur
+    // l'écran seul : elle échouait une fois sur sept sous la charge de la suite
+    // complète, sans que la cause soit établie. Attendre les deux plutôt que de
+    // supposer l'ordre vérifie la même chose sans dépendre du minutage.
     await waitFor(async () => expect((await getMessage('ta'))?.texte).toBe('Nouveau message.'))
+    await waitFor(() => expect(screen.getByText('Nouveau message.')).toBeInTheDocument())
+    expect(screen.queryByText('Ancien message.')).not.toBeInTheDocument()
     // Un seul message à la fois : ce n'est pas un fil, il n'y a rien à empiler.
     expect(await db.messages.count()).toBe(1)
   })
