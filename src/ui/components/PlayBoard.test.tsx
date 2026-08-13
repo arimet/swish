@@ -7,10 +7,14 @@ const demi = { id: 'x', ...nouveauSchema('c1', 'demi', true) }
 
 describe('PlayBoard', () => {
   it('rend les dix pions et le ballon du temps demandé', () => {
-    render(<PlayBoard schema={demi} tempsIndex={0} />)
-    // Cinq attaquants numérotés, cinq croix
-    ;[1, 2, 3, 4, 5].forEach((n) => expect(screen.getByText(String(n))).toBeInTheDocument())
-    ;[1, 2, 3, 4, 5].forEach((n) => expect(screen.getByText(`×${n}`)).toBeInTheDocument())
+    const { container } = render(<PlayBoard schema={demi} tempsIndex={0} />)
+    // Cinq attaquants numérotés, cinq croix numérotées. Les deux camps portent
+    // les mêmes chiffres : c'est le marqueur de camp qui les sépare, la croix
+    // étant tracée (deux traits) et non plus écrite « ×N ».
+    const numeros = (camp: string) => [...container.querySelectorAll(`[data-pion="${camp}"] text`)].map((t) => t.textContent).sort()
+    expect(numeros('attaque')).toEqual(['1', '2', '3', '4', '5'])
+    expect(numeros('defense')).toEqual(['1', '2', '3', '4', '5'])
+    expect(container.querySelectorAll('[data-pion="defense"] path')).toHaveLength(10)
     expect(screen.getByLabelText('ballon')).toBeInTheDocument()
   })
 

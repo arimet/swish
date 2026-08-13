@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ShotChart, ShotPicker, ZONE_PATH } from './ShotCourt'
+import { cadre, ShotChart, ShotPicker, ZONE_PATH } from './ShotCourt'
 import type { Shot } from '../../domain/shotchart'
 import { C } from '../olive/kit'
 
@@ -108,6 +108,35 @@ describe('ZONE_PATH', () => {
       corner3_right: 'M 1410 0 H 1500 V 299.01 H 1410 Z',
       top3: 'M 0 299.01 H 90 A 675 675 0 0 0 1410 299.01 H 1500 V 1400 H 0 Z',
     })
+  })
+})
+
+describe('Découpe des zones au cadre du terrain', () => {
+  // `corner3_left` part de (0,0), le cadre est rentré de 4 et arrondi de RAYON :
+  // sans découpe, le remplissage bavait dans les coins arrondis. Les deux usages
+  // — la confirmation après un tir et la carte des zones — doivent la porter.
+  const zonesDecoupees = (c: HTMLElement) =>
+    [...c.querySelectorAll('g[clip-path] path[d]')].map((p) => p.getAttribute('d'))
+
+  it('découpe le remplissage de confirmation', () => {
+    const { container } = render(
+      <ShotPicker onPick={vi.fn()} confirmation={{ spot: { x: 0.03, y: 0.12 }, label: '3 PTS · Corner gauche', made: true }} />,
+    )
+    expect(zonesDecoupees(container)).toContain(ZONE_PATH.corner3_left)
+  })
+
+  it('découpe les sept zones de la carte des tirs', () => {
+    const { container } = render(<ShotChart shots={[]} />)
+    const decoupees = zonesDecoupees(container)
+    expect(decoupees).toHaveLength(7)
+    expect(decoupees).toContain(ZONE_PATH.corner3_left)
+  })
+
+  it('donne à la découpe le cadre dessiné, et non des valeurs recopiées', () => {
+    const { container } = render(<ShotChart shots={[]} />)
+    const decoupe = container.querySelector('clipPath rect')!
+    for (const [attr, valeur] of Object.entries(cadre()))
+      expect(decoupe.getAttribute(attr)).toBe(String(valeur))
   })
 })
 

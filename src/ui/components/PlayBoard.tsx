@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react'
 import type { Fleche, ObjetPose, Pion, Point, Schema, Temps } from '../../domain/plays'
 import { C } from '../olive/kit'
-import { clamp01, CourtLines, D, RAYON, W } from './ShotCourt'
+import { cadre, clamp01, CourtLines, D, RAYON, W } from './ShotCourt'
 
 /** Profondeur du viewBox : le terrain complet, c'est le demi et son miroir. */
 const profondeur = (s: Schema) => (s.terrain === 'complet' ? D * 2 : D)
@@ -133,7 +133,7 @@ function Milieu() {
     <g>
       <line x1={4} y1={D} x2={W - 4} y2={D} {...trait} />
       <circle cx={W / 2} cy={D} r={180} {...trait} strokeWidth={6} opacity={0.4} />
-      <rect x={4} y={4} width={W - 8} height={D * 2 - 8} rx={RAYON} {...trait} />
+      <rect {...cadre(D * 2)} {...trait} />
     </g>
   )
 }
@@ -155,14 +155,34 @@ function FlecheTracee({ f, h }: { f: Fleche; h: number }) {
   )
 }
 
-/** Attaque : disque numéroté. Défense : croix ×N, sans disque — deux camps qu'on
- *  ne confond pas même en vignette. */
+/**
+ * Attaque : disque plein rose, numéro blanc. Défense : croix tracée puis numéro,
+ * en blanc sur un liseré sombre.
+ *
+ * La croix était un simple texte gris qui se noyait dans les lignes du terrain,
+ * surtout en vignette. Tracée, elle porte le même poids de trait que le disque :
+ * les deux camps se lisent d'un coup d'œil, et se distinguent par la **forme** —
+ * disque plein contre croix ouverte — donc aussi en noir et blanc.
+ * La paire croix + numéro reste centrée sur la position du pion, comme avant :
+ * la croix occupe la moitié gauche, le numéro la moitié droite.
+ */
 function PionDessine({ pion, h }: { pion: Pion; h: number }) {
   const { x, y } = enUnites(pion.at, h)
   const commun = { textAnchor: 'middle', dominantBaseline: 'central', fontWeight: 900 } as const
   if (pion.camp === 'defense') {
+    const cx = x - 46
+    const b = 40 // demi-diagonale de la croix : même encombrement que le disque d'en face
+    const croix = `M ${n1(cx - b)} ${n1(y - b)} L ${n1(cx + b)} ${n1(y + b)} M ${n1(cx - b)} ${n1(y + b)} L ${n1(cx + b)} ${n1(y - b)}`
     return (
-      <text data-pion="defense" x={x} y={y} {...commun} fontSize={92} fill={C.muted}>{`×${pion.poste}`}</text>
+      <g data-pion="defense">
+        {/* Deux passes : le liseré sombre détache le pion des lignes du terrain,
+            le trait clair lui donne le poids du disque adverse. */}
+        <path d={croix} stroke={C.frame} strokeWidth={34} strokeLinecap="round" fill="none" />
+        <path d={croix} stroke={C.text} strokeWidth={17} strokeLinecap="round" fill="none" />
+        <text x={x + 46} y={y} {...commun} fontSize={78} fill={C.text} stroke={C.frame} strokeWidth={12} paintOrder="stroke">
+          {String(pion.poste)}
+        </text>
+      </g>
     )
   }
   return (
