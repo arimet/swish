@@ -71,6 +71,8 @@ describe('TeamDetail — fiche signalétique', () => {
 
   it('ajoute un joueur avec sa date de naissance et sa taille', async () => {
     renderTeam()
+    // Le formulaire est replié : il apparaît sur un clic, jamais d'emblée.
+    await userEvent.click(await screen.findByRole('button', { name: /ajouter un joueur/i }))
     await userEvent.type(await screen.findByPlaceholderText('N°'), '9')
     await userEvent.type(screen.getByPlaceholderText('Nom'), 'DUPONT')
     await userEvent.type(screen.getByLabelText(/date de naissance/i), '1998-03-02')
@@ -87,14 +89,23 @@ describe('TeamDetail — fiche signalétique', () => {
 
 describe('TeamDetail — droits', () => {
   it('modifier l’effectif est administratif : la table de marque se voit demander le code admin', async () => {
+    // Le formulaire étant replié, la garde se déclenche dès son ouverture : la table
+    // de marque voit la demande de code, pas les champs.
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderTeam()
-    await userEvent.type(await screen.findByPlaceholderText('N°'), '9')
-    await userEvent.type(screen.getByPlaceholderText('Nom'), 'DUPONT')
-    await userEvent.click(screen.getByRole('button', { name: /ajouter le joueur/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /ajouter un joueur/i }))
 
     expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('N°')).not.toBeInTheDocument()
     expect(await listPlayers('ta')).toHaveLength(1) // MARTIN seul, DUPONT n'a pas été ajouté
+  })
+
+  it('n’affiche le formulaire d’ajout qu’après un clic', async () => {
+    renderTeam()
+    await screen.findByRole('button', { name: /ajouter un joueur/i })
+    expect(screen.queryByPlaceholderText('N°')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /ajouter un joueur/i }))
+    expect(await screen.findByPlaceholderText('N°')).toBeInTheDocument()
   })
 
   it('ne laisse pas à l’écran un entraîneur que le refus du code n’a pas enregistré', async () => {

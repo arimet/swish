@@ -32,6 +32,9 @@ export function TeamDetail() {
   const [matches, setMatches] = useState<Match[]>([])
   const [teamsById, setTeamsById] = useState<Record<string, Team>>({})
   const [coach, setCoach] = useState('')
+  // Un formulaire de saisie apparaît sur un clic, jamais d'emblée : l'effectif est
+  // ce qu'on vient lire, recruter est l'exception.
+  const [ajoutOuvert, setAjoutOuvert] = useState(false)
   const [num, setNum] = useState(''); const [ln, setLn] = useState(''); const [fn, setFn] = useState('')
   const [birth, setBirth] = useState(''); const [height, setHeight] = useState('')
   // Un seul joueur dépliable à la fois : pas d'état par ligne à faire vivre.
@@ -203,7 +206,19 @@ export function TeamDetail() {
               ))}
               {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>Aucun joueur. Ajoutez-en ci-dessous.</li>}
             </ul>
+            {/* Ouvrir le formulaire est déjà une écriture : la garde est ici, pas
+                seulement à l'enregistrement — un visiteur voit la demande de code,
+                pas les champs. */}
+            {!ajoutOuvert ? (
+              <button onClick={() => guard('manage', () => setAjoutOuvert(true))} className="w-full rounded-xl py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+                + Ajouter un joueur
+              </button>
+            ) : (
             <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Nouveau joueur</p>
+                <button onClick={() => setAjoutOuvert(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>Fermer</button>
+              </div>
               <div className="grid grid-cols-[56px_1fr] gap-2">
                 <input placeholder="N°" value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center' }} />
                 <input placeholder="Nom" value={ln} onChange={(e) => setLn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={field} />
@@ -221,6 +236,7 @@ export function TeamDetail() {
               </div>
               <button onClick={addPlayer} className="w-full rounded-xl py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Ajouter le joueur</button>
             </div>
+            )}
           </Panel>
         </div>
       </div>

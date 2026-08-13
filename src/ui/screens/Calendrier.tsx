@@ -76,6 +76,9 @@ export function Calendrier() {
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
   }, [nos, nosEntrainements])
 
+  // Un formulaire de saisie apparaît sur un clic, jamais d'emblée : le calendrier
+  // est ce qu'on vient lire, planifier une séance est l'exception.
+  const [saisieOuverte, setSaisieOuverte] = useState(false)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [place, setPlace] = useState('')
@@ -141,9 +144,20 @@ export function Calendrier() {
         </div>
       )}
 
-      {/* Saisie réservée à l'admin : le code d'accès est demandé à la validation. */}
+      {/* Saisie réservée à l'admin, repliée derrière son bouton. Ouvrir le formulaire
+          est déjà une écriture : la garde est ici, pas seulement à la validation — un
+          visiteur voit la demande de code, pas les champs. */}
       <section className="mt-8 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <p className="mb-4 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Nouvel entraînement</p>
+        {!saisieOuverte ? (
+          <button onClick={() => guard('manage', () => setSaisieOuverte(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: ENTR_COLOR }}>
+            + Nouvel entraînement
+          </button>
+        ) : (
+        <>
+        <div className="mb-4 flex items-center gap-3">
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Nouvel entraînement</p>
+          <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>Fermer</button>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="entr-date" label="Date de l'entraînement" type="date" value={date} onChange={setDate} />
           <Field id="entr-time" label="Heure" type="time" value={time} onChange={setTime} />
@@ -153,6 +167,8 @@ export function Calendrier() {
         <button onClick={ajouter} disabled={!date || !clubId} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: ENTR_COLOR }}>
           Ajouter l'entraînement
         </button>
+        </>
+        )}
 
         {/* Comme les convocations et les résultats extérieurs : même formulation que sur
             les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux

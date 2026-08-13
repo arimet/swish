@@ -23,9 +23,12 @@ const renderChamp = () =>
   render(<MemoryRouter><ClubProvider><AuthProvider><Championnat /></AuthProvider></ClubProvider></MemoryRouter>)
 
 /** Sélectionne les équipes et scores du formulaire de saisie, sans valider.
+ *  Le formulaire est replié : il faut d'abord l'ouvrir — un formulaire de saisie
+ *  apparaît sur un clic, jamais d'emblée.
  *  Les équipes du club viennent d'un chargement asynchrone : on attend qu'elles
  *  soient là avant de choisir une valeur, sinon le select n'a que « — Choisir — ». */
 const remplirFormulaire = async (home: string, away: string, hs: string, as_: string) => {
+  await userEvent.click(await screen.findByRole('button', { name: /saisir un résultat/i }))
   await waitFor(() => expect((screen.getByLabelText('Équipe reçue') as HTMLSelectElement).options.length).toBeGreaterThan(1))
   await userEvent.selectOptions(screen.getByLabelText('Équipe reçue'), home)
   await userEvent.selectOptions(screen.getByLabelText('Équipe visiteuse'), away)
@@ -121,14 +124,24 @@ describe('Championnat', () => {
 
 describe('Championnat — droits', () => {
   it('saisir un résultat est administratif : la table de marque se voit demander le code admin', async () => {
+    // Le formulaire étant replié, la garde se déclenche dès son ouverture : la table
+    // de marque ne remplit pas des champs pour se voir refuser à l'envoi, elle voit
+    // la demande de code et les champs restent fermés.
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderChamp()
-    await remplirFormulaire('tb', 'tc', '70', '60')
-    await userEvent.type(screen.getByLabelText('Date de la rencontre'), '2026-01-10')
-    await userEvent.click(screen.getByRole('button', { name: /ajouter le résultat/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /saisir un résultat/i }))
 
     expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Équipe reçue')).not.toBeInTheDocument()
     expect(await listResults()).toHaveLength(0)
+  })
+
+  it('n’affiche le formulaire de saisie qu’après un clic', async () => {
+    renderChamp()
+    await screen.findByRole('button', { name: /saisir un résultat/i })
+    expect(screen.queryByLabelText('Équipe reçue')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /saisir un résultat/i }))
+    expect(screen.getByLabelText('Équipe reçue')).toBeInTheDocument()
   })
 
   it('ne laisse pas à l’écran un score corrigé que le refus du code n’a pas enregistré', async () => {
