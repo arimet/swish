@@ -374,7 +374,9 @@ function Echeance({ fixture, teams, players, convocation, schemas }: { fixture: 
           convocation vidée de ses joueurs est une absence de convoqués, et c'est
           justement le moment où l'on veut agir. */}
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-3" style={{ borderColor: C.border }}>
-        <div className="min-w-0 flex-1">
+        {/* `min-w-[180px]` : sur téléphone, plutôt que d'écraser « Personne n'est
+            convoqué » sur trois lignes à côté du bouton, la ligne se casse en deux. */}
+        <div className="min-w-[180px] flex-1">
           {convoqués.length === 0 ? (
             <p className="text-sm font-bold" style={{ color: C.amber }}>Personne n’est convoqué.</p>
           ) : (
