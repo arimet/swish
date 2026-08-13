@@ -8,13 +8,19 @@ const demi = { id: 'x', ...nouveauSchema('c1', 'demi', true) }
 describe('PlayBoard', () => {
   it('rend les dix pions et le ballon du temps demandé', () => {
     const { container } = render(<PlayBoard schema={demi} tempsIndex={0} />)
-    // Cinq attaquants numérotés, cinq croix numérotées. Les deux camps portent
-    // les mêmes chiffres : c'est le marqueur de camp qui les sépare, la croix
-    // étant tracée (deux traits) et non plus écrite « ×N ».
+    // Cinq attaquants, cinq défenseurs, mêmes chiffres de part et d'autre : c'est
+    // le marqueur de camp qui les sépare. Les deux ont un disque de même rayon —
+    // plein pour l'attaque, ouvert pour la défense —, ce qui les distingue aussi
+    // en noir et blanc.
     const numeros = (camp: string) => [...container.querySelectorAll(`[data-pion="${camp}"] text`)].map((t) => t.textContent).sort()
     expect(numeros('attaque')).toEqual(['1', '2', '3', '4', '5'])
     expect(numeros('defense')).toEqual(['1', '2', '3', '4', '5'])
-    expect(container.querySelectorAll('[data-pion="defense"] path')).toHaveLength(10)
+    const disque = (camp: string) => [...container.querySelectorAll(`[data-pion="${camp}"] circle`)]
+    expect(disque('defense')).toHaveLength(5)
+    expect(disque('defense').every((c) => c.getAttribute('r') === disque('attaque')[0].getAttribute('r'))).toBe(true)
+    // Ouvert contre plein : la défense a un contour, l'attaque n'en a pas.
+    expect(disque('defense').every((c) => !!c.getAttribute('stroke'))).toBe(true)
+    expect(disque('attaque').every((c) => !c.getAttribute('stroke'))).toBe(true)
     expect(screen.getByLabelText('ballon')).toBeInTheDocument()
   })
 
