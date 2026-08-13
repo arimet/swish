@@ -64,7 +64,11 @@ export function PlayerActionDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="sm:max-w-md border-none bg-[#161618] p-5 text-white [&>button]:text-white/60 max-h-[90vh] overflow-y-auto">
+      {/* `gap-0` : le gabarit du dialogue est une grille à `gap-4`, qui s'ajoutait aux
+          `mt-*` de chaque bloc ci-dessous — deux espacements empilés, une centaine de
+          pixels perdus. Les marges des blocs suffisent. Le débordement reste borné en
+          dernier recours : les corrections dépliées ne tiennent dans aucune fenêtre. */}
+      <DialogContent className="sm:max-w-md max-h-[92vh] gap-0 overflow-y-auto border-none bg-[#161618] p-5 text-white [&>button]:text-white/60">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2.5 text-xl font-extrabold">
             <span className="h-3.5 w-3.5 rounded-full ring-2 ring-white/20" style={{ background: color }} />

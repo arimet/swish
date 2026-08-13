@@ -122,20 +122,30 @@ export function ShotPicker({ onPick, confirmation, shots }: {
   }
   return (
     <div>
-      <Court label="Demi-terrain — toucher le point de tir" onClick={pickFromEvent}>
-        {shots?.map((s, i) => (
-          <circle
-            key={i}
-            data-past-shot={s.made ? 'made' : 'missed'}
-            cx={s.spot.x * W} cy={s.spot.y * D} r={11}
-            fill={s.made ? C.accent : 'none'}
-            stroke={s.made ? 'none' : C.muted} strokeWidth={5}
-            opacity={0.5}
-          />
-        ))}
-        <CourtLines />
-        {confirmation && <Confirmation spot={confirmation.spot} made={confirmation.made} />}
-      </Court>
+      {/* La largeur est bornée, jamais la hauteur : le SVG est un élément remplacé,
+          sa boîte suit donc le rapport du viewBox tant qu'on ne lui impose que sa
+          largeur. Borner la hauteur le centrerait dans des marges internes et
+          `getBoundingClientRect` ci-dessus convertirait le doigt de travers — un tir
+          enregistré à côté de l'endroit touché. Même piège que dans `SchemaPlayer`.
+          Ces 240 px suffisent à viser une zone au doigt et laissent les actions du bas
+          (lancer franc, passe décisive, contre…) au-dessus de la ligne de flottaison,
+          aussi bien en 1440×900 qu'en 375×812. */}
+      <div className="mx-auto w-full max-w-[240px]">
+        <Court label="Demi-terrain — toucher le point de tir" onClick={pickFromEvent}>
+          {shots?.map((s, i) => (
+            <circle
+              key={i}
+              data-past-shot={s.made ? 'made' : 'missed'}
+              cx={s.spot.x * W} cy={s.spot.y * D} r={11}
+              fill={s.made ? C.accent : 'none'}
+              stroke={s.made ? 'none' : C.muted} strokeWidth={5}
+              opacity={0.5}
+            />
+          ))}
+          <CourtLines />
+          {confirmation && <Confirmation spot={confirmation.spot} made={confirmation.made} />}
+        </Court>
+      </div>
       {/* Toujours rendue (contenu vide sans confirmation) : la pastille ne doit jamais
           apparaître ni disparaître, sinon tout ce qui suit — dont les boutons de zone
           et « + 1 Lancer franc » — se décale pendant que le verrou anti-double-comptage
