@@ -1,5 +1,6 @@
 import { db } from './db'
 import { enqueuePut, enqueueDel, remoteEnabled, hydrate } from './remote'
+import { aVider } from '../domain/menage'
 import type { Team, Player, Match, ReportedResult, Convocation, Training } from '../domain/types'
 import type { Schema } from '../domain/plays'
 
@@ -118,4 +119,68 @@ export const deletePlay = async (id: string) =>
     await db.plays.delete(id)
     const séances = (await db.trainings.toArray()).filter((t) => t.playIds?.includes(id))
     await db.trainings.bulkPut(séances.map((t) => ({ ...t, playIds: t.playIds!.filter((pid) => pid !== id) })))
+  })
+
+// ── Ménage d'administration ─────────────────────────────────────────────────
+// Suppressions groupées, irréversibles : ni corbeille ici, ni copie ailleurs pour
+// tout ce qui ne passe pas par la file de synchronisation. Chacune se cadre sur un
+// périmètre relu **dans** sa transaction, comme `deletePlay` : lire avant, c'est
+// prendre un instantané, et deux ménages coup sur coup partiraient du même état.
+
+/** Supprime les rencontres qui répondent au filtre et leurs convocations — même
+ *  cascade que `deleteMatch`, appliquée en bloc. Renvoie les identifiants supprimés,
+ *  de quoi rendre compte de ce qui a réellement disparu. */
+export const deleteMatchesWhere = async (filtre: (m: Match) => boolean): Promise<string[]> => {
+  const ids: string[] = []
+  await db.transaction('rw', db.matches, db.convocations, async () => {
+    ids.push(...(await db.matches.toArray()).filter(filtre).map((m) => m.id))
+    await db.matches.bulkDelete(ids)
+    await db.convocations.bulkDelete(ids)
+  })
+  for (const id of ids) await enqueueDel('match', id)
+  return ids
+}
+
+/** Vide les feuilles d'un club : les évènements enregistrés partent, la rencontre,
+ *  sa date et sa convocation restent. Le statut redescend à « à venir » — une
+ *  rencontre « terminée » sans le moindre évènement s'afficherait 0–0 partout, comme
+ *  un score réellement observé. Renvoie le nombre de feuilles vidées. */
+export const clearClubStats = async (clubId: string): Promise<number> => {
+  let vidées: Match[] = []
+  await db.transaction('rw', db.matches, async () => {
+    vidées = (await db.matches.toArray()).filter(aVider(clubId)).map((m) => ({ ...m, events: [], status: 'setup' as const }))
+    await db.matches.bulkPut(vidées)
+  })
+  for (const m of vidées) await enqueuePut('match', m.id, m)
+  return vidées.length
+}
+
+/** Les résultats saisis à la main, en bloc. Aucune cascade : rien ne les référence. */
+export const deleteAllResults = () => db.results.clear()
+
+/** Les entraînements d'un club, en bloc. Leurs `playIds` partent avec eux : ce sont
+ *  les séances qui citent les schémas, jamais l'inverse. */
+export const deleteTrainingsOfClub = (clubId: string) => db.trainings.filter((t) => t.clubId === clubId).delete()
+
+/** Les schémas d'un club, en bloc, et leurs identifiants retirés des séances qui les
+ *  citaient — même cascade que `deletePlay`, sinon le ménage laisserait derrière lui
+ *  des identifiants orphelins dans les entraînements conservés. */
+export const deletePlaysOfClub = async (clubId: string) =>
+  db.transaction('rw', db.plays, db.trainings, async () => {
+    const ids = await db.plays.where('clubId').equals(clubId).primaryKeys()
+    await db.plays.bulkDelete(ids)
+    const séances = (await db.trainings.toArray()).filter((t) => t.playIds?.some((pid) => ids.includes(pid)))
+    await db.trainings.bulkPut(séances.map((t) => ({ ...t, playIds: t.playIds!.filter((pid) => !ids.includes(pid)) })))
+  })
+
+/** Remise à zéro complète de l'appareil : toutes les tables, file de synchronisation
+ *  comprise. La file part sans être poussée, volontairement — un effacement local ne
+ *  doit pas se propager au serveur et vider du même coup les autres appareils. */
+export const wipeAll = () =>
+  // Les tables passent par un tableau : au-delà de cinq, Dexie ne les prend plus une à une.
+  db.transaction('rw', [db.teams, db.players, db.matches, db.results, db.convocations, db.trainings, db.plays, db.outbox], async () => {
+    await Promise.all([
+      db.teams.clear(), db.players.clear(), db.matches.clear(), db.results.clear(),
+      db.convocations.clear(), db.trainings.clear(), db.plays.clear(), db.outbox.clear(),
+    ])
   })

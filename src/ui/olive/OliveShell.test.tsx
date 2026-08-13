@@ -31,6 +31,13 @@ const ouvrirLesAcces = async () => {
   await userEvent.click(within(aside).getByRole('button', { name: /accès/i }))
 }
 
+/** Le dialogue d'accès est modal : ce qui est derrière lui reste inatteignable
+ *  aux requêtes par rôle tant qu'il n'est pas refermé. */
+const fermerLesAcces = async () => {
+  await userEvent.keyboard('{Escape}')
+  await waitFor(() => expect(screen.queryByLabelText(/code d.accès/i)).not.toBeInTheDocument())
+}
+
 const saisirLeCode = async (code: string) => {
   await userEvent.type(await screen.findByLabelText(/code d.accès/i), code)
   await userEvent.click(screen.getByRole('button', { name: 'Déverrouiller' }))
@@ -74,6 +81,33 @@ describe('point d’entrée des accès', () => {
     expect(await screen.findByRole('button', { name: /MARTIN Lucas/ })).toBeInTheDocument()
     // Deux axes indépendants : s'identifier ne fait pas monter en droits.
     expect(screen.getByText(/accès en cours : visiteur/i)).toBeInTheDocument()
+  })
+})
+
+describe('entrée d’administration', () => {
+  it('reste invisible pour un visiteur et pour la table de marque', async () => {
+    // Une porte qu'on ne peut pas ouvrir n'a pas à s'afficher : le ménage des
+    // données est réservé à l'administrateur.
+    renderShell()
+    const aside = await screen.findByRole('complementary')
+    expect(within(aside).queryByRole('link', { name: /administration/i })).not.toBeInTheDocument()
+
+    await ouvrirLesAcces()
+    await saisirLeCode('marque')
+    // Le dialogue est modal : tant qu'il est ouvert, le reste de la page est
+    // masqué aux requêtes par rôle et l'absence du lien ne prouverait rien.
+    await fermerLesAcces()
+    expect(within(await screen.findByRole('complementary')).queryByRole('link', { name: /administration/i })).not.toBeInTheDocument()
+  })
+
+  it('apparaît sous le bouton d’accès dès que le code administrateur est saisi', async () => {
+    renderShell()
+    await ouvrirLesAcces()
+    await saisirLeCode('admin')
+    await fermerLesAcces()
+    const aside = await screen.findByRole('complementary')
+    const entrée = within(aside).getByRole('link', { name: /administration/i })
+    expect(entrée).toHaveAttribute('href', '/admin')
   })
 })
 
