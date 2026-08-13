@@ -10,7 +10,7 @@ import { instantane, transitions } from '../../domain/anim'
 import type { Schema } from '../../domain/plays'
 import { getPlay } from '../../persistence/repositories'
 import { ExportSchema } from '../components/ExportSchema'
-import { PlayBoard } from '../components/PlayBoard'
+import { largeurTerrain, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
 
 /** Une transition dure une seconde et demie, le double au ralenti. Ce n'est pas
@@ -109,13 +109,12 @@ export function SchemaPlayer() {
   const temps = !enLecture && Number.isInteger(pos)
     ? schema.temps[pos]
     : instantane(schema, { temps: Math.floor(pos), part: pos - Math.floor(pos) })
-  // Le lecteur remplit toute la place disponible : le SVG se cale lui-même dans sa
-  // boîte (`preserveAspectRatio`), sans distorsion. L'éditeur ne peut pas faire ça —
-  // il borne la largeur pour que la boîte du SVG garde le rapport du viewBox, sans
-  // quoi la conversion du doigt en coordonnées viserait de travers. Ici rien ne
-  // convertit : on lit, on ne dessine pas. C'est l'écran du temps-mort, cinq joueurs
-  // penchés dessus — chaque centimètre gagné se voit.
-  const large = schema.terrain === 'demi' ? '46vh' : undefined
+  // Le lecteur prend la place disponible, mais pas plus que `TERRAIN_MAX` : sur un
+  // téléphone tenu à bout de bras chaque centimètre compte, sur un écran de bureau
+  // un terrain de mille pixels ne se lit pas mieux, il se lit moins bien. Le SVG se
+  // cale lui-même dans sa boîte (`preserveAspectRatio`), sans distorsion, et rien
+  // ici ne convertit de coordonnées — on lit, on ne dessine pas.
+  const large = largeurTerrain(schema.terrain)
 
   return (
     <Ecran>
@@ -140,7 +139,7 @@ export function SchemaPlayer() {
             ne vise pas un bouton de quarante pixels. Elles s'arrêtent au-dessus
             des commandes, qui restent atteignables. */}
         <div className="relative flex min-h-0 flex-1 items-center justify-center">
-          <div className="h-full w-full select-none">
+          <div className="h-full w-full select-none" style={{ maxWidth: large }}>
             <PlayBoard schema={schema} tempsIndex={0} temps={temps} remplit />
           </div>
           <Zone cote="left" label="Temps précédent" fleche="‹" onClick={() => aller(-1)} disabled={courant === 0} />

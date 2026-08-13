@@ -78,29 +78,29 @@ describe('point d’entrée des accès', () => {
 })
 
 describe('identité du joueur dans l’effectif', () => {
-  it('marque le nom du joueur choisi dans l’effectif de la barre latérale', async () => {
+  it('retient le joueur choisi, sans lister l’effectif dans la barre latérale', async () => {
+    // L'effectif a quitté le menu : treize noms y poussaient la navigation hors de
+    // l'écran. Choisir son nom enregistre bien l'identité — c'est le tableau de
+    // bord et la fiche du joueur qui la montrent désormais.
     renderShell()
     await ouvrirLesAcces()
     await saisirLeCode('joueur')
     await userEvent.click(await screen.findByRole('button', { name: /MARTIN Lucas/ }))
 
+    await waitFor(() => expect(localStorage.getItem(PLAYER_ID_KEY)).toBe('p1'))
     const aside = await screen.findByRole('complementary')
-    const ligne = within(aside).getByText('Lucas MARTIN').closest('a')!
-    expect(within(ligne).getByText('vous')).toBeInTheDocument()
-    // Un seul nom marqué : le coéquipier n'hérite pas de la marque.
-    const autre = within(aside).getByText('Théo DURAND').closest('a')!
-    expect(within(autre).queryByText('vous')).not.toBeInTheDocument()
+    expect(within(aside).queryByText('Lucas MARTIN')).not.toBeInTheDocument()
+    expect(within(aside).queryByText('Théo DURAND')).not.toBeInTheDocument()
   })
 
   it('oublie un identifiant qui ne correspond à aucun joueur de l’effectif', async () => {
     // Le joueur a été retiré de l'effectif, mais son identifiant survit dans le
-    // localStorage : l'application doit se comporter comme sans identité.
+    // localStorage : l'application doit se comporter comme sans identité. L'effectif
+    // reste chargé par la coquille pour le choix du nom, même s'il n'est plus affiché.
     localStorage.setItem(PLAYER_ID_KEY, 'parti')
     renderShell()
 
-    const aside = await screen.findByRole('complementary')
-    await within(aside).findByText('Lucas MARTIN')
-    expect(within(aside).queryByText('vous')).not.toBeInTheDocument()
+    await screen.findByRole('complementary')
     await waitFor(() => expect(localStorage.getItem(PLAYER_ID_KEY)).toBeNull())
   })
 })

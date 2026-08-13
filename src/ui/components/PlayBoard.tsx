@@ -12,6 +12,21 @@ import { clamp01, CourtLines, D, W } from './ShotCourt'
 /** Profondeur du viewBox : le terrain complet, c'est le demi et son miroir. */
 const profondeur = (s: Schema) => (s.terrain === 'complet' ? D * 2 : D)
 
+/**
+ * Largeur maximale d'un terrain affiché. Deux bornes, et il faut les deux.
+ *
+ * `46vh` suit la hauteur : c'est ce qui laisse le terrain, sa barre d'outils et
+ * ses commandes tenir ensemble sur un écran bas. Sur un téléphone, cette borne
+ * seule donne à peu près la largeur de l'écran, ce qu'on veut.
+ *
+ * La borne en pixels est celle qui manquait : sur un grand écran, `46vh` laisse
+ * le terrain grossir jusqu'à occuper la fenêtre, et un tableau de mille pixels ne
+ * se lit pas mieux — l'œil doit le balayer au lieu de l'embrasser. Le terrain
+ * complet est deux fois plus profond, donc deux fois moins large à hauteur égale.
+ */
+export const largeurTerrain = (terrain: Schema['terrain']) =>
+  terrain === 'complet' ? 'min(23vh, 260px)' : 'min(46vh, 520px)'
+
 /** Coordonnées normalisées → unités du viewBox (des centimètres). */
 const enUnites = (p: Point, h: number): Point => ({ x: p.x * W, y: p.y * h })
 
@@ -103,7 +118,7 @@ function Milieu() {
     <g>
       <line x1={4} y1={D} x2={W - 4} y2={D} {...trait} />
       <circle cx={W / 2} cy={D} r={180} {...trait} strokeWidth={6} opacity={0.4} />
-      <rect x={4} y={4} width={W - 8} height={D * 2 - 8} rx={12} {...trait} />
+      <rect x={4} y={4} width={W - 8} height={D * 2 - 8} rx={60} {...trait} />
     </g>
   )
 }

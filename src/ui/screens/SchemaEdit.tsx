@@ -12,7 +12,7 @@ import {
 } from '../../domain/plays'
 import { getPlay, savePlay } from '../../persistence/repositories'
 import { useAuth } from '../../app/auth'
-import { PlayBoard, versSvg } from '../components/PlayBoard'
+import { largeurTerrain, PlayBoard, versSvg } from '../components/PlayBoard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { D, W } from '../components/ShotCourt'
 import { C, bd } from '../olive/kit'
@@ -370,7 +370,7 @@ export function SchemaEdit() {
               la largeur : le brider en hauteur le réduirait à une bande où les pions
               ne se distinguent plus, il se tient en portrait et se fait défiler.
               `select-none` : sans lui, un glisser sélectionne les numéros des pions. */}
-          <div className="select-none" style={{ maxWidth: vivant.terrain === 'demi' ? '46vh' : undefined }}>
+          <div className="select-none" style={{ maxWidth: largeurTerrain(vivant.terrain) }}>
             <PlayBoard schema={affiche} tempsIndex={index} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
               {/* Le geste en cours, brut : il disparaît au relâcher, remplacé par la
                   flèche réduite — ou par rien du tout si le droit a été refusé. */}
