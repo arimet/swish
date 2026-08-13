@@ -24,9 +24,9 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
         <DialogHeader><DialogTitle>Changement</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <PickGroup title="Sort du terrain" accent="text-red-600" players={onCourtPlayers}
-            selected={out} onSelect={setOut} activeClass="border-transparent bg-red-500 text-white" />
-          <PickGroup title="Entre sur le terrain" accent="text-emerald-600" players={benchPlayers}
-            selected={inId} onSelect={setInId} activeClass="border-transparent bg-emerald-500 text-white" />
+            selected={out} onSelect={setOut} activeClass="border-transparent bg-red-600 text-white" />
+          <PickGroup title="Entre sur le terrain" accent="text-emerald-700" players={benchPlayers}
+            selected={inId} onSelect={setInId} activeClass="border-transparent bg-emerald-700 text-white" />
         </div>
         <DialogFooter>
           <button

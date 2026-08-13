@@ -121,7 +121,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
                   à chaque rendu parce que la saisie du match dure deux heures et change de mains,
                   pas parce que cet écran-ci aurait oublié de le faire. */}
               <button onClick={() => (editStats ? setEditStats(false) : guard('manage', () => setEditStats(true)))}
-                className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={editStats ? { background: C.accent, color: '#fff' } : { border: bd, color: C.text }}>
+                className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={editStats ? { background: C.accent, color: C.onAccent } : { border: bd, color: C.text }}>
                 {editStats ? '✓ Terminer' : '✎ Corriger stats'}
               </button>
             </>
@@ -130,7 +130,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         </div>
       </div>
       {editStats && (
-        <div className="mb-4 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accent}44` }}>
+        <div className="mb-4 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}>
           Mode correction — cliquez un joueur dans un tableau pour ajuster ses points, fautes ou stats.
         </div>
       )}
@@ -157,7 +157,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       <div className="overflow-hidden rounded-3xl" style={{ background: C.frame, border: bd }}>
         <div className="flex items-center justify-between px-6 pt-5">
           <span className="truncate text-[11px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{champLabel(meta)}</span>
-          <span className="rounded-md px-2 py-0.5 text-[10px] font-black uppercase" style={{ background: 'rgba(255,255,255,0.08)', color: C.muted }}>Final</span>
+          <span className="rounded-md px-2 py-0.5 text-[10px] font-black uppercase" style={{ background: C.neutralBg, color: C.muted }}>Final</span>
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-6 py-5 sm:gap-8">
           <FinalSide id={meta.clubId} name={teamNames.A} score={score.a} win={score.a >= score.b} align="right" />
@@ -261,7 +261,7 @@ function TeamTable({ match, players, name, teamId, onPick }: { match: Match; pla
   // à tort 100 %. On n'affiche le pourcentage que si notre club a suivi au moins un tir manqué.
   const tracksMisses = match.events.some((e) => e.type === 'MISS' && e.team === 'A')
   return (
-    <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: bd, ...(onPick ? { boxShadow: `0 0 0 1px ${C.accent}55` } : {}) }}>
+    <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: bd, ...(onPick ? { boxShadow: `0 0 0 1px ${C.accentBd}` } : {}) }}>
       <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: `1px solid ${C.border}` }}>
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: teamColor(teamId) }} />
         <h3 className="text-sm font-extrabold uppercase tracking-wide">Locaux · {name}</h3>
@@ -280,7 +280,7 @@ function TeamTable({ match, players, name, teamId, onPick }: { match: Match; pla
               const dnp = (times.get(s.playerId) ?? 0) === 0 && s.points === 0 && s.fouls === 0
               return (
                 <tr key={s.playerId} onClick={onPick ? () => onPick(s.playerId, `${p?.number ?? ''} ${p?.lastName ?? ''}`.trim()) : undefined}
-                  className={onPick ? 'cursor-pointer transition hover:bg-white/[0.04]' : ''}
+                  className={onPick ? 'cursor-pointer transition hover:bg-[var(--c-hover)]' : ''}
                   style={{ borderTop: `1px solid ${C.border}`, opacity: dnp && !onPick ? 0.5 : 1 }}>
                   <Td left><span className="font-black">{p?.number ?? '—'}</span></Td>
                   <Td left>{p ? <Link to={`/players/${s.playerId}`} onClick={(e) => e.stopPropagation()} className="hover:underline">{p.lastName} {p.firstName}</Link> : s.playerId}</Td>
@@ -312,5 +312,5 @@ function Th({ children, left }: { children?: ReactNode; left?: boolean }) {
   return <th className={`px-3 py-2.5 ${left ? 'text-left' : 'text-center'}`}>{children}</th>
 }
 function Td({ children, left }: { children?: ReactNode; left?: boolean }) {
-  return <td className={`px-3 py-2.5 tabular-nums ${left ? 'text-left' : 'text-center'}`} style={{ color: '#c4c4ca' }}>{children}</td>
+  return <td className={`px-3 py-2.5 tabular-nums ${left ? 'text-left' : 'text-center'}`} style={{ color: C.muted }}>{children}</td>
 }

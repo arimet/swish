@@ -2,7 +2,7 @@ import { useId, type ReactNode } from 'react'
 import { zoneSummary, type Shot } from '../../domain/shotchart'
 import { zoneAt, ZONE_CENTROID, ZONE_LABELS, ZONES, type ShotZone } from '../../domain/shotzones'
 import type { ShotSpot } from '../../domain/types'
-import { C } from '../olive/kit'
+import { C, T } from '../olive/kit'
 
 // viewBox en centimètres, ligne de fond en haut. Voir les repères du plan.
 // Exportés parce que le tableau tactique dessine sur le même demi-terrain — et,
@@ -44,9 +44,9 @@ export function CourtLines({ bord = true }: { bord?: boolean }) {
   const minor = { fill: 'none', stroke: 'currentColor', strokeWidth: 6, opacity: 0.4 } as const
   const faint = { fill: 'none', stroke: 'currentColor', strokeWidth: 4, opacity: 0.22 } as const
   return (
-    <g style={{ color: C.muted }}>
+    <g style={{ color: T.line }}>
       {/* Fond propre à la raquette */}
-      <rect x={505} y={0} width={490} height={580} fill={C.text} fillOpacity={0.05} />
+      <rect x={505} y={0} width={490} height={580} fill={T.ink} fillOpacity={0.05} />
       {/* Prolongements des lignes de raquette : laissent deviner les cibles de mi-distance */}
       <g {...faint} strokeDasharray="18 22">
         <line x1={505} y1={580} x2={505} y2={786.5} />
@@ -103,8 +103,8 @@ function Court({ children, label, onClick }: { children: ReactNode; label: strin
     >
       <defs>
         <radialGradient id={gid} cx="50%" cy="10%" r="95%">
-          <stop offset="0%" stopColor={C.card2} />
-          <stop offset="100%" stopColor={C.panel} />
+          <stop offset="0%" stopColor={T.courtHi} />
+          <stop offset="100%" stopColor={T.court} />
         </radialGradient>
       </defs>
       {/* Le fond porte l'arrondi, pas un masque CSS : un rayon en pixels ne suit
@@ -168,8 +168,8 @@ export function ShotPicker({ onPick, confirmation, shots }: {
               key={i}
               data-past-shot={s.made ? 'made' : 'missed'}
               cx={s.spot.x * W} cy={s.spot.y * D} r={11}
-              fill={s.made ? C.accent : 'none'}
-              stroke={s.made ? 'none' : C.muted} strokeWidth={5}
+              fill={s.made ? T.attack : 'none'}
+              stroke={s.made ? 'none' : T.line} strokeWidth={5}
               opacity={0.5}
             />
           ))}
@@ -218,15 +218,15 @@ function Confirmation({ spot, made }: { spot: ShotSpot; made: boolean }) {
   return (
     <g>
       <ZonesDecoupees>
-        <path d={ZONE_PATH[zoneAt(spot.x, spot.y)]} fill={made ? C.accent : C.muted} fillOpacity={0.22} />
+        <path d={ZONE_PATH[zoneAt(spot.x, spot.y)]} fill={made ? T.attack : T.line} fillOpacity={0.22} />
       </ZonesDecoupees>
       <circle
         data-confirmation={made ? 'made' : 'missed'}
         cx={cx} cy={cy} r={26}
-        fill={made ? C.accent : 'none'}
-        stroke={made ? 'none' : C.accent} strokeWidth={made ? 0 : 10}
+        fill={made ? T.attack : 'none'}
+        stroke={made ? 'none' : T.attack} strokeWidth={made ? 0 : 10}
       />
-      <circle cx={cx} cy={cy} r={26} fill="none" stroke={C.accent} strokeWidth={10}>
+      <circle cx={cx} cy={cy} r={26} fill="none" stroke={T.attack} strokeWidth={10}>
         <animate attributeName="r" from="26" to="160" dur={`${SHOT_FEEDBACK_MS}ms`} fill="freeze" />
         <animate attributeName="opacity" from="0.9" to="0" dur={`${SHOT_FEEDBACK_MS}ms`} fill="freeze" />
       </circle>
@@ -251,7 +251,7 @@ export function ShotChart({ shots, minAttempts = 3 }: { shots: Shot[]; minAttemp
             <path
               key={z}
               d={ZONE_PATH[z]}
-              fill={enough ? C.accent : C.text}
+              fill={enough ? T.attack : T.ink}
               fillOpacity={enough ? 0.1 + 0.55 * pct : 0.03}
             />
           )
@@ -265,8 +265,8 @@ export function ShotChart({ shots, minAttempts = 3 }: { shots: Shot[]; minAttemp
           cx={s.spot.x * W}
           cy={s.spot.y * D}
           r={14}
-          fill={s.made ? C.accent : 'none'}
-          stroke={s.made ? 'none' : C.muted}
+          fill={s.made ? T.attack : 'none'}
+          stroke={s.made ? 'none' : T.line}
           strokeWidth={6}
         />
       ))}
@@ -287,7 +287,7 @@ export function ShotChart({ shots, minAttempts = 3 }: { shots: Shot[]; minAttemp
             dominantBaseline="middle"
             fontSize={62}
             fontWeight={900}
-            fill={C.text}
+            fill={T.ink}
           >
             {made}/{attempts}
           </text>

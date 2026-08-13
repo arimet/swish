@@ -20,8 +20,8 @@ export function GameClock({ running, seconds, onToggle }: {
         onClick={onToggle}
         className={`min-w-28 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide shadow-lg transition active:scale-95 sm:min-w-32 sm:px-6 sm:py-2.5 sm:text-sm ${
           running
-            ? 'bg-red-500 text-white hover:bg-red-600'
-            : 'bg-emerald-500 text-white hover:bg-emerald-600'
+            ? 'bg-red-600 text-white hover:bg-red-700'
+            : 'bg-emerald-700 text-white hover:bg-emerald-800'
         }`}
       >
         {running ? '❚❚ Arrêter' : '▶ Démarrer'}

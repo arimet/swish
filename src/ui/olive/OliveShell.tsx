@@ -128,12 +128,12 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
       </button>
 
       <Dialog open={open} onOpenChange={(o) => !o && setOpen(false)}>
-        <DialogContent className="sm:max-w-xs border-none bg-[#161618] p-5 text-white [&>button]:text-white/60">
+        <DialogContent className="sm:max-w-xs border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
           <DialogHeader>
             <DialogTitle className="text-lg font-extrabold">Accès</DialogTitle>
           </DialogHeader>
           <p className="text-[13px] font-semibold">Accès en cours : {NOM_ROLE[role]}</p>
-          <p className="text-[13px]" style={{ color: '#8a8a90' }}>
+          <p className="text-[13px]" style={{ color: C.muted }}>
             {moi ? `Identifié comme ${moi.lastName} ${moi.firstName}.` : 'Aucun joueur identifié sur cet appareil.'}
           </p>
 
@@ -145,14 +145,14 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
                   <li key={p.id}>
                     <button
                       onClick={() => { setPlayer(p.id); setChoix(false); setOpen(false) }}
-                      className="flex w-full items-center gap-2.5 rounded-xl bg-white/5 px-2.5 py-2 text-left text-sm font-medium transition hover:bg-white/10"
+                      className="flex w-full items-center gap-2.5 rounded-xl bg-[var(--c-card2)] px-2.5 py-2 text-left text-sm font-medium transition hover:bg-[var(--c-card2)]"
                     >
                       <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[9px] font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
                       <span className="truncate">{p.lastName} {p.firstName}</span>
                     </button>
                   </li>
                 ))}
-                {players.length === 0 && <li className="py-2 text-[13px]" style={{ color: '#8a8a90' }}>Aucun joueur dans l’effectif.</li>}
+                {players.length === 0 && <li className="py-2 text-[13px]" style={{ color: C.muted }}>Aucun joueur dans l’effectif.</li>}
               </ul>
             </>
           ) : (
@@ -161,19 +161,19 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
                 autoFocus aria-label="Code d’accès" type="password" value={code} placeholder="Code"
                 onChange={(e) => { setCode(e.target.value); setErreur('') }}
                 onKeyDown={(e) => e.key === 'Enter' && valider()}
-                className={`w-full rounded-xl border bg-[#202024] px-4 py-3 text-sm outline-none transition ${erreur ? 'border-red-500/60' : 'border-white/10 focus:border-[#ff4d6d]'}`}
+                className={`w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${erreur ? 'border-red-500/60' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
               />
-              {erreur && <p className="text-xs font-semibold text-red-400">{erreur}</p>}
-              <button onClick={valider} className="rounded-xl bg-[#ff4d6d] py-2.5 text-sm font-bold text-white transition hover:brightness-110">Déverrouiller</button>
+              {erreur && <p className="text-xs font-semibold text-red-700">{erreur}</p>}
+              <button onClick={valider} className="rounded-xl bg-[var(--c-accent)] py-2.5 text-sm font-bold text-white transition hover:brightness-110">Déverrouiller</button>
             </>
           )}
 
           <div className="flex gap-2">
             {moi && !choix && (
-              <button onClick={() => setPlayer(null)} className="flex-1 rounded-xl bg-white/10 py-2.5 text-sm font-bold transition hover:bg-white/20">Ne plus m’identifier</button>
+              <button onClick={() => setPlayer(null)} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">Ne plus m’identifier</button>
             )}
             {!verrouille && (
-              <button onClick={lock} className="flex-1 rounded-xl bg-white/10 py-2.5 text-sm font-bold transition hover:bg-white/20">Se verrouiller</button>
+              <button onClick={lock} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">Se verrouiller</button>
             )}
           </div>
         </DialogContent>

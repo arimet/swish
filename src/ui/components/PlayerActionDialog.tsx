@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ShotPicker, SHOT_FEEDBACK_MS } from './ShotCourt'
+import { C } from '../olive/kit'
 import { kindAt, ZONE_LABELS, zoneAt } from '../../domain/shotzones'
 import type { Shot } from '../../domain/shotchart'
 import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types'
@@ -22,7 +23,7 @@ const ZERO_T: Record<StatKind, number> = { assist: 0, reb_off: 0, reb_def: 0, bl
 const POINTS_LABEL: Record<'2int' | '2ext' | '3', string> = { '2int': '2 PTS', '2ext': '2 PTS', '3': '3 PTS' }
 
 export function PlayerActionDialog({
-  open, playerName, color = '#ffffff', scoreCounts, statCounts, fouls = 0, misses = 0, shots,
+  open, playerName, color = C.text, scoreCounts, statCounts, fouls = 0, misses = 0, shots,
   onClose, onScore, onMiss, onFoul, onStat, onRemoveScore, onRemoveFoul, onRemoveStat, onRemoveMiss,
 }: {
   open: boolean; playerName: string; color?: string
@@ -68,7 +69,7 @@ export function PlayerActionDialog({
           `mt-*` de chaque bloc ci-dessous — deux espacements empilés, une centaine de
           pixels perdus. Les marges des blocs suffisent. Le débordement reste borné en
           dernier recours : les corrections dépliées ne tiennent dans aucune fenêtre. */}
-      <DialogContent className="sm:max-w-md max-h-[92vh] gap-0 overflow-y-auto border-none bg-[#161618] p-5 text-white [&>button]:text-white/60">
+      <DialogContent className="sm:max-w-md max-h-[92vh] gap-0 overflow-y-auto border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2.5 text-xl font-extrabold">
             <span className="h-3.5 w-3.5 rounded-full ring-2 ring-white/20" style={{ background: color }} />
@@ -77,17 +78,17 @@ export function PlayerActionDialog({
         </DialogHeader>
 
         {/* TIR : réussi ou manqué, puis position sur le terrain */}
-        <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-[#202024] p-1">
-          <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[#ff4d6d] text-white">Réussi</Toggle>
-          <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-white/20 text-white">Manqué</Toggle>
+        <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
+          <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-accent)] text-white">Réussi</Toggle>
+          <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">Manqué</Toggle>
         </div>
-        <p className="mt-2 text-[11px] font-semibold text-white/45">
+        <p className="mt-2 text-[11px] font-semibold text-[var(--c-muted)]">
           {made ? 'Touchez l’endroit du tir : la zone donne les points.' : 'Touchez l’endroit du tir manqué.'}
         </p>
         <div className="mt-2"><ShotPicker onPick={pick} confirmation={confirmation} shots={shots} /></div>
 
         <button onClick={() => { onScore('lf'); close() }}
-          className="mt-3 w-full rounded-2xl border border-white/10 bg-[#202024] py-3 text-sm font-bold text-white transition hover:border-[#ff4d6d] active:scale-[0.98]">
+          className="mt-3 w-full rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] py-3 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-accent)] active:scale-[0.98]">
           + 1 Lancer franc
         </button>
 
@@ -95,15 +96,15 @@ export function PlayerActionDialog({
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           {STATS.map((s) => (
             <button key={s.k} onClick={() => { onStat(s.k); close() }}
-              className="flex items-center justify-between rounded-xl border border-white/10 bg-[#202024] px-3.5 py-2.5 text-left transition hover:border-[#3fe08a] hover:bg-[#26262b] active:scale-[0.97]">
-              <span className="text-[13px] font-semibold text-white/80">{s.label}</span>
-              <span className="text-base font-black text-[#3fe08a]">+1</span>
+              className="flex items-center justify-between rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] px-3.5 py-2.5 text-left transition hover:border-[var(--c-green)] hover:bg-[var(--c-panel)] active:scale-[0.97]">
+              <span className="text-[13px] font-semibold text-[var(--c-text)]">{s.label}</span>
+              <span className="text-base font-black text-[var(--c-green)]">+1</span>
             </button>
           ))}
         </div>
 
         <button onClick={() => { onFoul('personal'); close() }}
-          className="mt-3 w-full rounded-2xl bg-red-500/15 py-3.5 text-base font-bold text-red-400 transition hover:bg-red-500 hover:text-white active:scale-[0.98]">
+          className="mt-3 w-full rounded-2xl bg-red-500/15 py-3.5 text-base font-bold text-red-700 transition hover:bg-red-600 hover:text-white active:scale-[0.98]">
           ⚠ Faute personnelle
         </button>
 
@@ -111,8 +112,8 @@ export function PlayerActionDialog({
             défaire. Déployées d'emblée, elles poussaient la moitié du dialogue
             sous la ligne de flottaison et forçaient un défilement à chaque tir. */}
         {hasCorrections && (
-          <details className="mt-4 border-t border-white/10 pt-3">
-            <summary className="cursor-pointer list-none text-[11px] font-bold uppercase tracking-wide text-white/40 transition hover:text-white/70">
+          <details className="mt-4 border-t border-[var(--c-border)] pt-3">
+            <summary className="cursor-pointer list-none text-[11px] font-bold uppercase tracking-wide text-[var(--c-muted)] transition hover:text-[var(--c-text)]">
               ▾ Corriger — retirer une action
             </summary>
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -124,12 +125,12 @@ export function PlayerActionDialog({
               ))}
             </div>
             <button disabled={misses <= 0} onClick={() => { onRemoveMiss(); close() }}
-              className="mt-2 w-full rounded-xl border border-white/10 bg-[#202024] py-2.5 text-sm font-bold text-white/80 transition hover:border-white/25 hover:bg-[#26262b] disabled:opacity-35 disabled:hover:border-white/10">
-              − Retirer le dernier tir manqué {misses > 0 && <span className="text-white/40">({misses})</span>}
+              className="mt-2 w-full rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] py-2.5 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)] disabled:opacity-35 disabled:hover:border-[var(--c-border)]">
+              − Retirer le dernier tir manqué {misses > 0 && <span className="text-[var(--c-muted)]">({misses})</span>}
             </button>
             <button disabled={fouls <= 0} onClick={() => { onRemoveFoul(); close() }}
-              className="mt-2 w-full rounded-xl border border-white/10 bg-[#202024] py-2.5 text-sm font-bold text-white/80 transition hover:border-white/25 hover:bg-[#26262b] disabled:opacity-35 disabled:hover:border-white/10">
-              − Retirer une faute {fouls > 0 && <span className="text-white/40">({fouls})</span>}
+              className="mt-2 w-full rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] py-2.5 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)] disabled:opacity-35 disabled:hover:border-[var(--c-border)]">
+              − Retirer une faute {fouls > 0 && <span className="text-[var(--c-muted)]">({fouls})</span>}
             </button>
           </details>
         )}
@@ -141,7 +142,7 @@ export function PlayerActionDialog({
 function Toggle({ active, activeClass, onClick, children }: { active: boolean; activeClass: string; onClick: () => void; children: React.ReactNode }) {
   return (
     <button onClick={onClick} aria-pressed={active}
-      className={`rounded-lg py-2 text-sm font-bold transition ${active ? activeClass : 'text-white/50 hover:text-white/80'}`}>
+      className={`rounded-lg py-2 text-sm font-bold transition ${active ? activeClass : 'text-[var(--c-muted)] hover:text-[var(--c-text)]'}`}>
       {children}
     </button>
   )
@@ -150,9 +151,9 @@ function Toggle({ active, activeClass, onClick, children }: { active: boolean; a
 function RemoveBtn({ label, value, disabled, onClick }: { label: string; value: string; disabled: boolean; onClick: () => void }) {
   return (
     <button disabled={disabled} onClick={onClick}
-      className="flex items-center justify-between gap-1 rounded-xl border border-white/10 bg-[#202024] px-3 py-2 text-left transition hover:border-white/25 hover:bg-[#26262b] active:scale-[0.97] disabled:opacity-35 disabled:hover:border-white/10">
-      <span className="truncate text-[12px] font-semibold text-white/70">{label}</span>
-      <span className="tabular-nums text-sm font-black text-white/80">{value}</span>
+      className="flex items-center justify-between gap-1 rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] px-3 py-2 text-left transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)] active:scale-[0.97] disabled:opacity-35 disabled:hover:border-[var(--c-border)]">
+      <span className="truncate text-[12px] font-semibold text-[var(--c-text)]">{label}</span>
+      <span className="tabular-nums text-sm font-black text-[var(--c-text)]">{value}</span>
     </button>
   )
 }

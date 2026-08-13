@@ -29,7 +29,7 @@ export function TeamPanel({
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: color }} />
           <h3 className="truncate text-base font-extrabold tracking-tight sm:text-lg">{title}</h3>
-          {bonus && <span className="rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-black uppercase text-white">Bonus</span>}
+          {bonus && <span className="rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-black uppercase text-white">Bonus</span>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Chip label="Fautes" value={teamFouls} warn={teamFouls >= 4} />
@@ -38,7 +38,7 @@ export function TeamPanel({
               onClick={onTimeout}
               disabled={timeoutsRemaining <= 0}
               title="Prendre un temps-mort"
-              className="flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-muted-foreground transition hover:bg-[#ff4d6d] hover:text-white disabled:opacity-40"
+              className="flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-muted-foreground transition hover:bg-[var(--c-accent)] hover:text-white disabled:opacity-40"
             >
               TM<span className="nums text-foreground">{timeoutsRemaining}</span>
             </button>
@@ -47,13 +47,13 @@ export function TeamPanel({
               disabled={timeoutsUsed <= 0}
               title="Annuler le dernier temps-mort"
               aria-label={`Annuler le dernier temps-mort ${title}`}
-              className="border-l border-background/60 px-1.5 py-1 text-[11px] text-muted-foreground transition hover:bg-[#ff4d6d] hover:text-white disabled:opacity-30"
+              className="border-l border-background/60 px-1.5 py-1 text-[11px] text-muted-foreground transition hover:bg-[var(--c-accent)] hover:text-white disabled:opacity-30"
             >
               ↺
             </button>
           </span>
           <button onClick={onSub} title="Changement" aria-label={`Changement ${title}`}
-            className="grid h-7 w-7 place-items-center rounded-lg bg-muted text-muted-foreground transition hover:bg-[#ff4d6d] hover:text-white">
+            className="grid h-7 w-7 place-items-center rounded-lg bg-muted text-muted-foreground transition hover:bg-[var(--c-accent)] hover:text-white">
             ⇄
           </button>
         </div>
@@ -66,7 +66,7 @@ export function TeamPanel({
           return (
             <div key={p.id} className={`rounded-2xl border border-border/60 bg-background p-2.5 ${out ? 'opacity-40' : ''}`}>
               <button disabled={out} onClick={() => onPick(p.id, `${p.number} ${p.lastName}`)} className="flex w-full items-center gap-2.5 text-left">
-                <span className="nums grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#202024] text-base font-extrabold text-white" style={{ boxShadow: `inset 0 0 0 2px ${color}` }}>
+                <span className="nums grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--c-card2)] text-base font-extrabold text-[var(--c-text)]" style={{ boxShadow: `inset 0 0 0 2px ${color}` }}>
                   {p.number}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -98,7 +98,7 @@ function Quick({ label, onClick, foul, disabled }: { label: string; onClick: () 
       disabled={disabled}
       onClick={(e) => { e.stopPropagation(); onClick() }}
       className={`rounded-lg py-2 text-sm font-black transition active:scale-90 disabled:opacity-40 ${
-        foul ? 'bg-red-500/15 text-red-400 hover:bg-red-500 hover:text-white' : 'bg-white/[0.06] text-white hover:bg-[#ff4d6d] hover:text-white'
+        foul ? 'bg-red-500/15 text-red-700 hover:bg-red-600 hover:text-white' : 'bg-[var(--c-card2)] text-[var(--c-text)] hover:bg-[var(--c-accent)] hover:text-white'
       }`}
     >
       {label}
@@ -108,7 +108,7 @@ function Quick({ label, onClick, foul, disabled }: { label: string; onClick: () 
 
 function Chip({ label, value, warn }: { label: string; value: number; warn?: boolean }) {
   return (
-    <span className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold ${warn ? 'bg-amber-500/15 text-amber-600' : 'bg-muted text-muted-foreground'}`}>
+    <span className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold ${warn ? 'bg-amber-500/15 text-amber-700' : 'bg-muted text-muted-foreground'}`}>
       {label}<span className="nums text-foreground">{value}</span>
     </span>
   )

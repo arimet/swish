@@ -78,14 +78,14 @@ function StartingFivePanel({ title, color, players, required, chosen, onToggle }
               style={isChosen ? { boxShadow: `inset 0 0 0 2px ${color}`, borderColor: 'transparent' } : undefined}
             >
               <span
-                className="nums grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#202024] text-sm font-extrabold text-white"
+                className="nums grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--c-card2)] text-sm font-extrabold text-[var(--c-text)]"
                 style={{ boxShadow: `inset 0 0 0 2px ${color}` }}
               >
                 {p.number}
               </span>
               <span className="min-w-0 flex-1 truncate text-sm font-bold">{p.lastName}</span>
               <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-black"
-                style={isChosen ? { background: color, color: '#0d0d0f' } : { border: `1.5px solid ${C.border}`, color: 'transparent' }}>
+                style={isChosen ? { background: color, color: C.frame } : { border: `1.5px solid ${C.border}`, color: 'transparent' }}>
                 ✓
               </span>
             </button>

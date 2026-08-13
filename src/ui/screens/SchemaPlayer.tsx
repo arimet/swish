@@ -182,13 +182,18 @@ export function SchemaPlayer() {
   )
 }
 
-/** Le fond du lecteur : sombre et plein, comme le suivi spectateur. */
+/** Le fond du lecteur : le cadre de l'application, plein écran. Le terrain, lui,
+ *  reste sombre — c'est le tableau du coach, pas une carte de plus. */
 function Ecran({ children }: { children: React.ReactNode }) {
   return <div className="min-h-dvh" style={{ background: C.frame, color: C.text }}>{children}</div>
 }
 
 /** Une moitié d'écran qui avance ou recule d'un temps. Éteinte à l'extrémité :
- *  le défilement se borne, il ne boucle pas. */
+ *  le défilement se borne, il ne boucle pas.
+ *
+ *  Le chevron est de l'encre voilée : à 35 % il ne donnait plus que 2,4:1 sur le
+ *  fond clair, sous le seuil même pour un glyphe de cette taille. 45 % le
+ *  remonte à 3,3:1 sans le rendre bavard. */
 function Zone({ cote, label, fleche, onClick, disabled }: {
   cote: 'left' | 'right'; label: string; fleche: string; onClick: () => void; disabled: boolean
 }) {
@@ -196,7 +201,7 @@ function Zone({ cote, label, fleche, onClick, disabled }: {
     <button
       aria-label={label} onClick={onClick} disabled={disabled}
       className={`absolute inset-y-0 ${cote === 'left' ? 'left-0' : 'right-0'} w-1/2 px-2 text-4xl font-black disabled:opacity-0`}
-      style={{ color: C.text, opacity: 0.35, textAlign: cote }}
+      style={{ color: C.text, opacity: 0.45, textAlign: cote }}
     >
       {fleche}
     </button>

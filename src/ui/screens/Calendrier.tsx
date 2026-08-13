@@ -14,8 +14,8 @@ import { useAuth } from '../../app/auth'
 // par aucun autre badge de l'écran (le vert vaut victoire/en direct, l'ambre
 // vaut « à venir », le rose est l'accent des rencontres) : au coup d'œil, le
 // bleu ne peut désigner qu'une séance d'entraînement.
-const ENTR_COLOR = '#4d9fff'
-const ENTR_BG = 'rgba(77,159,255,0.16)'
+const ENTR_COLOR = C.info
+const ENTR_BG = C.infoBg
 
 // Les mois en toutes lettres, comme le kit tient déjà ses jours et ses mois
 // abrégés : la locale du navigateur n'est pas celle de l'application, et un
@@ -202,7 +202,7 @@ export function Calendrier() {
                     {/* Le cartouche de date : jour de la semaine et quantième, en gros.
                         Le mois est dans la barre au-dessus, il n'a pas à être répété. */}
                     <span className="grid h-14 w-14 shrink-0 place-content-center rounded-2xl text-center leading-none"
-                      style={vedette ? { background: C.accentBg, border: `1px solid ${C.accent}66` } : { background: C.card2, border: bd }}>
+                      style={vedette ? { background: C.accentBg, border: `1px solid ${C.accentBd}` } : { background: C.card2, border: bd }}>
                       <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: vedette ? C.accent : C.faint }}>{f.wd || '—'}</span>
                       <span className="mt-1 text-xl font-black tabular-nums" style={{ color: vedette ? C.accent : C.text }}>{f.day}</span>
                     </span>
@@ -282,7 +282,7 @@ function Field({ id, label, value, onChange, type = 'text' }: { id: string; labe
   return (
     <div>
       <label htmlFor={id} className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</label>
-      <input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} className="mt-1.5 w-full text-sm [color-scheme:dark]" style={field} />
+      <input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} className="mt-1.5 w-full text-sm" style={field} />
     </div>
   )
 }
