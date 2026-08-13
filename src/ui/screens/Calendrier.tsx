@@ -142,7 +142,10 @@ export function Calendrier() {
       ) : groups.length === 0 ? (
         <p className="rounded-2xl border border-dashed py-16 text-center text-sm" style={{ borderColor: C.border, color: C.muted }}>Aucune rencontre ni entraînement planifié.</p>
       ) : (
-        <div className="space-y-8">
+        // Deux dates par ligne dès qu'on a la largeur : une saison fait une colonne
+        // interminable sur un écran de bureau, où la place est à côté et pas en
+        // dessous. Sur téléphone, une seule colonne, comme avant.
+        <div className="grid gap-8 xl:grid-cols-2 [&>*]:min-w-0">
           {groups.map(([iso, items]) => {
             const f = fmtDate(iso === '—' ? undefined : iso)
             const nbRencontres = items.filter((i) => i.kind === 'match').length

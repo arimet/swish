@@ -10,7 +10,7 @@ import type { Schema } from '../../domain/plays'
 import { getPlay } from '../../persistence/repositories'
 import { useAuth } from '../../app/auth'
 import { ExportSchema } from '../components/ExportSchema'
-import { PlayBoard } from '../components/PlayBoard'
+import { largeurTerrain, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
 
 export function SchemaView() {
@@ -65,11 +65,11 @@ export function SchemaView() {
 
       {/* Même bornage de largeur que l'éditeur : c'est le rapport du viewBox qui
           doit tenir, le demi-terrain déborderait sinon sur un écran large. */}
-      <div className="select-none" style={{ maxWidth: schema.terrain === 'demi' ? '46vh' : undefined }}>
+      <div className="select-none" style={{ maxWidth: largeurTerrain(schema.terrain) }}>
         <PlayBoard schema={schema} tempsIndex={index} />
       </div>
 
-      <div className="mt-3 flex select-none items-center gap-3" style={{ maxWidth: schema.terrain === 'demi' ? '46vh' : undefined }}>
+      <div className="mt-3 flex select-none items-center gap-3" style={{ maxWidth: largeurTerrain(schema.terrain) }}>
         <button
           onClick={() => aller(-1)} aria-label="Temps précédent" disabled={index === 0}
           className="rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40" style={{ background: C.card, border: bd, color: C.text }}

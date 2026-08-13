@@ -57,7 +57,7 @@ export function CourtLines({ bord = true }: { bord?: boolean }) {
           à bout avec son miroir (terrain complet), il doublerait la ligne médiane
           et y planterait deux coins arrondis — l'appelant le trace alors lui-même. */}
       <path d="M 90 0 L 90 299.01 A 675 675 0 0 0 1410 299.01 L 1410 0" {...major} />
-      {bord && <rect x={4} y={4} width={W - 8} height={D - 8} rx={12} {...major} />}
+      {bord && <rect x={4} y={4} width={W - 8} height={D - 8} rx={60} {...major} />}
     </g>
   )
 }

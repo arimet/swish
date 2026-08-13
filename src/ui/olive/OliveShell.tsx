@@ -3,7 +3,7 @@ import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { listPlayers } from '../../persistence/repositories'
 import type { Player } from '../../domain/types'
-import { C, bd, Ic, ICON, Vous } from './kit'
+import { C, bd, Ic, ICON } from './kit'
 import { NOM_ROLE, useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 
@@ -213,7 +213,6 @@ function NavGroup({ items }: { items: { icon: string; label: string; to: string;
 }
 
 function Sidebar({ players }: { players: Player[] }) {
-  const { playerId } = useAuth()
   const { clubId, clear } = useClub()
   return (
     <aside className="hidden w-[236px] shrink-0 flex-col overflow-y-auto px-4 py-5 lg:flex" style={{ background: C.panel, borderRight: `1px solid ${C.border}` }}>
@@ -236,25 +235,10 @@ function Sidebar({ players }: { players: Player[] }) {
       )}
       <NavGroup items={NAV_REST} />
 
-      {clubId && players.length > 0 && (
-        <>
-          <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Effectif</p>
-          <ul className="mt-1.5 space-y-0.5">
-            {[...players].sort((a, b) => a.number - b.number).map((p) => {
-              const estMoi = p.id === playerId
-              return (
-                <li key={p.id}>
-                  <Link to={`/players/${p.id}`} className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition hover:bg-white/5" style={{ color: estMoi ? C.text : C.muted }}>
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[9px] font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
-                    <span className="truncate">{p.firstName} {p.lastName}</span>
-                    {estMoi && <Vous />}
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </>
-      )}
+      {/* L'effectif n'est plus dans le menu : treize noms y poussaient la navigation
+          hors de l'écran et faisaient défiler la barre. Il est à sa place sur la
+          fiche d'équipe, où l'on va pour le consulter. Le joueur identifié se
+          reconnaît toujours au tableau de bord et sur sa propre fiche. */}
 
       <div className="mt-auto space-y-2.5">
         <button

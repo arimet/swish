@@ -16,7 +16,7 @@ import { newId } from '../../domain/ids'
 import { decoder } from '../../domain/partage'
 import type { Schema } from '../../domain/plays'
 import { savePlay } from '../../persistence/repositories'
-import { PlayBoard } from '../components/PlayBoard'
+import { largeurTerrain, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
 
 export function SchemaRecu() {
@@ -70,7 +70,7 @@ export function SchemaRecu() {
 
   // Même bornage de largeur que la consultation : c'est le rapport du viewBox
   // qui doit tenir, le demi-terrain déborderait sinon sur un écran large.
-  const large = schema.terrain === 'demi' ? '46vh' : undefined
+  const large = largeurTerrain(schema.terrain)
 
   return (
     <Ecran>
