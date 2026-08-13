@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -282,11 +282,13 @@ describe('Dashboard — le message à l’équipe', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: /modifier/i }))
     const champ = await screen.findByLabelText(/message à l’équipe/i)
-    await userEvent.clear(champ)
-    await userEvent.type(champ, 'Nouveau message.')
+    // Un seul événement plutôt que seize frappes : c'est exactement ce que le champ
+    // contrôlé écoute, et la frappe caractère par caractère rendait ce test instable
+    // sous la charge de la suite complète — il échouait une fois sur trois.
+    fireEvent.change(champ, { target: { value: 'Nouveau message.' } })
     await userEvent.click(screen.getByRole('button', { name: /publier/i }))
 
-    expect(await screen.findByText('Nouveau message.', {}, { timeout: 5000 })).toBeInTheDocument()
+    expect(await screen.findByText('Nouveau message.')).toBeInTheDocument()
     expect(screen.queryByText('Ancien message.')).not.toBeInTheDocument()
     await waitFor(async () => expect((await getMessage('ta'))?.texte).toBe('Nouveau message.'))
     // Un seul message à la fois : ce n'est pas un fil, il n'y a rien à empiler.
