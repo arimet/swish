@@ -185,7 +185,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         </div>
       </header>
 
-      {error && <div className="bg-red-500/10 py-1.5 text-center text-sm font-semibold text-red-600">{error}</div>}
+      {error && <div className="bg-[var(--c-danger-bg)] py-1.5 text-center text-sm font-semibold text-[var(--c-danger)]">{error}</div>}
 
       {/* SCORE ADVERSE : global, sans joueurs */}
       <div className="mx-auto mt-2 flex w-full max-w-4xl flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-card/50 px-4 py-2.5 sm:mt-4">

@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             onKeyDown={(e) => e.key === 'Enter' && submit()}
             className={`mt-2 w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${error ? 'border-red-500/60' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
           />
-          {error && <p className="text-xs font-semibold text-red-700">{error}</p>}
+          {error && <p className="text-xs font-semibold text-[var(--c-danger)]">{error}</p>}
           <div className="mt-2 flex gap-2">
             <button onClick={close} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">Annuler</button>
             <button onClick={submit} className="flex-1 rounded-xl bg-[var(--c-accent)] py-2.5 text-sm font-bold text-white transition hover:brightness-110">Déverrouiller</button>

@@ -98,7 +98,7 @@ function Quick({ label, onClick, foul, disabled }: { label: string; onClick: () 
       disabled={disabled}
       onClick={(e) => { e.stopPropagation(); onClick() }}
       className={`rounded-lg py-2 text-sm font-black transition active:scale-90 disabled:opacity-40 ${
-        foul ? 'bg-red-500/15 text-red-700 hover:bg-red-600 hover:text-white' : 'bg-[var(--c-card2)] text-[var(--c-text)] hover:bg-[var(--c-accent)] hover:text-white'
+        foul ? 'bg-[var(--c-danger-bg)] text-[var(--c-danger)] hover:bg-red-600 hover:text-white' : 'bg-[var(--c-card2)] text-[var(--c-text)] hover:bg-[var(--c-accent)] hover:text-white'
       }`}
     >
       {label}

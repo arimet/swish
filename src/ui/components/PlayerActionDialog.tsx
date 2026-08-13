@@ -104,7 +104,7 @@ export function PlayerActionDialog({
         </div>
 
         <button onClick={() => { onFoul('personal'); close() }}
-          className="mt-3 w-full rounded-2xl bg-red-500/15 py-3.5 text-base font-bold text-red-700 transition hover:bg-red-600 hover:text-white active:scale-[0.98]">
+          className="mt-3 w-full rounded-2xl bg-[var(--c-danger-bg)] py-3.5 text-base font-bold text-[var(--c-danger)] transition hover:bg-red-600 hover:text-white active:scale-[0.98]">
           ⚠ Faute personnelle
         </button>
 
