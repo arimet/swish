@@ -8,7 +8,7 @@ import { playerCareer, ageAt } from '../../domain/career'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { ShotChart } from '../components/ShotCourt'
 import { fmt } from '../components/GameClock'
-import { C, bd, TeamBadge, champLabel, fmtDate } from '../olive/kit'
+import { C, bd, NumBadge, TeamBadge, champLabel, fmtDate } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import type { Match, Player, Team } from '../../domain/types'
 
@@ -71,9 +71,7 @@ export function PlayerDetail() {
       </Link>
 
       <div className="mb-6 mt-4 flex items-center gap-3">
-        <span className="nums grid h-12 w-12 shrink-0 place-items-center rounded-xl text-lg font-extrabold" style={{ background: C.accentBg, color: C.accent }}>
-          {player.number}
-        </span>
+        <NumBadge n={player.number} size="h-12 w-12 rounded-xl text-lg" />
         <div className="min-w-0 flex-1">
           <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
             <span className="truncate">{player.lastName} {player.firstName}</span>

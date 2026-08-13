@@ -4,7 +4,7 @@ import { newId } from '../../domain/ids'
 import { getTeam, listPlayers, listMatches, listTeams, savePlayer, deletePlayer, deleteTeam, saveTeam } from '../../persistence/repositories'
 import { teamRecord, teamMatches, teamScorers } from '../../domain/teamRecord'
 import type { Match, Player, Team } from '../../domain/types'
-import { C, bd, TeamBadge, fmtDate } from '../olive/kit'
+import { C, bd, NumBadge, TeamBadge, fmtDate } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { refresh as refreshRemote } from '../../persistence/remote'
@@ -157,7 +157,7 @@ export function TeamDetail() {
                   return (
                     <li key={pid} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: C.panel }}>
                       <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.orange : C.faint }}>{i + 1}</span>
-                      <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p?.number ?? '?'}</span>
+                      <NumBadge n={p?.number ?? '?'} />
                       <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : 'Joueur'}</span>
                       <span className="text-sm font-black tabular-nums" style={{ color: C.text }}>{pts} <span className="text-[11px] font-semibold" style={{ color: C.muted }}>pts</span></span>
                     </li>
@@ -179,11 +179,20 @@ export function TeamDetail() {
                 <li key={p.id} className="space-y-2 rounded-xl px-3 py-2" style={{ background: C.panel }}>
                   <div className="flex items-center gap-3">
                     <Link to={`/players/${p.id}`} className="flex min-w-0 flex-1 items-center gap-3">
-                      <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
-                      <span className="font-semibold">{p.lastName}</span><span style={{ color: C.muted }}>{p.firstName}</span>
+                      <NumBadge n={p.number} />
+                      {/* Nom et prénom coupés d'un seul tenant, pas chacun de son côté :
+                          deux troncatures indépendantes rognaient le nom de famille
+                          alors que le prénom, seul à devoir céder, gardait sa place. */}
+                      <span className="min-w-0 flex-1 truncate">
+                        <span className="font-semibold">{p.lastName}</span> <span style={{ color: C.muted }}>{p.firstName}</span>
+                      </span>
                     </Link>
-                    <button onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.muted }}>
-                      {editingId === p.id ? 'fermer' : `modifier ${p.lastName}`}
+                    {/* Le nom du joueur reste dans le nom accessible du bouton — sans lui,
+                        dix boutons « modifier » identiques dans la même liste — mais il
+                        sort du libellé visible, qui chevauchait le nom sur un téléphone. */}
+                    <button aria-label={editingId === p.id ? `fermer ${p.lastName}` : `modifier ${p.lastName}`}
+                      onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.muted }}>
+                      {editingId === p.id ? 'fermer' : 'modifier'}
                     </button>
                     {/* Le retrait reste hors de la zone dépliée : c'est une action destructrice,
                         elle ne doit pas se retrouver mêlée aux champs d'édition. */}
