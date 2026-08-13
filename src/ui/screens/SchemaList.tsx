@@ -15,7 +15,13 @@ import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { PlayBoard } from '../components/PlayBoard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { C, bd, PageTitle } from '../olive/kit'
+import { C, bd, Ic, ICON, PageTitle } from '../olive/kit'
+
+/** Les deux actions de carte qui ne sont pas « Jouer » : dessinées, pas écrites.
+ *  Un mot de la même taille que « Jouer » leur donnait le même poids, alors que
+ *  l'une recopie et l'autre détruit. */
+const ICONE_COPIE = 'M9 9h11v11H9zM15 5.5V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1.5'
+const ICONE_POUBELLE = 'M4 7h16M9.5 7V4.5h5V7M6.5 7l1 12.5h9L17.5 7M10 11v5M14 11v5'
 
 /** Sans casse ni accents : au bord du terrain on tape « defense » et l'on veut
  *  trouver « défense ». */
@@ -108,9 +114,18 @@ export function SchemaList() {
       {schemas === null ? (
         <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
       ) : schemas.length === 0 ? (
-        <div className="rounded-2xl py-16 text-center" style={{ border: `1px dashed ${C.border}` }}>
-          <p className="text-sm" style={{ color: C.muted }}>Aucun schéma pour l’instant.</p>
-          <button onClick={creer} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+        // L'état vide dit ce qu'on y range et ce qu'on y gagne, pas seulement
+        // qu'il n'y a rien : « aucun schéma » n'a jamais donné envie d'en faire un.
+        <div className="rounded-2xl px-6 py-14 text-center" style={{ border: `1px dashed ${C.border}` }}>
+          <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl" style={{ background: C.accentBg, color: C.accent }}>
+            <Ic d={ICON.matches} className="h-7 w-7" />
+          </span>
+          <p className="text-base font-extrabold">La bibliothèque est vide.</p>
+          <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
+            Posez vos cinq joueurs, tirez leurs trajectoires au doigt, empilez les temps : la combinaison
+            se rejoue ensuite au temps-mort, animée, sur le téléphone.
+          </p>
+          <button onClick={creer} className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
             Dessiner ma première combinaison →
           </button>
         </div>
@@ -126,12 +141,19 @@ export function SchemaList() {
               ))}
               {aDesNonRanges && <Onglet actif={dossierActif === ''} onClick={() => setDossierActif('')}>Sans dossier</Onglet>}
             </div>
-            <input
-              type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
-              aria-label="Rechercher un schéma" placeholder="Rechercher (nom ou note)…"
-              className="ml-auto w-full rounded-xl px-3 py-2 text-sm sm:w-64"
-              style={{ background: C.panel, border: bd, color: C.text }}
-            />
+            {/* La loupe dans le champ : sur une barre de dossiers qui s'allonge, un
+                rectangle nu ne se distingue plus d'un onglet de plus. */}
+            <div className="relative ml-auto w-full sm:w-72">
+              <span className="pointer-events-none absolute inset-y-0 left-3 grid place-items-center" style={{ color: C.faint }}>
+                <Ic d={ICON.search} className="h-4 w-4" />
+              </span>
+              <input
+                type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
+                aria-label="Rechercher un schéma" placeholder="Rechercher (nom ou note)…"
+                className="h-10 w-full rounded-xl pl-9 pr-3 text-sm"
+                style={{ background: C.panel, border: bd, color: C.text }}
+              />
+            </div>
           </div>
 
           {/* Une seule liste de suggestions pour toutes les cartes : elle évite les
@@ -193,12 +215,33 @@ export function SchemaList() {
                     )}
                   </div>
 
-                  <div className="mt-2.5 flex items-center justify-end gap-2 border-t pt-2.5 text-[11px] font-bold" style={{ borderColor: C.border }}>
-                    {/* Jouer depuis la carte : au bord du terrain on ouvre le lecteur
-                        sans passer par la fiche. */}
-                    <Link to={`/schemas/${s.id}/lecteur`} className="mr-auto rounded-lg px-2 py-1" style={{ color: C.accent }}>▶ Jouer</Link>
-                    <button onClick={() => dupliquer(s)} className="rounded-lg px-2 py-1" style={{ color: C.muted }}>Dupliquer</button>
-                    <button onClick={() => guard('manage', () => setASupprimer(s))} className="rounded-lg px-2 py-1" style={{ color: C.pink }}>Supprimer</button>
+                  {/* Trois poids, trois formes : « Jouer » — ce qu'on vient faire au
+                      bord du terrain, sans passer par la fiche — occupe la ligne et
+                      porte l'accent ; dupliquer et supprimer se retirent en carrés,
+                      la destruction seule en rose bordé. Leur nom accessible reste
+                      entier : c'est le mot qui s'efface, pas l'étiquette. */}
+                  <div className="mt-2.5 flex items-center gap-2 border-t pt-2.5" style={{ borderColor: C.border }}>
+                    <Link
+                      to={`/schemas/${s.id}/lecteur`}
+                      className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl text-[13px] font-black"
+                      style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accent}55` }}
+                    >
+                      ▶ Jouer
+                    </Link>
+                    <button
+                      onClick={() => dupliquer(s)} aria-label="Dupliquer" title="Dupliquer"
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+                      style={{ background: C.card2, border: bd, color: C.muted }}
+                    >
+                      <Ic d={ICONE_COPIE} className="h-[17px] w-[17px]" />
+                    </button>
+                    <button
+                      onClick={() => guard('manage', () => setASupprimer(s))} aria-label="Supprimer" title="Supprimer"
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+                      style={{ border: `1px solid ${C.pink}55`, color: C.pink }}
+                    >
+                      <Ic d={ICONE_POUBELLE} className="h-[17px] w-[17px]" />
+                    </button>
                   </div>
                 </article>
               ))}

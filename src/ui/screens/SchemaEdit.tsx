@@ -4,7 +4,7 @@
  * abouti s'écrit en base sur-le-champ : il n'y a pas de bouton « Enregistrer »,
  * un coach au bord du terrain n'a pas une main pour ça.
  */
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   PANIER, distanceAuSegment, reduireTrace, tempsSuivant, versTerrain,
@@ -15,7 +15,7 @@ import { useAuth } from '../../app/auth'
 import { largeurTerrain, PlayBoard, versSvg } from '../components/PlayBoard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { D, W } from '../components/ShotCourt'
-import { C, bd } from '../olive/kit'
+import { C, bd, Ic } from '../olive/kit'
 
 type Outil = 'deplacer' | Trait | 'ballon' | 'objet' | 'gomme'
 /** Ce qu'un glisser tient : un pion (par son camp et son poste), ou un objet posé
@@ -111,15 +111,27 @@ function sansDefense(t: Temps): Temps {
   }
 }
 
-const OUTILS: { cle: Outil; libelle: string }[] = [
-  { cle: 'deplacer', libelle: 'Déplacer' },
+/**
+ * Les outils, par famille. Huit pastilles de texte de même poids ne disaient pas
+ * qu'elles font trois choses différentes : deux façons de manipuler ce qui est
+ * déjà là, quatre traits qui s'excluent, deux choses à poser. Chaque famille est
+ * désormais son propre segment, et le libellé — qui reste le nom accessible du
+ * bouton — cède la place à un pictogramme.
+ */
+const MANIPULER: { cle: Outil; libelle: string; icone: string }[] = [
+  // La croix fléchée du curseur de déplacement, et la gomme du carnet.
+  { cle: 'deplacer', libelle: 'Déplacer', icone: 'M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3' },
+  { cle: 'gomme', libelle: 'Gomme', icone: 'm7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21M22 21H7M5 11l9 9' },
+]
+const TRACER: { cle: Trait; libelle: string }[] = [
   { cle: 'course', libelle: 'Course' },
   { cle: 'ecran', libelle: 'Écran' },
   { cle: 'passe', libelle: 'Passe' },
   { cle: 'dribble', libelle: 'Dribble' },
-  { cle: 'ballon', libelle: 'Ballon' },
-  { cle: 'objet', libelle: 'Objets' },
-  { cle: 'gomme', libelle: 'Gomme' },
+]
+const POSER: { cle: Outil; libelle: string; icone: string }[] = [
+  { cle: 'ballon', libelle: 'Ballon', icone: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M3.2 12h17.6M12 3.2a14 14 0 0 0 0 17.6M12 3.2a14 14 0 0 1 0 17.6' },
+  { cle: 'objet', libelle: 'Objets', icone: 'M12 3.5 20.5 20.5H3.5zM8 14h8' },
 ]
 const SORTES: { cle: ObjetPose['sorte']; libelle: string }[] = [
   { cle: 'plot', libelle: 'Plot' },
@@ -152,9 +164,9 @@ export function SchemaEdit() {
   }, [id])
 
   if (!id) return null
-  if (schema === undefined) return <div className="p-6"><div className="h-96 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
+  if (schema === undefined) return <div className="p-4 sm:p-6"><div className="h-96 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
   if (schema === null) return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
         Schéma introuvable. <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>← Retour</Link>
       </p>
@@ -310,48 +322,82 @@ export function SchemaEdit() {
 
   const affiche = prise ? deplace(vivant, index, prise.quoi, prise.at) : vivant
 
+  // La bande des temps se cale sur le terrain — elle en montre les états — mais ne
+  // descend pas sous une largeur utilisable : un terrain complet ne fait que 26vh
+  // de large, et l'en-tête s'y replierait sur deux lignes pendant que les vignettes
+  // se couperaient. Le `min(100%, …)` garde la promesse de ne jamais déborder.
+  const largeurBande = `min(100%, max(320px, ${largeurTerrain(vivant.terrain, 'edition')}))`
+
+  // Seul écran du dépôt à respirer moins large sur téléphone (`p-4` au lieu de
+  // `p-6`) : les seize pixels rendus au terrain sont seize pixels de plus pour
+  // viser un pion au pouce, et c'est ici qu'on vise.
   return (
-    <div className="p-6">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Link to="/schemas" className="text-sm font-bold" style={{ color: C.muted }}>←</Link>
+    <div className="p-4 sm:p-6">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Link to="/schemas" aria-label="Retour aux schémas" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
         <input
           aria-label="Nom du schéma" value={nom} onChange={(e) => setNom(e.target.value)}
           onFocus={demanderCode} readOnly={!can('manage')} onBlur={enregistrerNom}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-          style={{ ...champ, flex: '1 1 240px', fontWeight: 800 }}
+          style={{ ...champ, flex: '1 1 180px', minWidth: 0, fontWeight: 800 }}
         />
+        {/* Voir ce qu'on vient de dessiner se joue : le lecteur est à un doigt de
+            l'éditeur, teinté d'accent comme partout ailleurs — c'est le même geste
+            sur les quatre écrans. */}
+        <Link
+          to={`/schemas/${id}/lecteur`}
+          className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
+          style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accent}55` }}
+        >
+          ▶ Jouer
+        </Link>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+      {/* `[&>*]:min-w-0` : sans lui, une rangée de commandes non sécable impose sa
+          largeur intrinsèque à la colonne de la grille, qui déborde alors de
+          l'écran — et emmène le terrain avec elle. */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px] [&>*]:min-w-0">
         <div>
           {/* La barre d'outils au-dessus du terrain, à portée de pouce. `select-none`
               partout où l'on tape : sur mobile, un appui un peu long sélectionne sinon
               le libellé du bouton au lieu de le presser. */}
-          <div className="mb-3 flex select-none flex-wrap gap-2">
-            {OUTILS.map((o) => (
-              <button
-                key={o.cle} onClick={() => setOutil(o.cle)}
-                className="rounded-xl px-3 py-2 text-xs font-bold"
-                style={outil === o.cle
-                  ? { background: C.accent, color: '#fff' }
-                  : { background: C.card, border: bd, color: C.text }}
-              >
-                {o.libelle}
-              </button>
-            ))}
+          <div className="mb-3 flex select-none flex-wrap items-center gap-2">
+            <Famille titre="Manipuler">
+              {MANIPULER.map((o) => (
+                <OutilBouton key={o.cle} libelle={o.libelle} actif={outil === o.cle} onClick={() => setOutil(o.cle)}>
+                  <Ic d={o.icone} className="h-[19px] w-[19px]" />
+                </OutilBouton>
+              ))}
+            </Famille>
+            <Famille titre="Tracer">
+              {TRACER.map((t) => (
+                <OutilBouton key={t.cle} libelle={t.libelle} actif={outil === t.cle} onClick={() => setOutil(t.cle)}>
+                  <TraitDessine trait={t.cle} />
+                </OutilBouton>
+              ))}
+            </Famille>
+            <Famille titre="Poser">
+              {POSER.map((o) => (
+                <OutilBouton key={o.cle} libelle={o.libelle} actif={outil === o.cle} onClick={() => setOutil(o.cle)}>
+                  <Ic d={o.icone} className="h-[19px] w-[19px]" />
+                </OutilBouton>
+              ))}
+            </Famille>
+            {/* Nom accessible explicite : « Annuler » tout court se confond avec le
+                bouton d'abandon des dialogues de confirmation. */}
             <button
-              onClick={annuler} disabled={!pile[index]?.length}
-              className="ml-auto rounded-xl px-3 py-2 text-xs font-bold disabled:opacity-40"
+              onClick={annuler} disabled={!pile[index]?.length} aria-label="Annuler la dernière action"
+              className="ml-auto flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold disabled:opacity-40"
               style={{ background: C.card, border: bd, color: C.text }}
             >
-              ↩ Annuler
+              <span className="text-base leading-none">↩</span> Annuler
             </button>
           </div>
           {outil === 'objet' && (
-            <div className="mb-3 flex gap-2">
+            <div className="mb-3 flex select-none flex-wrap gap-2">
               {SORTES.map((s) => (
                 <button
-                  key={s.cle} onClick={() => setSorteObjet(s.cle)}
+                  key={s.cle} onClick={() => setSorteObjet(s.cle)} aria-pressed={sorteObjet === s.cle}
                   className="rounded-lg px-3 py-1.5 text-[11px] font-bold"
                   style={sorteObjet === s.cle ? { background: C.amberBg, color: C.amber, border: `1px solid ${C.amber}` } : { background: C.card, border: bd, color: C.muted }}
                 >
@@ -363,12 +409,9 @@ export function SchemaEdit() {
 
           {/* Le terrain est borné par la largeur, jamais par la hauteur : c'est le
               rapport de sa boîte qui doit rester celui du viewBox, sinon le SVG se
-              centre dans des marges et `versSvg` convertit de travers. La borne est
-              exprimée en hauteur d'écran pour que la bande des temps reste visible
-              pendant qu'on dessine — sur un écran large, le demi-terrain déborderait
-              sinon sous la barre de navigation. Le terrain complet, lui, garde toute
-              la largeur : le brider en hauteur le réduirait à une bande où les pions
-              ne se distinguent plus, il se tient en portrait et se fait défiler.
+              centre dans des marges et `versSvg` convertit de travers. La borne dit
+              trois choses à la fois (largeur disponible, hauteur d'écran, plafond) ;
+              c'est `largeurTerrain` qui les tient.
               `select-none` : sans lui, un glisser sélectionne les numéros des pions. */}
           <div className="select-none" style={{ maxWidth: largeurTerrain(vivant.terrain, 'edition') }}>
             <PlayBoard schema={affiche} tempsIndex={index} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
@@ -383,11 +426,28 @@ export function SchemaEdit() {
             </PlayBoard>
           </div>
 
+          {/* Réordonner et supprimer un temps sont des gestes rares : ils n'ont pas à
+              tenir un rang pleine largeur sous la bande, là où la barre de navigation
+              du téléphone les rattrapait. Ils tiennent maintenant dans l'en-tête de
+              la bande, contre le numéro du temps qu'ils manipulent — et la bande
+              entière se cale sur la largeur du terrain, dont elle montre les états. */}
+          <div className="mt-4 flex select-none items-center gap-2" style={{ maxWidth: largeurBande }}>
+            <p className="text-[11px] font-black uppercase tracking-wider" style={{ color: C.faint }}>
+              Temps {index + 1} <span style={{ opacity: 0.6 }}>/ {vivant.temps.length}</span>
+            </p>
+            <div className="ml-auto flex items-center gap-1.5">
+              <CommandeTemps libelle="Reculer le temps" onClick={() => bougerTemps(-1)} disabled={index === 0}>◀</CommandeTemps>
+              <CommandeTemps libelle="Avancer le temps" onClick={() => bougerTemps(1)} disabled={index === vivant.temps.length - 1}>▶</CommandeTemps>
+              {/* Un schéma a toujours au moins un temps : le dernier ne se supprime pas. */}
+              <CommandeTemps libelle="Supprimer le temps" onClick={supprimerTemps} disabled={vivant.temps.length === 1} danger>✕</CommandeTemps>
+            </div>
+          </div>
+
           {/* La bande des temps sous le terrain : on y lit la combinaison entière. */}
-          <div className="mt-3 flex select-none items-end gap-2 overflow-x-auto pb-1">
+          <div className="mt-2 flex select-none items-stretch gap-2 overflow-x-auto pb-1" style={{ maxWidth: largeurBande }}>
             {vivant.temps.map((_, i) => (
               <button
-                key={i} aria-label={`Temps ${i + 1}`} onClick={() => setTempsIndex(i)}
+                key={i} aria-label={`Temps ${i + 1}`} aria-pressed={i === index} onClick={() => setTempsIndex(i)}
                 className="w-20 shrink-0 rounded-xl p-1"
                 style={{ background: C.card, border: i === index ? `2px solid ${C.accent}` : bd }}
               >
@@ -395,13 +455,14 @@ export function SchemaEdit() {
                 <span className="mt-1 block text-[10px] font-bold" style={{ color: i === index ? C.accent : C.muted }}>{i + 1}</span>
               </button>
             ))}
-            <button onClick={ajouterTemps} className="h-16 shrink-0 rounded-xl px-4 text-sm font-bold" style={{ background: C.card, border: bd, color: C.text }}>+ Temps</button>
-          </div>
-          <div className="mt-2 flex select-none gap-2">
-            <button onClick={() => bougerTemps(-1)} disabled={index === 0} className="rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-40" style={{ background: C.card, border: bd, color: C.text }}>◀ Reculer le temps</button>
-            <button onClick={() => bougerTemps(1)} disabled={index === vivant.temps.length - 1} className="rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-40" style={{ background: C.card, border: bd, color: C.text }}>Avancer le temps ▶</button>
-            {/* Un schéma a toujours au moins un temps : le dernier ne se supprime pas. */}
-            <button onClick={supprimerTemps} disabled={vivant.temps.length === 1} className="rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-40" style={{ background: C.card, border: bd, color: C.pink }}>Supprimer le temps</button>
+            <button
+              onClick={ajouterTemps} aria-label="Ajouter un temps"
+              className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-bold"
+              style={{ background: C.card, border: `1px dashed ${C.border}`, color: C.muted }}
+            >
+              <span className="text-lg leading-none" style={{ color: C.accent }}>+</span>
+              Temps
+            </button>
           </div>
         </div>
 
@@ -411,8 +472,8 @@ export function SchemaEdit() {
             <div className="flex gap-2">
               {(['demi', 'complet'] as Terrain[]).map((t) => (
                 <button
-                  key={t} onClick={() => changerTerrain(t)}
-                  className="flex-1 rounded-xl py-2 text-xs font-bold"
+                  key={t} onClick={() => changerTerrain(t)} aria-pressed={vivant.terrain === t}
+                  className="min-w-0 flex-1 rounded-xl py-2 text-xs font-bold"
                   style={vivant.terrain === t ? { background: C.accent, color: '#fff' } : { background: C.panel, border: bd, color: C.text }}
                 >
                   {t === 'demi' ? 'Demi-terrain' : 'Terrain complet'}
@@ -445,5 +506,64 @@ export function SchemaEdit() {
         confirmLabel="Retirer" onConfirm={retirerDefense} onClose={() => setAskDefense(false)}
       />
     </div>
+  )
+}
+
+/** Une famille d'outils : son propre segment, son propre fond. C'est la forme qui
+ *  dit « ceci ne fait pas la même chose que cela » — le titre reste pour les
+ *  lecteurs d'écran, et s'affiche dès qu'il y a la place. */
+function Famille({ titre, children }: { titre: string; children: ReactNode }) {
+  return (
+    <div role="group" aria-label={titre} className="flex shrink-0 items-center gap-1 rounded-2xl p-1" style={{ background: C.panel, border: bd }}>
+      <span className="hidden pl-1.5 pr-0.5 text-[10px] font-black uppercase tracking-wider xl:inline" style={{ color: C.faint }}>{titre}</span>
+      {children}
+    </div>
+  )
+}
+
+/** Un outil. Le pictogramme porte le sens, l'`aria-label` porte le nom : le bouton
+ *  reste « Course » pour un lecteur d'écran comme pour un test, sans que le mot
+ *  vole la place au dessin. */
+function OutilBouton({ libelle, actif, onClick, children }: { libelle: string; actif: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      onClick={onClick} aria-label={libelle} title={libelle} aria-pressed={actif}
+      className="grid h-10 min-w-10 place-items-center rounded-xl px-1.5 transition"
+      style={actif ? { background: C.accent, color: '#fff' } : { background: 'transparent', color: C.muted }}
+    >
+      {children}
+    </button>
+  )
+}
+
+/** Le trait tel que le tableau le dessine : plein et fléché pour la course, barré
+ *  en T pour l'écran, pointillé pour la passe, ondulé pour le dribble. C'est la
+ *  convention du carnet de coach, la même que `PlayBoard` — un mot met trois
+ *  secondes à dire ce que ce tracé dit d'un coup d'œil. */
+function TraitDessine({ trait }: { trait: Trait }) {
+  return (
+    <svg viewBox="0 0 34 22" className="h-[22px] w-[34px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path
+        d={trait === 'dribble' ? 'M3 15q2.5-6 5 0t5 0t5 0t5 0' : `M3 15h${trait === 'ecran' ? 24 : 20}`}
+        strokeDasharray={trait === 'passe' ? '4.5 3.5' : undefined}
+      />
+      <path d={trait === 'ecran' ? 'M27 8v14' : 'm22 10 5 5-5 5'} />
+    </svg>
+  )
+}
+
+/** Une commande de la bande des temps : carrée, au pouce, et le danger seul en
+ *  rose bordé — le reste du dépôt ne fait pas autrement. */
+function CommandeTemps({ libelle, onClick, disabled, danger, children }: {
+  libelle: string; onClick: () => void; disabled: boolean; danger?: boolean; children: ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick} disabled={disabled} aria-label={libelle} title={libelle}
+      className="grid h-10 w-10 place-items-center rounded-xl text-xs font-black disabled:opacity-30"
+      style={danger ? { border: `1px solid ${C.pink}55`, color: C.pink } : { background: C.card, border: bd, color: C.text }}
+    >
+      {children}
+    </button>
   )
 }
