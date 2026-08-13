@@ -157,7 +157,7 @@ export function Admin() {
 
         {/* La remise à zéro à part, et derrière la recopie du nom du club : un clic
             unique n'est pas à la hauteur d'une action qui vide tout l'appareil. */}
-        <section className="rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.pink}55` }}>
+        <section className="rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
           <p className="mb-1 text-xs font-bold uppercase tracking-wide" style={{ color: C.pink }}>Tout effacer</p>
           <p className="mb-3 text-[13px]" style={{ color: C.muted }}>
             Remise à zéro complète de cet appareil : équipes, joueurs, rencontres, résultats,
@@ -220,7 +220,7 @@ function Ligne({ libelle, compte, action, aria, desactive, onClick }: {
       <button
         onClick={onClick} disabled={desactive} aria-label={aria}
         className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40"
-        style={{ border: `1px solid ${C.pink}55`, color: C.pink }}
+        style={{ border: `1px solid ${C.accentBd}`, color: C.pink }}
       >
         {action}
       </button>

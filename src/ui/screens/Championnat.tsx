@@ -276,7 +276,7 @@ function Field({ id, label, value, onChange, type = 'text', min }: { id: string;
   return (
     <div>
       <label htmlFor={id} className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</label>
-      <input id={id} type={type} min={min} value={value} onChange={(e) => onChange(e.target.value)} className="mt-1.5 w-full text-sm [color-scheme:dark]" style={field} />
+      <input id={id} type={type} min={min} value={value} onChange={(e) => onChange(e.target.value)} className="mt-1.5 w-full text-sm" style={field} />
     </div>
   )
 }

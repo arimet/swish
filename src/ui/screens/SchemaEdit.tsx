@@ -353,7 +353,7 @@ export function SchemaEdit() {
         <Link
           to={`/schemas/${id}/lecteur`}
           className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
-          style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accent}55` }}
+          style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}
         >
           ▶ Jouer
         </Link>
@@ -480,7 +480,7 @@ export function SchemaEdit() {
                 <button
                   key={t} onClick={() => changerTerrain(t)} aria-pressed={vivant.terrain === t}
                   className="min-w-0 flex-1 rounded-xl py-2 text-xs font-bold"
-                  style={vivant.terrain === t ? { background: C.accent, color: '#fff' } : { background: C.panel, border: bd, color: C.text }}
+                  style={vivant.terrain === t ? { background: C.accent, color: C.onAccent } : { background: C.panel, border: bd, color: C.text }}
                 >
                   {t === 'demi' ? 'Demi-terrain' : 'Terrain complet'}
                 </button>
@@ -535,7 +535,7 @@ function OutilBouton({ libelle, actif, onClick, children }: { libelle: string; a
     <button
       onClick={onClick} aria-label={libelle} title={libelle} aria-pressed={actif}
       className="grid h-10 min-w-10 place-items-center rounded-xl px-1.5 transition"
-      style={actif ? { background: C.accent, color: '#fff' } : { background: 'transparent', color: C.muted }}
+      style={actif ? { background: C.accent, color: C.onAccent } : { background: 'transparent', color: C.muted }}
     >
       {children}
     </button>
@@ -546,7 +546,7 @@ function OutilBouton({ libelle, actif, onClick, children }: { libelle: string; a
  *  disque ambre qu'on voit sur le terrain, le plot son triangle ambre. Un contour
  *  générique se lisait « globe » ; ici le bouton montre littéralement son effet. */
 function PoserDessine({ quoi, actif }: { quoi: Outil; actif: boolean }) {
-  const teinte = actif ? '#fff' : C.amber
+  const teinte = actif ? C.onAccent : C.amber
   return (
     <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]">
       {quoi === 'ballon'
@@ -581,7 +581,7 @@ function CommandeTemps({ libelle, onClick, disabled, danger, children }: {
     <button
       onClick={onClick} disabled={disabled} aria-label={libelle} title={libelle}
       className="grid h-10 w-10 place-items-center rounded-xl text-xs font-black disabled:opacity-30"
-      style={danger ? { border: `1px solid ${C.pink}55`, color: C.pink } : { background: C.card, border: bd, color: C.text }}
+      style={danger ? { border: `1px solid ${C.accentBd}`, color: C.pink } : { background: C.card, border: bd, color: C.text }}
     >
       {children}
     </button>

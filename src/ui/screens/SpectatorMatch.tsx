@@ -90,7 +90,7 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
             pas une porte d'entrée dans l'application derrière la garde club. */}
         <div className="mb-5 flex items-center justify-center">
           <span className="flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide"
-            style={live ? { background: C.greenBg, color: C.green } : finished ? { background: 'rgba(255,255,255,0.08)', color: C.muted } : { background: C.amberBg, color: C.amber }}>
+            style={live ? { background: C.greenBg, color: C.green } : finished ? { background: C.neutralBg, color: C.muted } : { background: C.amberBg, color: C.amber }}>
             {live && <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: C.green }} />}
             {live ? 'En direct' : finished ? 'Terminé' : 'À venir'}
           </span>
@@ -149,7 +149,7 @@ function MetaRow({ label, fouls, bonus, to }: { label: string; fouls: number; bo
     <div className="flex items-center justify-between gap-2 rounded-xl px-3 py-2" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <span className="truncate text-[11px] font-bold uppercase" style={{ color: C.muted }}>{label}</span>
       <span className="flex shrink-0 items-center gap-2 text-[11px] font-bold">
-        {bonus && <span className="rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase text-white" style={{ background: '#ef4444' }}>Bonus</span>}
+        {bonus && <span className="rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase text-white" style={{ background: 'var(--destructive)' }}>Bonus</span>}
         <span style={{ color: C.faint }}>Fautes <span style={{ color: C.text }}>{fouls}</span></span>
         <span style={{ color: C.faint }}>TM <span style={{ color: C.text }}>{to}</span></span>
       </span>

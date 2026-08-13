@@ -119,7 +119,7 @@ function Field({ id, label, value, onChange, placeholder, type = 'text' }: { id:
   return (
     <div>
       <label htmlFor={id} className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</label>
-      <input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="mt-1.5 w-full text-sm [color-scheme:dark]" style={input} />
+      <input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="mt-1.5 w-full text-sm" style={input} />
     </div>
   )
 }

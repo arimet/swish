@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { C } from '../ui/olive/kit'
 
 /** Ce qu'on peut écrire dans l'application. Un visiteur ne modifie rien, la
  *  table de marque saisit la rencontre, l'administrateur gère le club. */
@@ -114,23 +115,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={{ role, playerId, can, unlock, lock, setPlayer, guard }}>
       {children}
       <Dialog open={!!pending} onOpenChange={(o) => !o && close()}>
-        <DialogContent className="sm:max-w-xs border-none bg-[#161618] p-5 text-white [&>button]:text-white/60">
+        <DialogContent className="sm:max-w-xs border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
           <DialogHeader>
             <DialogTitle className="text-lg font-extrabold">
               🔒 Accès {pending ? NOM_ROLE[REQUIS[pending.ability]] : ''} requis
             </DialogTitle>
           </DialogHeader>
-          <p className="text-[13px]" style={{ color: '#8a8a90' }}>Cette action nécessite ce code d'accès.</p>
+          <p className="text-[13px]" style={{ color: C.muted }}>Cette action nécessite ce code d'accès.</p>
           <input
             autoFocus type="password" value={code} placeholder="Code"
             onChange={(e) => { setCode(e.target.value); setError('') }}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
-            className={`mt-2 w-full rounded-xl border bg-[#202024] px-4 py-3 text-sm outline-none transition ${error ? 'border-red-500/60' : 'border-white/10 focus:border-[#ff4d6d]'}`}
+            className={`mt-2 w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${error ? 'border-red-500/60' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
           />
-          {error && <p className="text-xs font-semibold text-red-400">{error}</p>}
+          {error && <p className="text-xs font-semibold text-red-700">{error}</p>}
           <div className="mt-2 flex gap-2">
-            <button onClick={close} className="flex-1 rounded-xl bg-white/10 py-2.5 text-sm font-bold transition hover:bg-white/20">Annuler</button>
-            <button onClick={submit} className="flex-1 rounded-xl bg-[#ff4d6d] py-2.5 text-sm font-bold text-white transition hover:brightness-110">Déverrouiller</button>
+            <button onClick={close} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">Annuler</button>
+            <button onClick={submit} className="flex-1 rounded-xl bg-[var(--c-accent)] py-2.5 text-sm font-bold text-white transition hover:brightness-110">Déverrouiller</button>
           </div>
         </DialogContent>
       </Dialog>

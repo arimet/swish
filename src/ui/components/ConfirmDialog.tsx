@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { C } from '../olive/kit'
 
 /** Confirmation interne (remplace window.confirm).
  *
@@ -18,9 +19,9 @@ export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirmer'
   const bloqué = !!saisieAttendue && saisie.trim() !== saisieAttendue
   return (
     <Dialog open={open} onOpenChange={(o) => !o && fermer()}>
-      <DialogContent className="sm:max-w-sm border-none bg-[#161618] p-5 text-white [&>button]:text-white/60">
+      <DialogContent className="sm:max-w-sm border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader><DialogTitle className="text-lg font-extrabold">{title}</DialogTitle></DialogHeader>
-        {message && <p className="text-[13px] leading-relaxed" style={{ color: '#8a8a90' }}>{message}</p>}
+        {message && <p className="text-[13px] leading-relaxed" style={{ color: C.muted }}>{message}</p>}
         {saisieAttendue && (
           <>
             <label htmlFor="confirm-saisie" className="mt-1 text-[13px] font-semibold">
@@ -28,15 +29,15 @@ export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirmer'
             </label>
             <input
               id="confirm-saisie" autoFocus value={saisie} onChange={(e) => setSaisie(e.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-[#202024] px-4 py-3 text-sm outline-none transition focus:border-[#ff4d6d]"
+              className="w-full rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition focus:border-[var(--c-accent)]"
             />
           </>
         )}
         <div className="mt-3 flex gap-2">
-          <button onClick={fermer} className="flex-1 rounded-xl bg-white/10 py-2.5 text-sm font-bold transition hover:bg-white/20">{cancelLabel}</button>
+          <button onClick={fermer} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{cancelLabel}</button>
           <button
             onClick={() => { onConfirm(); fermer() }} disabled={bloqué}
-            className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-40 disabled:hover:brightness-100 ${danger ? 'bg-red-500' : 'bg-[#ff4d6d]'}`}
+            className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-40 disabled:hover:brightness-100 ${danger ? 'bg-red-600' : 'bg-[var(--c-accent)]'}`}
           >
             {confirmLabel}
           </button>

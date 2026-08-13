@@ -419,7 +419,7 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md border-none bg-[#161618] p-5 text-white [&>button]:text-white/60">
+      <DialogContent className="sm:max-w-md border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
           <DialogTitle className="text-lg font-extrabold">Partager « {schema.nom} »</DialogTitle>
         </DialogHeader>
@@ -442,7 +442,7 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
             <input
               readOnly value={lien} aria-label="Lien de la combinaison"
               onFocus={(e) => e.currentTarget.select()}
-              className="w-full truncate rounded-xl bg-[#202024] px-3 py-2 text-[11px] outline-none"
+              className="w-full truncate rounded-xl bg-[var(--c-card2)] px-3 py-2 text-[11px] outline-none"
               style={{ border: bd, color: C.muted }}
             />
             <button

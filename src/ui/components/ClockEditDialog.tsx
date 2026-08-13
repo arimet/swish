@@ -23,7 +23,7 @@ export function ClockEditDialog({ open, seconds, max, onClose, onSubmit }: {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-xs border-none bg-[#161618] p-5 text-white [&>button]:text-white/60">
+      <DialogContent className="sm:max-w-xs border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
           <DialogTitle className="text-lg font-extrabold">Éditer le chrono</DialogTitle>
         </DialogHeader>
@@ -34,19 +34,19 @@ export function ClockEditDialog({ open, seconds, max, onClose, onSubmit }: {
           onKeyDown={(e) => e.key === 'Enter' && submit()}
           inputMode="numeric"
           placeholder="MM:SS"
-          className={`mt-2 w-full rounded-xl border bg-[#202024] px-4 py-3 text-center text-4xl font-black tabular-nums outline-none transition ${
-            valid ? 'border-white/10 focus:border-[#ff4d6d]' : 'border-red-500/60'
+          className={`mt-2 w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-center text-4xl font-black tabular-nums outline-none transition ${
+            valid ? 'border-[var(--c-border)] focus:border-[var(--c-accent)]' : 'border-red-500/60'
           }`}
         />
-        <p className="mt-1.5 text-center text-xs text-white/40">Format MM:SS — max {fmt(max)}</p>
+        <p className="mt-1.5 text-center text-xs text-[var(--c-muted)]">Format MM:SS — max {fmt(max)}</p>
         <div className="mt-4 flex gap-2">
-          <button onClick={onClose} className="flex-1 rounded-xl bg-white/10 py-2.5 text-sm font-bold transition hover:bg-white/20">
+          <button onClick={onClose} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">
             Annuler
           </button>
           <button
             disabled={!valid}
             onClick={submit}
-            className="flex-1 rounded-xl bg-[#ff4d6d] py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-40"
+            className="flex-1 rounded-xl bg-[var(--c-accent)] py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-40"
           >
             Valider
           </button>

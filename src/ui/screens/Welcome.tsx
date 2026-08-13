@@ -3,14 +3,19 @@ import { useClub } from '../../app/club'
 import { C, bd, TeamBadge } from '../olive/kit'
 
 /** Premier lancement : choisir le club suivi. Affiché à la place du shell tant
- *  qu'aucun club valide n'est réglé — ce n'est pas une route dont on s'échappe. */
+ *  qu'aucun club valide n'est réglé — ce n'est pas une route dont on s'échappe.
+ *
+ *  Posé sur le **cadre** et non sur la page : la page est la gouttière derrière
+ *  le cadre arrondi, le plan le plus foncé du thème clair, et personne n'y écrit
+ *  jamais. Cet écran, lui, est du contenu — le texte secondaire y tombait à
+ *  4,2:1, il tient 5,3:1 sur le cadre. */
 export function Welcome() {
   const { teams, ready, setClub } = useClub()
   // Tant que la liste des équipes n'est pas arrivée, on ne sait pas si le club
   // est vide : éviter d'afficher un instant « aucune équipe » à tort.
-  if (!ready) return <div className="grid min-h-dvh place-items-center" style={{ background: C.page, color: C.muted }}>Chargement…</div>
+  if (!ready) return <div className="grid min-h-dvh place-items-center" style={{ background: C.frame, color: C.muted }}>Chargement…</div>
   return (
-    <div className="grid min-h-dvh place-items-center p-6" style={{ background: C.page, color: C.text }}>
+    <div className="grid min-h-dvh place-items-center p-6" style={{ background: C.frame, color: C.text }}>
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-2xl text-xl" style={{ background: C.orange }}>🏀</span>

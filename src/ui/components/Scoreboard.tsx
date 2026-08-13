@@ -17,7 +17,7 @@ export function PeriodStrip({ current }: { current: Period }) {
           <span key={period}
             className={`nums rounded-lg px-2.5 py-1 text-[11px] font-black uppercase tracking-wide ${
               isCurrent ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
-                : isPast ? 'bg-white/10 text-white/70' : 'bg-white/[0.04] text-white/35'}`}>
+                : isPast ? 'bg-white/10 text-white/75' : 'bg-white/[0.06] text-white/55'}`}>
             {label}
           </span>
         )

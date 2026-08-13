@@ -126,7 +126,7 @@ export function Dashboard() {
           <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Forme</span>
           {lines.slice(0, 5).map((l) => (
             <span key={l.match.id} className="grid h-6 w-6 place-items-center rounded-md text-[11px] font-black"
-              style={{ background: l.result === 'V' ? C.greenBg : 'rgba(255,77,109,0.14)', color: l.result === 'V' ? C.green : C.pink }}>
+              style={{ background: l.result === 'V' ? C.greenBg : C.accentBg, color: l.result === 'V' ? C.green : C.pink }}>
               {l.result}
             </span>
           ))}
@@ -145,8 +145,8 @@ export function Dashboard() {
                   const estMoi = pid === moi?.id
                   return (
                     <li key={pid}>
-                      <Link to={`/players/${pid}`} className="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-white/5"
-                        style={estMoi ? { background: C.accentBg, border: `1px solid ${C.accent}55` } : { background: C.panel }}>
+                      <Link to={`/players/${pid}`} className="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-[var(--c-hover)]"
+                        style={estMoi ? { background: C.accentBg, border: `1px solid ${C.accentBd}` } : { background: C.panel }}>
                         <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.orange : C.faint }}>{i + 1}</span>
                         <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p?.number ?? '?'}</span>
                         <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : 'Joueur'}</span>
@@ -229,7 +229,7 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
   // bord est ce qu'on vient lire, écrire à l'équipe est l'exception.
   if (saisieOuverte) {
     return (
-      <section className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accent}44` }}>
+      <section className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
         <div className="mb-3 flex items-center gap-3">
           <label htmlFor="message-equipe" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>Message à l’équipe</label>
           <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>Fermer</button>
@@ -260,7 +260,7 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
 
   const oublié = Date.now() - Date.parse(affiché.écritLe) > OUBLI_MS
   return (
-    <section data-testid="message-equipe" className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${oublié ? C.amber : C.accent}55` }}>
+    <section data-testid="message-equipe" className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${oublié ? C.amberBd : C.accentBd}` }}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Message à l’équipe</span>
         <span className="rounded-md px-2 py-0.5 text-[11px] font-black"
@@ -290,7 +290,7 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
     const mine = ls.score.a
     const opp = ls.score.b
     return (
-      <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accent}55` }}>
+      <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
         <span className="rounded-md px-2 py-0.5 text-[10px] font-black uppercase" style={{ background: C.greenBg, color: C.green }}>En direct</span>
         <span className="nums text-3xl font-black tabular-nums">{mine} – {opp}</span>
         <span className="text-sm font-bold" style={{ color: C.muted }}>contre {opponent(live)}</span>
@@ -407,7 +407,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
             juste à gauche, eux, restent lus par toute l'équipe. */}
         {gere && (
           <Link to={`/match/${m.id}#convocation`} className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
-            style={convoqués.length === 0 ? { background: C.accent, color: '#fff' } : { border: bd, color: C.text }}>
+            style={convoqués.length === 0 ? { background: C.accent, color: C.onAccent } : { border: bd, color: C.text }}>
             {convoqués.length === 0 ? 'Convoquer l’équipe →' : 'Modifier la convocation →'}
           </Link>
         )}
@@ -436,7 +436,7 @@ function Panel({ title, children }: { title: string; children: ReactNode }) {
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button onClick={onClick} className="rounded-lg px-2.5 py-1 text-[11px] font-bold transition"
-      style={active ? { background: C.accent, color: '#fff' } : { background: C.card2, color: C.muted, border: bd }}>
+      style={active ? { background: C.accent, color: C.onAccent } : { background: C.card2, color: C.muted, border: bd }}>
       {children}
     </button>
   )

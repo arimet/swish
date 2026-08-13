@@ -194,12 +194,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         <div className="ml-auto flex items-center gap-1.5">
           {OPP_POINTS.map(({ k, n }) => (
             <button key={k} onClick={() => oppScore(k)} aria-label={`Ajouter ${n} point${n > 1 ? 's' : ''} à ${teamNames.B}`}
-              className="nums rounded-lg bg-white/[0.06] px-3 py-2 text-sm font-black text-white transition hover:bg-[#ff4d6d] active:scale-90">
+              className="nums rounded-lg bg-[var(--c-card2)] px-3 py-2 text-sm font-black text-[var(--c-text)] transition hover:bg-[var(--c-accent)] hover:text-white active:scale-90">
               +{n}
             </button>
           ))}
           <button onClick={removeOppScore} aria-label={`Retirer le dernier panier de ${teamNames.B}`}
-            className="rounded-lg bg-white/[0.06] px-2.5 py-2 text-sm font-bold text-muted-foreground transition hover:bg-[#ff4d6d] hover:text-white active:scale-90">
+            className="rounded-lg bg-[var(--c-card2)] px-2.5 py-2 text-sm font-bold text-muted-foreground transition hover:bg-[var(--c-accent)] hover:text-white active:scale-90">
             ↺
           </button>
         </div>

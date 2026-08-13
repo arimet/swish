@@ -101,7 +101,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
 
   const statusPill =
     match.status === 'live' ? { label: 'En cours', bg: C.greenBg, fg: C.green }
-    : match.status === 'finished' ? { label: 'Terminée', bg: 'rgba(255,255,255,0.08)', fg: C.muted }
+    : match.status === 'finished' ? { label: 'Terminée', bg: C.neutralBg, fg: C.muted }
     : { label: 'À venir', bg: C.amberBg, fg: C.amber }
 
   return (
@@ -251,7 +251,7 @@ function Field({ id, label, value, onChange, type = 'text' }: { id: string; labe
   return (
     <div>
       <label htmlFor={id} className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</label>
-      <input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} className="mt-1.5 w-full text-sm [color-scheme:dark]" style={field} />
+      <input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} className="mt-1.5 w-full text-sm" style={field} />
     </div>
   )
 }

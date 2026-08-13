@@ -245,7 +245,7 @@ export function SchemaList() {
                     <Link
                       to={`/schemas/${s.id}/lecteur`}
                       className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl text-[13px] font-black"
-                      style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accent}55` }}
+                      style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}
                     >
                       ▶ Jouer
                     </Link>
@@ -261,7 +261,7 @@ export function SchemaList() {
                         <button
                           onClick={() => guard('manage', () => setASupprimer(s))} aria-label="Supprimer" title="Supprimer"
                           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-                          style={{ border: `1px solid ${C.pink}55`, color: C.pink }}
+                          style={{ border: `1px solid ${C.accentBd}`, color: C.pink }}
                         >
                           <Ic d={ICONE_POUBELLE} className="h-[17px] w-[17px]" />
                         </button>
@@ -294,7 +294,7 @@ function Onglet({ actif, onClick, children }: { actif: boolean; onClick: () => v
     <button
       onClick={onClick} aria-pressed={actif}
       className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
-      style={actif ? { background: C.accent, color: '#fff' } : { background: C.card2, color: C.muted, border: bd }}
+      style={actif ? { background: C.accent, color: C.onAccent } : { background: C.card2, color: C.muted, border: bd }}
     >
       {children}
     </button>

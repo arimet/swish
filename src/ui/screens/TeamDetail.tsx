@@ -106,7 +106,7 @@ export function TeamDetail() {
         {/* Comme sur le résumé et la fiche de rencontre : le droit est vérifié à l'ouverture
             du dialogue, pas redérivé ensuite. Assumé — se verrouiller entre l'ouverture et la
             confirmation n'arrive qu'en rendant l'appareil en pleine action. */}
-        {gere && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.pink}55`, color: C.pink }}>Supprimer</button>}
+        {gere && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.accentBd}`, color: C.pink }}>Supprimer</button>}
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
         title="Supprimer l'équipe ?" message={`« ${team.name} » et tous ses joueurs seront supprimés. Cette action est définitive.`} confirmLabel="Supprimer" danger />
@@ -131,8 +131,8 @@ export function TeamDetail() {
                   const to = l.match.status === 'finished' ? `/match/${l.match.id}/summary` : l.match.status === 'live' ? `/match/${l.match.id}/live` : `/match/${l.match.id}`
                   return (
                     <li key={l.match.id}>
-                      <Link to={to} className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-white/5" style={{ background: C.panel }}>
-                        {l.result && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[11px] font-black" style={{ background: l.result === 'V' ? C.greenBg : 'rgba(255,77,109,0.14)', color: l.result === 'V' ? C.green : C.pink }}>{l.result}</span>}
+                      <Link to={to} className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-[var(--c-hover)]" style={{ background: C.panel }}>
+                        {l.result && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[11px] font-black" style={{ background: l.result === 'V' ? C.greenBg : C.accentBg, color: l.result === 'V' ? C.green : C.pink }}>{l.result}</span>}
                         {!l.result && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[10px] font-black" style={{ background: C.amberBg, color: C.amber }}>·</span>}
                         <TeamBadge id={l.opponentId} name={opp} size="h-7 w-7 text-[9px]" />
                         <span className="min-w-0 flex-1 truncate text-sm font-bold">{opp}</span>
