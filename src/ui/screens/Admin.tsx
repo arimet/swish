@@ -157,7 +157,8 @@ export function Admin() {
           <p className="mb-1 text-xs font-bold uppercase tracking-wide" style={{ color: C.pink }}>Tout effacer</p>
           <p className="mb-3 text-[13px]" style={{ color: C.muted }}>
             Remise à zéro complète de cet appareil : équipes, joueurs, rencontres, résultats,
-            convocations, entraînements et schémas. L’application repart sur l’écran de bienvenue.
+            convocations, entraînements, schémas et le message à l’équipe. L’application repart
+            sur l’écran de bienvenue.
           </p>
           <Ligne
             libelle="Toutes les données de cet appareil"
