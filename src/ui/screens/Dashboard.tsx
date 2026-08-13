@@ -128,7 +128,7 @@ export function Dashboard() {
           {lines.length === 0 && <span className="text-sm" style={{ color: C.muted }}>—</span>}
         </div>
 
-        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_420px]">
+        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_420px] [&>*]:min-w-0">
           <Panel title="Meilleurs marqueurs">
             {scorers.length === 0 ? (
               <Empty>Pas encore de points marqués.</Empty>
