@@ -190,6 +190,12 @@ describe('Calendrier — droits', () => {
     expect(await listTrainings()).toHaveLength(0)
   })
 
+  it('propose « Nouvelle rencontre » au calendrier, à côté du nouvel entraînement', async () => {
+    // Le bouton a quitté l'en-tête : c'est au calendrier que vivent les choses datées.
+    renderCal()
+    expect(await screen.findByRole('link', { name: /nouvelle rencontre/i })).toHaveAttribute('href', '/match/new')
+  })
+
   it('n’affiche le formulaire d’entraînement qu’après un clic', async () => {
     renderCal()
     await screen.findByRole('button', { name: /nouvel entraînement/i })

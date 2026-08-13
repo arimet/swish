@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { listMatches, listPlays, listTeams, listTrainings, saveTraining, deleteTraining, toggleTrainingPlay } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
@@ -146,12 +147,20 @@ export function Calendrier() {
 
       {/* Saisie réservée à l'admin, repliée derrière son bouton. Ouvrir le formulaire
           est déjà une écriture : la garde est ici, pas seulement à la validation — un
-          visiteur voit la demande de code, pas les champs. */}
+          visiteur voit la demande de code, pas les champs.
+          « Nouvelle rencontre » l'accompagne : le bouton a quitté l'en-tête, où il
+          n'avait rien à faire. C'est au calendrier que vivent les choses datées, et
+          c'est là qu'on va quand on prépare la saison. */}
       <section className="mt-8 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         {!saisieOuverte ? (
-          <button onClick={() => guard('manage', () => setSaisieOuverte(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: ENTR_COLOR }}>
-            + Nouvel entraînement
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => guard('manage', () => setSaisieOuverte(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: ENTR_COLOR }}>
+              + Nouvel entraînement
+            </button>
+            <Link to="/match/new" className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.orange }}>
+              + Nouvelle rencontre
+            </Link>
+          </div>
         ) : (
         <>
         <div className="mb-4 flex items-center gap-3">
