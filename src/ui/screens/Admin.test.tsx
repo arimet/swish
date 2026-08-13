@@ -170,11 +170,12 @@ describe('Administration — tout effacer', () => {
 })
 
 describe('Administration — droits', () => {
-  it('refuse chaque opération à la table de marque, sans rien écrire', async () => {
+  it('ne montre aucune opération à la table de marque, et ne touche à rien', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderAdmin()
-    await screen.findByRole('button', { name: 'Supprimer les rencontres de Poule A' })
 
+    // L'écran n'est qu'une planche de boutons destructeurs : sans le droit, il ne
+    // se monte pas du tout plutôt que d'aligner des boutons qui réclament un code.
     const opérations = [
       'Supprimer les rencontres de Poule A',
       'Supprimer les rencontres de l’année 2026',
@@ -185,14 +186,12 @@ describe('Administration — droits', () => {
       'Tout effacer',
     ]
     for (const nom of opérations) {
-      await userEvent.click(screen.getByRole('button', { name: nom }))
-      expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
-      // Aucune confirmation ne s'ouvre derrière la demande de code : la garde est
-      // avant la mutation, pas à la validation.
-      expect(screen.queryByRole('button', { name: /supprimer définitivement/i })).not.toBeInTheDocument()
-      await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
+      expect(screen.queryByRole('button', { name: nom })).not.toBeInTheDocument()
     }
+    // Et aucune confirmation ne peut s'ouvrir derrière.
+    expect(screen.queryByRole('button', { name: /supprimer définitivement/i })).not.toBeInTheDocument()
 
+    // Ce qui compte : rien n'a été effacé en base.
     expect(await listMatches()).toHaveLength(3)
     expect((await listMatches()).flatMap((m) => m.events)).toHaveLength(2)
     expect(await listResults()).toHaveLength(1)

@@ -15,7 +15,10 @@ import type { Schema } from '../../domain/plays'
 
 export function Dashboard() {
   const { clubId, club } = useClub()
-  const { playerId } = useAuth()
+  const { can, playerId } = useAuth()
+  // Le tableau de bord se lit en entier ; seuls les raccourcis qui mènent à une
+  // écriture (planifier, convoquer) sont réservés à qui gère le club.
+  const gere = can('manage')
   const [matches, setMatches] = useState<Match[] | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [players, setPlayers] = useState<Player[]>([])
@@ -108,9 +111,9 @@ export function Dashboard() {
 
         <MessageDuCoach clubId={clubId} />
 
-        <Banner live={live} next={next} teams={teams} />
+        <Banner live={live} next={next} teams={teams} gere={gere} tientLaMarque={can('score')} />
 
-        <Echeance fixture={fixture} teams={teams} players={players} convocation={convocation} schemas={schemas} />
+        <Echeance fixture={fixture} teams={teams} players={players} convocation={convocation} schemas={schemas} gere={gere} />
 
         <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat label="Bilan" value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? `${rec.played} rencontres` : 'aucune'} accent={rec.wins >= rec.losses ? C.green : C.pink} />
@@ -188,12 +191,13 @@ const OUBLI_MS = 14 * 24 * 3600_000
  * messagerie : ni fil, ni réponse, ni destinataire.
  *
  * Lire est libre, comme tout le reste : c'est un message pour l'équipe, y compris
- * pour un joueur qui n'a aucun droit d'écriture. Écrire et effacer relèvent de
- * l'administration, et se gardent d'abord : la saisie ne s'ouvre même pas sans le
- * droit, comme le formulaire d'entraînement du calendrier.
+ * pour un joueur qui n'a aucun droit d'écriture. Écrire, modifier et effacer
+ * relèvent de l'administration : leurs boutons ne s'affichent que pour elle, et
+ * la garde reste derrière eux.
  */
 function MessageDuCoach({ clubId }: { clubId: string }) {
-  const { guard } = useAuth()
+  const { can, guard } = useAuth()
+  const gere = can('manage')
   const [message, setMessage] = useState<MessageEquipe | null>(null)
   const [saisieOuverte, setSaisieOuverte] = useState(false)
   const [texte, setTexte] = useState('')
@@ -243,7 +247,10 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
     )
   }
 
+  // Pas de message et pas le droit d'en écrire : rien à montrer plutôt qu'un
+  // bouton qui réclamerait un code.
   if (!affiché) {
+    if (!gere) return null
     return (
       <button onClick={ouvrir} className="mb-5 rounded-xl px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>
         + Message à l’équipe
@@ -260,8 +267,12 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
           style={oublié ? { background: C.amberBg, color: C.amber } : { background: C.accentBg, color: C.accent }}>
           {depuis(affiché.écritLe)}
         </span>
-        <button onClick={ouvrir} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>Modifier</button>
-        <button onClick={effacer} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.pink }}>Effacer</button>
+        {gere && (
+          <>
+            <button onClick={ouvrir} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>Modifier</button>
+            <button onClick={effacer} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.pink }}>Effacer</button>
+          </>
+        )}
       </div>
       {/* `whitespace-pre-wrap` : deux consignes sur deux lignes restent sur deux lignes. */}
       <p className="whitespace-pre-wrap text-[15px] font-semibold">{affiché.texte}</p>
@@ -271,7 +282,7 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
 
 // `live` et `next` viennent tous les deux de `mine`, déjà filtré sur
 // `meta.clubId === clubId` : notre club est donc toujours le côté A.
-function Banner({ live, next, teams }: { live?: Match; next?: Match; teams: Record<string, Team> }) {
+function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next?: Match; teams: Record<string, Team>; gere: boolean; tientLaMarque: boolean }) {
   const opponent = (m: Match) => teams[m.meta.opponentId]?.name ?? 'Adversaire'
   if (live) {
     const ls = liveState(live)
@@ -284,9 +295,13 @@ function Banner({ live, next, teams }: { live?: Match; next?: Match; teams: Reco
         <span className="nums text-3xl font-black tabular-nums">{mine} – {opp}</span>
         <span className="text-sm font-bold" style={{ color: C.muted }}>contre {opponent(live)}</span>
         <span className="nums text-sm font-bold" style={{ color: C.faint }}>{dc.label} · {dc.clock}</span>
-        <Link to={`/match/${live.id}/live`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
-          Ouvrir la table de marque →
-        </Link>
+        {/* Le score en direct se lit par tout le monde ; ouvrir la table de marque
+            est le geste de celui qui la tient, et lui seul y est invité. */}
+        {tientLaMarque && (
+          <Link to={`/match/${live.id}/live`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+            Ouvrir la table de marque →
+          </Link>
+        )}
       </div>
     )
   }
@@ -304,7 +319,8 @@ function Banner({ live, next, teams }: { live?: Match; next?: Match; teams: Reco
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
       <span className="text-sm" style={{ color: C.muted }}>Aucune rencontre prévue.</span>
-      <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Planifier une rencontre</Link>
+      {/* Planifier écrit : le raccourci ne s'affiche qu'à qui gère le club. */}
+      {gere && <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Planifier une rencontre</Link>}
     </div>
   )
 }
@@ -312,13 +328,13 @@ function Banner({ live, next, teams }: { live?: Match; next?: Match; teams: Reco
 /** Bloc « prochaine échéance » : rencontre ou entraînement, convocation comprise.
  *  `fixture` exclut déjà le match en direct (voir le calcul dans `Dashboard`) : ce
  *  composant n'a donc jamais à s'en soucier, il affiche simplement ce qu'on lui donne. */
-function Echeance({ fixture, teams, players, convocation, schemas }: { fixture: Fixture | null; teams: Record<string, Team>; players: Player[]; convocation: Convocation | null; schemas: Schema[] }) {
+function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fixture: Fixture | null; teams: Record<string, Team>; players: Player[]; convocation: Convocation | null; schemas: Schema[]; gere: boolean }) {
   if (!fixture) {
     return (
       <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
         <span className="text-sm" style={{ color: C.muted }}>Rien de planifié pour l’instant.</span>
-        <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Planifier →</Link>
+        {gere && <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Planifier →</Link>}
       </div>
     )
   }
@@ -387,10 +403,14 @@ function Echeance({ fixture, teams, players, convocation, schemas }: { fixture: 
             </>
           )}
         </div>
-        <Link to={`/match/${m.id}#convocation`} className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
-          style={convoqués.length === 0 ? { background: C.accent, color: '#fff' } : { border: bd, color: C.text }}>
-          {convoqués.length === 0 ? 'Convoquer l’équipe →' : 'Modifier la convocation →'}
-        </Link>
+        {/* Convoquer écrit : le raccourci est celui du coach. Le compte et les noms
+            juste à gauche, eux, restent lus par toute l'équipe. */}
+        {gere && (
+          <Link to={`/match/${m.id}#convocation`} className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
+            style={convoqués.length === 0 ? { background: C.accent, color: '#fff' } : { border: bd, color: C.text }}>
+            {convoqués.length === 0 ? 'Convoquer l’équipe →' : 'Modifier la convocation →'}
+          </Link>
+        )}
       </div>
     </div>
   )

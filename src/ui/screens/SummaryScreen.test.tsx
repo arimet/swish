@@ -1,6 +1,5 @@
 import 'fake-indexeddb/auto'
 import { render, screen, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SummaryScreen } from './SummaryScreen'
@@ -94,20 +93,24 @@ describe('SummaryScreen — droits', () => {
   const renderRésumé = () =>
     render(<AuthProvider><MemoryRouter><SummaryScreen matchId={MATCH_ID} onHome={vi.fn()} /></MemoryRouter></AuthProvider>)
 
-  it('la correction des statistiques après match est refusée à la table de marque', async () => {
-    // Corriger une feuille close n'est pas le travail du bénévole du samedi : le
-    // code administrateur est demandé, et le mode correction ne s'ouvre pas.
+  it('la correction après match est refusée à la table de marque : ni bouton, ni mode correction', async () => {
+    // Corriger une feuille close n'est pas le travail du bénévole du samedi : les
+    // deux boutons de correction ne lui sont pas proposés, et le mode ne s'ouvre pas.
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderRésumé()
-    await userEvent.click(await screen.findByRole('button', { name: /corriger stats/i }))
+    await screen.findByText('Visiteurs · VERDUN')
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /corriger stats/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /infos/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/Mode correction/)).not.toBeInTheDocument()
   })
 
-  it('un visiteur consulte le résumé sans qu’aucun code lui soit demandé', async () => {
+  it('un visiteur consulte le résumé sans qu’aucun code lui soit demandé, et l’exporte', async () => {
     renderRésumé()
     await screen.findByText('Visiteurs · VERDUN')
     expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
+    // Lire, suivre et exporter n'écrivent rien : ces trois-là restent à tous.
+    expect(screen.getByRole('button', { name: /exporter en pdf/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /suivi/i })).toBeInTheDocument()
   })
 })

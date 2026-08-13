@@ -168,21 +168,49 @@ describe('MatchPreview — droits', () => {
     expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
   })
 
-  it('la convocation reste administrative : la table de marque se voit demander le code admin, et rien n’est enregistré', async () => {
+  it('la convocation reste administrative : la table de marque n’a ni cases ni bouton, et rien n’est enregistré', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderPreview()
-    await userEvent.click(await screen.findByRole('button', { name: /enregistrer la convocation/i }))
+    await screen.findByText(/convocation/i)
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    // Ni cases à cocher, ni champs de rendez-vous, ni enregistrement : plus rien
+    // ne réclame le code administrateur à qui tient seulement la marque.
+    expect(screen.queryByRole('button', { name: /enregistrer la convocation/i })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/ANTOINE/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/heure de rendez-vous/i)).not.toBeInTheDocument()
+    // Ce qui compte : rien n'est écrit en base.
     expect(await getConvocation('m1')).toBeUndefined()
   })
 
-  it('cocher un convoqué est déjà un geste administratif : la case reste décochée pour la table de marque', async () => {
+  it('la table de marque lit les convoqués sans pouvoir les changer', async () => {
+    // Savoir qui est convoqué n'est pas écrire : la liste reste, en toutes lettres.
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    await saveConvocation({ matchId: 'm1', playerIds: ['p1'], meetTime: '18:00', meetPlace: 'Gymnase' })
+    renderPreview()
+
+    expect(await screen.findByText(/ANTOINE/i)).toBeInTheDocument()
+    expect(screen.getByText(/rendez-vous 18:00 · gymnase/i)).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+
+  it('supprimer la rencontre est administratif : la table de marque ne voit pas le bouton', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
     renderPreview()
-    await userEvent.click(await screen.findByLabelText(/ANTOINE/i))
+    await screen.findByText(/convocation/i)
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
-    expect(screen.getByLabelText(/ANTOINE/i)).not.toBeChecked()
+    expect(screen.queryByRole('button', { name: /^supprimer$/i })).not.toBeInTheDocument()
+  })
+
+  it('un visiteur ne se voit proposer ni démarrage ni suppression', async () => {
+    // Démarrer relève de la table de marque, supprimer de l'administration :
+    // le visiteur consulte la fiche, et rien de plus.
+    sessionStorage.removeItem(ROLE_KEY)
+    renderPreview()
+    await screen.findByText(/convocation/i)
+
+    expect(screen.queryByRole('button', { name: /démarrer la rencontre/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^supprimer$/i })).not.toBeInTheDocument()
+    // Le suivi spectateur, lui, reste ouvert à tous.
+    expect(screen.getByRole('link', { name: /suivi spectateur/i })).toBeInTheDocument()
   })
 })

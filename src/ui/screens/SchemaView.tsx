@@ -1,7 +1,8 @@
 /**
  * La consultation d'un schéma : le tableau en grand, un temps à la fois, qu'on
  * fait défiler à la main. Aucun code n'est demandé pour lire — un joueur revoit
- * la combinaison chez lui. Seul « Modifier » réclame l'accès administrateur.
+ * la combinaison chez lui. Seul « Modifier » écrit : il réclame l'accès
+ * administrateur, et ne s'affiche que pour qui l'a.
  * Le lecteur animé viendra en 8B ; ici, c'est le doigt qui avance.
  */
 import { useEffect, useState } from 'react'
@@ -15,7 +16,7 @@ import { C, bd } from '../olive/kit'
 
 export function SchemaView() {
   const { id } = useParams<{ id: string }>()
-  const { guard } = useAuth()
+  const { can, guard } = useAuth()
   const navigate = useNavigate()
   const [schema, setSchema] = useState<Schema | null | undefined>(undefined)
   const [index, setIndex] = useState(0)
@@ -58,10 +59,11 @@ export function SchemaView() {
         {/* Un seul bouton plein par écran : « Jouer », ce qu'on vient chercher au
             bord du terrain, et c'est libre. Partager l'est aussi — rien n'est
             modifié, un joueur doit pouvoir envoyer la combinaison à un coéquipier ;
-            il reste en contour, comme Modifier, qui garde son code administrateur. */}
+            il reste en contour, comme Modifier — qui garde son code administrateur
+            et ne se rend que pour qui le possède. */}
         <div className="flex shrink-0 items-center gap-2">
           <button onClick={() => setPartage(true)} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>Partager</button>
-          <button onClick={modifier} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>Modifier</button>
+          {can('manage') && <button onClick={modifier} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>Modifier</button>}
           <Link to={`/schemas/${id}/lecteur`} className="flex h-11 items-center rounded-xl px-4 text-sm font-bold text-white" style={{ background: C.accent }}>▶ Jouer</Link>
         </div>
       </div>

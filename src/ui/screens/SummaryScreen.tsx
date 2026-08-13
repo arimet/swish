@@ -25,7 +25,7 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
 type EventInput = DistributiveOmit<GameEvent, 'id' | 'wallClock'>
 
 export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: () => void }) {
-  const { guard } = useAuth()
+  const { can, guard } = useAuth()
   const [match, setMatch] = useState<Match | null | undefined>(undefined)
   const [players, setPlayers] = useState<Record<string, Player>>({})
   // Indexé par côté d'évènement : A = notre club, B = l'adversaire (sans effectif).
@@ -108,17 +108,24 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         <button onClick={onHome} className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>← Accueil</button>
         <div className="flex flex-wrap items-center gap-2.5">
           <Link to={`/match/${match.id}/watch`} target="_blank" className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.muted }}>👁 Suivi</Link>
-          <button onClick={() => guard('manage', () => setShowEdit(true))} className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>✎ Infos</button>
-          {/* Le droit est vérifié à l'ouverture du mode correction, pas redérivé ensuite :
-              un administrateur qui ouvre « Corriger stats » puis se verrouille garde un mode
-              correction écrivant jusqu'à ce qu'il en sorte. C'est assumé — il faudrait rendre
-              la tablette en pleine correction pour que ça compte. `LiveMatch` réévalue `can()`
-              à chaque rendu parce que la saisie du match dure deux heures et change de mains,
-              pas parce que cet écran-ci aurait oublié de le faire. */}
-          <button onClick={() => (editStats ? setEditStats(false) : guard('manage', () => setEditStats(true)))}
-            className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={editStats ? { background: C.accent, color: '#fff' } : { border: bd, color: C.text }}>
-            {editStats ? '✓ Terminer' : '✎ Corriger stats'}
-          </button>
+          {/* Corriger les infos ou les stats après coup relève de l'administration :
+              les deux boutons ne se rendent que pour elle. Lire la feuille, la
+              suivre et l'exporter restent libres pour tout le monde. */}
+          {can('manage') && (
+            <>
+              <button onClick={() => guard('manage', () => setShowEdit(true))} className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>✎ Infos</button>
+              {/* Le droit est vérifié à l'ouverture du mode correction, pas redérivé ensuite :
+                  un administrateur qui ouvre « Corriger stats » puis se verrouille garde un mode
+                  correction écrivant jusqu'à ce qu'il en sorte. C'est assumé — il faudrait rendre
+                  la tablette en pleine correction pour que ça compte. `LiveMatch` réévalue `can()`
+                  à chaque rendu parce que la saisie du match dure deux heures et change de mains,
+                  pas parce que cet écran-ci aurait oublié de le faire. */}
+              <button onClick={() => (editStats ? setEditStats(false) : guard('manage', () => setEditStats(true)))}
+                className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={editStats ? { background: C.accent, color: '#fff' } : { border: bd, color: C.text }}>
+                {editStats ? '✓ Terminer' : '✎ Corriger stats'}
+              </button>
+            </>
+          )}
           <button onClick={printSummary} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>⬇ Exporter en PDF</button>
         </div>
       </div>

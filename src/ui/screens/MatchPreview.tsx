@@ -13,7 +13,7 @@ const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
 export function MatchPreview({ matchId }: { matchId: string }) {
   const navigate = useNavigate()
   const { hash } = useLocation()
-  const { guard } = useAuth()
+  const { can, guard } = useAuth()
   const [match, setMatch] = useState<Match | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [askDelete, setAskDelete] = useState(false)
@@ -75,6 +75,10 @@ export function MatchPreview({ matchId }: { matchId: string }) {
 
   const nameOf = (id: string) => teams[id]?.name ?? '—'
   const f = fmtDate(match.meta.date)
+  // Deux droits différents sur cette fiche : convoquer et supprimer relèvent du
+  // club, démarrer la rencontre relève de la table de marque.
+  const gere = can('manage')
+  const tientLaMarque = can('score')
   // Démarrer (ou reprendre) relève de la table de marque, pas de l'administration :
   // le bénévole du samedi doit pouvoir lancer la rencontre qu'il va tenir, sans le
   // code admin. Convoquer et supprimer, juste en dessous, restent administratifs.
@@ -139,48 +143,81 @@ export function MatchPreview({ matchId }: { matchId: string }) {
           </span>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-2">
-          {[...players].sort((a, b) => a.number - b.number).map((p) => (
-            <CaseJoueur key={p.id} player={p} checked={convoqués.has(p.id)} onToggle={() => basculerConvoqué(p.id)} />
-          ))}
-        </div>
+        {/* Convoquer écrit ; savoir si l'on est convoqué, non — c'est même la
+            première chose qu'un joueur vient lire ici. La section reste donc
+            entière pour tout le monde, en cases à cocher pour qui convoque, en
+            liste pour qui est convoqué. */}
+        {gere ? (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {[...players].sort((a, b) => a.number - b.number).map((p) => (
+                <CaseJoueur key={p.id} player={p} checked={convoqués.has(p.id)} onToggle={() => basculerConvoqué(p.id)} />
+              ))}
+            </div>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <Field id="convoc-heure" label="Heure de rendez-vous" type="time" value={meetTime} onChange={setMeetTime} />
-          <Field id="convoc-lieu" label="Lieu de rendez-vous" value={meetPlace} onChange={setMeetPlace} />
-        </div>
-        <div className="mt-4">
-          <label htmlFor="convoc-note" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Consignes</label>
-          <textarea id="convoc-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)}
-            className="mt-1.5 w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
-        </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Field id="convoc-heure" label="Heure de rendez-vous" type="time" value={meetTime} onChange={setMeetTime} />
+              <Field id="convoc-lieu" label="Lieu de rendez-vous" value={meetPlace} onChange={setMeetPlace} />
+            </div>
+            <div className="mt-4">
+              <label htmlFor="convoc-note" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Consignes</label>
+              <textarea id="convoc-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)}
+                className="mt-1.5 w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
+            </div>
 
-        <button onClick={enregistrerConvocation} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
-          Enregistrer la convocation
-        </button>
+            <button onClick={enregistrerConvocation} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+              Enregistrer la convocation
+            </button>
 
-        {/* Comme les résultats du championnat : aucune synchronisation pour la convocation,
-            même formulation que sur l'écran Championnat pour ne pas laisser croire à deux limites différentes. */}
-        <p className="mt-4 text-[11px]" style={{ color: C.faint }}>Cette convocation reste sur cet appareil : elle n’est pas synchronisée avec vos autres appareils.</p>
+            {/* Comme les résultats du championnat : aucune synchronisation pour la convocation,
+                même formulation que sur l'écran Championnat pour ne pas laisser croire à deux limites différentes. */}
+            <p className="mt-4 text-[11px]" style={{ color: C.faint }}>Cette convocation reste sur cet appareil : elle n’est pas synchronisée avec vos autres appareils.</p>
+          </>
+        ) : convoqués.size === 0 ? (
+          <p className="text-sm" style={{ color: C.muted }}>Personne n’est convoqué pour l’instant.</p>
+        ) : (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {[...players].filter((p) => convoqués.has(p.id)).sort((a, b) => a.number - b.number).map((p) => (
+                <span key={p.id} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: C.panel }}>
+                  <span className="text-xs font-black" style={{ color: C.accent }}>N°{p.number}</span>
+                  {p.lastName} {p.firstName}
+                </span>
+              ))}
+            </div>
+            {(meetTime || meetPlace) && (
+              <p className="mt-4 text-sm" style={{ color: C.muted }}>Rendez-vous {[meetTime, meetPlace].filter(Boolean).join(' · ')}</p>
+            )}
+            {note && <p className="mt-1 whitespace-pre-wrap text-sm" style={{ color: C.muted }}>{note}</p>}
+          </>
+        )}
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+      {/* `justify-end` et non `justify-between` : sans lui, la disparition de
+          « Supprimer » ferait glisser le reste de la rangée à gauche. */}
+      <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
         {/* Le droit est vérifié à l'ouverture du dialogue, pas redérivé ensuite : qui se
             verrouille pendant que la confirmation est ouverte peut encore la confirmer.
             C'est assumé — le scénario suppose de rendre la tablette en pleine action, et
             `LiveMatch` réévalue `can()` à chaque rendu parce que la saisie du match dure
             deux heures, pas parce que les autres écrans auraient oublié de le faire. */}
-        <button onClick={() => guard('manage', () => setAskDelete(true))} className="rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: `1px solid ${C.border}`, color: C.muted }}>
-          Supprimer
-        </button>
+        {gere && (
+          <button onClick={() => guard('manage', () => setAskDelete(true))} className="mr-auto rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: `1px solid ${C.border}`, color: C.muted }}>
+            Supprimer
+          </button>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <Link to={`/match/${match.id}/watch`} target="_blank" className="rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>👁 Suivi spectateur</Link>
           {match.status === 'finished' ? (
             <Link to={`/match/${match.id}/summary`} className="rounded-xl px-6 py-3 text-sm font-bold text-white" style={{ background: C.accent }}>Voir le résumé →</Link>
           ) : (
-            <button onClick={start} className="rounded-xl px-6 py-3 text-sm font-bold text-white" style={{ background: C.accent }}>
-              {match.status === 'live' ? 'Reprendre la rencontre →' : '▶ Démarrer la rencontre'}
-            </button>
+            // Démarrer ou reprendre est le geste de la table de marque : le bouton
+            // est le sien, et n'apparaît pas au visiteur qui consulte la fiche.
+            tientLaMarque && (
+              <button onClick={start} className="rounded-xl px-6 py-3 text-sm font-bold text-white" style={{ background: C.accent }}>
+                {match.status === 'live' ? 'Reprendre la rencontre →' : '▶ Démarrer la rencontre'}
+              </button>
+            )
           )}
         </div>
       </div>

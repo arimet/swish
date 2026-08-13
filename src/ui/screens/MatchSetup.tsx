@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { listPlayers, listTeams, saveMatch } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
@@ -15,7 +15,7 @@ const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
  *  fixé d'avance, seul l'adversaire se choisit ici — il n'a pas d'effectif à
  *  détailler, son score se saisira globalement pendant le match. */
 export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
-  const { guard } = useAuth()
+  const { can, guard } = useAuth()
   const { clubId, club, ready } = useClub()
   const [teams, setTeams] = useState<Team[] | null>(null) // null = pas encore chargé
   useEffect(() => { refresh().then(() => listTeams()).then(setTeams) }, [])
@@ -48,6 +48,12 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
     onCreated(match.id)
   }
   const canCreate = !!clubId && !!opponentId
+
+  // Cet écran n'existe que pour écrire une rencontre : les boutons qui y mènent
+  // ont disparu pour qui ne gère pas le club, et l'URL directe le renvoie au
+  // calendrier plutôt que de lui présenter un formulaire sans bouton d'envoi.
+  // La garde sur la création reste en place derrière ce renvoi.
+  if (!can('manage')) return <Navigate to="/calendrier" replace />
 
   if (!ready || teams === null) {
     return (

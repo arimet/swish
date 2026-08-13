@@ -9,7 +9,7 @@
  * rien est désactivée : un bouton actif qui ne fait rien se lit comme une panne.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { annees, aVider, championnats, clubsDesRencontres, deLAnnee, duChampionnat } from '../../domain/menage'
 import type { Match, ReportedResult, Training } from '../../domain/types'
 import type { Schema } from '../../domain/plays'
@@ -36,7 +36,7 @@ const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
 export function Admin() {
   const { clubId, club, teams, clear } = useClub()
-  const { guard } = useAuth()
+  const { can, guard } = useAuth()
   const navigate = useNavigate()
   const [matches, setMatches] = useState<Match[]>([])
   const [results, setResults] = useState<ReportedResult[]>([])
@@ -73,6 +73,12 @@ export function Admin() {
   // La coquille ne monte cet écran que derrière un club résolu ; la branche sans
   // club évite un `clubId!` dans chaque opération qui en dépend.
   if (!clubId) return null
+
+  // Le menu ne montre déjà l'entrée qu'à l'administrateur ; l'URL directe suit la
+  // même règle. Cet écran n'est qu'une planche de boutons destructeurs : sans le
+  // droit, il ne resterait que des comptes sous des boutons qui réclament un code.
+  // Les gardes sur chaque opération restent en place derrière ce renvoi.
+  if (!can('manage')) return <Navigate to="/" replace />
 
   return (
     <div className="p-6">

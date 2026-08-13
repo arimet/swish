@@ -204,18 +204,25 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     expect(f.points[0]).toEqual({ x: 0.5, y: 0.62 })
   })
 
-  it('la table de marque ne peut pas modifier : le tracé demande le code admin', async () => {
+  it('la table de marque n’ouvre pas l’éditeur : elle est renvoyée à la consultation, sans rien écrire', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
-    const { container } = renderEdit('s1')
-    await userEvent.click(await screen.findByRole('button', { name: 'Course' }))
-    const svg = await tableau()
-    fireEvent.pointerDown(svg, { clientX: 150, clientY: 174 })
-    fireEvent.pointerMove(svg, { clientX: 90, clientY: 220 })
-    fireEvent.pointerUp(svg, { clientX: 30, clientY: 250 })
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    const { container } = render(
+      <MemoryRouter initialEntries={['/schemas/s1/edit']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/schemas/:id/edit" element={<SchemaEdit />} />
+            <Route path="/schemas/:id" element={<p>consultation</p>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+
+    // L'éditeur écrit à chaque geste : sans le droit, il ne s'ouvre pas du tout,
+    // plutôt que de réclamer un code à chaque trait tiré.
+    expect(await screen.findByText('consultation')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Course' })).not.toBeInTheDocument()
+    // Ce qui compte : rien n'est écrit en base, ni montré à l'écran.
     expect((await getPlay('s1'))!.temps[0].fleches).toHaveLength(0)
-    // Garder d'abord, muter ensuite : tant que le code n'est pas donné, l'écran ne
-    // doit pas non plus montrer la flèche — sinon le coach croirait l'avoir tracée.
     expect(container.querySelectorAll('[data-trait="course"]')).toHaveLength(0)
   })
 })
