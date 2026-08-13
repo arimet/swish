@@ -155,7 +155,7 @@ export function SchemaList() {
                         dans la boîte sans distorsion (`preserveAspectRatio`) — un terrain
                         complet apparaît donc plus étroit, ce qui se lit très bien. Aucune
                         conversion de pointeur ici : `remplit` est sans danger. */}
-                    <div className="h-[150px]">
+                    <div className="h-[150px] sm:h-[200px]">
                       <PlayBoard schema={s} tempsIndex={0} apercu remplit />
                     </div>
                     <h3 className="mt-2.5 truncate text-[15px] font-extrabold tracking-tight">{s.nom}</h3>
