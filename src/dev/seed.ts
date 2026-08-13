@@ -1,6 +1,6 @@
 import { db } from '../persistence/db'
-import { saveTeam, savePlayer, saveMatch, saveResult, saveTraining, saveConvocation, savePlay } from '../persistence/repositories'
-import type { Convocation, GameEvent, Match, Period, Player, ReportedResult, ScoreKind, Training } from '../domain/types'
+import { saveTeam, savePlayer, saveMatch, saveResult, saveTraining, saveConvocation, savePlay, saveMessage } from '../persistence/repositories'
+import type { Convocation, GameEvent, Match, MessageEquipe, Period, Player, ReportedResult, ScoreKind, Training } from '../domain/types'
 import { kindAt } from '../domain/shotzones'
 import { nouveauSchema, tempsSuivant } from '../domain/plays'
 import type { Camp, Fleche, Poste, Schema, Temps, Terrain, Trait } from '../domain/plays'
@@ -10,7 +10,7 @@ import { CLUB_ID_KEY } from '../app/club'
  * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
  * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
  */
-const SEED_VERSION = 'v24'
+const SEED_VERSION = 'v25'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
@@ -412,6 +412,17 @@ function buildSchemas(clubId: string): Schema[] {
   ]
 }
 
+/** Le message du coach, daté d'il y a deux jours : le tableau de bord doit
+ *  montrer l'encart ET son âge sans rien saisir, et deux jours restent du côté
+ *  frais de la bascule à l'ambre (quinze jours). */
+function buildMessage(): MessageEquipe {
+  return {
+    clubId: teamId(0),
+    texte: 'Pas d’entraînement mardi, le gymnase est fermé. Pensez au maillot blanc pour samedi.',
+    écritLe: new Date(Date.now() - 2 * 24 * 3600_000).toISOString(),
+  }
+}
+
 export async function seedDevData(): Promise<void> {
   const already = (await db.teams.count()) > 0
   if (already && localStorage.getItem('seed-version') === SEED_VERSION) return
@@ -419,7 +430,7 @@ export async function seedDevData(): Promise<void> {
   // aussi : sans quoi un re-seed laisserait des orphelins rattachés à des
   // rencontres qui n'existent plus.
   await db.matches.clear(); await db.players.clear(); await db.teams.clear(); await db.results.clear()
-  await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear()
+  await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear(); await db.messages.clear()
 
   for (let t = 0; t < TEAMS.length; t++) await saveTeam({ id: teamId(t), name: TEAMS[t][0], coach: TEAMS[t][1] })
   for (const p of PLAYERS) await savePlayer(p)
@@ -427,6 +438,7 @@ export async function seedDevData(): Promise<void> {
   for (let idx = 0; idx < OUTSIDE_GAMES.length; idx++) await saveResult(buildResult(OUTSIDE_GAMES[idx], idx))
   for (const tr of buildTrainings()) await saveTraining(tr)
   await saveConvocation(buildConvocation())
+  await saveMessage(buildMessage())
   for (const s of buildSchemas(teamId(0))) await savePlay(s)
 
   localStorage.setItem('seed-version', SEED_VERSION)
