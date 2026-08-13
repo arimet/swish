@@ -21,6 +21,7 @@ import { SchemaList } from './ui/screens/SchemaList'
 import { SchemaView } from './ui/screens/SchemaView'
 import { SchemaPlayer } from './ui/screens/SchemaPlayer'
 import { SchemaRecu } from './ui/screens/SchemaRecu'
+import { Admin } from './ui/screens/Admin'
 
 const Padded = ({ children }: { children: ReactNode }) => <div className="p-6">{children}</div>
 
@@ -93,6 +94,9 @@ export default function App() {
               <Route path="/schemas" element={<SchemaList />} />
               <Route path="/schemas/:id/edit" element={<SchemaEdit />} />
               <Route path="/schemas/:id" element={<SchemaView />} />
+              {/* Le ménage des données : dans la coquille, chaque opération gardée
+                  par le code administrateur. */}
+              <Route path="/admin" element={<Admin />} />
               <Route path="/match/new" element={<Padded><MatchSetupRoute /></Padded>} />
               <Route path="/match/:id/summary" element={<SummaryRoute />} />
               <Route path="/match/:id" element={<Padded><MatchPreviewRoute /></Padded>} />

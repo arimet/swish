@@ -28,6 +28,7 @@ const NAV_MOBILE = [
 const TITLES: Record<string, string> = {
   '/': 'Tableau de bord', '/calendrier': 'Calendrier', '/championnat': 'Championnat',
   '/teams': 'Équipes', '/schemas': 'Schémas', '/match/new': 'Nouvelle rencontre',
+  '/admin': 'Administration',
 }
 
 export function OliveShell() {
@@ -214,6 +215,7 @@ function NavGroup({ items }: { items: { icon: string; label: string; to: string;
 
 function Sidebar({ players }: { players: Player[] }) {
   const { clubId, clear } = useClub()
+  const { can } = useAuth()
   return (
     <aside className="hidden w-[236px] shrink-0 flex-col overflow-y-auto px-4 py-5 lg:flex" style={{ background: C.panel, borderRight: `1px solid ${C.border}` }}>
       <Link to="/" className="flex items-center gap-2.5 px-1">
@@ -251,6 +253,17 @@ function Sidebar({ players }: { players: Player[] }) {
           Changer de club
         </button>
         <AccesMenu players={players} />
+        {/* Le ménage des données, sous l'accès et seulement pour l'administrateur :
+            un visiteur n'a pas à voir une porte qu'il ne peut pas ouvrir. L'entrée
+            apparaît dès que le code admin est saisi, dans le dialogue juste au-dessus. */}
+        {can('manage') && (
+          <NavLink to="/admin"
+            className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition"
+            style={({ isActive }) => ({ background: C.card, border: bd, color: isActive ? C.orange : C.muted })}>
+            <span>🧹</span>
+            Administration
+          </NavLink>
+        )}
         <a href="https://github.com/arimet" target="_blank" rel="noopener noreferrer"
           className="block px-2 text-center text-[11px] font-medium transition hover:underline" style={{ color: C.faint }}>
           Fait par Anthony Rimet ↗
