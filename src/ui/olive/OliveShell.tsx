@@ -66,7 +66,12 @@ export function OliveShell() {
               <AccesMenu players={effectif} compact />
             </div>
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* `relative` n'est pas décoratif : les libellés `sr-only` des écrans sont
+              en position absolue et, sans ancêtre positionné, se calent sur le
+              document au lieu de leur ligne. Ils échappaient alors au découpage de
+              la coquille et allongeaient la page entière — d'où un second
+              défilement, par-dessus celui de cette zone. */}
+          <div className="relative min-h-0 flex-1 overflow-y-auto">
             <Outlet />
           </div>
           <MobileNav />
