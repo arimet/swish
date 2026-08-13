@@ -14,6 +14,14 @@ export const RAYON = 110
 export const W = 1500
 export const D = 1400
 
+/**
+ * Le cadre du terrain : rentré de 4 unités du viewBox et arrondi de `RAYON`.
+ * Une seule définition, parce que trois tracés doivent coïncider au pixel près —
+ * le cadre dessiné, son homologue du terrain complet, et la découpe des zones.
+ * `h` est la profondeur : `D` pour un demi-terrain, le double pour un complet.
+ */
+export const cadre = (h = D) => ({ x: 4, y: 4, width: W - 8, height: h - 8, rx: RAYON })
+
 /** Contours des zones, dans le même ordre que ZONES. Les arcs suivent la ligne à 3 points. */
 export const ZONE_PATH: Record<ShotZone, string> = {
   paint: 'M 505 0 H 995 V 580 H 505 Z',
@@ -61,8 +69,24 @@ export function CourtLines({ bord = true }: { bord?: boolean }) {
           à bout avec son miroir (terrain complet), il doublerait la ligne médiane
           et y planterait deux coins arrondis — l'appelant le trace alors lui-même. */}
       <path d="M 90 0 L 90 299.01 A 675 675 0 0 0 1410 299.01 L 1410 0" {...major} />
-      {bord && <rect x={4} y={4} width={W - 8} height={D - 8} rx={RAYON} {...major} />}
+      {bord && <rect {...cadre()} {...major} />}
     </g>
+  )
+}
+
+/**
+ * Découpe ses enfants à la forme réelle du terrain. Les contours de `ZONE_PATH`
+ * courent jusqu'au bord du viewBox — `corner3_left` part de (0,0) — alors que le
+ * terrain s'arrête au cadre, rentré et arrondi : sans cette découpe, le
+ * remplissage d'une zone déborde dans les coins que le cadre arrondit.
+ */
+function ZonesDecoupees({ children }: { children: ReactNode }) {
+  const id = `terrain-${useId()}`
+  return (
+    <>
+      <defs><clipPath id={id}><rect {...cadre()} /></clipPath></defs>
+      <g clipPath={`url(#${id})`}>{children}</g>
+    </>
   )
 }
 
@@ -193,7 +217,9 @@ function Confirmation({ spot, made }: { spot: ShotSpot; made: boolean }) {
   const cy = spot.y * D
   return (
     <g>
-      <path d={ZONE_PATH[zoneAt(spot.x, spot.y)]} fill={made ? C.accent : C.muted} fillOpacity={0.22} />
+      <ZonesDecoupees>
+        <path d={ZONE_PATH[zoneAt(spot.x, spot.y)]} fill={made ? C.accent : C.muted} fillOpacity={0.22} />
+      </ZonesDecoupees>
       <circle
         data-confirmation={made ? 'made' : 'missed'}
         cx={cx} cy={cy} r={26}
@@ -216,19 +242,21 @@ export function ShotChart({ shots, minAttempts = 3 }: { shots: Shot[]; minAttemp
   const sum = zoneSummary(shots)
   return (
     <Court label="Carte des tirs">
-      {ZONES.map((z) => {
-        const { made, attempts } = sum[z]
-        const enough = attempts >= minAttempts
-        const pct = attempts ? made / attempts : 0
-        return (
-          <path
-            key={z}
-            d={ZONE_PATH[z]}
-            fill={enough ? C.accent : C.text}
-            fillOpacity={enough ? 0.1 + 0.55 * pct : 0.03}
-          />
-        )
-      })}
+      <ZonesDecoupees>
+        {ZONES.map((z) => {
+          const { made, attempts } = sum[z]
+          const enough = attempts >= minAttempts
+          const pct = attempts ? made / attempts : 0
+          return (
+            <path
+              key={z}
+              d={ZONE_PATH[z]}
+              fill={enough ? C.accent : C.text}
+              fillOpacity={enough ? 0.1 + 0.55 * pct : 0.03}
+            />
+          )
+        })}
+      </ZonesDecoupees>
       <CourtLines />
       {shots.map((s, i) => (
         <circle
