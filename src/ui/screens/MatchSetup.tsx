@@ -4,7 +4,7 @@ import { newId } from '../../domain/ids'
 import { listPlayers, listTeams, saveMatch } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
 import type { Match, Team } from '../../domain/types'
-import { C, bd, PageTitle, TeamBadge } from '../olive/kit'
+import { C, bd, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { publishBundle } from '../../app/sync'
@@ -74,8 +74,6 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageTitle title="Nouveau match" subtitle="Planifiez la rencontre ; vous la démarrerez le jour du match." />
-
       <div className="mb-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <div className="flex flex-col items-center gap-2 text-center">
           <TeamBadge id={club.id} name={club.name} size="h-10 w-10 text-xs" />

@@ -68,7 +68,7 @@ describe('premier lancement (appareil vierge)', () => {
     await userEvent.click(link)
     // La route de création doit rester joignable sans club réglé, sinon
     // l'utilisateur tourne en rond entre l'écran de bienvenue et lui-même.
-    expect(await screen.findByText(/nommez l.équipe/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /nouvelle équipe/i })).toBeInTheDocument()
     expect(screen.queryByText(/bienvenue sur swish/i)).not.toBeInTheDocument()
 
     await userEvent.type(screen.getByLabelText(/nom de l.équipe/i), 'NOUVEAU CLUB')

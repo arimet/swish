@@ -125,7 +125,6 @@ export function Calendrier() {
           ne se trouve jamais. Un seul bouton plein — la rencontre, ce qu'on planifie
           le plus souvent ; la séance reste en second, marquée par son bleu. */}
       <PageTitle
-        title="Calendrier" subtitle="Les rencontres et entraînements de votre équipe, par date."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => guard('manage', () => setSaisieOuverte(true))}

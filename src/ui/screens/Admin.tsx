@@ -20,7 +20,7 @@ import {
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { C, bd, PageTitle } from '../olive/kit'
+import { C, bd } from '../olive/kit'
 
 /** Une opération de ménage prête à être confirmée : ce qu'elle annonce, et ce
  *  qu'elle fait. Rien n'est exécuté avant la confirmation. */
@@ -76,8 +76,6 @@ export function Admin() {
 
   return (
     <div className="p-6">
-      <PageTitle subtitle="Le ménage de fin de saison : supprimer en bloc ce qui n’a plus lieu d’être." />
-
       <p className="mb-6 rounded-2xl px-4 py-3 text-sm" style={{ background: C.accentBg, color: C.pink }}>
         Ces suppressions sont définitives : il n’y a pas de corbeille, et résultats, convocations,
         entraînements et schémas ne sont pas synchronisés — ce qui est effacé ici n’existe plus nulle part.

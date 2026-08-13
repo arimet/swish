@@ -102,13 +102,16 @@ export function MatchPreview({ matchId }: { matchId: string }) {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageTitle subtitle={champLabel(match.meta)}
-        action={<Link to="/calendrier" className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>← Calendrier</Link>} />
+      <PageTitle action={<Link to="/calendrier" className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>← Calendrier</Link>} />
 
       <div className="rounded-2xl p-6" style={{ background: C.card, border: bd }}>
-        <div className="mb-5 flex items-center justify-between">
+        {/* Le championnat était le « sous-titre » de la page ; ce n'en était pas un,
+            c'est une information de la rencontre. Il rejoint donc le bandeau de la
+            fiche, entre l'état et le numéro. */}
+        <div className="mb-5 flex flex-wrap items-center gap-3">
           <span className="rounded-md px-2 py-1 text-[11px] font-black uppercase" style={{ background: statusPill.bg, color: statusPill.fg }}>{statusPill.label}</span>
-          {match.meta.matchNumber && <span className="text-[11px] font-bold" style={{ color: C.faint }}>Rencontre n°{match.meta.matchNumber}</span>}
+          <span className="min-w-0 truncate text-[11px] font-bold uppercase" style={{ color: C.muted }}>{champLabel(match.meta)}</span>
+          {match.meta.matchNumber && <span className="ml-auto text-[11px] font-bold" style={{ color: C.faint }}>Rencontre n°{match.meta.matchNumber}</span>}
         </div>
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
