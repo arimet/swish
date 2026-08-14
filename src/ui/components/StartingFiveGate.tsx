@@ -19,7 +19,9 @@ export function StartingFiveGate({
   onExit?: () => void
 }) {
   return (
-    <div>
+    /* La table de marque vit hors de la coquille : cet écran porte donc lui-même
+       son fond et sa hauteur, sinon il flotterait sur le gris de la page. */
+    <div className="min-h-dvh overflow-y-auto" style={{ background: C.frame, color: C.text }}>
       <div className="mx-auto max-w-4xl px-4 py-8 sm:py-10">
         <div className="mb-8 text-center">
           {onExit && (

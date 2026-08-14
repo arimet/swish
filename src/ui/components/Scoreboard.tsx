@@ -42,10 +42,17 @@ export function ScoreSide({ align, color, name, score, lead }: {
   )
 }
 
-export function ClockAdjust({ children, onClick }: { children: ReactNode; onClick: () => void }) {
+/**
+ * Une correction de chrono. Ces boutons faisaient 25 pixels de haut et se
+ * touchaient à quatre pixels près : à la table de marque, le pouce qui visait
+ * « −1s » enlevait dix secondes au match. Ils font maintenant la hauteur d'un
+ * doigt (44 px, le minimum tenable au tactile), et le pas de dix est séparé du
+ * pas de un par un écart qu'on sent.
+ */
+export function ClockAdjust({ children, onClick, ecart }: { children: ReactNode; onClick: () => void; ecart?: boolean }) {
   return (
     <button onClick={onClick}
-      className="nums rounded-md bg-white/10 px-2 py-1 text-[11px] font-bold tabular-nums text-white/80 transition hover:bg-white/20 active:scale-90">
+      className={`nums h-11 min-w-11 rounded-lg bg-white/10 px-2.5 text-[13px] font-bold tabular-nums text-white/80 transition hover:bg-white/20 active:scale-90 ${ecart ? 'ml-2' : ''}`}>
       {children}
     </button>
   )
@@ -54,7 +61,7 @@ export function ClockAdjust({ children, onClick }: { children: ReactNode; onClic
 export function SbButton({ children, onClick, title, danger }: { children: ReactNode; onClick: () => void; title?: string; danger?: boolean }) {
   return (
     <button onClick={onClick} title={title}
-      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition active:scale-95 ${
+      className={`h-11 shrink-0 rounded-full px-4 text-xs font-bold transition active:scale-95 ${
         danger ? 'bg-red-500/20 text-red-300 hover:bg-red-500 hover:text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>
       {children}
     </button>
