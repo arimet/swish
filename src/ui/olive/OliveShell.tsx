@@ -1,42 +1,77 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
-import { listTeams } from '../../persistence/repositories'
-import type { Team } from '../../domain/types'
-import { C, bd, Ic, ICON, TeamBadge } from './kit'
-import { useAdmin } from '../../app/admin'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { listPlayers } from '../../persistence/repositories'
+import type { Player } from '../../domain/types'
+import { C, bd, Ic, ICON } from './kit'
+import { NOM_ROLE, useAuth } from '../../app/auth'
+import { useClub } from '../../app/club'
 
-const NAV = [
-  { icon: ICON.matches, label: 'Rencontres', to: '/', end: true },
+// « Mon équipe » s'intercale entre les deux : lien à part car sa cible dépend
+// du club suivi (`/teams/<clubId>`), rendu seulement quand un club est réglé.
+const NAV_TOP = [
+  { icon: ICON.trophy, label: 'Tableau de bord', to: '/', end: true },
+]
+const NAV_REST = [
+  { icon: ICON.cal, label: 'Calendrier', to: '/calendrier', end: false },
+  { icon: ICON.trophy, label: 'Championnat', to: '/championnat', end: false },
+  { icon: ICON.users, label: 'Équipes', to: '/teams', end: false },
+  { icon: ICON.matches, label: 'Schémas', to: '/schemas', end: false },
+]
+const NAV_MOBILE = [
+  { icon: ICON.trophy, label: 'Tableau de bord', to: '/', end: true },
   { icon: ICON.cal, label: 'Calendrier', to: '/calendrier', end: false },
   { icon: ICON.users, label: 'Équipes', to: '/teams', end: false },
-  { icon: ICON.trophy, label: 'Classement', to: '/classement', end: false },
 ]
-const TITLES: Record<string, string> = { '/': 'Rencontres', '/calendrier': 'Calendrier', '/teams': 'Équipes', '/classement': 'Classement', '/match/new': 'Nouvelle rencontre' }
+// « Mon équipe » cible `/teams/<clubId>` : sans club réglé, ce serait un lien
+// vers `/teams/undefined` — l'entrée n'est ajoutée qu'une fois le club connu.
+const TITLES: Record<string, string> = {
+  '/': 'Tableau de bord', '/calendrier': 'Calendrier', '/championnat': 'Championnat',
+  '/teams': 'Équipes', '/schemas': 'Schémas', '/match/new': 'Nouvelle rencontre',
+  '/admin': 'Administration',
+}
 
 export function OliveShell() {
   const { pathname } = useLocation()
-  const { isAdmin, lock, guard } = useAdmin()
-  const title = TITLES[pathname] ?? (pathname.startsWith('/teams') ? 'Équipes' : pathname.startsWith('/match') ? 'Rencontre' : 'Rencontres')
+  const { clubId } = useClub()
+  const { playerId, setPlayer } = useAuth()
+  // `null` tant que l'effectif n'est pas chargé : sans cette distinction, le
+  // garde ci-dessous prendrait le tableau vide du premier rendu pour un effectif
+  // réel et effacerait l'identité à chaque ouverture.
+  const [players, setPlayers] = useState<Player[] | null>(null)
+  // La branche sans club est inatteignable tant que `ClubGate` ne monte cette
+  // coquille qu'avec un club résolu ; la garder revient à dire « effectif vide »,
+  // ce qui effacerait l'identité si l'on montait un jour ce composant sans club.
+  useEffect(() => { if (clubId) listPlayers(clubId).then(setPlayers); else setPlayers([]) }, [clubId])
+
+  // Joueur retiré de l'effectif alors que son identifiant survit dans le
+  // localStorage : on oublie l'identité plutôt que de laisser une mise en
+  // évidence fantôme, comme `ClubProvider` oublie un club supprimé.
+  useEffect(() => {
+    if (players && playerId && !players.some((p) => p.id === playerId)) setPlayer(null)
+  }, [players, playerId, setPlayer])
+
+  const effectif = players ?? []
+  const title = TITLES[pathname] ?? (pathname.startsWith('/teams') ? 'Équipes' : pathname.startsWith('/schemas') ? 'Schémas' : pathname.startsWith('/match') ? 'Rencontre' : 'Rencontres')
   return (
     <div className="min-h-dvh lg:p-4" style={{ background: C.page }}>
       <div className="mx-auto flex h-dvh w-full max-w-[1680px] overflow-hidden lg:h-[calc(100dvh-2rem)] lg:rounded-[26px] lg:shadow-2xl" style={{ background: C.frame, color: C.text }}>
-        <Sidebar />
+        <Sidebar players={effectif} />
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex shrink-0 items-center gap-3 px-4 py-3 sm:px-6 sm:py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
             <div className="flex items-center gap-2 text-base font-extrabold sm:text-lg"><span>🏀</span><span style={{ color: C.orange }}>{title}</span></div>
+            {/* L'en-tête ne garde que le titre et le menu d'accès. « Nouvelle
+                rencontre » est parti au calendrier, où vivent les choses datées. */}
             <div className="ml-auto flex items-center gap-2">
-              <button
-                onClick={() => (isAdmin ? lock() : guard(() => {}))}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm lg:hidden"
-                style={{ background: C.card, border: bd, color: isAdmin ? C.green : C.muted }}
-                title={isAdmin ? 'Admin déverrouillé' : 'Accès admin'}
-              >{isAdmin ? '🔓' : '🔒'}</button>
-              <Link to="/match/new" className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-bold text-white sm:px-4" style={{ background: C.orange }}>
-                <Ic d={ICON.plus} className="h-4 w-4" /> <span className="hidden sm:inline">Nouvelle rencontre</span>
-              </Link>
+              <AccesMenu players={effectif} compact />
             </div>
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          {/* `relative` n'est pas décoratif : les libellés `sr-only` des écrans sont
+              en position absolue et, sans ancêtre positionné, se calent sur le
+              document au lieu de leur ligne. Ils échappaient alors au découpage de
+              la coquille et allongeaient la page entière — d'où un second
+              défilement, par-dessus celui de cette zone. */}
+          <div className="relative min-h-0 flex-1 overflow-y-auto">
             <Outlet />
           </div>
           <MobileNav />
@@ -46,11 +81,117 @@ export function OliveShell() {
   )
 }
 
-/** Barre de navigation basse (mobile) : le menu latéral étant masqué < lg. */
+/** Point d'entrée unique des accès. Il dit le rôle en cours, en prend un autre à
+ *  partir d'un code, verrouille, et — quand le code saisi est celui du joueur —
+ *  laisse choisir son nom dans l'effectif.
+ *
+ *  Une seule saisie pour tous les codes : l'utilisateur tape ce qu'il a, il ne
+ *  déclare pas d'abord ce qu'il veut être. Et l'identité de joueur n'est pas un
+ *  quatrième rôle — la choisir n'accorde aucun droit d'écriture, la perdre n'en
+ *  retire aucun.
+ *
+ *  Le même composant sert à l'en-tête mobile (`compact`) et à la barre latérale :
+ *  deux copies finiraient par diverger. */
+function AccesMenu({ players, compact = false }: { players: Player[]; compact?: boolean }) {
+  const { role, playerId, unlock, lock, setPlayer } = useAuth()
+  const [open, setOpen] = useState(false)
+  const [code, setCode] = useState('')
+  const [erreur, setErreur] = useState('')
+  const [choix, setChoix] = useState(false)
+  const moi = players.find((p) => p.id === playerId) ?? null
+  const verrouille = role === 'visiteur'
+
+  const ouvrir = () => { setCode(''); setErreur(''); setChoix(false); setOpen(true) }
+  const valider = () => {
+    const obtenu = unlock(code)
+    setCode('')
+    if (!obtenu) { setErreur('Code inconnu.'); return }
+    setErreur('')
+    // Seul le code joueur ouvre le choix du nom ; les autres changent le rôle,
+    // que le dialogue affiche aussitôt en guise de confirmation.
+    setChoix(obtenu === 'joueur')
+  }
+
+  return (
+    <>
+      <button
+        onClick={ouvrir}
+        aria-label={`Accès · ${NOM_ROLE[role]}`}
+        title={`Accès · ${NOM_ROLE[role]}`}
+        className={compact
+          ? 'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm lg:hidden'
+          : 'flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition'}
+        style={{ background: C.card, border: bd, color: verrouille ? C.muted : C.green }}
+      >
+        <span>{verrouille ? '🔒' : '🔓'}</span>
+        {!compact && <span className="truncate">Accès · {NOM_ROLE[role]}</span>}
+      </button>
+
+      <Dialog open={open} onOpenChange={(o) => !o && setOpen(false)}>
+        <DialogContent className="sm:max-w-xs border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-extrabold">Accès</DialogTitle>
+          </DialogHeader>
+          <p className="text-[13px] font-semibold">Accès en cours : {NOM_ROLE[role]}</p>
+          <p className="text-[13px]" style={{ color: C.muted }}>
+            {moi ? `Identifié comme ${moi.lastName} ${moi.firstName}.` : 'Aucun joueur identifié sur cet appareil.'}
+          </p>
+
+          {choix ? (
+            <>
+              <p className="text-[13px] font-semibold">Qui êtes-vous dans l’effectif ?</p>
+              <ul className="max-h-56 space-y-1 overflow-y-auto">
+                {[...players].sort((a, b) => a.number - b.number).map((p) => (
+                  <li key={p.id}>
+                    <button
+                      onClick={() => { setPlayer(p.id); setChoix(false); setOpen(false) }}
+                      className="flex w-full items-center gap-2.5 rounded-xl bg-[var(--c-card2)] px-2.5 py-2 text-left text-sm font-medium transition hover:bg-[var(--c-card2)]"
+                    >
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[9px] font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
+                      <span className="truncate">{p.lastName} {p.firstName}</span>
+                    </button>
+                  </li>
+                ))}
+                {players.length === 0 && <li className="py-2 text-[13px]" style={{ color: C.muted }}>Aucun joueur dans l’effectif.</li>}
+              </ul>
+            </>
+          ) : (
+            <>
+              <input
+                autoFocus aria-label="Code d’accès" type="password" value={code} placeholder="Code"
+                onChange={(e) => { setCode(e.target.value); setErreur('') }}
+                onKeyDown={(e) => e.key === 'Enter' && valider()}
+                className={`w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${erreur ? 'border-red-500/60' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
+              />
+              {erreur && <p className="text-xs font-semibold text-[var(--c-danger)]">{erreur}</p>}
+              <button onClick={valider} className="rounded-xl bg-[var(--c-accent)] py-2.5 text-sm font-bold text-white transition hover:brightness-110">Déverrouiller</button>
+            </>
+          )}
+
+          <div className="flex gap-2">
+            {moi && !choix && (
+              <button onClick={() => setPlayer(null)} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">Ne plus m’identifier</button>
+            )}
+            {!verrouille && (
+              <button onClick={lock} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">Se verrouiller</button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+/** Barre de navigation basse (mobile) : le menu latéral étant masqué < lg.
+ *  Quatre entrées maximum — au-delà, les cibles deviennent trop étroites au pouce. */
 function MobileNav() {
+  const { clubId } = useClub()
+  const items = clubId
+    ? [...NAV_MOBILE, { icon: ICON.users, label: 'Mon équipe', to: `/teams/${clubId}`, end: true }]
+    : NAV_MOBILE
   return (
     <nav className="flex shrink-0 items-stretch justify-around gap-1 border-t px-1 pb-[env(safe-area-inset-bottom)] pt-1 lg:hidden" style={{ borderColor: C.border, background: C.panel }}>
-      {NAV.map((n) => (
+      {items.map((n) => (
         <NavLink key={n.label} to={n.to} end={n.end}
           className="flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] font-bold transition"
           style={({ isActive }) => ({ color: isActive ? C.orange : C.muted, background: isActive ? C.card2 : 'transparent' })}>
@@ -62,52 +203,72 @@ function MobileNav() {
   )
 }
 
-function Sidebar() {
-  const { isAdmin, lock, guard } = useAdmin()
-  const [teams, setTeams] = useState<Team[]>([])
-  useEffect(() => { listTeams().then(setTeams) }, [])
+/** Liens d'un groupe de menu de la barre latérale. */
+function NavGroup({ items, inactifSur }: { items: { icon: string; label: string; to: string; end: boolean }[]; inactifSur?: string }) {
+  const { pathname } = useLocation()
+  /** « Équipes » s'allumait sur la fiche de mon équipe, qui est sous `/teams/` :
+   *  deux entrées du menu se seraient éclairées pour une seule page. L'entrée qui
+   *  possède la route la garde ; celle qui ne fait que la préfixer s'éteint. */
+  const actif = (isActive: boolean, to: string) =>
+    isActive && !(inactifSur && inactifSur !== to && pathname === inactifSur)
+  return (
+    <nav className="mt-1.5 flex flex-col gap-0.5">
+      {items.map((n) => (
+        <NavLink key={n.label} to={n.to} end={n.end}
+          className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
+          style={({ isActive }) => ({ background: actif(isActive, n.to) ? C.card2 : 'transparent', color: actif(isActive, n.to) ? C.orange : C.muted })}>
+          {({ isActive }) => (<>{actif(isActive, n.to) && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.orange }} />}<Ic d={n.icon} />{n.label}</>)}
+        </NavLink>
+      ))}
+    </nav>
+  )
+}
+
+function Sidebar({ players }: { players: Player[] }) {
+  const { clubId } = useClub()
+  const { can } = useAuth()
   return (
     <aside className="hidden w-[236px] shrink-0 flex-col overflow-y-auto px-4 py-5 lg:flex" style={{ background: C.panel, borderRight: `1px solid ${C.border}` }}>
+      {/* Le nom seul : le sous-titre décrivait l'application à qui l'a déjà ouverte,
+          et ne disait plus rien de juste depuis qu'elle fait bien plus qu'une
+          table de marque. */}
       <Link to="/" className="flex items-center gap-2.5 px-1">
         <span className="grid h-8 w-8 place-items-center rounded-xl" style={{ background: C.orange }}>🏀</span>
-        <span className="leading-none">
-          <span className="block text-[15px] font-extrabold tracking-tight">Swish</span>
-          <span className="block text-[11px]" style={{ color: C.faint }}>Basket · table de marque</span>
-        </span>
+        <span className="text-[15px] font-extrabold leading-none tracking-tight">Swish</span>
       </Link>
 
-      <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Menu</p>
-      <nav className="mt-1.5 flex flex-col gap-0.5">
-        {NAV.map((n) => (
-          <NavLink key={n.label} to={n.to} end={n.end}
-            className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
-            style={({ isActive }) => ({ background: isActive ? C.card2 : 'transparent', color: isActive ? C.orange : C.muted })}>
-            {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.orange }} />}<Ic d={n.icon} />{n.label}</>)}
-          </NavLink>
-        ))}
-      </nav>
+      <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Mon club</p>
+      <NavGroup items={NAV_TOP} />
+      {clubId && (
+        <NavLink to={`/teams/${clubId}`} end
+          className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
+          style={({ isActive }) => ({ background: isActive ? C.card2 : 'transparent', color: isActive ? C.orange : C.muted })}>
+          {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.orange }} />}<Ic d={ICON.users} />Mon équipe</>)}
+        </NavLink>
+      )}
+      <NavGroup items={NAV_REST} inactifSur={clubId ? `/teams/${clubId}` : undefined} />
 
-      <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Équipes</p>
-      <ul className="mt-1.5 space-y-0.5">
-        {teams.map((t) => (
-          <li key={t.id}>
-            <Link to={`/teams/${t.id}`} className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition hover:bg-white/5" style={{ color: C.muted }}>
-              <TeamBadge id={t.id} name={t.name} size="h-6 w-6 text-[9px]" /><span className="truncate">{t.name}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {/* L'effectif n'est plus dans le menu : treize noms y poussaient la navigation
+          hors de l'écran et faisaient défiler la barre. Il est à sa place sur la
+          fiche d'équipe, où l'on va pour le consulter. Le joueur identifié se
+          reconnaît toujours au tableau de bord et sur sa propre fiche. */}
 
+      {/* Plus de « changer de club » : l'application est celle d'une équipe, pas
+          un annuaire qu'on parcourt. Le club se règle une fois, au premier
+          lancement, et ne se rechoisit que s'il disparaît. */}
       <div className="mt-auto space-y-2.5">
-        <button
-          onClick={() => (isAdmin ? lock() : guard(() => {}))}
-          className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition"
-          style={{ background: C.card, border: bd, color: isAdmin ? C.green : C.muted }}
-          title={isAdmin ? 'Verrouiller l’accès admin' : 'Déverrouiller l’accès admin'}
-        >
-          <span>{isAdmin ? '🔓' : '🔒'}</span>
-          {isAdmin ? 'Admin déverrouillé' : 'Accès admin'}
-        </button>
+        <AccesMenu players={players} />
+        {/* Le ménage des données, sous l'accès et seulement pour l'administrateur :
+            un visiteur n'a pas à voir une porte qu'il ne peut pas ouvrir. L'entrée
+            apparaît dès que le code admin est saisi, dans le dialogue juste au-dessus. */}
+        {can('manage') && (
+          <NavLink to="/admin"
+            className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition"
+            style={({ isActive }) => ({ background: C.card, border: bd, color: isActive ? C.orange : C.muted })}>
+            <span>🧹</span>
+            Administration
+          </NavLink>
+        )}
         <a href="https://github.com/arimet" target="_blank" rel="noopener noreferrer"
           className="block px-2 text-center text-[11px] font-medium transition hover:underline" style={{ color: C.faint }}>
           Fait par Anthony Rimet ↗

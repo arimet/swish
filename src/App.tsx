@@ -1,18 +1,27 @@
 import { BrowserRouter, Routes, Route, useNavigate, useParams, Navigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { OliveShell } from './ui/olive/OliveShell'
-import { Home } from './ui/screens/Home'
+import { Dashboard } from './ui/screens/Dashboard'
 import { Calendrier } from './ui/screens/Calendrier'
-import { Classement } from './ui/screens/Classement'
+import { Championnat } from './ui/screens/Championnat'
 import { TeamsList } from './ui/screens/TeamsList'
 import { TeamCreate } from './ui/screens/TeamCreate'
 import { TeamDetail } from './ui/screens/TeamDetail'
+import { PlayerDetail } from './ui/screens/PlayerDetail'
 import { MatchSetup } from './ui/screens/MatchSetup'
 import { MatchPreview } from './ui/screens/MatchPreview'
 import { LiveMatch } from './ui/screens/LiveMatch'
 import { SummaryScreen } from './ui/screens/SummaryScreen'
 import { SpectatorMatch } from './ui/screens/SpectatorMatch'
-import { AdminProvider } from './app/admin'
+import { AuthProvider } from './app/auth'
+import { ClubProvider, useClub } from './app/club'
+import { Welcome } from './ui/screens/Welcome'
+import { SchemaEdit } from './ui/screens/SchemaEdit'
+import { SchemaList } from './ui/screens/SchemaList'
+import { SchemaView } from './ui/screens/SchemaView'
+import { SchemaPlayer } from './ui/screens/SchemaPlayer'
+import { SchemaRecu } from './ui/screens/SchemaRecu'
+import { Admin } from './ui/screens/Admin'
 
 const Padded = ({ children }: { children: ReactNode }) => <div className="p-6">{children}</div>
 
@@ -43,29 +52,64 @@ function SpectatorRoute() {
   return <SpectatorMatch matchId={id} />
 }
 
+/** Tant qu'aucun club valide n'est réglé, l'application est l'écran de bienvenue.
+ *  Le suivi spectateur reste accessible sans club : il se partage à des gens qui
+ *  n'ont pas l'application réglée. */
+function ClubGate() {
+  const { clubId, ready } = useClub()
+  if (!ready) return <div className="grid min-h-dvh place-items-center text-muted-foreground">Chargement…</div>
+  if (!clubId) return <Welcome />
+  return <OliveShell />
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <AdminProvider>
-      <Routes>
-        {/* Suivi spectateur : plein écran, hors du shell (projetable) */}
-        <Route path="/match/:id/watch" element={<SpectatorRoute />} />
-        {/* Toute l'app dans le shell Olive */}
-        <Route element={<OliveShell />}>
-          <Route index element={<Home />} />
-          <Route path="/match/:id/live" element={<LiveRoute />} />
-          <Route path="/calendrier" element={<Calendrier />} />
-          <Route path="/classement" element={<Classement />} />
-          <Route path="/teams" element={<Padded><TeamsList /></Padded>} />
-          <Route path="/teams/new" element={<TeamCreate />} />
-          <Route path="/teams/:id" element={<TeamDetail />} />
-          <Route path="/match/new" element={<Padded><MatchSetupRoute /></Padded>} />
-          <Route path="/match/:id/summary" element={<SummaryRoute />} />
-          <Route path="/match/:id" element={<Padded><MatchPreviewRoute /></Padded>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-      </AdminProvider>
+      <ClubProvider>
+        <AuthProvider>
+          <Routes>
+            {/* Suivi spectateur : plein écran, hors du shell (projetable) */}
+            <Route path="/match/:id/watch" element={<SpectatorRoute />} />
+            {/* La table de marque : plein écran elle aussi. Dans la coquille, le
+                titre, le menu d'accès et la barre du bas prenaient une centaine
+                de pixels que l'effectif n'avait pas — on ne voyait que quatre des
+                cinq joueurs sur le terrain sans faire défiler, et un pouce égaré
+                sur « Calendrier » quittait la saisie en cours. */}
+            <Route path="/match/:id/live" element={<LiveRoute />} />
+            {/* Le lecteur du temps-mort : plein écran, hors du shell et hors de
+                la garde club — un joueur ouvre la combinaison chez lui. */}
+            <Route path="/schemas/:id/lecteur" element={<SchemaPlayer />} />
+            {/* Une combinaison reçue par lien : hors du shell et hors de la garde
+                club, puisque tout le schéma est dans le fragment de l'URL — celui
+                qui reçoit le lien n'a peut-être jamais ouvert l'application. */}
+            <Route path="/schemas/recu" element={<SchemaRecu />} />
+            {/* Création d'équipe : hors garde, c'est l'issue proposée par l'écran de
+                bienvenue quand aucune équipe n'existe encore pour choisir un club. */}
+            <Route path="/teams/new" element={<TeamCreate />} />
+            {/* Toute l'app dans le shell Olive, derrière le choix du club */}
+            <Route element={<ClubGate />}>
+              <Route index element={<Dashboard />} />
+              <Route path="/calendrier" element={<Calendrier />} />
+              <Route path="/championnat" element={<Championnat />} />
+              <Route path="/teams" element={<Padded><TeamsList /></Padded>} />
+              <Route path="/teams/:id" element={<TeamDetail />} />
+              <Route path="/players/:id" element={<PlayerDetail />} />
+              {/* Le tableau tactique : la bibliothèque, la consultation (libre),
+                  puis l'éditeur — la route la plus précise d'abord. */}
+              <Route path="/schemas" element={<SchemaList />} />
+              <Route path="/schemas/:id/edit" element={<SchemaEdit />} />
+              <Route path="/schemas/:id" element={<SchemaView />} />
+              {/* Le ménage des données : dans la coquille, chaque opération gardée
+                  par le code administrateur. */}
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/match/new" element={<Padded><MatchSetupRoute /></Padded>} />
+              <Route path="/match/:id/summary" element={<SummaryRoute />} />
+              <Route path="/match/:id" element={<Padded><MatchPreviewRoute /></Padded>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </AuthProvider>
+      </ClubProvider>
     </BrowserRouter>
   )
 }

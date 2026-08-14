@@ -1,15 +1,17 @@
 import 'fake-indexeddb/auto'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MatchSetup } from './MatchSetup'
-import { AdminProvider } from '../../app/admin'
+import { AuthProvider, ROLE_KEY } from '../../app/auth'
+import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { saveTeam, savePlayer } from '../../persistence/repositories'
 
 beforeEach(async () => {
-  sessionStorage.setItem('admin-unlocked', '1') // actions protégées débloquées pour le test
+  sessionStorage.setItem(ROLE_KEY, 'admin') // actions protégées débloquées pour le test
+  localStorage.setItem('swish-club-id', 'ta') // notre club est déjà réglé (écran derrière la garde club)
   await db.teams.clear(); await db.players.clear(); await db.matches.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' }); await saveTeam({ id: 'tb', name: 'VERDUN' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'A', firstName: 'x' })
@@ -19,7 +21,7 @@ beforeEach(async () => {
 describe('MatchSetup', () => {
   it('crée un match et notifie onCreated', async () => {
     const onCreated = vi.fn()
-    render(<MemoryRouter><AdminProvider><MatchSetup onCreated={onCreated} /></AdminProvider></MemoryRouter>)
+    render(<MemoryRouter><ClubProvider><AuthProvider><MatchSetup onCreated={onCreated} /></AuthProvider></ClubProvider></MemoryRouter>)
     await waitFor(() => expect(screen.getAllByText('VIGNOT').length).toBeGreaterThan(0))
     await userEvent.type(screen.getByLabelText(/championnat/i), 'PRM')
     await userEvent.click(screen.getByRole('button', { name: /planifier la rencontre/i }))
@@ -27,5 +29,42 @@ describe('MatchSetup', () => {
     expect(await db.matches.count()).toBe(1)
     const [created] = await db.matches.toArray()
     expect(created.status).toBe('setup') // planifié, pas démarré
+  })
+
+  it('notre club est fixé d\'avance et l\'adversaire n\'a pas d\'effectif détaillé', async () => {
+    const onCreated = vi.fn()
+    render(<ClubProvider><MemoryRouter><AuthProvider><MatchSetup onCreated={onCreated} /></AuthProvider></MemoryRouter></ClubProvider>)
+    await waitFor(() => expect(screen.getAllByText('VIGNOT').length).toBeGreaterThan(0))
+    await userEvent.click(screen.getByRole('button', { name: /Planifier la rencontre/ }))
+    await waitFor(() => expect(onCreated).toHaveBeenCalled())
+    const created = await db.matches.get(onCreated.mock.calls[0][0])
+    expect(created!.meta.clubId).toBe('ta')
+    expect(created!.meta.opponentId).toBe('tb')
+    expect(created!.roster).toEqual(['p1']) // notre effectif seulement, l'adversaire n'en a pas
+  })
+})
+
+describe('MatchSetup — droits', () => {
+  it('planifier une rencontre est administratif : la table de marque ne voit pas le formulaire, et rien n’est enregistré', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'marque')
+    const onCreated = vi.fn()
+    render(
+      <MemoryRouter initialEntries={['/match/new']}>
+        <ClubProvider><AuthProvider>
+          <Routes>
+            <Route path="/match/new" element={<MatchSetup onCreated={onCreated} />} />
+            <Route path="/calendrier" element={<p>Calendrier</p>} />
+          </Routes>
+        </AuthProvider></ClubProvider>
+      </MemoryRouter>,
+    )
+
+    // Cet écran n'existe que pour écrire : sans le droit, l'URL directe renvoie au
+    // calendrier plutôt que d'ouvrir un formulaire sans bouton d'envoi.
+    expect(await screen.findByText('Calendrier')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /planifier la rencontre/i })).not.toBeInTheDocument()
+    // Ce qui compte : aucune rencontre n'est créée.
+    expect(await db.matches.count()).toBe(0)
+    expect(onCreated).not.toHaveBeenCalled()
   })
 })

@@ -1,76 +1,43 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import { GameClock } from '../components/GameClock'
 import { TeamPanel } from '../components/TeamPanel'
-import { Link } from 'react-router-dom'
 import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { ClockEditDialog } from '../components/ClockEditDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { StartingFiveGate } from '../components/StartingFiveGate'
-import { useAdmin } from '../../app/admin'
-import { syncEnabled, publishBundle } from '../../app/sync'
+import { AccessGate } from '../components/AccessGate'
 import { SubstitutionDialog } from '../components/SubstitutionDialog'
+import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
+import { C } from '../olive/kit'
+import { useAuth } from '../../app/auth'
+import { syncEnabled, publishBundle } from '../../app/sync'
 import { useMatch } from '../../app/useMatch'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
+import { shotsOf } from '../../domain/shotchart'
 import { listPlayers, listTeams } from '../../persistence/repositories'
-import { periodLength } from '../../domain/ids'
-import type { Match, Period, Player, ScoreKind, StatKind, FoulType, TeamSide } from '../../domain/types'
+import { periodLength, seedSeconds } from '../../domain/ids'
+import type { Match, Player, ScoreKind, ShotSpot, StatKind, FoulType } from '../../domain/types'
 
 const TEAM_A = 'var(--team-a)'
-const TEAM_B = 'var(--team-b)'
+const OPP_POINTS: { k: ScoreKind; n: number }[] = [{ k: 'lf', n: 1 }, { k: '2int', n: 2 }, { k: '3', n: 3 }]
 
-/** Chrono restant à reprendre pour la période courante : celui du dernier évènement
- * de cette période dans le journal, ou la durée pleine si la période vient de commencer. */
-function seedSeconds(match: Match, period: Period): number {
-  for (let i = match.events.length - 1; i >= 0; i--) {
-    if (match.events[i].period === period) return match.events[i].gameClock
-  }
-  return periodLength(period)
-}
-
-/** Frise des périodes façon "date strip" : Q1→Q4 puis prolongations, courante en surbrillance. */
-function PeriodStrip({ current }: { current: Period }) {
-  const otCount = Math.max(0, current - 4)
-  const chips: { period: Period; label: string }[] = [
-    ...[1, 2, 3, 4].map((p) => ({ period: p as Period, label: `Q${p}` })),
-    ...Array.from({ length: otCount }, (_, i) => ({ period: (5 + i) as Period, label: `P${i + 1}` })),
-  ]
-  return (
-    <div className="flex items-center gap-1.5">
-      {chips.map(({ period, label }) => {
-        const isCurrent = period === current
-        const isPast = period < current
-        return (
-          <span
-            key={period}
-            className={`nums rounded-lg px-2.5 py-1 text-[11px] font-black uppercase tracking-wide ${
-              isCurrent
-                ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
-                : isPast
-                  ? 'bg-white/10 text-white/70'
-                  : 'bg-white/[0.04] text-white/35'
-            }`}
-          >
-            {label}
-          </span>
-        )
-      })}
-    </div>
-  )
-}
-
+/**
+ * Table de marque du match : notre effectif est détaillé joueur par joueur,
+ * l'adversaire se résume à un score saisi globalement.
+ */
 export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: () => void }) {
   const navigate = useNavigate()
-  const { isAdmin, guard } = useAdmin()
+  const { can, guard } = useAuth()
   const { match, dispatch, dispatchMany, undo, removeLast, finish, error } = useMatch(matchId)
   const [askFinish, setAskFinish] = useState(false)
   const [players, setPlayers] = useState<Record<string, Player>>({})
-  const [teamNames, setTeamNames] = useState<{ A: string; B: string }>({ A: 'Locaux', B: 'Visiteurs' })
+  const [teamNames, setTeamNames] = useState<{ A: string; B: string }>({ A: 'Mon équipe', B: 'Adversaire' })
   const [seconds, setSeconds] = useState(600)
-  const [pick, setPick] = useState<{ side: TeamSide; id: string; name: string } | null>(null)
-  const [starters, setStarters] = useState<{ A: string[]; B: string[] }>({ A: [], B: [] })
-  const [subSide, setSubSide] = useState<TeamSide | null>(null)
+  const [pick, setPick] = useState<{ id: string; name: string } | null>(null)
+  const [starters, setStarters] = useState<string[]>([])
+  const [sub, setSub] = useState(false)
   const [editClock, setEditClock] = useState(false)
   const timer = useRef<number | undefined>(undefined)
   const seededMatchId = useRef<string | null>(null)
@@ -79,17 +46,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
 
   useEffect(() => {
     if (!match) return
-    Promise.all([listPlayers(match.meta.teamAId), listPlayers(match.meta.teamBId), listTeams()]).then(([a, b, teams]) => {
-      const map: Record<string, Player> = {}
-      for (const p of [...a, ...b]) map[p.id] = p
-      setPlayers(map)
+    Promise.all([listPlayers(match.meta.clubId), listTeams()]).then(([a, teams]) => {
+      setPlayers(Object.fromEntries(a.map((p) => [p.id, p])))
       const byId = Object.fromEntries(teams.map((t) => [t.id, t.name]))
-      setTeamNames({
-        A: byId[match.meta.teamAId] ?? 'Locaux',
-        B: byId[match.meta.teamBId] ?? 'Visiteurs',
-      })
+      setTeamNames({ A: byId[match.meta.clubId] ?? 'Mon équipe', B: byId[match.meta.opponentId] ?? 'Adversaire' })
     })
-  }, [match?.meta.teamAId, match?.meta.teamBId])
+  }, [match?.meta.clubId, match?.meta.opponentId])
 
   useEffect(() => {
     if (!match || !ls || seededMatchId.current === match.id) return
@@ -104,7 +66,9 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     }
   }, [ls?.clockRunning])
 
-  // Suivi spectateur (multi-appareils) : publie l'état à chaque changement.
+  // Suivi spectateur (multi-appareils) : publie l'état à chaque changement, et
+  // republie au retour du réseau (une saisie hors ligne ne se repousse sinon
+  // qu'au prochain évènement).
   useEffect(() => {
     if (!match || !syncEnabled()) return
     const bundle = { match, players: Object.values(players), teamNames }
@@ -117,55 +81,22 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   if (!match || !ls)
     return <div className="grid min-h-dvh place-items-center text-muted-foreground">Chargement…</div>
 
-  // La table de marque (saisie du match) est réservée à l'admin ; les
-  // spectateurs passent par /watch (lecture seule).
-  if (!isAdmin)
-    return (
-      <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
-        <div className="text-5xl">🔒</div>
-        <h2 className="text-xl font-extrabold tracking-tight">Accès table de marque</h2>
-        <p className="max-w-sm text-sm text-muted-foreground">Le mot de passe administrateur est requis pour saisir la rencontre.</p>
-        <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-          <button onClick={() => guard(() => {})} className="rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110">
-            🔓 Déverrouiller
-          </button>
-          <Link to={`/match/${matchId}/watch`} className="rounded-xl border border-border/70 px-5 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-muted">
-            👁 Suivi spectateur
-          </Link>
-        </div>
-        <button onClick={() => navigate('/')} className="mt-1 text-xs font-semibold text-muted-foreground hover:text-foreground">← Accueil</button>
-      </div>
-    )
+  if (!can('score'))
+    return <AccessGate ability="score" matchId={matchId} onUnlock={() => guard('score', () => {})} onExit={() => navigate('/')} />
 
-  const rosterPlayers = (side: TeamSide) => match.roster[side].map((id) => players[id]).filter(Boolean)
-  const teamName = (side: TeamSide) => teamNames[side]
+  const rosterPlayers = match.roster.map((id) => players[id]).filter(Boolean)
 
-  const hasStartingFive = (side: TeamSide) =>
-    match.events.some((e) => e.type === 'STARTING_FIVE' && e.team === side)
-
-  if (!hasStartingFive('A') || !hasStartingFive('B')) {
-    const requiredFor = (side: TeamSide) => Math.min(5, match.roster[side].length)
-    const toggleStarter = (side: TeamSide, id: string) => {
-      setStarters((prev) => {
-        const cur = prev[side]
-        if (cur.includes(id)) return { ...prev, [side]: cur.filter((x) => x !== id) }
-        if (cur.length >= requiredFor(side)) return prev
-        return { ...prev, [side]: [...cur, id] }
-      })
-    }
-    const canStart = starters.A.length === requiredFor('A') && starters.B.length === requiredFor('B')
-    // Ordonne le cinq de départ par numéro pour un affichage propre ; les
-    // remplacements ultérieurs conserveront ensuite la position de chaque slot.
+  if (!match.events.some((e) => e.type === 'STARTING_FIVE' && e.team === 'A')) {
+    const required = Math.min(5, match.roster.length)
+    const toggle = (id: string) =>
+      setStarters((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= required ? cur : [...cur, id]))
     const byNumber = (ids: string[]) => [...ids].sort((a, b) => (players[a]?.number ?? 0) - (players[b]?.number ?? 0))
-    const startMatch = () => guard(() => dispatchMany([
-      { type: 'STARTING_FIVE', team: 'A', playerIds: byNumber(starters.A), period: ls.period, gameClock: periodLength(ls.period) },
-      { type: 'STARTING_FIVE', team: 'B', playerIds: byNumber(starters.B), period: ls.period, gameClock: periodLength(ls.period) },
-    ]))
     return (
       <StartingFiveGate
-        rosterA={rosterPlayers('A')} rosterB={rosterPlayers('B')}
-        requiredA={requiredFor('A')} requiredB={requiredFor('B')} selected={starters}
-        onToggle={toggleStarter} onStart={startMatch} canStart={canStart}
+        rosterA={rosterPlayers} requiredA={required}
+        selected={starters} onToggle={toggle}
+        canStart={starters.length === required}
+        onStart={() => dispatch({ type: 'STARTING_FIVE', team: 'A', playerIds: byNumber(starters), period: ls.period, gameClock: periodLength(ls.period) })}
         onExit={() => navigate('/')}
       />
     )
@@ -174,62 +105,47 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   const toggleClock = () =>
     dispatch({ type: ls.clockRunning ? 'CLOCK_STOP' : 'CLOCK_START', period: ls.period, gameClock: seconds })
 
-  const statsByPlayer = (side: TeamSide) => {
+  const statsByPlayer = () => {
     const map = new Map<string, { points: number; fouls: number }>()
-    for (const s of playerStats(match, side)) map.set(s.playerId, { points: s.points, fouls: s.fouls })
+    for (const s of playerStats(match)) map.set(s.playerId, { points: s.points, fouls: s.fouls })
     return map
   }
-  const quickScore = (side: TeamSide, playerId: string, kind: ScoreKind) =>
-    dispatch({ type: 'SCORE', team: side, playerId, kind, period: ls.period, gameClock: seconds })
-  const quickFoul = (side: TeamSide, playerId: string) =>
-    dispatch({ type: 'FOUL', team: side, target: { kind: 'player', playerId }, foulType: 'personal', period: ls.period, gameClock: seconds })
-  const quickStat = (side: TeamSide, playerId: string, stat: StatKind) =>
-    dispatch({ type: 'STAT', team: side, playerId, stat, period: ls.period, gameClock: seconds })
-
-  // Corrections (erreurs de saisie) : on retire le dernier évènement concerné.
-  // Retrait ciblé d'un type de panier précis (le dernier 3 pts, même si un 2 a suivi).
-  const removeScoreKind = (side: TeamSide, playerId: string, kind: ScoreKind) =>
-    removeLast((e) => e.type === 'SCORE' && e.team === side && e.playerId === playerId && e.kind === kind)
-  const removeFoul = (side: TeamSide, playerId: string) =>
-    removeLast((e) => e.type === 'FOUL' && e.team === side && e.target.kind === 'player' && e.target.playerId === playerId)
-  const removeStatKind = (side: TeamSide, playerId: string, stat: StatKind) =>
-    removeLast((e) => e.type === 'STAT' && e.team === side && e.playerId === playerId && e.stat === stat)
-  const statCounts = (side: TeamSide, playerId: string): Record<StatKind, number> => {
-    const c: Record<StatKind, number> = { assist: 0, reb_off: 0, reb_def: 0, block: 0 }
-    for (const e of match.events)
-      if (e.type === 'STAT' && e.team === side && e.playerId === playerId) c[e.stat]++
-    return c
-  }
-  const removeTimeout = (side: TeamSide) =>
-    removeLast((e) => e.type === 'TIMEOUT' && e.team === side)
-  /** Nombre de paniers par type pour un joueur (active/désactive les boutons de correction). */
-  const scoreCounts = (side: TeamSide, playerId: string): Record<ScoreKind, number> => {
-    const c: Record<ScoreKind, number> = { '2int': 0, '2ext': 0, '3': 0, lf: 0 }
-    for (const e of match.events)
-      if (e.type === 'SCORE' && e.team === side && e.playerId === playerId) c[e.kind]++
-    return c
-  }
-  // Correction du chrono (souci de buzzer) : pas à pas ou saisie manuelle.
-  const clampClock = (s: number) => Math.min(periodLength(ls.period), Math.max(0, s))
-  const adjustClock = (delta: number) => setSeconds((s) => clampClock(s + delta))
-
-  const score = (kind: ScoreKind) => pick &&
-    dispatch({ type: 'SCORE', team: pick.side, playerId: pick.id, kind, period: ls.period, gameClock: seconds })
+  const score = (kind: ScoreKind, shot?: ShotSpot) => pick &&
+    dispatch({ type: 'SCORE', team: 'A', playerId: pick.id, kind, shot, period: ls.period, gameClock: seconds })
+  const miss = (kind: ScoreKind, shot: ShotSpot) => pick &&
+    dispatch({ type: 'MISS', team: 'A', playerId: pick.id, kind, shot, period: ls.period, gameClock: seconds })
   const foul = (type: FoulType) => pick &&
-    dispatch({ type: 'FOUL', team: pick.side, target: { kind: 'player', playerId: pick.id }, foulType: type, period: ls.period, gameClock: seconds })
+    dispatch({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId: pick.id }, foulType: type, period: ls.period, gameClock: seconds })
 
-  // Ordre = celui de ls.onCourt (le remplaçant hérite de la place du sortant).
-  const onCourtFor = (side: TeamSide) => {
-    const byId = new Map(rosterPlayers(side).map((p) => [p.id, p]))
-    return ls.onCourt[side].map((id) => byId.get(id)).filter((p): p is Player => !!p)
+  // Panier adverse : pas de joueur identifié, seul le score compte.
+  const oppScore = (kind: ScoreKind) =>
+    dispatch({ type: 'SCORE', team: 'B', kind, period: ls.period, gameClock: seconds })
+  const removeOppScore = () =>
+    removeLast((e) => e.type === 'SCORE' && e.team === 'B' && !e.playerId)
+
+  const countOf = <T extends string>(keys: T[], read: (e: Match['events'][number]) => T | null): Record<T, number> => {
+    const c = Object.fromEntries(keys.map((k) => [k, 0])) as Record<T, number>
+    for (const e of match.events) { const k = read(e); if (k) c[k]++ }
+    return c
   }
-  const benchFor = (side: TeamSide) => {
-    const onCourtSet = new Set(ls.onCourt[side])
-    const fouledOutSet = new Set(ls.fouledOut[side])
-    return rosterPlayers(side).filter((p) => !onCourtSet.has(p.id) && !fouledOutSet.has(p.id))
+  const scoreCounts = (id: string) =>
+    countOf<ScoreKind>(['2int', '2ext', '3', 'lf'], (e) =>
+      e.type === 'SCORE' && e.team === 'A' && e.playerId === id ? e.kind : null)
+  const statCounts = (id: string) =>
+    countOf<StatKind>(['assist', 'reb_off', 'reb_def', 'block'], (e) =>
+      e.type === 'STAT' && e.team === 'A' && e.playerId === id ? e.stat : null)
+  const missCount = (id: string) =>
+    match.events.filter((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === id).length
+
+  const clampClock = (s: number) => Math.min(periodLength(ls.period), Math.max(0, s))
+  const onCourt = () => {
+    const byId = new Map(rosterPlayers.map((p) => [p.id, p]))
+    return ls.onCourt.A.map((id) => byId.get(id)).filter((p): p is Player => !!p)
   }
-  const submitSub = (side: TeamSide, playerOutId: string, playerInId: string) =>
-    dispatch({ type: 'SUBSTITUTION', team: side, playerOutId, playerInId, period: ls.period, gameClock: seconds })
+  const bench = () => {
+    const on = new Set(ls.onCourt.A), out = new Set(ls.fouledOut.A)
+    return rosterPlayers.filter((p) => !on.has(p.id) && !out.has(p.id))
+  }
 
   const nextPeriod = () => {
     const next = ls.period + 1
@@ -240,134 +156,117 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     setSeconds(periodLength(next))
   }
 
-  const doFinish = async () => { await finish(); onFinish() }
-
   return (
-    <div className="flex min-h-full flex-col">
-      {/* SCOREBOARD */}
-      <header className="rounded-t-none px-4 pb-4 pt-3 text-[var(--scoreboard-fg)] sm:px-6" style={{ background: 'var(--scoreboard)' }}>
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2">
-          <PeriodStrip current={ls.period} />
+    /* `h-dvh`, pas `min-h-full` : le tableau d'affichage et le chrono ne défilent
+       plus jamais hors de l'écran, seul l'effectif défile — et il ne défile plus
+       guère, puisque la coquille ne lui prend plus ses cent pixels. */
+    <div className="flex h-dvh flex-col overflow-hidden" style={{ background: C.frame, color: C.text }}>
+      <header className="shrink-0 px-4 pb-4 pt-3 text-[var(--scoreboard-fg)] sm:px-6" style={{ background: 'var(--scoreboard)' }}>
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
+          {/* La sortie voyage avec la frise des périodes, pas avec les actions :
+              quitter n'est pas une action de saisie, et la ligne des périodes a la
+              place que celle des boutons n'a plus. Le match n'est pas terminé pour
+              autant — on revient à sa fiche, et « Reprendre » ramène ici. */}
           <div className="flex items-center gap-2">
-            <Link to={`/match/${match.id}/watch`} target="_blank" title="Ouvrir le suivi spectateur"
-              className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-white/20">👁 Suivi</Link>
-            <SbButton onClick={undo} title="Annuler la dernière action">↩︎ Annuler</SbButton>
-            <SbButton onClick={nextPeriod}>Période suivante →</SbButton>
+            <Link to={`/match/${match.id}`} aria-label="Quitter la table de marque" title="Quitter la table de marque"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-base font-black text-white transition hover:bg-white/20">✕</Link>
+            <PeriodStrip current={ls.period} />
+          </div>
+          {/* `flex-wrap` : cinq commandes larges d'un doigt ne tiennent pas toujours
+              sur une ligne de téléphone. Elles passent à la ligne — elles ne sortent
+              plus de l'écran, comme « Terminer » le faisait, hors d'atteinte. */}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Link to={`/match/${match.id}/watch`} target="_blank" aria-label="Ouvrir le suivi spectateur" title="Ouvrir le suivi spectateur"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-base text-white transition hover:bg-white/20">👁</Link>
+            <SbButton onClick={undo} title="Annuler la dernière action">Annuler</SbButton>
+            <SbButton onClick={nextPeriod} title="Passer à la période suivante">Période →</SbButton>
+            {/* Un écart avant l'irréversible. « Terminer » fige le score ; il était
+                à huit pixels de « Période suivante », soit la largeur d'un pouce
+                mal posé. */}
+            <span className="w-3 shrink-0" aria-hidden />
             <SbButton onClick={() => setAskFinish(true)} danger>Terminer</SbButton>
           </div>
         </div>
 
-        <div className="mx-auto mt-3 grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-1 overflow-hidden sm:gap-6">
-          <ScoreSide align="right" color="var(--sb-team-a)" name={teamName('A')} score={ls.score.a} lead={ls.score.a > ls.score.b} />
-          <div className="flex flex-col items-center gap-2">
-            <GameClock running={ls.clockRunning} seconds={seconds} onToggle={toggleClock} />
-            <div className="flex flex-wrap items-center justify-center gap-1" title="Corriger le chrono (buzzer)">
-              <ClockAdjust onClick={() => adjustClock(-10)}>−10s</ClockAdjust>
-              <ClockAdjust onClick={() => adjustClock(-1)}>−1s</ClockAdjust>
-              <ClockAdjust onClick={() => adjustClock(1)}>+1s</ClockAdjust>
-              <ClockAdjust onClick={() => adjustClock(10)}>+10s</ClockAdjust>
-              <ClockAdjust onClick={() => setEditClock(true)}>✎ Éditer</ClockAdjust>
-            </div>
-          </div>
-          <ScoreSide align="left" color="var(--sb-team-b)" name={teamName('B')} score={ls.score.b} lead={ls.score.b > ls.score.a} />
+        <div className="mx-auto mt-3 grid max-w-4xl grid-cols-[1fr_auto_1fr] items-center gap-1 overflow-hidden sm:gap-6">
+          <ScoreSide align="right" color="var(--sb-team-a)" name={teamNames.A} score={ls.score.a} lead={ls.score.a > ls.score.b} />
+          <GameClock running={ls.clockRunning} seconds={seconds} onToggle={toggleClock} />
+          <ScoreSide align="left" color="var(--sb-team-b)" name={teamNames.B} score={ls.score.b} lead={ls.score.b > ls.score.a} />
+        </div>
+
+        {/* Les corrections de chrono sur leur propre ligne, et non dans la colonne
+            centrale de la grille : à cinq boutons larges d'un doigt, cette colonne
+            devenait plus large que l'écran et poussait les deux scores hors du
+            cadre. Le score passe avant le réglage. */}
+        <div className="mx-auto mt-2.5 flex max-w-4xl flex-wrap items-center justify-center gap-1" title="Corriger le chrono (buzzer)">
+          <ClockAdjust onClick={() => setSeconds((s) => clampClock(s - 10))}>−10s</ClockAdjust>
+          <ClockAdjust ecart onClick={() => setSeconds((s) => clampClock(s - 1))}>−1s</ClockAdjust>
+          <ClockAdjust onClick={() => setSeconds((s) => clampClock(s + 1))}>+1s</ClockAdjust>
+          <ClockAdjust ecart onClick={() => setSeconds((s) => clampClock(s + 10))}>+10s</ClockAdjust>
+          <ClockAdjust ecart onClick={() => setEditClock(true)}>✎ Éditer</ClockAdjust>
         </div>
       </header>
 
-      {error && (
-        <div className="bg-red-500/10 py-1.5 text-center text-sm font-semibold text-red-600">{error}</div>
-      )}
+      {error && <div className="shrink-0 bg-[var(--c-danger-bg)] py-1.5 text-center text-sm font-semibold text-[var(--c-danger)]">{error}</div>}
 
-      {/* TEAM COLUMNS */}
-      <div className="mx-auto grid w-full max-w-6xl flex-1 grid-cols-2 gap-2 p-2 sm:gap-4 sm:p-4">
+      {/* SCORE ADVERSE : global, sans joueurs. Une seule ligne — la mention
+          « score global, pas de détail joueur » expliquait à chaque match un fait
+          qu'on apprend au premier, et la troisième ligne qu'elle imposait au
+          téléphone se prenait sur l'effectif. */}
+      <div className="mx-auto mt-2 flex w-full max-w-4xl shrink-0 items-center gap-2 rounded-2xl border border-border/60 bg-card/50 px-3 py-2 sm:mt-4 sm:px-4">
+        <span className="min-w-0 truncate text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {OPP_POINTS.map(({ k, n }) => (
+            <button key={k} onClick={() => oppScore(k)} aria-label={`Ajouter ${n} point${n > 1 ? 's' : ''} à ${teamNames.B}`}
+              className="nums h-11 min-w-11 rounded-lg bg-[var(--c-card2)] px-3 text-sm font-black text-[var(--c-text)] transition hover:bg-[var(--c-accent)] hover:text-white active:scale-90">
+              +{n}
+            </button>
+          ))}
+          <button onClick={removeOppScore} aria-label={`Retirer le dernier panier de ${teamNames.B}`}
+            className="h-11 w-11 rounded-lg bg-[var(--c-card2)] text-sm font-bold text-muted-foreground transition hover:bg-[var(--c-accent)] hover:text-white active:scale-90">
+            ↺
+          </button>
+        </div>
+      </div>
+
+      {/* `min-h-0` : sans lui, un enfant flexible refuse de se laisser comprimer
+          sous la taille de son contenu et l'effectif repousserait le tableau
+          d'affichage hors de l'écran au lieu de défiler dans sa propre boîte. */}
+      <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col p-2 sm:p-4">
         <TeamPanel
-          title="LOCAUX" color={TEAM_A} players={onCourtFor('A')}
-          statsByPlayer={statsByPlayer('A')} teamFouls={ls.teamFoulsThisPeriod.A}
+          title={teamNames.A.toUpperCase()} color={TEAM_A} players={onCourt()}
+          statsByPlayer={statsByPlayer()} teamFouls={ls.teamFoulsThisPeriod.A}
           bonus={ls.bonus.A} timeoutsRemaining={ls.timeoutsRemaining.A} timeoutsUsed={ls.timeoutsUsed.A}
-          onPick={(id, name) => setPick({ side: 'A', id, name })}
-          onScore={(id, kind) => quickScore('A', id, kind)} onFoul={(id) => quickFoul('A', id)}
-          onSub={() => setSubSide('A')}
+          onPick={(id, name) => setPick({ id, name })}
+          onScore={(id, kind) => dispatch({ type: 'SCORE', team: 'A', playerId: id, kind, period: ls.period, gameClock: seconds })}
+          onFoul={(id) => dispatch({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId: id }, foulType: 'personal', period: ls.period, gameClock: seconds })}
+          onSub={() => setSub(true)}
           onTimeout={() => dispatch({ type: 'TIMEOUT', team: 'A', period: ls.period, gameClock: seconds })}
-          onUndoTimeout={() => removeTimeout('A')}
-        />
-        <TeamPanel
-          title="VISITEURS" color={TEAM_B} players={onCourtFor('B')}
-          statsByPlayer={statsByPlayer('B')} teamFouls={ls.teamFoulsThisPeriod.B}
-          bonus={ls.bonus.B} timeoutsRemaining={ls.timeoutsRemaining.B} timeoutsUsed={ls.timeoutsUsed.B}
-          onPick={(id, name) => setPick({ side: 'B', id, name })}
-          onScore={(id, kind) => quickScore('B', id, kind)} onFoul={(id) => quickFoul('B', id)}
-          onSub={() => setSubSide('B')}
-          onTimeout={() => dispatch({ type: 'TIMEOUT', team: 'B', period: ls.period, gameClock: seconds })}
-          onUndoTimeout={() => removeTimeout('B')}
+          onUndoTimeout={() => removeLast((e) => e.type === 'TIMEOUT' && e.team === 'A')}
         />
       </div>
 
       <PlayerActionDialog
-        open={!!pick} playerName={pick?.name ?? ''} color={pick?.side === 'B' ? TEAM_B : TEAM_A}
-        scoreCounts={pick ? scoreCounts(pick.side, pick.id) : undefined}
-        statCounts={pick ? statCounts(pick.side, pick.id) : undefined}
-        fouls={pick ? statsByPlayer(pick.side).get(pick.id)?.fouls ?? 0 : 0}
-        onClose={() => setPick(null)} onScore={score} onFoul={foul}
-        onStat={(kind) => pick && quickStat(pick.side, pick.id, kind)}
-        onRemoveScore={(kind) => pick && removeScoreKind(pick.side, pick.id, kind)}
-        onRemoveFoul={() => pick && removeFoul(pick.side, pick.id)}
-        onRemoveStat={(kind) => pick && removeStatKind(pick.side, pick.id, kind)}
+        open={!!pick} playerName={pick?.name ?? ''} color={TEAM_A}
+        scoreCounts={pick ? scoreCounts(pick.id) : undefined}
+        statCounts={pick ? statCounts(pick.id) : undefined}
+        fouls={pick ? statsByPlayer().get(pick.id)?.fouls ?? 0 : 0}
+        misses={pick ? missCount(pick.id) : 0}
+        shots={pick ? shotsOf([match], pick.id) : undefined}
+        onClose={() => setPick(null)} onScore={score} onMiss={miss} onFoul={foul}
+        onStat={(kind) => pick && dispatch({ type: 'STAT', team: 'A', playerId: pick.id, stat: kind, period: ls.period, gameClock: seconds })}
+        onRemoveScore={(kind) => pick && removeLast((e) => e.type === 'SCORE' && e.team === 'A' && e.playerId === pick.id && e.kind === kind)}
+        onRemoveFoul={() => pick && removeLast((e) => e.type === 'FOUL' && e.team === 'A' && e.target.kind === 'player' && e.target.playerId === pick.id)}
+        onRemoveStat={(kind) => pick && removeLast((e) => e.type === 'STAT' && e.team === 'A' && e.playerId === pick.id && e.stat === kind)}
+        onRemoveMiss={() => pick && removeLast((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === pick.id)}
       />
-      <ClockEditDialog
-        open={editClock} seconds={seconds} max={periodLength(ls.period)}
-        onClose={() => setEditClock(false)} onSubmit={(s) => setSeconds(clampClock(s))}
-      />
-      <ConfirmDialog open={askFinish} onClose={() => setAskFinish(false)} onConfirm={doFinish}
+      <ClockEditDialog open={editClock} seconds={seconds} max={periodLength(ls.period)}
+        onClose={() => setEditClock(false)} onSubmit={(s) => setSeconds(clampClock(s))} />
+      <ConfirmDialog open={askFinish} onClose={() => setAskFinish(false)} onConfirm={async () => { await finish(); onFinish() }}
         title="Terminer le match ?" message="Le score est figé et la rencontre passe en « terminée ». Cette action est définitive." confirmLabel="Terminer" danger />
-      <SubstitutionDialog
-        open={subSide !== null} onClose={() => setSubSide(null)}
-        onCourtPlayers={subSide ? onCourtFor(subSide) : []}
-        benchPlayers={subSide ? benchFor(subSide) : []}
-        onSubmit={(playerOutId, playerInId) => subSide && submitSub(subSide, playerOutId, playerInId)}
-      />
+      <SubstitutionDialog open={sub} onClose={() => setSub(false)}
+        onCourtPlayers={onCourt()} benchPlayers={bench()}
+        onSubmit={(playerOutId, playerInId) => dispatch({ type: 'SUBSTITUTION', team: 'A', playerOutId, playerInId, period: ls.period, gameClock: seconds })} />
     </div>
-  )
-}
-
-function ScoreSide({ align, color, name, score, lead }: {
-  align: 'left' | 'right'; color: string; name: string; score: number; lead: boolean
-}) {
-  return (
-    <div className={`flex min-w-0 flex-col ${align === 'right' ? 'items-end text-right' : 'items-start text-left'}`}>
-      <span className="flex min-w-0 max-w-full items-center gap-1.5">
-        <span className="h-2 w-2 shrink-0 rounded-full sm:h-2.5 sm:w-2.5" style={{ background: color }} />
-        <span className="truncate text-[11px] font-bold text-white/85 sm:text-base">{name}</span>
-      </span>
-      <span
-        className="nums text-[2.75rem] font-black leading-none tabular-nums sm:text-8xl"
-        style={{ color, opacity: lead ? 1 : 0.85 }}
-      >
-        {score}
-      </span>
-    </div>
-  )
-}
-
-function ClockAdjust({ children, onClick }: { children: ReactNode; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="nums rounded-md bg-white/10 px-2 py-1 text-[11px] font-bold tabular-nums text-white/80 transition hover:bg-white/20 active:scale-90"
-    >
-      {children}
-    </button>
-  )
-}
-
-function SbButton({ children, onClick, title, danger }: { children: ReactNode; onClick: () => void; title?: string; danger?: boolean }) {
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition active:scale-95 ${
-        danger ? 'bg-red-500/20 text-red-300 hover:bg-red-500 hover:text-white' : 'bg-white/10 text-white hover:bg-white/20'
-      }`}
-    >
-      {children}
-    </button>
   )
 }

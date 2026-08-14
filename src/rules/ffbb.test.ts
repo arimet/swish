@@ -3,8 +3,8 @@ import { liveState, timeoutsAllowed, TEAM_FOUL_BONUS } from './ffbb'
 import type { Match, GameEvent } from '../domain/types'
 
 const mk = (events: Partial<GameEvent>[]): Match => ({
-  id: 'm', meta: { championshipLabel: 'x', teamAId: 'a', teamBId: 'b' },
-  roster: { A: ['p1', 'p2'], B: ['q1'] }, status: 'live',
+  id: 'm', meta: { championshipLabel: 'x', clubId: 'a', opponentId: 'b' },
+  roster: ['p1', 'p2'], status: 'live',
   events: events.map((e, i) => ({ id: `e${i}`, wallClock: i, period: e.period ?? 1, gameClock: e.gameClock ?? 600, ...e } as GameEvent)),
 })
 
@@ -70,5 +70,21 @@ describe("liveState", () => {
     ]))
     // p9 remplace p2 à l'index 1, les autres ne bougent pas.
     expect(s.onCourt.A).toEqual(['p1', 'p9', 'p3', 'p4', 'p5'])
+  })
+  it('l\'adversaire n\'a pas d\'effectif : jamais « sorti sur fautes », même à 5 fautes sur un joueur du roster', () => {
+    // 'p1' est dans le roster (côté A) : si fouledOutOf lisait match.roster des
+    // deux côtés sans garde, il apparaîtrait à tort dans fouledOut.B.
+    const events: Partial<GameEvent>[] = Array(5).fill(null).map(() => ({
+      type: 'FOUL' as const, team: 'B' as const, target: { kind: 'player' as const, playerId: 'p1' }, foulType: 'personal' as const, period: 1,
+    }))
+    expect(liveState(mk(events)).fouledOut.B).toEqual([])
+  })
+  it('compte un panier sans joueur identifié dans le score de l’équipe', () => {
+    const m = mk([
+      { type: 'CLOCK_START', period: 1, gameClock: 600 },
+      { type: 'SCORE', team: 'B', kind: '3', period: 1, gameClock: 500 },
+      { type: 'MISS', team: 'A', playerId: 'p1', kind: '3', shot: { x: 0.5, y: 0.7 }, period: 1, gameClock: 490 },
+    ])
+    expect(liveState(m).score).toEqual({ a: 0, b: 3 })
   })
 })

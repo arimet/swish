@@ -66,8 +66,9 @@ export function liveState(match: Match): LiveState {
     }
   }
 
+  // Seul notre club (côté A) a un effectif : l'adversaire ne peut pas être « sorti sur fautes ».
   const fouledOutOf = (side: TeamSide) =>
-    match.roster[side].filter((id) => (playerFouls.get(id) ?? 0) >= PLAYER_FOUL_OUT)
+    (side === 'A' ? match.roster : []).filter((id) => (playerFouls.get(id) ?? 0) >= PLAYER_FOUL_OUT)
   const allowed = timeoutsAllowed(period)
 
   return {

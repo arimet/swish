@@ -3,8 +3,8 @@ import { scoreProgression, matchRatios } from './progression'
 import type { Match, GameEvent } from './types'
 
 const mk = (events: Partial<GameEvent>[]): Match => ({
-  id: 'm', meta: { championshipLabel: 'x', teamAId: 'a', teamBId: 'b' },
-  roster: { A: ['p1'], B: ['q1'] }, status: 'live',
+  id: 'm', meta: { championshipLabel: 'x', clubId: 'a', opponentId: 'b' },
+  roster: ['p1'], status: 'live',
   events: events.map((e, i) => ({ id: `e${i}`, wallClock: i, period: 1, gameClock: e.gameClock ?? 600, ...e } as GameEvent)),
 })
 

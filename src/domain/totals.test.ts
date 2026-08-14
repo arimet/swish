@@ -4,8 +4,8 @@ import type { Match, GameEvent } from './types'
 
 const mk = (events: Partial<GameEvent>[]): Match => ({
   id: 'm',
-  meta: { championshipLabel: 'x', teamAId: 'a', teamBId: 'b' },
-  roster: { A: ['p1', 'p2'], B: [] },
+  meta: { championshipLabel: 'x', clubId: 'a', opponentId: 'b' },
+  roster: ['p1', 'p2'],
   status: 'live',
   events: events.map((e, i) => ({
     id: `e${i}`,
@@ -25,7 +25,6 @@ describe('teamTotals', () => {
         { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' },
         { type: 'SCORE', team: 'A', playerId: 'p2', kind: '3' },
       ]),
-      'A'
     )
     expect(t.team.points).toBe(5)
     expect(t.starters.points).toBe(2)
@@ -40,7 +39,6 @@ describe('teamTotals', () => {
         { type: 'CLOCK_START', period: 3 },
         { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', period: 3 },
       ]),
-      'A'
     )
     expect(t.firstHalf.points).toBe(2)
     expect(t.secondHalf.points).toBe(3)
@@ -51,7 +49,6 @@ describe('teamTotals', () => {
       mk([
         { type: 'FOUL', team: 'A', target: { kind: 'coach' }, foulType: 'technical' },
       ]),
-      'A'
     )
     expect(t.coachFouls).toBe(1)
   })
@@ -61,7 +58,6 @@ describe('teamTotals', () => {
       mk([
         { type: 'FOUL', team: 'A', target: { kind: 'bench' }, foulType: 'technical' },
       ]),
-      'A'
     )
     expect(t.firstHalf.fouls).toBe(0)
     expect(t.coachFouls).toBe(0)
@@ -72,10 +68,22 @@ describe('teamTotals', () => {
       mk([
         { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int', period: 5 },
       ]),
-      'A'
     )
     expect(t.overtime.points).toBe(2)
     expect(t.firstHalf.points).toBe(0)
     expect(t.secondHalf.points).toBe(0)
+  })
+
+  it('ignore les paniers adverses (côté B) dans nos totaux, y compris par période', () => {
+    const t = teamTotals(
+      mk([
+        { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' },
+        { type: 'SCORE', team: 'B', kind: '3' }, // panier adverse : sans joueur identifié, hors de nos totaux
+      ]),
+    )
+    expect(t.team.points).toBe(2)
+    // t.team.points dérive de playerStats (déjà verrouillé ailleurs) ; seule cette
+    // assertion protège la boucle par période de teamTotals elle-même.
+    expect(t.firstHalf.points).toBe(2)
   })
 })

@@ -1,0 +1,302 @@
+/**
+ * La bibliothèque des combinaisons du club. Chaque carte montre la vignette du
+ * premier temps : un coach reconnaît sa combinaison à sa forme, pas à son nom.
+ * Vingt combinaisons, c'est le moment où l'on range : une barre de dossiers, une
+ * recherche, et le plus récemment modifié en tête.
+ * La lecture est libre — chercher, filtrer et jouer ne demandent aucun code ;
+ * créer, dupliquer, ranger et supprimer sont administratifs, et leurs boutons
+ * ne se rendent que pour qui en a le droit. Les gardes restent en place : un
+ * bouton masqué est un confort d'affichage, pas une protection.
+ */
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { newId } from '../../domain/ids'
+import { dossiers, nouveauSchema, type Schema } from '../../domain/plays'
+import { deletePlay, listPlays, savePlay } from '../../persistence/repositories'
+import { useAuth } from '../../app/auth'
+import { useClub } from '../../app/club'
+import { PlayBoard } from '../components/PlayBoard'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { C, bd, Ic, ICON, PageTitle } from '../olive/kit'
+
+/** Les deux actions de carte qui ne sont pas « Jouer » : dessinées, pas écrites.
+ *  Un mot de la même taille que « Jouer » leur donnait le même poids, alors que
+ *  l'une recopie et l'autre détruit. */
+const ICONE_COPIE = 'M9 9h11v11H9zM15 5.5V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1.5'
+const ICONE_POUBELLE = 'M4 7h16M9.5 7V4.5h5V7M6.5 7l1 12.5h9L17.5 7M10 11v5M14 11v5'
+
+/** Sans casse ni accents : au bord du terrain on tape « defense » et l'on veut
+ *  trouver « défense ». */
+const sansAccents = (v: string) => v.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+
+/** Le dossier d'un schéma, normalisé. Chaîne vide = « Sans dossier », ce qui sert
+ *  aussi d'onglet : un vrai dossier n'est jamais vide (cf. `dossiers`). */
+const dossierDe = (s: Schema) => s.dossier?.trim() ?? ''
+
+const DATALIST = 'dossiers-connus'
+
+export function SchemaList() {
+  const { clubId } = useClub()
+  const { can, guard } = useAuth()
+  const gere = can('manage')
+  const navigate = useNavigate()
+  const [schemas, setSchemas] = useState<Schema[] | null>(null)
+  // Le schéma dont on a demandé la suppression : le droit est vérifié à
+  // l'ouverture du dialogue, comme sur la fiche d'équipe.
+  const [aSupprimer, setASupprimer] = useState<Schema | null>(null)
+  // `null` = onglet « Tous », `''` = « Sans dossier », sinon le nom du dossier.
+  const [dossierActif, setDossierActif] = useState<string | null>(null)
+  const [recherche, setRecherche] = useState('')
+  // Le schéma dont on saisit le dossier, et la valeur en cours de frappe.
+  const [enRangement, setEnRangement] = useState<{ id: string; valeur: string } | null>(null)
+
+  const recharger = useCallback(() => {
+    if (clubId) listPlays(clubId).then(setSchemas)
+  }, [clubId])
+  useEffect(() => { recharger() }, [recharger])
+
+  // Garder d'abord, écrire ensuite : le schéma n'est créé qu'une fois le droit
+  // acquis, sinon un visiteur laisserait des schémas vides derrière ses refus.
+  const creer = () => guard('manage', async () => {
+    if (!clubId) return
+    const s: Schema = { id: newId(), ...nouveauSchema(clubId, 'demi', false) }
+    await savePlay(s)
+    navigate(`/schemas/${s.id}/edit`)
+  })
+
+  const dupliquer = (s: Schema) => guard('manage', async () => {
+    // Copie profonde : les temps et leurs flèches sont partagés sinon, et
+    // retoucher la copie modifierait l'original.
+    await savePlay({ ...structuredClone(s), id: newId(), nom: `${s.nom} (copie)` })
+    recharger()
+  })
+
+  const supprimer = async () => {
+    if (!aSupprimer) return
+    await deletePlay(aSupprimer.id)
+    recharger()
+  }
+
+  // Garder d'abord, muter ensuite : la table de marque n'ouvre même pas la
+  // saisie, plutôt que de taper un dossier pour se voir refuser à l'envoi.
+  const ouvrirRangement = (s: Schema) => guard('manage', () => setEnRangement({ id: s.id, valeur: dossierDe(s) }))
+  const ranger = (s: Schema) => guard('manage', async () => {
+    const valeur = enRangement?.valeur.trim()
+    await savePlay({ ...s, dossier: valeur || undefined })
+    setEnRangement(null)
+    recharger()
+  })
+
+  const tous = useMemo(() => schemas ?? [], [schemas])
+  const listeDossiers = useMemo(() => dossiers(tous), [tous])
+  const aDesNonRanges = tous.some((s) => !dossierDe(s))
+
+  // Filtrer puis ranger : le dossier actif, la recherche sur le nom et la note,
+  // et l'ordre du plus récemment modifié au plus ancien. Les schémas d'avant
+  // l'horodatage n'ont pas de `majLe` ; la chaîne vide les envoie en dernier
+  // sans jamais comparer un `undefined`.
+  const visibles = useMemo(() => {
+    const q = sansAccents(recherche.trim())
+    return tous
+      .filter((s) => dossierActif === null || dossierDe(s) === dossierActif)
+      .filter((s) => !q || sansAccents(`${s.nom} ${s.note ?? ''}`).includes(q))
+      .sort((a, b) => (b.majLe ?? '').localeCompare(a.majLe ?? ''))
+  }, [tous, dossierActif, recherche])
+
+  return (
+    <div className="p-6">
+      <PageTitle
+        action={gere && (
+          <button onClick={creer} className="rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+            + Nouveau schéma
+          </button>
+        )}
+      />
+
+      {schemas === null ? (
+        <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
+      ) : schemas.length === 0 ? (
+        // L'état vide dit ce qu'on y range et ce qu'on y gagne, pas seulement
+        // qu'il n'y a rien : « aucun schéma » n'a jamais donné envie d'en faire un.
+        // Encore faut-il pouvoir en faire un : à qui n'a pas le droit d'écrire,
+        // l'invitation à dessiner ne dirait rien qu'un refus. Il lit alors qui
+        // remplit cette bibliothèque, et attend qu'elle le soit.
+        <div className="rounded-2xl px-6 py-14 text-center" style={{ border: `1px dashed ${C.border}` }}>
+          <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl" style={{ background: C.accentBg, color: C.accent }}>
+            <Ic d={ICON.matches} className="h-7 w-7" />
+          </span>
+          <p className="text-base font-extrabold">La bibliothèque est vide.</p>
+          {gere ? (
+            <>
+              <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
+                Posez vos cinq joueurs, tirez leurs trajectoires au doigt, empilez les temps : la combinaison
+                se rejoue ensuite au temps-mort, animée, sur le téléphone.
+              </p>
+              <button onClick={creer} className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+                Dessiner ma première combinaison →
+              </button>
+            </>
+          ) : (
+            <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
+              Les combinaisons dessinées par le coach apparaîtront ici, à revoir avant l’entraînement.
+            </p>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            {/* Les onglets se déduisent des schémas : un dossier vidé disparaît de
+                lui-même, et « Sans dossier » ne s'affiche que s'il reste à ranger. */}
+            <div role="group" aria-label="Dossiers" className="flex flex-wrap gap-1.5">
+              <Onglet actif={dossierActif === null} onClick={() => setDossierActif(null)}>Tous</Onglet>
+              {listeDossiers.map((d) => (
+                <Onglet key={d} actif={dossierActif === d} onClick={() => setDossierActif(d)}>{d}</Onglet>
+              ))}
+              {aDesNonRanges && <Onglet actif={dossierActif === ''} onClick={() => setDossierActif('')}>Sans dossier</Onglet>}
+            </div>
+            {/* La loupe dans le champ : sur une barre de dossiers qui s'allonge, un
+                rectangle nu ne se distingue plus d'un onglet de plus. */}
+            <div className="relative ml-auto w-full sm:w-72">
+              <span className="pointer-events-none absolute inset-y-0 left-3 grid place-items-center" style={{ color: C.faint }}>
+                <Ic d={ICON.search} className="h-4 w-4" />
+              </span>
+              <input
+                type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
+                aria-label="Rechercher un schéma" placeholder="Rechercher (nom ou note)…"
+                className="h-10 w-full rounded-xl pl-9 pr-3 text-sm"
+                style={{ background: C.panel, border: bd, color: C.text }}
+              />
+            </div>
+          </div>
+
+          {/* Une seule liste de suggestions pour toutes les cartes : elle évite les
+              doublons d'orthographe sans imposer une gestion de dossiers. */}
+          <datalist id={DATALIST}>{listeDossiers.map((d) => <option key={d} value={d} />)}</datalist>
+
+          {visibles.length === 0 ? (
+            <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
+              Aucun schéma ne correspond à cette recherche.
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
+              {visibles.map((s) => (
+                <article key={s.id} className="flex flex-col rounded-2xl p-3" style={{ background: C.card, border: bd }}>
+                  {/* La vignette et le nom mènent à la consultation ; les boutons
+                      restent hors du lien, un bouton dans un lien n'est pas cliquable. */}
+                  <Link to={`/schemas/${s.id}`} className="block transition hover:-translate-y-0.5">
+                    {/* Hauteur fixe, quel que soit le terrain : à suivre son rapport, la
+                        vignette d'un terrain complet ferait le double des autres, la grille
+                        alignerait la rangée sur elle et la couperait en bas. Le SVG se cale
+                        dans la boîte sans distorsion (`preserveAspectRatio`) — un terrain
+                        complet apparaît donc plus étroit, ce qui se lit très bien. Aucune
+                        conversion de pointeur ici : `remplit` est sans danger. */}
+                    <div className="h-[150px] sm:h-[200px]">
+                      <PlayBoard schema={s} tempsIndex={0} apercu remplit />
+                    </div>
+                    <h3 className="mt-2.5 truncate text-[15px] font-extrabold tracking-tight">{s.nom}</h3>
+                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-bold" style={{ color: C.muted }}>
+                      <span className="rounded-md px-1.5 py-0.5" style={{ background: C.card2 }}>
+                        {s.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'}
+                      </span>
+                      <span>{s.temps.length} temps</span>
+                      {s.defense && <span>· défense</span>}
+                    </p>
+                    {s.note && <p className="mt-1 truncate text-[11px]" style={{ color: C.faint }}>{s.note}</p>}
+                  </Link>
+
+                  {/* Le dossier reste lisible par tout le monde — c'est un
+                      classement, pas une action — mais seul qui peut ranger
+                      obtient un bouton pour le changer. */}
+                  <div className="mt-2 text-[11px] font-bold">
+                    {!gere ? (
+                      <span className="inline-block rounded-md px-1.5 py-0.5" style={{ background: C.card2, color: s.dossier ? C.accent : C.faint }}>
+                        {s.dossier || 'Sans dossier'}
+                      </span>
+                    ) : enRangement?.id === s.id ? (
+                      <form
+                        className="flex items-center gap-1.5"
+                        onSubmit={(e) => { e.preventDefault(); ranger(s) }}
+                      >
+                        <input
+                          list={DATALIST} aria-label="Dossier" autoFocus value={enRangement.valeur}
+                          onChange={(e) => setEnRangement({ id: s.id, valeur: e.target.value })}
+                          placeholder="Nom du dossier" className="min-w-0 flex-1 rounded-lg px-2 py-1 text-[11px] font-semibold"
+                          style={{ background: C.panel, border: bd, color: C.text }}
+                        />
+                        <button type="submit" className="rounded-lg px-2 py-1" style={{ color: C.accent }}>Ranger</button>
+                      </form>
+                    ) : (
+                      <button
+                        onClick={() => ouvrirRangement(s)} aria-label={`Dossier de « ${s.nom} »`}
+                        className="rounded-md px-1.5 py-0.5" style={{ background: C.card2, color: s.dossier ? C.accent : C.faint }}
+                      >
+                        {s.dossier || 'Sans dossier'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Trois poids, trois formes : « Jouer » — ce qu'on vient faire au
+                      bord du terrain, sans passer par la fiche — occupe la ligne et
+                      porte l'accent ; dupliquer et supprimer se retirent en carrés,
+                      la destruction seule en rose bordé. Leur nom accessible reste
+                      entier : c'est le mot qui s'efface, pas l'étiquette. Les deux
+                      carrés écrivent : sans le droit, « Jouer » occupe seul la ligne. */}
+                  <div className="mt-2.5 flex items-center gap-2 border-t pt-2.5" style={{ borderColor: C.border }}>
+                    <Link
+                      to={`/schemas/${s.id}/lecteur`}
+                      className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl text-[13px] font-black"
+                      style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}
+                    >
+                      ▶ Jouer
+                    </Link>
+                    {gere && (
+                      <>
+                        <button
+                          onClick={() => dupliquer(s)} aria-label="Dupliquer" title="Dupliquer"
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+                          style={{ background: C.card2, border: bd, color: C.muted }}
+                        >
+                          <Ic d={ICONE_COPIE} className="h-[17px] w-[17px]" />
+                        </button>
+                        <button
+                          onClick={() => guard('manage', () => setASupprimer(s))} aria-label="Supprimer" title="Supprimer"
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
+                          style={{ border: `1px solid ${C.accentBd}`, color: C.pink }}
+                        >
+                          <Ic d={ICONE_POUBELLE} className="h-[17px] w-[17px]" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Même formulation que les entraînements et les résultats extérieurs :
+          une seule limite à retenir, pas une par écran. */}
+      <p className="mt-8 text-[11px]" style={{ color: C.faint }}>Ces schémas restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
+
+      <ConfirmDialog
+        open={!!aSupprimer} danger
+        title="Supprimer le schéma ?"
+        message={aSupprimer ? `« ${aSupprimer.nom} » et tous ses temps seront supprimés. Cette action est définitive.` : undefined}
+        confirmLabel="Supprimer" onConfirm={supprimer} onClose={() => setASupprimer(null)}
+      />
+    </div>
+  )
+}
+
+function Onglet({ actif, onClick, children }: { actif: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick} aria-pressed={actif}
+      className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
+      style={actif ? { background: C.accent, color: C.onAccent } : { background: C.card2, color: C.muted, border: bd }}
+    >
+      {children}
+    </button>
+  )
+}
