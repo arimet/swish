@@ -32,5 +32,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  test: { environment: 'jsdom', globals: true, setupFiles: ['./src/setupTests.ts'] },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/setupTests.ts'],
+    // Les worktrees vivent sous `.claude/`, donc *dans* le dépôt : sans cette
+    // exclusion, une exécution depuis la racine ramasse aussi les tests de
+    // chaque branche en cours et les fait échouer sur un alias `@` qui pointe
+    // ailleurs. Deux cents échecs qui ne disent rien du code de `main`.
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.claude/**'],
+  },
 })
