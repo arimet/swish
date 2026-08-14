@@ -9,6 +9,7 @@ import { StartingFiveGate } from '../components/StartingFiveGate'
 import { AccessGate } from '../components/AccessGate'
 import { SubstitutionDialog } from '../components/SubstitutionDialog'
 import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
+import { C } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { syncEnabled, publishBundle } from '../../app/sync'
 import { useMatch } from '../../app/useMatch'
@@ -156,56 +157,82 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   }
 
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="px-4 pb-4 pt-3 text-[var(--scoreboard-fg)] sm:px-6" style={{ background: 'var(--scoreboard)' }}>
+    /* `h-dvh`, pas `min-h-full` : le tableau d'affichage et le chrono ne défilent
+       plus jamais hors de l'écran, seul l'effectif défile — et il ne défile plus
+       guère, puisque la coquille ne lui prend plus ses cent pixels. */
+    <div className="flex h-dvh flex-col overflow-hidden" style={{ background: C.frame, color: C.text }}>
+      <header className="shrink-0 px-4 pb-4 pt-3 text-[var(--scoreboard-fg)] sm:px-6" style={{ background: 'var(--scoreboard)' }}>
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
-          <PeriodStrip current={ls.period} />
+          {/* La sortie voyage avec la frise des périodes, pas avec les actions :
+              quitter n'est pas une action de saisie, et la ligne des périodes a la
+              place que celle des boutons n'a plus. Le match n'est pas terminé pour
+              autant — on revient à sa fiche, et « Reprendre » ramène ici. */}
           <div className="flex items-center gap-2">
-            <Link to={`/match/${match.id}/watch`} target="_blank" title="Ouvrir le suivi spectateur"
-              className="rounded-full bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-white/20">👁 Suivi</Link>
-            <SbButton onClick={undo} title="Annuler la dernière action">↩︎ Annuler</SbButton>
-            <SbButton onClick={nextPeriod}>Période suivante →</SbButton>
+            <Link to={`/match/${match.id}`} aria-label="Quitter la table de marque" title="Quitter la table de marque"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-base font-black text-white transition hover:bg-white/20">✕</Link>
+            <PeriodStrip current={ls.period} />
+          </div>
+          {/* `flex-wrap` : cinq commandes larges d'un doigt ne tiennent pas toujours
+              sur une ligne de téléphone. Elles passent à la ligne — elles ne sortent
+              plus de l'écran, comme « Terminer » le faisait, hors d'atteinte. */}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Link to={`/match/${match.id}/watch`} target="_blank" aria-label="Ouvrir le suivi spectateur" title="Ouvrir le suivi spectateur"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-base text-white transition hover:bg-white/20">👁</Link>
+            <SbButton onClick={undo} title="Annuler la dernière action">Annuler</SbButton>
+            <SbButton onClick={nextPeriod} title="Passer à la période suivante">Période →</SbButton>
+            {/* Un écart avant l'irréversible. « Terminer » fige le score ; il était
+                à huit pixels de « Période suivante », soit la largeur d'un pouce
+                mal posé. */}
+            <span className="w-3 shrink-0" aria-hidden />
             <SbButton onClick={() => setAskFinish(true)} danger>Terminer</SbButton>
           </div>
         </div>
 
         <div className="mx-auto mt-3 grid max-w-4xl grid-cols-[1fr_auto_1fr] items-center gap-1 overflow-hidden sm:gap-6">
           <ScoreSide align="right" color="var(--sb-team-a)" name={teamNames.A} score={ls.score.a} lead={ls.score.a > ls.score.b} />
-          <div className="flex flex-col items-center gap-2">
-            <GameClock running={ls.clockRunning} seconds={seconds} onToggle={toggleClock} />
-            <div className="flex flex-wrap items-center justify-center gap-1" title="Corriger le chrono (buzzer)">
-              <ClockAdjust onClick={() => setSeconds((s) => clampClock(s - 10))}>−10s</ClockAdjust>
-              <ClockAdjust onClick={() => setSeconds((s) => clampClock(s - 1))}>−1s</ClockAdjust>
-              <ClockAdjust onClick={() => setSeconds((s) => clampClock(s + 1))}>+1s</ClockAdjust>
-              <ClockAdjust onClick={() => setSeconds((s) => clampClock(s + 10))}>+10s</ClockAdjust>
-              <ClockAdjust onClick={() => setEditClock(true)}>✎ Éditer</ClockAdjust>
-            </div>
-          </div>
+          <GameClock running={ls.clockRunning} seconds={seconds} onToggle={toggleClock} />
           <ScoreSide align="left" color="var(--sb-team-b)" name={teamNames.B} score={ls.score.b} lead={ls.score.b > ls.score.a} />
+        </div>
+
+        {/* Les corrections de chrono sur leur propre ligne, et non dans la colonne
+            centrale de la grille : à cinq boutons larges d'un doigt, cette colonne
+            devenait plus large que l'écran et poussait les deux scores hors du
+            cadre. Le score passe avant le réglage. */}
+        <div className="mx-auto mt-2.5 flex max-w-4xl flex-wrap items-center justify-center gap-1" title="Corriger le chrono (buzzer)">
+          <ClockAdjust onClick={() => setSeconds((s) => clampClock(s - 10))}>−10s</ClockAdjust>
+          <ClockAdjust ecart onClick={() => setSeconds((s) => clampClock(s - 1))}>−1s</ClockAdjust>
+          <ClockAdjust onClick={() => setSeconds((s) => clampClock(s + 1))}>+1s</ClockAdjust>
+          <ClockAdjust ecart onClick={() => setSeconds((s) => clampClock(s + 10))}>+10s</ClockAdjust>
+          <ClockAdjust ecart onClick={() => setEditClock(true)}>✎ Éditer</ClockAdjust>
         </div>
       </header>
 
-      {error && <div className="bg-[var(--c-danger-bg)] py-1.5 text-center text-sm font-semibold text-[var(--c-danger)]">{error}</div>}
+      {error && <div className="shrink-0 bg-[var(--c-danger-bg)] py-1.5 text-center text-sm font-semibold text-[var(--c-danger)]">{error}</div>}
 
-      {/* SCORE ADVERSE : global, sans joueurs */}
-      <div className="mx-auto mt-2 flex w-full max-w-4xl flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-card/50 px-4 py-2.5 sm:mt-4">
-        <span className="text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
-        <span className="text-[11px] font-semibold text-muted-foreground">score global — pas de détail joueur</span>
-        <div className="ml-auto flex items-center gap-1.5">
+      {/* SCORE ADVERSE : global, sans joueurs. Une seule ligne — la mention
+          « score global, pas de détail joueur » expliquait à chaque match un fait
+          qu'on apprend au premier, et la troisième ligne qu'elle imposait au
+          téléphone se prenait sur l'effectif. */}
+      <div className="mx-auto mt-2 flex w-full max-w-4xl shrink-0 items-center gap-2 rounded-2xl border border-border/60 bg-card/50 px-3 py-2 sm:mt-4 sm:px-4">
+        <span className="min-w-0 truncate text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {OPP_POINTS.map(({ k, n }) => (
             <button key={k} onClick={() => oppScore(k)} aria-label={`Ajouter ${n} point${n > 1 ? 's' : ''} à ${teamNames.B}`}
-              className="nums rounded-lg bg-[var(--c-card2)] px-3 py-2 text-sm font-black text-[var(--c-text)] transition hover:bg-[var(--c-accent)] hover:text-white active:scale-90">
+              className="nums h-11 min-w-11 rounded-lg bg-[var(--c-card2)] px-3 text-sm font-black text-[var(--c-text)] transition hover:bg-[var(--c-accent)] hover:text-white active:scale-90">
               +{n}
             </button>
           ))}
           <button onClick={removeOppScore} aria-label={`Retirer le dernier panier de ${teamNames.B}`}
-            className="rounded-lg bg-[var(--c-card2)] px-2.5 py-2 text-sm font-bold text-muted-foreground transition hover:bg-[var(--c-accent)] hover:text-white active:scale-90">
+            className="h-11 w-11 rounded-lg bg-[var(--c-card2)] text-sm font-bold text-muted-foreground transition hover:bg-[var(--c-accent)] hover:text-white active:scale-90">
             ↺
           </button>
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-4xl flex-1 p-2 sm:p-4">
+      {/* `min-h-0` : sans lui, un enfant flexible refuse de se laisser comprimer
+          sous la taille de son contenu et l'effectif repousserait le tableau
+          d'affichage hors de l'écran au lieu de défiler dans sa propre boîte. */}
+      <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col p-2 sm:p-4">
         <TeamPanel
           title={teamNames.A.toUpperCase()} color={TEAM_A} players={onCourt()}
           statsByPlayer={statsByPlayer()} teamFouls={ls.teamFoulsThisPeriod.A}

@@ -70,6 +70,12 @@ export default function App() {
           <Routes>
             {/* Suivi spectateur : plein écran, hors du shell (projetable) */}
             <Route path="/match/:id/watch" element={<SpectatorRoute />} />
+            {/* La table de marque : plein écran elle aussi. Dans la coquille, le
+                titre, le menu d'accès et la barre du bas prenaient une centaine
+                de pixels que l'effectif n'avait pas — on ne voyait que quatre des
+                cinq joueurs sur le terrain sans faire défiler, et un pouce égaré
+                sur « Calendrier » quittait la saisie en cours. */}
+            <Route path="/match/:id/live" element={<LiveRoute />} />
             {/* Le lecteur du temps-mort : plein écran, hors du shell et hors de
                 la garde club — un joueur ouvre la combinaison chez lui. */}
             <Route path="/schemas/:id/lecteur" element={<SchemaPlayer />} />
@@ -83,7 +89,6 @@ export default function App() {
             {/* Toute l'app dans le shell Olive, derrière le choix du club */}
             <Route element={<ClubGate />}>
               <Route index element={<Dashboard />} />
-              <Route path="/match/:id/live" element={<LiveRoute />} />
               <Route path="/calendrier" element={<Calendrier />} />
               <Route path="/championnat" element={<Championnat />} />
               <Route path="/teams" element={<Padded><TeamsList /></Padded>} />

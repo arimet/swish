@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { NOM_ROLE, REQUIS, type Ability } from '../../app/auth'
+import { C } from '../olive/kit'
 
 /**
  * Écran de verrouillage : la saisie du match est réservée à qui détient
@@ -10,7 +11,7 @@ import { NOM_ROLE, REQUIS, type Ability } from '../../app/auth'
 export function AccessGate({ ability, matchId, onUnlock, onExit }: { ability: Ability; matchId: string; onUnlock: () => void; onExit: () => void }) {
   const nomAccès = NOM_ROLE[REQUIS[ability]]
   return (
-    <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-8 text-center" style={{ background: C.frame, color: C.text }}>
       <div className="text-5xl">🔒</div>
       <h2 className="text-xl font-extrabold tracking-tight">Accès {nomAccès} requis</h2>
       <p className="max-w-sm text-sm text-muted-foreground">Le code {nomAccès.toLowerCase()} est requis pour saisir la rencontre.</p>
