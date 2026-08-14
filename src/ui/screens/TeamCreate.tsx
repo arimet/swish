@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { saveTeam, savePlayer } from '../../persistence/repositories'
 import type { Player } from '../../domain/types'
-import { C, bd, PageTitle } from '../olive/kit'
-import { useAdmin } from '../../app/admin'
+import { C, bd, NumBadge } from '../olive/kit'
+import { useAuth } from '../../app/auth'
+import { useClub } from '../../app/club'
 
 type Draft = Omit<Player, 'id' | 'teamId'>
 const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
@@ -12,7 +13,8 @@ const Label = ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: str
 
 export function TeamCreate() {
   const navigate = useNavigate()
-  const { guard } = useAdmin()
+  const { guard } = useAuth()
+  const { clubId, setClub } = useClub()
   const [name, setName] = useState(''); const [coach, setCoach] = useState('')
   const [roster, setRoster] = useState<Draft[]>([])
   const [num, setNum] = useState(''); const [ln, setLn] = useState(''); const [fn, setFn] = useState('')
@@ -27,13 +29,18 @@ export function TeamCreate() {
     const teamId = newId()
     await saveTeam({ id: teamId, name: name.trim(), coach: coach.trim() || undefined })
     for (const p of roster) await savePlayer({ id: newId(), teamId, ...p })
+    // Aucun club suivi : l'équipe qu'on vient de créer le devient, sinon la
+    // garde renvoie droit vers l'écran de bienvenue qu'on quitte à peine.
+    if (!clubId) setClub(teamId)
     navigate(`/teams/${teamId}`)
   }
 
   return (
     <div className="p-6">
       <Link to="/teams" className="text-sm font-semibold" style={{ color: C.muted }}>← Équipes</Link>
-      <PageTitle title="Nouvelle équipe" subtitle="Nommez l’équipe, son entraîneur, et ajoutez ses joueurs." />
+      {/* Un vrai titre, et non plus le sous-titre qui en tenait lieu : cet écran
+          vit hors de la coquille, son en-tête ne le nomme donc pas à sa place. */}
+      <h1 className="mb-6 mt-2 text-2xl font-extrabold tracking-tight">Nouvelle équipe</h1>
 
       <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
         <div className="space-y-5 self-start rounded-2xl p-5" style={{ background: C.card, border: bd }}>
@@ -50,7 +57,7 @@ export function TeamCreate() {
             <ul className="mb-3 grid gap-1.5 sm:grid-cols-2">
               {roster.map((p, i) => (
                 <li key={i} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: C.panel }}>
-                  <span className="grid h-7 w-7 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
+                  <NumBadge n={p.number} size="h-7 w-7 rounded-lg text-xs" />
                   <span className="font-semibold">{p.lastName}</span><span style={{ color: C.muted }}>{p.firstName}</span>
                   <button onClick={() => setRoster((r) => r.filter((_, j) => j !== i))} className="ml-auto text-xs font-semibold" style={{ color: C.pink }}>retirer</button>
                 </li>
@@ -67,9 +74,15 @@ export function TeamCreate() {
         </div>
       </div>
 
+      {/* Le bouton de création reste visible sans le droit, contrairement au reste
+          du dépôt : c'est le premier lancement qui passe par ici, quand aucune
+          équipe n'existe et qu'aucun accès n'a encore été saisi. Cet écran vit
+          hors de la coquille, sans menu d'accès — masquer le bouton rendrait
+          l'application impossible à démarrer. La garde fait le travail : elle
+          réclame le code au moment de créer. */}
       <div className="mt-6 flex justify-end gap-3">
         <Link to="/teams" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>Annuler</Link>
-        <button onClick={() => guard(create)} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>Créer l'équipe →</button>
+        <button onClick={() => guard('manage', create)} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>Créer l'équipe →</button>
       </div>
     </div>
   )

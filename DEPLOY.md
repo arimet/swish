@@ -26,9 +26,29 @@ created on one device show up on the others. The app stays **local-first**
 (IndexedDB cache): it keeps working offline and re-syncs when the network is
 back. Without `VITE_SYNC_URL`, everything stays purely local per device.
 
-Optional: `VITE_ADMIN_PASSWORD` to change the admin password (default `admin`).
+## 3. Set the three access codes
 
-## 3. Demo data
+The app has three independent access codes, each read from its own variable.
+**All three fall back to a development default when the variable is unset — the
+fallback applies in production too.** Setting only the admin one leaves the
+scorer's table open on the French word `marque`, and `score` covers "finish the
+match", which freezes the score for good.
+
+| Variable | Unlocks | Fallback |
+|---|---|---|
+| `VITE_ADMIN_PASSWORD` | Roster, schedule, call-ups, trainings, championship results, post-game stat corrections | `admin` |
+| `VITE_SCORER_PASSWORD` | Starting a match, points, fouls, substitutions, clock, finishing the match | `marque` |
+| `VITE_PLAYER_PASSWORD` | Nothing in write. Only picking your own name in the roster, to see your stats | `joueur` |
+
+> **What these codes are not.** They are `VITE_*` variables: compiled into the
+> bundle and readable in the browser's dev tools. And the write endpoints
+> `api/mutate.ts` and `api/match/[id].ts` accept writes with no authentication
+> and `Access-Control-Allow-Origin: *`, so the UI can be bypassed outright. The
+> three accesses guard against
+> accidents between people who trust each other, not against a malicious third
+> party. Do not deploy shared data you would mind seeing altered.
+
+## 4. Demo data
 
 For a demo (deployment pre-filled with teams / championship / matches), add
 **`VITE_SEED=1`** and redeploy. Every device that opens the app is seeded with a
@@ -54,7 +74,9 @@ overwrites shared data. Remove the variable for real use.
 | `VITE_SYNC_URL=/api` | Enable shared data + realtime following | Optional |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Redis store | Auto (Vercel KV) |
 | `VITE_SEED=1` | Seed demo data | Demo only |
-| `VITE_ADMIN_PASSWORD` | Admin password (default `admin`) | Optional |
+| `VITE_ADMIN_PASSWORD` | Admin access code (fallback `admin`) | Recommended |
+| `VITE_SCORER_PASSWORD` | Scorer's table access code (fallback `marque`) | Recommended |
+| `VITE_PLAYER_PASSWORD` | Player identification code, no write access (fallback `joueur`) | Recommended |
 
 > `VITE_*` variables are read at **build time** — always redeploy after changing them.
 

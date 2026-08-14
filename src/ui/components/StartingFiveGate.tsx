@@ -1,26 +1,27 @@
-import type { Player, TeamSide } from '../../domain/types'
+import type { Player } from '../../domain/types'
 import { C } from '../olive/kit'
 
 const TEAM_A = 'var(--team-a)'
-const TEAM_B = 'var(--team-b)'
 
 /**
- * Porte d'entrée avant tout démarrage de chrono : chaque équipe doit désigner
+ * Porte d'entrée avant tout démarrage de chrono : notre équipe doit désigner
  * son cinq de départ (STARTING_FIVE) avant que le match live ne s'affiche.
  */
 export function StartingFiveGate({
-  rosterA, rosterB, requiredA, requiredB, selected, onToggle, onStart, canStart, onExit,
+  rosterA, requiredA, selected, onToggle, onStart, canStart, onExit,
 }: {
-  rosterA: Player[]; rosterB: Player[]
-  requiredA: number; requiredB: number
-  selected: { A: string[]; B: string[] }
-  onToggle: (side: TeamSide, playerId: string) => void
+  rosterA: Player[]
+  requiredA: number
+  selected: string[]
+  onToggle: (playerId: string) => void
   onStart: () => void
   canStart: boolean
   onExit?: () => void
 }) {
   return (
-    <div>
+    /* La table de marque vit hors de la coquille : cet écran porte donc lui-même
+       son fond et sa hauteur, sinon il flotterait sur le gris de la page. */
+    <div className="min-h-dvh overflow-y-auto" style={{ background: C.frame, color: C.text }}>
       <div className="mx-auto max-w-4xl px-4 py-8 sm:py-10">
         <div className="mb-8 text-center">
           {onExit && (
@@ -29,14 +30,12 @@ export function StartingFiveGate({
             </button>
           )}
           <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Cinq de départ</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Désignez les titulaires de chaque équipe pour démarrer.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Désignez vos titulaires pour démarrer.</p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <StartingFivePanel title="LOCAUX" color={TEAM_A} players={rosterA} required={requiredA}
-            chosen={selected.A} onToggle={(id) => onToggle('A', id)} />
-          <StartingFivePanel title="VISITEURS" color={TEAM_B} players={rosterB} required={requiredB}
-            chosen={selected.B} onToggle={(id) => onToggle('B', id)} />
+        <div className="mx-auto grid max-w-md gap-5">
+          <StartingFivePanel title="MON ÉQUIPE" color={TEAM_A} players={rosterA} required={requiredA}
+            chosen={selected} onToggle={onToggle} />
         </div>
 
         <div className="sticky bottom-4 mt-8 flex justify-center">
@@ -81,14 +80,14 @@ function StartingFivePanel({ title, color, players, required, chosen, onToggle }
               style={isChosen ? { boxShadow: `inset 0 0 0 2px ${color}`, borderColor: 'transparent' } : undefined}
             >
               <span
-                className="nums grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#202024] text-sm font-extrabold text-white"
+                className="nums grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--c-card2)] text-sm font-extrabold text-[var(--c-text)]"
                 style={{ boxShadow: `inset 0 0 0 2px ${color}` }}
               >
                 {p.number}
               </span>
               <span className="min-w-0 flex-1 truncate text-sm font-bold">{p.lastName}</span>
               <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-black"
-                style={isChosen ? { background: color, color: '#0d0d0f' } : { border: `1.5px solid ${C.border}`, color: 'transparent' }}>
+                style={isChosen ? { background: color, color: C.frame } : { border: `1.5px solid ${C.border}`, color: 'transparent' }}>
                 ✓
               </span>
             </button>

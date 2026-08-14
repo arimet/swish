@@ -1,9 +1,165 @@
-/* Palette calquée sur le dashboard 'Olive' : app sombre (charcoal) dans un cadre
-   arrondi posé sur une page gris clair. Accent orange. Deux thèmes: dark (défaut) / light. */
+/* Les jetons de couleur de l'application, en un seul endroit.
+ *
+ * Le thème **clair est le défaut** : il est posé sur `:root` nu, donc il
+ * s'applique dès la première peinture, avant même que le JavaScript n'ait
+ * décidé quoi que ce soit. Le sombre reste accessible — il ne coûte qu'un bloc
+ * de surcharges — via `data-theme="dark"` sur `<html>`.
+ *
+ * Deux familles de jetons, et la distinction est délibérée :
+ *
+ * — `--c-*` : le chrome de l'application (fonds, textes, bordures, accents).
+ *   Il bascule avec le thème.
+ * — `--t-*` : le terrain de basket. Il **ne bascule pas**. Un tableau tactique
+ *   est un carnet de coach : le rose y dit « attaque », le bleu « défense »,
+ *   l'ambre « ballon » et le blanc « déplacement ». Cette convention se lit sur
+ *   un fond sombre, et la retourner sur du blanc reviendrait à réapprendre à
+ *   lire à celui qui la connaît. Le terrain reste donc un panneau sombre posé
+ *   dans une interface claire, comme un tableau noir dans une salle éclairée.
+ */
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* Six plans, et l'ordre compte : la carte blanche est le point haut, tout le
+     reste s'enfonce derrière elle. Le cadre est légèrement teinté — sur un cadre
+     blanc, les cartes blanches ne tenaient plus que par leur filet de bordure.
+       carte #fff > cadre > panneau > carte2 > bordure > page (la gouttière). */
+  --c-page: #d8dce5;
+  --c-frame: #eef1f6;
+  --c-panel: #eaedf3;
+  --c-card: #ffffff;
+  --c-card2: #e6eaf1;
+  --c-border: #dde2ea;
+
+  /* Trois niveaux de texte. Mesurés sur --c-card2, le plan le plus foncé sur
+     lequel ils tombent : 15,0:1 — 6,4:1 — 4,8:1. Sur du blanc : 17,7 — 7,7 —
+     5,8. Le gris clair qui se lisait sur du charcoal devenait invisible ici :
+     les deux niveaux secondaires ont été franchement assombris. */
+  --c-text: #14161a;
+  --c-muted: #4d5361;
+  --c-faint: #5f6675;
+
+  /* Le rose d'Olive (#ff4d6d) ne tient pas sur du blanc : 3,2:1, sous le seuil
+     pour du texte comme pour du blanc posé dessus. Approfondi en framboise, il
+     passe à 5,7:1 sur blanc et tient encore 4,7:1 sur le plan le plus foncé
+     (--c-card2), là où se posent les onglets et la ligne de menu active. Le
+     blanc de ses boutons profite du même écart. */
+  --c-accent: #c81a44;
+  --c-accent-bg: #fdf0f3;
+  --c-accent-bd: rgba(200, 26, 68, 0.3);
+  --c-pink: #c81a44;
+
+  /* Même traitement pour le vert (victoire) et l'ambre (à venir, alerte
+     douce) : les teintes vives conçues pour du charcoal virent au fluo sur du
+     blanc. Approfondies : 6,3:1 sur blanc, 5,2:1 sur --c-card2. */
+  --c-green: #0a6f3c;
+  --c-green-bg: #e7f4ec;
+  --c-amber: #8f5100;
+  --c-amber-bg: #fbf0e0;
+  --c-amber-bd: rgba(143, 81, 0, 0.3);
+
+  /* Le bleu des entraînements dans le calendrier : 6,2:1 sur blanc. */
+  --c-info: #1a5fb8;
+  --c-info-bg: #e8f1fc;
+
+  /* La faute, l'effacement, le refus. Un jeton plutôt que les rouges 400-500
+     de Tailwind : ceux-là sont calibrés pour du charcoal et il fallait les
+     approfondir en clair, ce qui les crevait en sombre. 5,3:1 sur son propre
+     fond, 7,0:1 sur blanc. */
+  --c-danger: #b91c1c;
+  --c-danger-bg: #fbe4e4;
+
+  /* Le voile neutre (survol, pastille « Final ») : il assombrit en clair, il
+     éclaircit en sombre. Un `rgba(255,255,255,…)` en dur faisait donc
+     disparaître ces fonds dès que la page passait au blanc. */
+  --c-hover: rgba(0, 0, 0, 0.05);
+  --c-neutral-bg: rgba(0, 0, 0, 0.06);
+
+  /* --- shadcn / Base UI --- */
+  --background: oklch(0.99 0.002 265);
+  --foreground: oklch(0.18 0.008 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.008 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.008 265);
+  --primary: oklch(0.5379 0.2026 15.9);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.955 0.003 265);
+  --secondary-foreground: oklch(0.18 0.008 265);
+  --muted: oklch(0.945 0.004 265);
+  --muted-foreground: oklch(0.4450 0.014 265);
+  --accent: oklch(0.955 0.003 265);
+  --accent-foreground: oklch(0.18 0.008 265);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.9050 0.006 265);
+  --input: oklch(0.9050 0.006 265);
+  --ring: oklch(0.5379 0.2026 15.9);
+  --chart-1: oklch(0.5379 0.2026 15.9);
+  --chart-2: oklch(0.18 0.008 265);
+  --chart-3: oklch(0.5000 0.1200 60);
+  --chart-4: oklch(0.5500 0.010 265);
+  --chart-5: oklch(0.4600 0.1400 150);
+  --radius: 0.85rem;
+  --sidebar: oklch(0.9450 0.005 265);
+  --sidebar-foreground: oklch(0.18 0.008 265);
+  --sidebar-primary: oklch(0.5379 0.2026 15.9);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.9100 0.006 265);
+  --sidebar-accent-foreground: oklch(0.18 0.008 265);
+  --sidebar-border: oklch(0.9050 0.006 265);
+  --sidebar-ring: oklch(0.5379 0.2026 15.9);
+
+  /* La table de marque garde son bandeau sombre, en clair comme en sombre :
+     c'est le panneau d'affichage d'un gymnase, pas une carte de plus. */
+  --team-a: oklch(0.2000 0.010 265);
+  --team-b: oklch(0.5379 0.2026 15.9);
+  --scoreboard: oklch(0.1650 0.006 265);
+  --scoreboard-fg: oklch(0.9800 0 0);
+  --sb-team-a: oklch(0.9800 0 0);
+  --sb-team-b: oklch(0.7000 0.2000 12);
+}
 
 :root[data-theme='dark'] {
-  --page: oklch(0.8950 0.004 265);          /* page gris clair derrière le cadre (comme Olive) */
-  --background: oklch(0.1900 0.005 265);     /* contenu de l'app (charcoal) */
+  color-scheme: dark;
+
+  --c-page: #b9bcc4;
+  --c-frame: #0d0d0f;
+  --c-panel: #0a0a0c;
+  --c-card: #161618;
+  --c-card2: #1e1e21;
+  --c-border: #262629;
+
+  /* Éclaircis : sur la carte (#161618), l'ancien gris secondaire ne donnait
+     que 3,3:1 et le tertiaire 2,9:1. Ils tiennent maintenant 6,1:1 et 5,0:1,
+     tout en restant distincts l'un de l'autre. */
+  --c-text: #f4f4f5;
+  --c-muted: #9a9aa2;
+  --c-faint: #8a8a92;
+
+  --c-accent: #ff4d6d;
+  --c-accent-bg: rgba(255, 77, 109, 0.14);
+  --c-accent-bd: rgba(255, 77, 109, 0.35);
+  --c-pink: #ff4d6d;
+
+  --c-green: #3fe08a;
+  --c-green-bg: rgba(63, 224, 138, 0.13);
+  --c-amber: #ffb44d;
+  --c-amber-bg: rgba(255, 180, 77, 0.14);
+  --c-amber-bd: rgba(255, 180, 77, 0.35);
+
+  --c-info: #4d9fff;
+  --c-info-bg: rgba(77, 159, 255, 0.16);
+
+  --c-danger: #ff8080;
+  --c-danger-bg: rgba(255, 128, 128, 0.15);
+
+  --c-hover: rgba(255, 255, 255, 0.06);
+  --c-neutral-bg: rgba(255, 255, 255, 0.08);
+
+  /* --- shadcn / Base UI --- */
+  --background: oklch(0.1900 0.005 265);
   --foreground: oklch(0.9700 0 0);
   --card: oklch(0.2250 0.005 265);
   --card-foreground: oklch(0.9700 0 0);
@@ -27,7 +183,6 @@
   --chart-3: oklch(0.8000 0.1400 55);
   --chart-4: oklch(0.5500 0.006 265);
   --chart-5: oklch(0.4500 0.1200 45);
-  --radius: 0.85rem;
   --sidebar: oklch(0.1650 0.005 265);
   --sidebar-foreground: oklch(0.9700 0 0);
   --sidebar-primary: oklch(0.6750 0.2050 12);
@@ -37,54 +192,25 @@
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: oklch(0.6750 0.2050 12);
 
-  --team-a: oklch(0.9600 0 0);            /* blanc — lisible sur charcoal */
-  --team-b: oklch(0.6750 0.2050 12);      /* rose (accent Olive) */
+  --team-a: oklch(0.9600 0 0);
+  --team-b: oklch(0.6750 0.2050 12);
   --scoreboard: oklch(0.1400 0.005 265);
   --scoreboard-fg: oklch(0.9800 0 0);
   --sb-team-a: oklch(0.9800 0 0);
   --sb-team-b: oklch(0.6900 0.2100 12);
 }
 
-:root[data-theme='light'] {
-  --page: oklch(0.9250 0.004 265);
-  --background: oklch(0.9900 0.002 265);
-  --foreground: oklch(0.1800 0.008 265);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.1800 0.008 265);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.1800 0.008 265);
-  --primary: oklch(0.6850 0.1850 41);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.1900 0.008 265);
-  --secondary-foreground: oklch(0.9900 0 0);
-  --muted: oklch(0.9550 0.003 265);
-  --muted-foreground: oklch(0.4600 0.006 265);
-  --accent: oklch(0.9450 0.0450 60);
-  --accent-foreground: oklch(0.2500 0.030 45);
-  --destructive: oklch(0.6000 0.2200 25);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.9050 0.004 265);
-  --input: oklch(0.9050 0.004 265);
-  --ring: oklch(0.6850 0.1850 41);
-  --chart-1: oklch(0.6850 0.1850 41);
-  --chart-2: oklch(0.1900 0.008 265);
-  --chart-3: oklch(0.7600 0.1500 55);
-  --chart-4: oklch(0.5000 0.006 265);
-  --chart-5: oklch(0.8300 0.1200 60);
-  --radius: 0.85rem;
-  --sidebar: oklch(0.1650 0.006 265);
-  --sidebar-foreground: oklch(0.9700 0 0);
-  --sidebar-primary: oklch(0.6850 0.1850 41);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.2600 0.005 265);
-  --sidebar-accent-foreground: oklch(0.9700 0 0);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.6850 0.1850 41);
-
-  --team-a: oklch(0.2000 0.010 265);
-  --team-b: oklch(0.6600 0.1900 41);
-  --scoreboard: oklch(0.1500 0.006 265);
-  --scoreboard-fg: oklch(0.9800 0 0);
-  --sb-team-a: oklch(0.9800 0 0);
-  --sb-team-b: oklch(0.7200 0.1900 44);
+/* Le terrain, hors des thèmes : les mêmes valeurs en clair et en sombre.
+ * Contrastes mesurés sur le fond du terrain (#14161b) : flèches 17:1,
+ * défense 8,5:1, ballon 10,2:1, attaque 5,6:1. Et les quatre repères restent
+ * distincts par la **forme** — disque plein, anneau ouvert, petit disque,
+ * trait — donc aussi en noir et blanc. */
+:root {
+  --t-court: #14161b;
+  --t-court-hi: #1e222a;
+  --t-line: #8b93a3;
+  --t-ink: #f4f6fa;
+  --t-attack: #ff4d6d;
+  --t-def: #6ab7ff;
+  --t-ball: #ffb44d;
 }

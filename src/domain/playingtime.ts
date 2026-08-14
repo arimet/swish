@@ -1,8 +1,9 @@
-import type { Match, TeamSide } from './types'
+import type { Match } from './types'
 
-export function playingTimes(match: Match, side: TeamSide): Map<string, number> {
+/** Temps de jeu de notre effectif (côté A). L'adversaire n'a pas de joueurs saisis. */
+export function playingTimes(match: Match): Map<string, number> {
   const times = new Map<string, number>()
-  for (const id of match.roster[side]) times.set(id, 0)
+  for (const id of match.roster) times.set(id, 0)
 
   let onCourt = new Set<string>()
   let running = false
@@ -18,7 +19,7 @@ export function playingTimes(match: Match, side: TeamSide): Map<string, number> 
   for (const e of match.events) {
     switch (e.type) {
       case 'STARTING_FIVE':
-        if (e.team === side) onCourt = new Set(e.playerIds)
+        if (e.team === 'A') onCourt = new Set(e.playerIds)
         break
       case 'CLOCK_START':
         running = true; lastRemaining = e.gameClock
@@ -30,7 +31,7 @@ export function playingTimes(match: Match, side: TeamSide): Map<string, number> 
         accrue(e.gameClock); running = false
         break
       case 'SUBSTITUTION':
-        if (e.team === side) {
+        if (e.team === 'A') {
           accrue(e.gameClock)
           onCourt.delete(e.playerOutId)
           onCourt.add(e.playerInId)

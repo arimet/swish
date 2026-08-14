@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
-import type { Team, Player, Match } from '../domain/types'
+import type { Team, Player, Match, ReportedResult, Convocation, Training, MessageEquipe } from '../domain/types'
+import type { Schema } from '../domain/plays'
 
 /** File d'attente de synchronisation (offline-first) : mutations à pousser vers le serveur. */
 export interface OutboxItem {
@@ -16,6 +17,11 @@ export class ScoreSheetDB extends Dexie {
   players!: Table<Player, string>
   matches!: Table<Match, string>
   outbox!: Table<OutboxItem, number>
+  results!: Table<ReportedResult, string>
+  convocations!: Table<Convocation, string>
+  trainings!: Table<Training, string>
+  plays!: Table<Schema, string>
+  messages!: Table<MessageEquipe, string>
   constructor() {
     super('score-sheet')
     this.version(1).stores({
@@ -26,6 +32,26 @@ export class ScoreSheetDB extends Dexie {
     // v2 : file d'attente de synchronisation (les autres stores sont conservés).
     this.version(2).stores({
       outbox: '++seq',
+    })
+    // v3 : résultats saisis à la main pour les rencontres entre autres équipes.
+    this.version(3).stores({
+      results: 'id, championshipLabel',
+    })
+    // v4 : vie d'équipe — convocations (une par rencontre) et entraînements.
+    this.version(4).stores({
+      convocations: 'matchId',
+      trainings: 'id, date',
+    })
+    // v5 : schémas du tableau tactique, propres au club (index sur `clubId`).
+    this.version(5).stores({
+      plays: 'id, clubId',
+    })
+    // v6 : le message du coach à son équipe. Un seul par club : le club EST la
+    // clé, ce qui rend le remplacement gratuit (un `put` suffit) et rend
+    // impossible la messagerie qu'on ne veut pas. Strictement additif : aucune
+    // donnée existante n'est touchée.
+    this.version(6).stores({
+      messages: 'clubId',
     })
   }
 }
