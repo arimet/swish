@@ -229,12 +229,12 @@ function Sidebar({ players }: { players: Player[] }) {
   const { can } = useAuth()
   return (
     <aside className="hidden w-[236px] shrink-0 flex-col overflow-y-auto px-4 py-5 lg:flex" style={{ background: C.panel, borderRight: `1px solid ${C.border}` }}>
+      {/* Le nom seul : le sous-titre décrivait l'application à qui l'a déjà ouverte,
+          et ne disait plus rien de juste depuis qu'elle fait bien plus qu'une
+          table de marque. */}
       <Link to="/" className="flex items-center gap-2.5 px-1">
         <span className="grid h-8 w-8 place-items-center rounded-xl" style={{ background: C.orange }}>🏀</span>
-        <span className="leading-none">
-          <span className="block text-[15px] font-extrabold tracking-tight">Swish</span>
-          <span className="block text-[11px]" style={{ color: C.faint }}>Basket · table de marque</span>
-        </span>
+        <span className="text-[15px] font-extrabold leading-none tracking-tight">Swish</span>
       </Link>
 
       <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Mon club</p>

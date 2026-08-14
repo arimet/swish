@@ -17,13 +17,16 @@ describe('ThemeProvider', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(false)
   })
 
-  // Le sombre n'a pas d'entrée dans l'interface, mais il n'est pas mort : une
-  // préférence déjà écrite est respectée au démarrage.
-  it('respecte un thème Nuit déjà enregistré', () => {
+  // Tant qu'aucun écran n'offre la bascule, une préférence mémorisée ne peut que
+  // piéger : un « dark » laissé par une version précédente enfermait son
+  // propriétaire dans un thème dont rien ne permettait de sortir. On l'ignore, et
+  // on l'efface au passage.
+  it('ignore un thème Nuit laissé par une version précédente', () => {
     localStorage.setItem('theme', 'dark')
     render(<ThemeProvider><div>x</div></ThemeProvider>)
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
-    expect(document.documentElement.classList.contains('dark')).toBe(true)
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light')
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+    expect(localStorage.getItem('theme')).toBeNull()
   })
 
   it('bascule en mode Nuit via le switcher', async () => {
