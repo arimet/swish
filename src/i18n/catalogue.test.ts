@@ -6,15 +6,15 @@ import { en } from './en'
 import { translator } from './index'
 
 /**
- * Le garde-fou de la traduction.
+ * The translation's guard rail.
  *
- * Le défaut que ce fichier attrape n'est pas rattrapable autrement : une clef écrite
- * dans un composant mais absente du catalogue **compile**, passe le typage, et
- * s'affiche telle quelle à l'écran — « nav.calendrier » en toutes lettres dans la
- * barre de navigation. C'est arrivé pendant la migration de la coquille, entre deux
- * étapes, sans qu'aucun outil ne bronche.
+ * The defect this file catches cannot be caught any other way: a key written in a
+ * component but absent from the catalogue **compiles**, passes type checking, and
+ * shows on screen as it is — "nav.calendrier" spelled out in the navigation bar. That
+ * happened during the shell's migration, between two steps, without a single tool
+ * blinking.
  *
- * On relit donc les sources et on confronte les clefs employées au catalogue français,
+ * So we read the sources back and confront the keys used with the French catalogue,
  * qui fait référence.
  */
 
@@ -34,20 +34,19 @@ function sources(): string[] {
 }
 
 /**
- * Toute chaîne littérale **en forme de clef** trouvée dans les sources.
+ * Every string literal **shaped like a key** found in the sources.
  *
- * La première version ne lisait que `t('…')`, et une mutation l'a prise en défaut :
- * les libellés de navigation et les titres de page sont des clefs rangées dans des
- * tableaux au niveau du module — `{ label: 'nav.calendrier' }` — puis traduits au
- * rendu. Une faute de frappe y passait sans être vue, ce qui est exactement le cas
- * qu'on cherche à couvrir.
+ * The first version only read `t('…')`, and a mutation caught it out: the navigation
+ * labels and the page titles are keys filed in module-level arrays —
+ * `{ label: 'nav.calendrier' }` — and translated at render time. A typo went through
+ * unseen there, which is exactly the case we are trying to cover.
  *
- * On repère donc les clefs à leur **forme** : une famille connue du catalogue, un
- * point, un nom. Les familles se déduisent du catalogue lui-même, donc en ajouter une
+ * So keys are recognised by their **shape**: a family known to the catalogue, a dot,
+ * a name. The families are derived from the catalogue itself, so adding one
  * n'oblige à rien ici.
  *
- * Les clefs calculées (`t(\`role.${r}\`)`) restent hors de portée d'une lecture de
- * texte ; elles ont leur propre test, plus bas.
+ * Computed keys (`t(\`role.${r}\`)`) stay out of reach of a textual read; they have
+ * their own test, further down.
  */
 function clefsEmployees(): Map<string, string[]> {
   const familles = [...new Set(Object.keys(fr).map((k) => k.split('.')[0]))]
@@ -76,28 +75,28 @@ describe('the translation catalogue', () => {
   })
 
   it('the computed families are complete', () => {
-    // Ces clefs se construisent à l'exécution (`t(\`role.${role}\`)`) : le test ne peut
-    // pas les lire dans les sources, donc il énumère les valeurs possibles du domaine.
+    // These keys are built at run time (`t(\`role.${role}\`)`): the test cannot read
+    // them from the sources, so it enumerates the domain's possible values.
     for (const role of ['visitor', 'scorer', 'admin']) expect(fr).toHaveProperty(`role.${role}`)
   })
 
   it('English never falls back to the key itself', () => {
-    // Le repli est le français, par choix : un écran à moitié traduit reste utilisable,
-    // un écran semé d'identifiants ne l'est pas. On vérifie donc que *traduire* en
-    // anglais ne rend jamais la clef brute, y compris pour ce que l'anglais n'a pas.
+    // The fallback is French, by choice: a half-translated screen is still usable, a
+    // screen strewn with identifiers is not. So we check that *translating* into
+    // English never returns the raw key, including for what English does not have.
     const t = translator('en')
     const brutes = Object.keys(fr).filter((key) => t(key) === key && fr[key] !== key)
     expect(brutes, 'clefs rendues telles quelles en anglais').toEqual([])
   })
 
   it('English holds no key unknown to French', () => {
-    // L'inverse est permis — l'anglais peut être en retard — mais une clef anglaise
-    // sans équivalent français est une faute de frappe ou un reliquat.
+    // The converse is allowed — English may lag — but an English key with no French
+    // counterpart is a typo or a leftover.
     expect(Object.keys(en).filter((key) => !(key in fr))).toEqual([])
   })
 
   it('a template\'s parameters exist in both languages', () => {
-    // « {role} » traduit sans son paramètre laisserait l'accolade à l'écran.
+    // "{role}" translated without its parameter would leave the brace on screen.
     const params = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',')
     const divergents = Object.keys(en)
       .filter((key) => key in fr && params(en[key]) !== params(fr[key]))

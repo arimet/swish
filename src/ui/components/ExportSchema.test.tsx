@@ -1,16 +1,15 @@
 /**
- * Ce qui se teste honnêtement ici, et ce qui ne s'y teste pas.
+ * What can honestly be tested here, and what cannot.
  *
- * jsdom ne rend rien dans un canvas : `getContext('2d')` y renvoie `null` et
- * `toBlob` n'existe pas. Un test qui prétendrait vérifier le contenu d'un PNG,
- * d'un PDF ou d'un GIF ne prouverait donc rien — il ne pourrait même pas tomber.
- * Les trois sorties fichier se vérifient au navigateur, pas ici.
+ * jsdom renders nothing into a canvas: `getContext('2d')` returns `null` there and
+ * `toBlob` does not exist. A test claiming to check the contents of a PNG, a PDF or a
+ * GIF would therefore prove nothing — it could not even fail. The three file outputs
+ * are verified in a browser, not here.
  *
- * Restent, et ce sont les propriétés qui comptent : le dialogue propose bien les
- * quatre sorties, le lien porte réellement le schéma (aller-retour par
- * `decoder`), un schéma trop chargé n'en produit pas, la remise du fichier passe
- * par le partage natif quand il existe et par le téléchargement sinon, et
- * partager ne demande jamais de code.
+ * What remains are the properties that matter: the dialog does offer the four outputs,
+ * the link really carries the play (a round trip through `decode`), a play too heavy
+ * produces none, handing over the file goes through the native share when there is one
+ * and through a download otherwise, and sharing never asks for a code.
  */
 import 'fake-indexeddb/auto'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -35,9 +34,9 @@ const deuxTemps = (): Play => {
 }
 
 /**
- * Un schéma que le lien ne peut pas porter. Les points sont tirés au hasard :
- * un tracé régulier se compresserait presque à néant, et le test ne dirait plus
- * rien de la limite.
+ * A play the link cannot carry. The points are drawn at random: a regular stroke
+ * would compress almost to nothing, and the test would no longer say anything about
+ * the limit.
  */
 const troisMilleGestes = (): Play => {
   const s = deuxTemps()
@@ -52,7 +51,7 @@ const troisMilleGestes = (): Play => {
 const ouvrir = (schema: Play) =>
   render(<ExportSchema schema={schema} stepIndex={0} open onClose={() => {}} />)
 
-/** Le lien tel que le dialogue le donne à copier. */
+/** The link as the dialog offers it for copying. */
 const lienAffiche = async () =>
   (await screen.findByLabelText<HTMLInputElement>('Lien de la combinaison')).value
 
@@ -67,8 +66,8 @@ describe('ExportSchema — sharing a play', () => {
     expect(screen.getByRole('button', { name: 'Image PNG' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'PDF' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'GIF animé' })).toBeInTheDocument()
-    // §6 du spec : l'écran explique pourquoi le lien est long, sans quoi on le
-    // prendrait pour un dysfonctionnement.
+    // Spec §6: the screen explains why the link is long, otherwise it would be taken
+    // for a malfunction.
     expect(screen.getByText(/contient la combinaison entière/)).toBeInTheDocument()
   })
 
@@ -78,7 +77,7 @@ describe('ExportSchema — sharing a play', () => {
 
     const lien = new URL(await lienAffiche())
     expect(lien.pathname).toBe('/schemas/recu')
-    // Le schéma voyage dans le fragment, jamais dans la requête.
+    // The play travels in the fragment, never in the query string.
     expect(lien.search).toBe('')
     expect(lien.hash.length).toBeGreaterThan(1)
 
@@ -96,7 +95,7 @@ describe('ExportSchema — sharing a play', () => {
     expect(await screen.findByText(/trop chargée pour tenir dans un lien/)).toBeInTheDocument()
     expect(screen.queryByLabelText('Lien de la combinaison')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Copier le lien/ })).not.toBeInTheDocument()
-    // Les sorties fichier, elles, restent : c'est justement ce qu'on propose à la place.
+    // The file outputs stay: they are precisely what is offered instead.
     expect(screen.getByRole('button', { name: 'Image PNG' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'PDF' })).toBeInTheDocument()
   })
@@ -129,9 +128,9 @@ describe('ExportSchema — sharing a play', () => {
   })
 
   it('a file leaves through the native share if there is one, and downloads otherwise', async () => {
-    // La fabrication du PNG, du PDF et du GIF ne peut pas être exercée en jsdom
-    // (pas de canvas) ; leur **remise**, si — et c'est elle qui décide entre le
-    // geste du téléphone et celui du bureau.
+    // Building the PNG, the PDF and the GIF cannot be exercised in jsdom (no canvas);
+    // **handing them over** can — and that is what decides between the phone's gesture
+    // and the desktop's.
     const file = new File(['x'], 'pick-and-roll.png', { type: 'image/png' })
     vi.stubGlobal('URL', Object.create(URL, {
       createObjectURL: { value: vi.fn(() => 'blob:faux') },
