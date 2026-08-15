@@ -14,15 +14,14 @@ import { remoteEnabled } from '../../persistence/remote'
 import { useAuth } from '../../app/auth'
 import { X } from 'lucide-react'
 
-// L'entraînement se distingue de la rencontre par une couleur qui n'est prise
-// par aucun autre badge de l'écran (le vert vaut victoire/en direct, l'ambre
-// vaut « à venir », le rose est l'accent des rencontres) : au coup d'œil, le
-// bleu ne peut désigner qu'une séance d'entraînement.
-const ENTR_COLOR = C.info
-const ENTR_BG = C.infoBg
+// A training is told from a game by a colour no other badge on this screen takes
+// (green means win/live, amber means upcoming, the accent belongs to games): at a
+// glance, blue can only mean a training session.
+const TRAINING_INK = C.info
+const TRAINING_BG = C.infoBg
 
-// Le mois en toutes lettres, dans la langue de l'application et non dans celle du
-// navigateur : un calendrier français doit dire « août » sur une machine en anglais.
+// The month spelled out, in the application's language and not the browser's: a
+// French calendar must say "août" on a machine set to English.
 const longMonth = (d: Date) => new Intl.DateTimeFormat(currentLang(), { month: 'long' }).format(d)
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
@@ -33,12 +32,12 @@ export function Calendrier() {
   const translate = useT()
   const { clubId } = useClub()
   const { can, guard } = useAuth()
-  // Planifier relève du club : ce qui l'écrit ne s'affiche que pour qui le gère.
-  const gere = can('manage')
+  // Planning belongs to the club: what writes it only shows for whoever manages it.
+  const manages = can('manage')
   const [matches, setMatches] = useState<Match[] | null>(null)
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [trainings, setTrainings] = useState<Training[] | null>(null)
-  // La bibliothèque du club : c'est elle qui dit quels schémas existent encore.
+  // The club's library: it is what says which plays still exist.
   const [schemas, setSchemas] = useState<Play[]>([])
 
   const refreshTrainings = () => listTrainings().then(setTrainings)
@@ -54,8 +53,8 @@ export function Calendrier() {
     return () => { cancel = true }
   }, [])
 
-  // Les schémas suivent le club de l'appareil, comme les entraînements ci-dessous :
-  // effet séparé, car celui du dessus ne dépend pas de `clubId`.
+  // The plays follow the device's club, like the trainings below: a separate effect,
+  // because the one above does not depend on `clubId`.
   useEffect(() => {
     if (!clubId) { setSchemas([]); return }
     let cancel = false
@@ -63,50 +62,49 @@ export function Calendrier() {
     return () => { cancel = true }
   }, [clubId])
 
-  const nos = useMemo(() => matches?.filter((m) => m.meta.clubId === clubId) ?? null, [matches, clubId])
-  // Comme les rencontres : un appareil qui change de club ne doit garder au calendrier
-  // que les entraînements de ce club, pas ceux laissés en mémoire par le club précédent.
-  const nosEntrainements = useMemo(() => trainings?.filter((t) => t.clubId === clubId) ?? null, [trainings, clubId])
+  const ourGames = useMemo(() => matches?.filter((m) => m.meta.clubId === clubId) ?? null, [matches, clubId])
+  // Like the games: a device that changes club must keep in the calendar only that
+  // club's trainings, not those left in memory by the previous one.
+  const ourTrainings = useMemo(() => trainings?.filter((t) => t.clubId === clubId) ?? null, [trainings, clubId])
 
-  // Rencontres et entraînements partagent les mêmes groupes par date : le calendrier
-  // sert à repérer d'un coup d'œil, pas à parcourir deux listes séparées pour
-  // reconstituer la semaine.
+  // Games and trainings share the same groups by date: the calendar is there to be
+  // read at a glance, not to make anyone walk two separate lists to reconstruct the
+  // week.
   const groups = useMemo(() => {
-    if (!nos || !nosEntrainements) return []
+    if (!ourGames || !ourTrainings) return []
     const map = new Map<string, CalItem[]>()
     const push = (k: string, item: CalItem) => { if (!map.has(k)) map.set(k, []); map.get(k)!.push(item) }
-    // Les entraînements sont ajoutés avant les rencontres : le tri ci-dessous est stable,
-    // donc si l'ordre d'insertion décidait des égalités d'heure, il faudrait qu'il coïncide
-    // par hasard avec la règle voulue (la rencontre passe avant). En les mettant dans
-    // l'ordre « inverse », c'est bien le départage explicite qui décide, et non un ordre
-    // d'insertion accidentel — même dilemme, même remède que `nextFixture` dans
-    // `src/domain/fixtures.ts`.
-    for (const t of nosEntrainements) push(t.date ?? '—', { key: t.id, kind: 'training', training: t, time: t.time ?? '' })
-    for (const m of nos) push(m.meta.date ?? '—', { key: m.id, kind: 'match', match: m, time: m.meta.time ?? '' })
-    // À heure égale, la rencontre passe avant l'entraînement — c'est elle qui compte.
+    // Trainings are pushed before games: the sort below is stable, so if insertion
+    // order decided ties on time, it would have to coincide by accident with the rule we
+    // want (the game comes first). By inserting them in the "wrong" order, it really is
+    // the explicit tie-break that decides, not an accidental insertion order — same
+    // dilemma, same remedy as `nextFixture` in `src/domain/fixtures.ts`.
+    for (const t of ourTrainings) push(t.date ?? '—', { key: t.id, kind: 'training', training: t, time: t.time ?? '' })
+    for (const m of ourGames) push(m.meta.date ?? '—', { key: m.id, kind: 'match', match: m, time: m.meta.time ?? '' })
+    // At equal time the game comes before the training — it is the one that counts.
     for (const items of map.values())
       items.sort((a, b) => a.time.localeCompare(b.time) || (a.kind === b.kind ? 0 : a.kind === 'match' ? -1 : 1))
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
-  }, [nos, nosEntrainements])
+  }, [ourGames, ourTrainings])
 
-  // Le repère qui coupe la page en deux : ce qui précède est joué, ce qui suit
-  // reste à faire. Et la prochaine échéance est celle du domaine — la même qu'au
-  // tableau de bord, pour qu'il n'y ait pas deux règles pour désigner « la suite ».
-  const aujourdhui = isoDay(new Date())
-  const prochaine = useMemo(
-    () => (nos && nosEntrainements ? nextFixture(nos, nosEntrainements, new Date()) : null),
-    [nos, nosEntrainements],
+  // The landmark that cuts the page in two: what precedes has been played, what
+  // follows remains to be done. And the next fixture is the domain's — the same as on
+  // the dashboard, so that there are not two rules for naming "what comes next".
+  const today = isoDay(new Date())
+  const next = useMemo(
+    () => (ourGames && ourTrainings ? nextFixture(ourGames, ourTrainings, new Date()) : null),
+    [ourGames, ourTrainings],
   )
 
-  // Un formulaire de saisie apparaît sur un clic, jamais d'emblée : le calendrier
-  // est ce qu'on vient lire, planifier une séance est l'exception.
-  const [saisieOuverte, setSaisieOuverte] = useState(false)
+  // An entry form appears on a click, never up front: the calendar is what people
+  // come to read, planning a session is the exception.
+  const [formOpen, setFormOpen] = useState(false)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [place, setPlace] = useState('')
   const [theme, setTheme] = useState('')
 
-  const ajouter = () => {
+  const add = () => {
     if (!date || !clubId) return
     guard('manage', async () => {
       await saveTraining({ id: newId(), clubId, date, time: time.trim() || undefined, place: place.trim() || undefined, theme: theme.trim() || undefined })
@@ -114,35 +112,35 @@ export function Calendrier() {
       refreshTrainings()
     })
   }
-  /* Supprimer une séance passe par une confirmation, comme supprimer une rencontre,
-     un schéma ou un joueur. Elle manquait ici : un clic sur la croix effaçait la
-     séance, sans retour possible. Le message dit ce qui n'est **pas** supprimé — les
-     schémas rattachés vivent dans la bibliothèque, seul le lien disparaît — parce que
-     c'est la question qu'on se pose la main sur la croix. */
+  /* Deleting a session goes through a confirmation, like deleting a game, a play or a
+     player. It was missing here: a click on the cross erased the session, with no way
+     back. The message says what is **not** deleted — the attached plays live in the
+     library, only the link disappears — because that is the question people ask with
+     their hand on the cross. */
   const [toDelete, setToDelete] = useState<Training | null>(null)
-  const supprimer = () => { const t = toDelete; if (!t) return
+  const remove = () => { const t = toDelete; if (!t) return
     guard('manage', async () => { await deleteTraining(t.id); setToDelete(null); refreshTrainings() }) }
 
-  // Attacher un schéma à une séance est administratif : garder d'abord, écrire
-  // ensuite. Le va-et-vient lui-même est transactionnel (cf. `toggleTrainingPlay`),
-  // pour que deux cases cochées coup sur coup ne s'effacent pas l'une l'autre.
-  const basculerSchema = (id: string, playId: string) => guard('manage', async () => {
+  // Attaching a play to a session is administrative: guard first, write second. The
+  // toggle itself is transactional (cf. `toggleTrainingPlay`), so that two boxes ticked
+  // in quick succession do not erase each other.
+  const togglePlay = (id: string, playId: string) => guard('manage', async () => {
     await toggleTrainingPlay(id, playId)
     refreshTrainings()
   })
 
   return (
     <div className="p-6">
-      {/* Les actions dans la barre de sous-titre, comme la bibliothèque de schémas :
-          une saison fait des milliers de pixels de dates, et un bouton placé après
-          ne se trouve jamais. Un seul bouton plein — la rencontre, ce qu'on planifie
-          le plus souvent ; la séance reste en second, marquée par son bleu. */}
+      {/* The actions in the subtitle bar, like the playbook: a season is thousands of
+          pixels of dates, and a button placed after them is never found. One filled
+          button — the game, what gets planned most often; the session stays second,
+          marked by its blue. */}
       <PageTitle
-        action={gere && (
+        action={manages && (
           <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => guard('manage', () => setSaisieOuverte(true))}
+            <button onClick={() => guard('manage', () => setFormOpen(true))}
               className="rounded-xl px-4 py-2.5 text-sm font-bold"
-              style={{ background: ENTR_BG, color: ENTR_COLOR, border: `1px solid ${ENTR_COLOR}55` }}>
+              style={{ background: TRAINING_BG, color: TRAINING_INK, border: `1px solid ${TRAINING_INK}55` }}>
               {translate('cal.nouvelEntrainement')}
             </button>
             <Link to="/match/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
@@ -152,11 +150,11 @@ export function Calendrier() {
         )}
       />
 
-      {saisieOuverte && (
-        <section className="mb-6 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${ENTR_COLOR}44` }}>
+      {formOpen && (
+        <section className="mb-6 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${TRAINING_INK}44` }}>
           <div className="mb-4 flex items-center gap-3">
-            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: ENTR_COLOR }}>{translate('cal.titreEntrainement')}</p>
-            <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: TRAINING_INK }}>{translate('cal.titreEntrainement')}</p>
+            <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="entr-date" label={translate('cal.dateEntrainement')} type="date" value={date} onChange={setDate} />
@@ -164,86 +162,86 @@ export function Calendrier() {
             <Field id="entr-place" label={translate('match.lieu')} value={place} onChange={setPlace} />
             <Field id="entr-theme" label={translate('cal.theme')} value={theme} onChange={setTheme} />
           </div>
-          <button onClick={ajouter} disabled={!date || !clubId} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: ENTR_COLOR }}>
+          <button onClick={add} disabled={!date || !clubId} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: TRAINING_INK }}>
             {translate('cal.ajouterEntrainement')}
           </button>
         </section>
       )}
 
-      {!nos || !nosEntrainements ? (
+      {!ourGames || !ourTrainings ? (
         <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
       ) : groups.length === 0 ? (
-        // L'invitation à planifier ne s'adresse qu'à qui le peut ; les autres
-        // lisent simplement qu'il n'y a rien de prévu.
+        // The invitation to plan is addressed only to whoever can; everyone else
+        // simply reads that nothing is scheduled.
         <div className="rounded-2xl py-16 text-center" style={{ border: `1px dashed ${C.border}` }}>
           <p className="text-sm font-bold">{translate('cal.saisonVierge')}</p>
           <p className="mt-1 text-sm" style={{ color: C.muted }}>
-            {gere
+            {manages
               ? translate('cal.videGere')
               : translate('cal.videVisiteur')}
           </p>
         </div>
       ) : (
-        // Deux dates par ligne dès qu'on a la largeur : une saison fait une colonne
-        // interminable sur un écran de bureau, où la place est à côté et pas en
-        // dessous. Sur téléphone, une seule colonne, comme avant. La barre de mois
-        // occupe la largeur entière et ouvre donc toujours une nouvelle rangée.
+        // Two dates per row as soon as there is width: a season makes an endless column
+        // on a desktop screen, where the room is beside and not below. On a phone, one
+        // column, as before. The month bar takes the full width and therefore always
+        // opens a new row.
         <div className="grid gap-x-8 gap-y-7 xl:grid-cols-2 [&>*]:min-w-0">
           {groups.map(([iso, items], i) => {
             const f = fmtDate(iso === '—' ? undefined : iso)
-            const nbRencontres = items.filter((i) => i.kind === 'match').length
-            const nbEntrainements = items.filter((i) => i.kind === 'training').length
-            const résumé = [
-              nbRencontres ? translate('compte.rencontre', { count: nbRencontres }) : '',
-              nbEntrainements ? translate('compte.entrainement', { count: nbEntrainements }) : '',
+            const gameCount = items.filter((i) => i.kind === 'match').length
+            const trainingCount = items.filter((i) => i.kind === 'training').length
+            const summary = [
+              gameCount ? translate('compte.rencontre', { count: gameCount }) : '',
+              trainingCount ? translate('compte.entrainement', { count: trainingCount }) : '',
             ].filter(Boolean).join(' · ')
-            // Le passé est estompé plutôt que masqué : on veut pouvoir remonter la
-            // saison, mais rien de joué ne doit disputer l'œil à ce qui reste à jouer.
-            const passé = iso !== '—' && iso < aujourdhui
-            const estAujourdhui = iso === aujourdhui
-            // La date qui porte la prochaine échéance, ou le jour même : les deux
-            // seules du calendrier à mériter l'accent.
-            const vedette = estAujourdhui || prochaine?.date === iso
-            const nouveauMois = i === 0 || groups[i - 1][0].slice(0, 7) !== iso.slice(0, 7)
+            // The past is faded rather than hidden: people want to walk back up the
+            // season, but nothing already played should compete for the eye with what is
+            // left to play.
+            const past = iso !== '—' && iso < today
+            const isToday = iso === today
+            // The date carrying the next fixture, or today itself: the only two in the
+            // calendar that deserve the accent.
+            const featured = isToday || next?.date === iso
+            const newMonth = i === 0 || groups[i - 1][0].slice(0, 7) !== iso.slice(0, 7)
             return (
               <Fragment key={iso}>
-                {nouveauMois && <BarreDeMois iso={iso} />}
-                {/* Le passé s'estompe, mais pas jusqu'à devenir illisible.
-                    `opacity-60` diluait le texte du jeton d'encre jusqu'à 4,63:1
-                    sur le cadre — soit trois pour cent au-dessus du seuil AA, et
-                    3,1:1 une fois les pixels rendus comptés, l'antialiasing
-                    mangeant le reste. À 0,75 le même texte tient 8,1:1 et la
-                    journée écoulée se reconnaît toujours du premier coup d'œil.
-                    Le survol la rend entière, comme avant. */}
-                <section className={passé ? 'opacity-75 transition-opacity hover:opacity-100' : undefined}>
+                {newMonth && <MonthBar iso={iso} />}
+                {/* The past fades, but not to the point of becoming illegible.
+                    `opacity-60` diluted the ink token's text down to 4.63:1 on the frame
+                    — three per cent above the AA threshold, and 3.1:1 once the rendered
+                    pixels are counted, antialiasing eating the rest. At 0.75 the same
+                    text holds 8.1:1 and a day gone by is still recognised at first
+                    glance. Hover restores it fully, as before. */}
+                <section className={past ? 'opacity-75 transition-opacity hover:opacity-100' : undefined}>
                   <header className="mb-3 flex items-center gap-3">
-                    {/* Le cartouche de date : jour de la semaine et quantième, en gros.
-                        Le mois est dans la barre au-dessus, il n'a pas à être répété. */}
+                    {/* The date cartouche: weekday and day of the month, in large type.
+                        The month is in the bar above, it need not be repeated. */}
                     <span className="grid h-14 w-14 shrink-0 place-content-center rounded-2xl text-center leading-none"
-                      style={vedette ? { background: C.accentBg, border: `1px solid ${C.accentBd}` } : { background: C.card2, border: bd }}>
-                      <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: vedette ? C.accent : C.faint }}>{f.wd || '—'}</span>
-                      <span className="mt-1 text-xl font-black tabular-nums" style={{ color: vedette ? C.accent : C.text }}>{f.day}</span>
+                      style={featured ? { background: C.accentBg, border: `1px solid ${C.accentBd}` } : { background: C.card2, border: bd }}>
+                      <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: featured ? C.accent : C.faint }}>{f.wd || '—'}</span>
+                      <span className="mt-1 text-xl font-black tabular-nums" style={{ color: featured ? C.accent : C.text }}>{f.day}</span>
                     </span>
                     <div className="min-w-0">
-                      {vedette && (
+                      {featured && (
                         <p className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.accent }}>
-                          {estAujourdhui ? translate('commun.aujourdhui') : translate('bord.prochaineEcheance')}
+                          {isToday ? translate('commun.aujourdhui') : translate('bord.prochaineEcheance')}
                         </p>
                       )}
-                      <p className="truncate text-sm font-extrabold">{résumé}</p>
+                      <p className="truncate text-sm font-extrabold">{summary}</p>
                     </div>
-                    {/* Le filet prolonge l'en-tête jusqu'au bord et referme le groupe ;
-                        sur téléphone la largeur est trop précieuse pour le garder. */}
+                    {/* The rule extends the header to the edge and closes the group; on a
+                        phone the width is too precious to keep it. */}
                     <span className="hidden h-px flex-1 sm:block" style={{ background: C.border }} />
                   </header>
-                  {/* `auto-fit` plutôt qu'un nombre fixe de colonnes : une date qui ne
-                      porte qu'une carte l'étale sur toute la largeur du groupe, au lieu
-                      de laisser une demi-colonne vide à sa droite. */}
+                  {/* `auto-fit` rather than a fixed number of columns: a date carrying a
+                      single card spreads it across the group's full width, instead of
+                      leaving half a column empty to its right. */}
                   <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
                     {items.map((it) => it.kind === 'match'
-                      ? <CarteRencontre key={it.key} m={it.match} teams={teams} gere={gere} />
-                      : <TrainingCard key={it.key} t={it.training} schemas={schemas} gere={gere}
-                          onToggleSchema={(playId) => basculerSchema(it.training.id, playId)}
+                      ? <GameCard key={it.key} m={it.match} teams={teams} manages={manages} />
+                      : <TrainingCard key={it.key} t={it.training} schemas={schemas} manages={manages}
+                          onToggleSchema={(playId) => togglePlay(it.training.id, playId)}
                           onDelete={() => setToDelete(it.training)} />)}
                   </div>
                 </section>
@@ -253,12 +251,12 @@ export function Calendrier() {
         </div>
       )}
 
-      {/* Comme les convocations et les résultats extérieurs : même formulation que sur
-          les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux
-          limites différentes — la décision couvrait aussi bien les entraînements. */}
+      {/* Like the call-ups and the outside results: worded the same way as on the
+          standings screen and the game record, so as not to suggest two different limits
+          — the decision covered the trainings just as much. */}
       {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('cal.entrainementsLocaux')}</p>}
 
-      <ConfirmDialog open={!!toDelete} onClose={() => setToDelete(null)} onConfirm={supprimer}
+      <ConfirmDialog open={!!toDelete} onClose={() => setToDelete(null)} onConfirm={remove}
         title={translate('cal.supprimerSeanceTitre')}
         message={toDelete
           ? translate('cal.supprimerSeanceTexte', { date: fmtDate(toDelete.date).long || toDelete.date })
@@ -268,19 +266,19 @@ export function Calendrier() {
   )
 }
 
-/** La carte d'une rencontre, et — tant qu'elle est à venir — l'accès direct à sa
- *  convocation. La convocation reste sur la fiche de la rencontre, à sa place ;
- *  ce qui manquait, c'est un chemin depuis là où le coach regarde. Le lien est
- *  posé À CÔTÉ de la carte et non dedans : `MatchCard` est elle-même un lien, et
- *  un lien dans un lien n'est pas du HTML valide. */
-function CarteRencontre({ m, teams, gere }: { m: Match; teams: Record<string, Team>; gere: boolean }) {
+/** A game's card and — while it is still upcoming — direct access to its call-up.
+ *  The call-up stays on the game's record, where it belongs; what was missing is a
+ *  path from where the coach is looking. The link sits BESIDE the card and not
+ *  inside it: `MatchCard` is itself a link, and a link inside a link is not valid
+ *  HTML. */
+function GameCard({ m, teams, manages }: { m: Match; teams: Record<string, Team>; manages: boolean }) {
   const translate = useT()
   return (
     <div className="flex flex-col gap-1.5">
       <MatchCard m={m} teams={teams} />
-      {/* Convoquer écrit : le raccourci est celui du coach. La carte, elle, mène à
-          la fiche de la rencontre, où la convocation se lit par tout le monde. */}
-      {gere && m.status === 'setup' && (
+      {/* Calling up writes: the shortcut is the coach's. The card leads to the game's
+          record, where the call-up reads for everyone. */}
+      {manages && m.status === 'setup' && (
         <Link to={`/match/${m.id}#convocation`} className="rounded-xl px-3 py-1.5 text-center text-[12px] font-bold"
           style={{ background: C.accentBg, color: C.accent }}>
           {translate('cal.convoquer')}
@@ -290,10 +288,10 @@ function CarteRencontre({ m, teams, gere }: { m: Match; teams: Record<string, Te
   )
 }
 
-/** Le mois en toutes lettres, en travers de la grille : sans lui, une saison n'est
- *  qu'une suite de quantièmes, et l'on ne sait plus si le 3 suit le 30 de justesse
- *  ou de cinq semaines. */
-function BarreDeMois({ iso }: { iso: string }) {
+/** The month spelled out, across the grid: without it a season is only a run of day
+ *  numbers, and you can no longer tell whether the 3rd follows the 30th by a day or
+ *  by five weeks. */
+function MonthBar({ iso }: { iso: string }) {
   const translate = useT()
   const d = new Date(iso + 'T00:00:00')
   const label = Number.isNaN(d.getTime()) ? translate('commun.sansDate') : `${longMonth(d)} ${d.getFullYear()}`
@@ -314,43 +312,42 @@ function Field({ id, label, value, onChange, type = 'text' }: { id: string; labe
   )
 }
 
-/** Carte d'entraînement : même gabarit que `MatchCard` pour se mêler à la
- *  grille, mais un rail bleu à silhouette — là où la rencontre montre deux écussons
- *  et son « VS » — la distingue sans qu'il faille lire un seul mot. Elle se déplie
- *  sur les schémas qu'on y travaille — mêmes cases à cocher que la convocation
- *  d'une rencontre, pour qui peut les cocher. Les autres lisent le programme de
- *  la séance sans pouvoir le changer : c'est ce qui les intéresse. */
-function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Training; schemas: Play[]; gere: boolean; onToggleSchema: (playId: string) => void; onDelete: () => void }) {
+/** A training card: the same template as `MatchCard` so it mixes into the grid, but
+ *  a blue silhouette rail — where the game shows two crests and its "VS" — tells it
+ *  apart without a single word being read. It unfolds onto the plays worked on
+ *  there — the same checkboxes as a game's call-up, for whoever can tick them.
+ *  Everyone else reads the session's programme without being able to change it: that
+ *  is what interests them. */
+function TrainingCard({ t, schemas, manages, onToggleSchema, onDelete }: { t: Training; schemas: Play[]; manages: boolean; onToggleSchema: (playId: string) => void; onDelete: () => void }) {
   const translate = useT()
-  // Le compte affiché est celui des schémas qui existent : un entraînement peut
-  // citer un schéma supprimé (base antérieure à la cascade de `deletePlay`), et
-  // le compter ferait mentir la ligne — la faute corrigée au projet 6 sur les
-  // convocations et leurs joueurs retirés.
+  // The count shown is of the plays that exist: a training may cite a deleted play (a
+  // store predating `deletePlay`'s cascade), and counting it would make the row lie —
+  // the same fault fixed earlier on call-ups and their removed players.
   const attached = schemas.filter((s) => t.playIds?.includes(s.id))
   return (
-    <div className="flex gap-3 rounded-2xl p-3" style={{ background: C.card, border: `1px solid ${ENTR_COLOR}55` }}>
-      <div className="flex w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: ENTR_BG }}>
-        <Ic d={ICON.users} className="h-6 w-6" style={{ color: ENTR_COLOR }} />
+    <div className="flex gap-3 rounded-2xl p-3" style={{ background: C.card, border: `1px solid ${TRAINING_INK}55` }}>
+      <div className="flex w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: TRAINING_BG }}>
+        <Ic d={ICON.users} className="h-6 w-6" style={{ color: TRAINING_INK }} />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: ENTR_BG, color: ENTR_COLOR }}>{translate('cal.entrainement')}</span>
+          <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: TRAINING_BG, color: TRAINING_INK }}>{translate('cal.entrainement')}</span>
           {t.time && <span className="ml-auto text-[12px] font-bold" style={{ color: C.muted }}>{t.time}</span>}
         </div>
         <p className="mt-2 truncate text-sm font-bold">{t.theme || translate('cal.seanceLibre')}</p>
 
-        {/* `<details>` plutôt qu'un état local : le navigateur sait déjà déplier, et
-            vingt schémas dépliés d'office noieraient le calendrier. */}
+        {/* `<details>` rather than local state: the browser already knows how to
+            unfold, and twenty plays unfolded by default would drown the calendar. */}
         <details className="mt-2">
-          <summary className="flex cursor-pointer items-center gap-2 text-[12px] font-bold" style={{ color: ENTR_COLOR }}>
+          <summary className="flex cursor-pointer items-center gap-2 text-[12px] font-bold" style={{ color: TRAINING_INK }}>
             {translate('cal.schemasTravailles')}
             {attached.length > 0 && (
-              <span className="rounded-md px-1.5 py-0.5 font-black" style={{ background: ENTR_BG, color: ENTR_COLOR }}>
+              <span className="rounded-md px-1.5 py-0.5 font-black" style={{ background: TRAINING_BG, color: TRAINING_INK }}>
                 {translate('cal.schemaCompte', { count: attached.length })}
               </span>
             )}
           </summary>
-          {!gere ? (
+          {!manages ? (
             attached.length === 0 ? (
               <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{translate('cal.aucunSchemaSeance')}</p>
             ) : (
@@ -379,11 +376,10 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
 
         <div className="mt-2.5 flex items-center justify-between border-t pt-2.5 text-[12px] font-semibold" style={{ borderColor: C.border, color: C.faint }}>
           <span className="truncate">{t.place || '—'}</span>
-          {/* `grid h-9 w-9` et non `px-1.5 py-0.5` : la cible faisait 26 × 18, sous le
-              minimum de vingt-quatre pixels — et c'est une **suppression**, la
-              combinaison la plus fâcheuse entre une cible qu'on rate et un geste qu'on
-              ne défait pas. */}
-          {gere && <button onClick={onDelete} aria-label={translate('cal.supprimerEntrainement')} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-black transition hover:bg-[var(--c-danger-bg)] hover:text-[var(--c-danger)]" style={{ color: C.accent }}><X className="h-4 w-4" strokeWidth={2.5} /></button>}
+          {/* `grid h-9 w-9` and not `px-1.5 py-0.5`: the target was 26 × 18, under the
+              twenty-four-pixel minimum — and it is a **deletion**, the most unfortunate
+              combination of a target you miss and a gesture you cannot undo. */}
+          {manages && <button onClick={onDelete} aria-label={translate('cal.supprimerEntrainement')} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-black transition hover:bg-[var(--c-danger-bg)] hover:text-[var(--c-danger)]" style={{ color: C.accent }}><X className="h-4 w-4" strokeWidth={2.5} /></button>}
         </div>
       </div>
     </div>

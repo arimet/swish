@@ -31,7 +31,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const { can, guard } = useAuth()
   const [match, setMatch] = useState<Match | null | undefined>(undefined)
   const [players, setPlayers] = useState<Record<string, Player>>({})
-  // Indexé par côté d'évènement : A = notre club, B = l'adversaire (sans effectif).
+  // Indexed by event side: A = our club, B = the opposition (with no roster).
   const [teamNames, setTeamNames] = useState<Record<TeamSide, string>>({ A: '', B: '' })
   const [showEdit, setShowEdit] = useState(false)
   const [editStats, setEditStats] = useState(false)
@@ -68,21 +68,22 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const persist = async (next: Match) => {
     setMatch(next)
     await saveMatch(next)
-    // Envoi immédiat (pas d'attente du débounce de 700 ms), une fois l'écriture
-    // dans la file confirmée : une correction de stats ici est typiquement
-    // suivie d'une navigation qui peut déclencher une hydratation ailleurs.
+    // Sent immediately (no waiting for the 700 ms debounce), once the write into the
+    // queue is confirmed: a stats correction here is typically followed by a
+    // navigation that may trigger a hydration elsewhere.
     void flushNow()
   }
   const saveMeta = async (patch: Partial<Match['meta']>) => persist({ ...match, meta: { ...match.meta, ...patch } })
 
-  // Correction des stats après le match (réservé admin) : on ajoute/retire des évènements.
+  // Correcting stats after the game (admin only): we add and remove events.
   const addEvent = (e: EventInput) =>
     persist({ ...match, events: [...match.events, { ...e, id: newId(), wallClock: Date.now() } as GameEvent] })
   const removeLast = (pred: (e: GameEvent) => boolean) => {
     const next = removeLastEvent(match, pred)
     if (next !== match) persist(next)
   }
-  // La correction de stats ne porte que sur notre effectif (côté A) : l'adversaire n'a pas de joueurs saisis.
+  // Stats correction only touches our roster (side A): the opposition has no players
+  // recorded.
   const addScore = (playerId: string, kind: ScoreKind, shot?: ShotSpot) => addEvent({ type: 'SCORE', team: 'A', playerId, kind, shot, period: ls.period, gameClock: 0 })
   const addFoul = (playerId: string) => addEvent({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId }, foulType: 'personal', period: ls.period, gameClock: 0 })
   const addStat = (playerId: string, stat: StatKind) => addEvent({ type: 'STAT', team: 'A', playerId, stat, period: ls.period, gameClock: 0 })
@@ -110,18 +111,19 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         <button onClick={onHome} className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('garde.accueil')}</button>
         <div className="flex flex-wrap items-center gap-2.5">
           <Link to={`/match/${match.id}/watch`} target="_blank" className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.muted }}><Eye className="h-4 w-4" strokeWidth={2} />{translate('resume.suivi')}</Link>
-          {/* Corriger les infos ou les stats après coup relève de l'administration :
-              les deux boutons ne se rendent que pour elle. Lire la feuille, la
-              suivre et l'exporter restent libres pour tout le monde. */}
+          {/* Correcting the details or the stats after the fact belongs to
+              administration: both buttons render only for it. Reading the sheet,
+              following it and exporting it stay ungated for everyone. */}
           {can('manage') && (
             <>
               <button onClick={() => guard('manage', () => setShowEdit(true))} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}><Pencil className="h-4 w-4" strokeWidth={2} />{translate('resume.infos')}</button>
-              {/* Le droit est vérifié à l'ouverture du mode correction, pas redérivé ensuite :
-                  un administrateur qui ouvre « Corriger stats » puis se verrouille garde un mode
-                  correction écrivant jusqu'à ce qu'il en sorte. C'est assumé — il faudrait rendre
-                  la tablette en pleine correction pour que ça compte. `LiveMatch` réévalue `can()`
-                  à chaque rendu parce que la saisie du match dure deux heures et change de mains,
-                  pas parce que cet écran-ci aurait oublié de le faire. */}
+              {/* The right is checked when correction mode opens, not re-derived
+                  afterwards: an administrator who opens "Correct stats" and then locks
+                  themselves out keeps a writing correction mode until they leave it.
+                  That is accepted — you would have to hand the tablet over mid-correction
+                  for it to matter. `LiveMatch` re-evaluates `can()` on every render
+                  because recording a game lasts two hours and changes hands, not because
+                  this screen forgot to. */}
               <button onClick={() => (editStats ? setEditStats(false) : guard('manage', () => setEditStats(true)))}
                 className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={editStats ? { background: C.brand, color: C.onBrand } : { border: bd, color: C.text }}>
                 {editStats
@@ -157,7 +159,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         onRemoveMiss={() => pick && removeMiss(pick.id)}
       />
 
-      {/* SCOREBOARD FINAL */}
+      {/* FINAL SCOREBOARD */}
       <div className="overflow-hidden rounded-3xl" style={{ background: C.frame, border: bd }}>
         <div className="flex items-center justify-between px-6 pt-5">
           <span className="truncate text-[12px] font-bold" style={{ color: C.muted }}>{champ(meta)}</span>
@@ -176,14 +178,14 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         </div>
       </div>
 
-      {/* TABLEAUX PAR ÉQUIPE */}
+      {/* PER-TEAM TABLES */}
       <div className="mt-6 space-y-6">
         <TeamTable match={match} players={players} name={teamNames.A}
           onPick={editStats ? (id, label) => setPick({ id, name: label }) : undefined} />
         <OpponentCard teamId={meta.opponentId} name={teamNames.B} score={score.b} />
       </div>
 
-      {/* INDICATEURS */}
+      {/* INDICATORS */}
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         <Stat label={translate('resume.plusLargeEcart')} a={ratios.A.maxLead} b={ratios.B.maxLead} />
         <Stat label={translate('resume.plusLongueSerie')} a={ratios.A.maxRun} b={ratios.B.maxRun} />
@@ -200,11 +202,11 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('resume.progression')}</p>
           <span className="flex items-center gap-4 text-xs font-bold">
-            {/* Deux séries, donc deux couleurs de la charte et non deux hachages : un
-                trait d'un pixel en marine sombre était invisible sur la carte sombre,
-                et rien ne garantissait que les deux hachages tombent sur des teintes
-                séparables. Le citron et le bleu se distinguent dans les deux thèmes,
-                et le pointillé continue de dire « l'adversaire » sans la couleur. */}
+            {/* Two series, so two colours from the charter and not two hashes: a
+                one-pixel line in dark navy was invisible on the dark card, and nothing
+                guaranteed the two hashes would land on separable hues. Lemon and blue
+                are distinct in both themes, and the dashes keep saying "the opposition"
+                without the colour. */}
             <span className="flex items-center gap-2"><span className="h-1 w-6 rounded-full" style={{ background: C.brand }} /><span style={{ color: C.text }}>{teamNames.A}</span></span>
             <span className="flex items-center gap-2"><span className="h-1 w-6 rounded-full" style={{ backgroundImage: `repeating-linear-gradient(90deg, ${C.infoFill} 0 5px, transparent 5px 8px)` }} /><span style={{ color: C.text }}>{teamNames.B}</span></span>
           </span>
@@ -214,7 +216,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         </div>
       </section>
 
-      {/* Feuille imprimable (masquée à l'écran, visible à l'impression) */}
+      {/* The printable sheet (hidden on screen, visible when printing) */}
       <PrintableSummary match={match} players={players} teamNames={teamNames} />
     </div>
   )
@@ -226,12 +228,12 @@ function FinalSide({ id, name, score, win, align }: { id: string; name: string; 
       <TeamBadge id={id} name={name} size="h-11 w-11 text-xs" />
       <div className="min-w-0">
         <p className="truncate text-sm font-bold" style={{ color: win ? C.text : C.muted }}>{name}</p>
-        {/* Le vainqueur en accent, le perdant en gris. `teamColor(id)` tirait la
-            couleur d'un hachage parmi huit hexadécimaux façon NBA : c'est juste pour
-            un écusson dans une liste, faux pour un nombre de soixante pixels, et le
-            marine comme le cramoisi tombaient à 2,1:1 sur la carte sombre. L'écusson
-            juste à gauche garde sa couleur de club — c'est là que l'identité a un
-            sens. Ici la question est « qui a gagné », et un seul accent y répond. */}
+        {/* The winner in accent, the loser in grey. `teamColor(id)` drew the colour
+            from a hash among eight NBA-ish hex values: right for a crest in a list,
+            wrong for a sixty-pixel number, and both the navy and the crimson fell to
+            2.1:1 on the dark card. The crest just to the left keeps its club colour —
+            that is where identity means something. Here the question is "who won", and
+            a single accent answers it. */}
         <p className="text-5xl font-black tabular-nums sm:text-6xl" style={{ color: win ? C.accent : C.muted }}>{score}</p>
       </div>
     </div>
@@ -249,10 +251,10 @@ function Stat({ label, a, b }: { label: string; a: ReactNode; b: ReactNode }) {
   )
 }
 
-/** L'adversaire n'a pas d'effectif : un tableau de stats joueur y afficherait un
- *  total à 0 sous un score qui, lui, est réel. On affiche donc à la place ce
- *  score (indépendant du roster) avec la mention explicite que la saisie était
- *  globale, plutôt qu'un silence trompeur. */
+/** The opposition has no roster: a player stats table would show a total of 0 under
+ *  a score that is real. So we show that score instead (independent of the roster)
+ *  with an explicit note that it was entered as a total, rather than a misleading
+ *  silence. */
 function OpponentCard({ teamId, name, score }: { teamId: string; name: string; score: number }) {
   const translate = useT()
   return (
@@ -267,17 +269,17 @@ function OpponentCard({ teamId, name, score }: { teamId: string; name: string; s
   )
 }
 
-/* `teamId` a disparu de la signature : il n'y servait qu'à `teamColor`, et laisser un
-   paramètre que rien ne lit invite le prochain à croire qu'il compte. */
+/* `teamId` has gone from the signature: it only served `teamColor` there, and leaving
+   a parameter nothing reads invites the next person to believe it matters. */
 function TeamTable({ match, players, name, onPick }: { match: Match; players: Record<string, Player>; name: string; onPick?: (playerId: string, label: string) => void }) {
   const translate = useT()
   const stats = playerStats(match)
   const times = playingTimes(match)
   const totals = teamTotals(match)
-  // Avant cette branche, l'évènement MISS n'existait pas : sur ces rencontres (et sur
-  // toute nouvelle rencontre où « Manqué » n'a jamais été utilisé), le dénominateur
-  // fieldGoalsMade + misses vaut toujours fieldGoalsMade, donc chaque marqueur afficherait
-  // à tort 100 %. On n'affiche le pourcentage que si notre club a suivi au moins un tir manqué.
+  // Before this branch the MISS event did not exist: on those games (and on any new
+  // game where "Missed" was never used), the denominator fieldGoalsMade + misses is
+  // always fieldGoalsMade, so every scorer would wrongly show 100%. We only show the
+  // percentage if our club tracked at least one missed shot.
   const tracksMisses = match.events.some((e) => e.type === 'MISS' && e.team === 'A')
   return (
     <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: bd, ...(onPick ? { boxShadow: `0 0 0 1px ${C.accentBd}` } : {}) }}>

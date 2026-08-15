@@ -538,6 +538,10 @@ export const fr: Record<string, string> = {
   'equipe.modifierJoueur': 'modifier {name}',
   'equipe.retirerJoueur': 'Retirer {name}',
   'apercu.demarrerRencontre': '▶ Démarrer la rencontre',
+  'champ.scoreDe': 'Score {name}',
+  'equipe.coachSuffixe': 'Coach {name}',
+  'commun.joueurMot': 'Joueur',
+
   'sch.copieDe': '{name} (copie)',
 
   'apercu.reprendreRencontre': 'Reprendre la rencontre →',

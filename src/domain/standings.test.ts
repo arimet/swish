@@ -8,26 +8,26 @@ const TEAMS: Record<string, Team> = {
 }
 
 /** Une de nos rencontres, terminée, `pa` paniers à 2 pts pour nous et `pb` pour eux. */
-const notre = (id: string, opponentId: string, pa: number, pb: number, date = '2026-01-10', champ = 'Poule A'): Match => {
+const notre = (id: string, opponentId: string, pa: number, pb: number, date = '2026-01-10', league = 'Poule A'): Match => {
   const evts: Partial<GameEvent>[] = [
     { type: 'CLOCK_START' },
     ...Array.from({ length: pa }, () => ({ type: 'SCORE' as const, team: 'A' as const, playerId: 'p1', kind: '2int' as const })),
     ...Array.from({ length: pb }, () => ({ type: 'SCORE' as const, team: 'B' as const, kind: '2int' as const })),
   ]
   return {
-    id, meta: { championshipLabel: champ, date, clubId: 'a', opponentId },
+    id, meta: { championshipLabel: league, date, clubId: 'a', opponentId },
     roster: ['p1'], status: 'finished',
     events: evts.map((e, i) => ({ id: `${id}-${i}`, wallClock: i, period: 1, gameClock: 600, ...e } as GameEvent)),
   }
 }
 
-const saisi = (id: string, homeId: string, awayId: string, hs: number, as_: number, date = '2026-01-10', champ = 'Poule A'): ReportedResult =>
-  ({ id, championshipLabel: champ, date, homeId, awayId, homeScore: hs, awayScore: as_ })
+const saisi = (id: string, homeId: string, awayId: string, hs: number, as_: number, date = '2026-01-10', league = 'Poule A'): ReportedResult =>
+  ({ id, championshipLabel: league, date, homeId, awayId, homeScore: hs, awayScore: as_ })
 
 describe('standings', () => {
   it('applique le barème : victoire 2 points, défaite 1 point', () => {
     const [table] = standings([notre('m1', 'b', 10, 5)], [], TEAMS)
-    expect(table.champ).toBe('Poule A')
+    expect(table.league).toBe('Poule A')
     expect(table.lines.map((l) => [l.id, l.v, l.d, l.pts])).toEqual([['a', 1, 0, 2], ['b', 0, 1, 1]])
   })
 
@@ -53,7 +53,7 @@ describe('standings', () => {
 
   it('sépare les championnats', () => {
     const tables = standings([notre('m1', 'b', 10, 5)], [saisi('r1', 'c', 'd', 70, 60, '2026-01-10', 'Coupe')], TEAMS)
-    expect(tables.map((t) => t.champ).sort()).toEqual(['Coupe', 'Poule A'])
+    expect(tables.map((t) => t.league).sort()).toEqual(['Coupe', 'Poule A'])
   })
 
   it('départage à égalité de points par la différence', () => {
