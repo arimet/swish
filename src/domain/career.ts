@@ -9,7 +9,7 @@ export interface CareerTotals {
   threes: number; twoInside: number; twoOutside: number; freeThrows: number
   assists: number; offRebounds: number; defRebounds: number; blocks: number
   fouls: number
-  /** Temps de jeu cumulé, en secondes. */
+  /** Cumulative playing time, in seconds. */
   seconds: number
 }
 
@@ -19,18 +19,18 @@ const ZERO: CareerTotals = {
   assists: 0, offRebounds: 0, defRebounds: 0, blocks: 0, fouls: 0, seconds: 0,
 }
 
-/** Un joueur a paru dans la rencontre s'il a du temps de jeu, ou au moins une action
- *  enregistrée. La seconde condition est nécessaire : sans elle, un panier saisi pour
- *  un joueur dont on aurait oublié de pointer l'entrée ferait disparaître sa rencontre. */
-function aJoue(s: ReturnType<typeof playerStats>[number], seconds: number): boolean {
+/** A player appeared in the game if he has playing time, or at least one recorded
+ *  action. The second condition is necessary: without it, a basket entered for a player
+ *  whose entry onto the court was never logged would make his game vanish. */
+function played(s: ReturnType<typeof playerStats>[number], seconds: number): boolean {
   return seconds > 0 || s.points > 0 || s.fouls > 0 || s.assists > 0
     || s.offRebounds > 0 || s.defRebounds > 0 || s.blocks > 0 || s.misses > 0
 }
 
 /**
- * Cumuls d'un joueur sur les rencontres où il a réellement paru et qui ont commencé.
- * Être convoqué n'est pas avoir joué : un joueur resté sur le banc n'a pas disputé
- * la rencontre, et la compter fausserait toutes ses moyennes par match.
+ * A player's totals over the games he actually appeared in and that started. Being
+ * called up is not playing: a player who stayed on the bench did not contest the game,
+ * and counting it would distort every per-game average.
  */
 export function playerCareer(matches: Match[], playerId: string): CareerTotals {
   const t: CareerTotals = { ...ZERO }
@@ -39,7 +39,7 @@ export function playerCareer(matches: Match[], playerId: string): CareerTotals {
     const s = playerStats(m).find((x) => x.playerId === playerId)
     if (!s) continue
     const seconds = playingTimes(m).get(playerId) ?? 0
-    if (!aJoue(s, seconds)) continue
+    if (!played(s, seconds)) continue
     t.games++
     t.points += s.points
     t.fieldGoalsMade += s.fieldGoalsMade; t.misses += s.misses
@@ -53,8 +53,8 @@ export function playerCareer(matches: Match[], playerId: string): CareerTotals {
 }
 
 /**
- * Âge révolu à la date donnée. La date de référence est un paramètre plutôt que
- * l'horloge du moment : sans cela, tout test dépendrait du jour où il tourne.
+ * Completed age at the given date. The reference date is a parameter rather than the
+ * current clock: without that, every test would depend on the day it runs.
  */
 export function ageAt(birthDate: string, at: Date): number {
   const b = new Date(`${birthDate}T00:00:00`)

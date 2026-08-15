@@ -9,7 +9,7 @@
  *
  * Les trois sorties fichier partent du même geste : le tableau rendu en SVG,
  * rasterisé dans un canvas sur fond opaque. Aucune dépendance — le PDF et le
- * GIF sont écrits octet à octet plus bas, ce qui coûte deux cents lignes contre
+ * GIF sont écrits octet à octet plus bas, ce qui coûte deux cents lines contre
  * plusieurs centaines de kilooctets de bibliothèque.
  *
  * Partager et exporter sont **libres** : rien n'est modifié, aucun code n'est
@@ -17,7 +17,7 @@
  */
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { instantane, transitions } from '../../domain/anim'
+import { snapshot, transitions } from '../../domain/anim'
 import { LIMITE_LIEN, encoder } from '../../domain/partage'
 import type { Play, Step } from '../../domain/plays'
 import { C, bd } from '../olive/kit'
@@ -319,7 +319,7 @@ async function fabriquerGif(schema: Play, avance?: (fait: number, total: number)
   octets.push(0x21, 0xff, 0x0b, ...octetsDe('NETSCAPE2.0'), 0x03, 0x01, 0xff, 0xff, 0x00)
 
   for (let i = 0; i < liste.length; i++) {
-    const canvas = await rasteriser(await svgAutonome(schema, instantane(schema, liste[i]), l, hi), l, hi)
+    const canvas = await rasteriser(await svgAutonome(schema, snapshot(schema, liste[i]), l, hi), l, hi)
     const rgba = canvas.getContext('2d')!.getImageData(0, 0, l, hi).data
     const indices = new Uint8Array(l * hi)
     for (let p = 0; p < indices.length; p++) {

@@ -34,7 +34,7 @@ export function matchRatios(match: Match): MatchRatios {
     maxLeadB = Math.max(maxLeadB, -lead)
     if (i > 0 && a === b) ties++ // égalité après un panier (0-0 initial exclu)
 
-    // série max : points consécutifs par une équipe
+    // longest run: consecutive points by one team
     if (i > 0) {
       const dA = a - prog[i - 1].a
       const dB = b - prog[i - 1].b
@@ -43,7 +43,7 @@ export function matchRatios(match: Match): MatchRatios {
       maxRunA = Math.max(maxRunA, runA)
       maxRunB = Math.max(maxRunB, runB)
 
-      // durée de l'avantage : segment [t_{i-1}, t_i) attribué à l'équipe en tête avant ce panier
+      // time in front: segment [t_{i-1}, t_i) credited to the team leading before this basket
       const dt = t - prog[i - 1].t
       if (prevLead > 0) leadDurA += dt
       else if (prevLead < 0) leadDurB += dt

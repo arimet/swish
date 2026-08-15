@@ -9,7 +9,7 @@ export interface PlayerStat {
   twoOutside: number
   freeThrows: number
   fouls: number
-  /** Tirs de champ manqués. Les lancers francs n'ont pas de position et n'entrent pas ici. */
+  /** Missed field goals. Free throws have no position and do not count here. */
   misses: number
   assists: number
   offRebounds: number
@@ -26,7 +26,7 @@ export function pointsForKind(kind: ScoreKind): number {
   }
 }
 
-/** Statistiques de notre effectif (côté A). L'adversaire n'a pas de joueurs saisis. */
+/** Our roster's stats (side A). No players are entered for the opponent. */
 export function playerStats(match: Match): PlayerStat[] {
   const roster = match.roster
   const stats = new Map<string, PlayerStat>()

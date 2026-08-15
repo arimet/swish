@@ -53,7 +53,7 @@ const addStat = (acc: StatTotals, s: PlayerStat) => {
   acc.blocks += s.blocks
 }
 
-/** Totaux de notre effectif (côté A). Le score adverse se lit via `liveState`. */
+/** Our roster's totals (side A). The opponent's score is read through `liveState`. */
 export function teamTotals(match: Match): TeamTotals {
   const stats = playerStats(match)
   const team = empty()

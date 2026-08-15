@@ -11,20 +11,18 @@ export function elapsedGlobal(period: Period, gameClock: number): number {
   for (let p = 1; p < period; p++) before += periodLength(p)
   return before + (periodLength(period) - gameClock)
 }
-/** Chrono restant à reprendre pour la période courante : celui du dernier évènement
- *  de cette période dans le journal, ou la durée pleine si la période vient de commencer. */
+/** The clock to resume for the current period: the one on the last event of that
+ *  period in the log, or the full length if the period has just started. */
 export function seedSeconds(match: Match, period: Period): number {
   for (let i = match.events.length - 1; i >= 0; i--)
     if (match.events[i].period === period) return match.events[i].gameClock
   return periodLength(period)
 }
-/** Libellé de championnat avec repli quand la rencontre n'en a pas. */
-/** Le libellé du championnat quand la rencontre n'en porte aucun.
+/** The league label used when a game carries none.
  *
- * C'est une **valeur de données**, pas un libellé d'écran : elle sert de clef de
- * regroupement au ménage, au classement et aux confrontations, et elle finit stockée
- * dans les résultats saisis à la main. La traduire ici scinderait un même championnat
- * en deux selon la langue de qui l'a saisi. L'affichage la remplace au dernier moment,
- * par `useChampLabel` (voir `ui/olive/kit`). */
+ * This is a **data value**, not a screen label: it is the grouping key for cleanup,
+ * standings and head-to-heads, and it ends up stored in hand-entered results.
+ * Translating it here would split one league in two depending on who entered it.
+ * Display swaps it at the last moment, through `useLeagueLabel` (see `ui/olive/kit`). */
 export const FRIENDLY = 'Match amical'
 export const leagueLabel = (meta: MatchMeta) => meta.championshipLabel?.trim() || FRIENDLY

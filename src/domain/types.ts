@@ -1,6 +1,6 @@
 export type TeamSide = 'A' | 'B'
 export type ScoreKind = '2int' | '2ext' | '3' | 'lf'
-/** Statistiques secondaires attribuées à un joueur. */
+/** Secondary stats credited to a player. */
 export type StatKind = 'assist' | 'reb_off' | 'reb_def' | 'block'
 export type FoulType = 'personal' | 'technical' | 'unsportsmanlike' | 'disqualifying'
 export type FoulTarget =
@@ -13,18 +13,18 @@ export interface Team { id: string; name: string; coach?: string }
 export interface Player {
   id: string; teamId: string; number: number
   lastName: string; firstName: string; license?: string
-  /** Date de naissance au format ISO `AAAA-MM-JJ`. L'âge s'en déduit à l'affichage,
-   *  il n'est jamais stocké : un âge en dur devient faux au premier anniversaire. */
+  /** Birth date in ISO `YYYY-MM-DD`. Age is derived at display time and never
+   *  stored: a hard-coded age goes wrong on the first birthday. */
   birthDate?: string
-  /** Taille en centimètres. */
+  /** Height in centimetres. */
   height?: number
 }
 
 interface EventBase { id: string; wallClock: number; period: Period; gameClock: number }
 
-/** Position d'un tir, normalisée dans le demi-terrain :
- *  x 0..1 de la touche gauche à la touche droite,
- *  y 0..1 de la ligne de fond à la ligne médiane. */
+/** A shot's position, normalised within the half court:
+ *  x 0..1 from the left sideline to the right,
+ *  y 0..1 from the baseline to the half-way line. */
 export interface ShotSpot { x: number; y: number }
 
 export type GameEvent =
@@ -33,8 +33,8 @@ export type GameEvent =
   | (EventBase & { type: 'PERIOD_END' })
   | (EventBase & { type: 'CLOCK_START' })
   | (EventBase & { type: 'CLOCK_STOP' })
-  // playerId absent = panier d'équipe sans joueur identifié (score adverse en mode solo).
-  // shot absent = tir saisi sans position (lancer franc, ou match antérieur à la carte de tir).
+  // No playerId = a team basket with no identified player (the opponent's score).
+  // No shot = a shot entered without a position (free throw, or a game predating the shot chart).
   | (EventBase & { type: 'SCORE'; team: TeamSide; playerId?: string; kind: ScoreKind; shot?: ShotSpot })
   | (EventBase & { type: 'MISS'; team: TeamSide; playerId: string; kind: ScoreKind; shot: ShotSpot })
   | (EventBase & { type: 'FOUL'; team: TeamSide; target: FoulTarget; foulType: FoulType })
@@ -47,9 +47,9 @@ export interface MatchMeta {
   date?: string; time?: string; venue?: string; pool?: string
   referee1?: string; referee2?: string; referee3?: string
   coachA?: string
-  /** Notre club. L'application ne détaille jamais qu'une équipe. */
+  /** Our club. The app only ever details one team. */
   clubId: string
-  /** L'adversaire : une fiche équipe sans effectif, dont on ne saisit que le score. */
+  /** The opponent: a team record with no roster, for which only the score is entered. */
   opponentId: string
 }
 export interface Match {
@@ -60,28 +60,27 @@ export interface Match {
   events: GameEvent[]
   status: 'setup' | 'live' | 'finished'
   /**
-   * Les ratures : identifiants d'évènements retirés du journal.
+   * Retractions: ids of events taken out of the log.
    *
-   * Une feuille de match se fusionne entre appareils par **union** des
-   * évènements, chacun portant un identifiant stable. Une union seule ne saurait
-   * pas distinguer « cet évènement n'est jamais arrivé chez l'autre » de « l'autre
-   * l'a annulé » : le panier annulé par le coach reviendrait dès que le marqueur,
-   * qui l'a encore, repousse sa copie.
+   * A match sheet merges across devices by **union** of its events, each carrying a
+   * stable id. A union alone cannot tell "this event never reached the other device"
+   * from "the other device undid it": the basket the coach cancelled would come back
+   * as soon as the scorer, who still has it, pushes their copy.
    *
-   * L'évènement sort donc du journal — les écrans et les statistiques ne changent
-   * pas d'un iota — mais son identifiant reste ici. Un journal note ses ratures.
+   * The event therefore leaves the log — screens and statistics do not change one
+   * bit — but its id stays here. A log records its own crossings-out.
    *
-   * Optionnel, et pas seulement par prudence : Dexie range des objets entiers et
-   * n'indexe pas ce champ, donc aucune version de base locale à ajouter.
+   * Optional, and not merely out of caution: Dexie stores whole objects and does not
+   * index this field, so there is no local database version to add.
    */
   retracted?: string[]
 }
 
 /**
- * Résultat d'une rencontre entre deux autres équipes, relevé à la main sur le site
- * de la fédération. Ce n'est **pas** une `Match` : on n'en connaît ni l'effectif, ni
- * le déroulé, rien d'autre que le score final. Le forcer dans le moule d'une rencontre
- * obligerait à fabriquer des évènements de panier qui n'ont jamais été observés.
+ * The result of a game between two other teams, copied by hand from the federation's
+ * site. This is **not** a `Match`: we know neither its roster nor how it unfolded,
+ * nothing beyond the final score. Forcing it into a game's shape would mean inventing
+ * basket events nobody ever observed.
  */
 export interface ReportedResult {
   id: string
@@ -94,48 +93,47 @@ export interface ReportedResult {
   awayScore: number
 }
 
-/** Qui est convoqué pour une rencontre, et où l'on se retrouve.
- *  Une seule par rencontre : `matchId` est la clé. */
+/** Who is called up for a game, and where everyone meets.
+ *  One per game: `matchId` is the key. */
 export interface Convocation {
   matchId: string
-  /** Joueurs convoqués, sous-ensemble de l'effectif du club. */
+  /** Called-up players, a subset of the club's roster. */
   playerIds: string[]
-  /** Rendez-vous, souvent différent de l'heure et du lieu du match. */
+  /** Meeting point, often different from the game's own time and venue. */
   meetTime?: string
   meetPlace?: string
-  /** Consignes libres : tenue, covoiturage. */
+  /** Free-form notes: kit, car sharing. */
   note?: string
 }
 
 /**
- * Le message du coach à son équipe : un texte court que tout le monde lit en
- * ouvrant l'application. Ce n'est pas une messagerie — ni fil, ni réponses, ni
- * destinataires : **un seul message à la fois par club**, et en écrire un
- * nouveau remplace le précédent. La clé est donc le club, pas le message.
+ * The coach's message to the team: a short text everyone reads when opening the app.
+ * This is not a messaging system — no thread, no replies, no recipients: **one message
+ * at a time per club**, and writing a new one replaces the previous. The key is
+ * therefore the club, not the message.
  */
 export interface TeamMessage {
   clubId: string
-  /** Le texte, tel qu'il a été écrit. Vide = pas de message (rien à afficher). */
+  /** The text as written. Empty = no message (nothing to show). */
   text: string
-  /** Date ISO complète de l'écriture : l'âge s'affiche en relatif (`depuis`),
-   *  car « il y a deux jours » ne pèse pas comme « il y a trois semaines ». */
+  /** Full ISO date of writing: the age is shown relative (`since`), because "two days
+   *  ago" does not weigh the same as "three weeks ago". */
   writtenAt: string
 }
 
-/** Séance d'entraînement. Existe seule, sans rencontre associée. */
+/** A training session. Stands alone, with no game attached. */
 export interface Training {
   id: string
-  /** Club auquel appartient la séance : obligatoire, car changer de club (le hub
-   *  en gère plusieurs) doit filtrer les entraînements comme les rencontres. Un
-   *  entraînement sans club se mêlerait au calendrier de n'importe quel autre. */
+  /** The club the session belongs to: mandatory, because switching club (the hub
+   *  handles several) must filter trainings the way it filters games. A training with
+   *  no club would blend into any other club's calendar. */
   clubId: string
   date: string        // ISO AAAA-MM-JJ
   time?: string
   place?: string
-  /** Thème de la séance : « défense sur écran », « tirs extérieurs »… */
+  /** The session's theme: "defending screens", "outside shooting"… */
   theme?: string
-  /** Les schémas travaillés à cette séance. Sous-ensemble de la bibliothèque : un
-   *  schéma supprimé depuis en est retiré par `deletePlay`, et la lecture filtre
-   *  quand même sur ce qui existe. */
+  /** The plays worked on in this session. A subset of the library: a play deleted
+   *  since is removed by `deletePlay`, and reads still filter on what exists. */
   playIds?: string[]
 }

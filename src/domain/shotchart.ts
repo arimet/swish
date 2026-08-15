@@ -5,10 +5,9 @@ export interface Shot { matchId: string; spot: ShotSpot; zone: ShotZone; made: b
 export interface ZoneTally { made: number; attempts: number }
 
 /**
- * Tirs positionnés d'un joueur. Un seul match en entrée donne la hot zone du
- * match, tous ses matchs donnent celle de sa carrière : même fonction.
- * Les lancers francs et les paniers saisis sans position sont exclus — ils
- * n'ont pas de coordonnée et fausseraient les pourcentages par zone.
+ * A player's located shots. One game in gives that game's hot zone, all his games give
+ * his career's: the same function. Free throws and baskets entered without a position
+ * are excluded — they have no coordinate and would distort the per-zone percentages.
  */
 export function shotsOf(matches: Match[], playerId: string): Shot[] {
   const out: Shot[] = []
@@ -31,8 +30,8 @@ export function zoneSummary(shots: Shot[]): Record<ShotZone, ZoneTally> {
   return acc
 }
 
-/** Réussite en pourcentage entier. `null` quand il n'y a aucun tir : afficher
- *  « 0 % » à un joueur qui n'a pas tiré serait faux. */
+/** Accuracy as a whole percentage. `null` when there are no shots: showing "0 %" to a
+ *  player who never shot would be wrong. */
 export function shootingPct(shots: Shot[]): { fg: number | null; three: number | null } {
   const pct = (s: Shot[]) => (s.length ? Math.round((s.filter((x) => x.made).length / s.length) * 100) : null)
   return { fg: pct(shots), three: pct(shots.filter((s) => isThree(s.zone))) }

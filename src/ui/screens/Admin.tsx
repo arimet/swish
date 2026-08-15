@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { years, hasEvents, leagues, clubsDesRencontres, ofYear, ofLeague } from '../../domain/menage'
+import { years, hasEvents, leagues, clubsOfGames, ofYear, ofLeague } from '../../domain/menage'
 import type { Match, ReportedResult, Training } from '../../domain/types'
 import type { Play } from '../../domain/plays'
 import {
@@ -123,7 +123,7 @@ export function Admin() {
         </Bloc>
 
         <Bloc titre={translate('admin.statsEquipe')} aide={translate('admin.aideStats')}>
-          {clubsDesRencontres(matches).map((id) => {
+          {clubsOfGames(matches).map((id) => {
             const n = matches.filter(hasEvents(id)).length
             return (
               <Row key={id} libelle={teamName(id)} count={translate('admin.aVider', { count: translate('compte.feuille', { count: n }) })} action={translate('admin.vider')}

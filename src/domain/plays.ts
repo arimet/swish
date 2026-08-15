@@ -1,9 +1,9 @@
 /**
- * Le domaine du tableau tactique : un schéma est une suite de temps, chaque
- * temps porte les positions complètes des pions, le ballon et ses flèches.
- * Coordonnées normalisées 0..1 dans le terrain choisi : sur `demi`, y va de la
- * ligne de fond (0) à la ligne médiane (1) ; sur `complet`, la médiane est à
- * 0,5 et la moitié avant est y ≤ 0,5.
+ * The tactical board's domain: a play is a sequence of steps, and each step carries
+ * the complete positions of the markers, the ball and its arrows.
+ * Coordinates normalised 0..1 within the chosen court: on `half`, y runs from the
+ * baseline (0) to the half-way line (1); on `full`, half-way sits at 0.5 and the front
+ * court is y ≤ 0.5.
  */
 export type Court = 'half' | 'full'
 export type Side = 'offense' | 'defense'
@@ -14,8 +14,8 @@ export interface Point { x: number; y: number }
 
 export interface Marker { side: Side; position: Position; at: Point }
 
-/** Points échantillonnés du geste, lissés au rendu. Le dernier porte la pointe
- *  (ou la barre en T pour un écran). */
+/** Sampled points of the gesture, smoothed at render time. The last one carries the
+ *  arrowhead (or the T-bar for a screen). */
 export interface Arrow { from: { side: Side; position: Position }; points: Point[]; stroke: Stroke }
 
 export interface Step {
@@ -36,29 +36,28 @@ export interface Play {
   props: Prop[]                             // communs à tous les temps
   temps: Step[]                                  // au moins un
   /** Étiquette de rangement. Absent = « Sans dossier ». Un seul niveau : la liste
-   *  des dossiers se déduit des schémas, il n'y a ni table ni entité. */
+   *  of folders is derived from the plays; there is no table and no entity. */
   folder?: string
-  /** Date ISO du dernier enregistrement, écrite par la persistance. Sert à ranger
-   *  la bibliothèque du plus récent au plus ancien. Absente sur les schémas
-   *  enregistrés avant qu'on l'horodate. */
+  /** ISO date of the last save, written by the persistence layer. Orders the library
+   *  from most to least recent. Absent on plays saved before we timestamped them. */
   updatedAt?: string
 }
 
-/** Les dossiers déclarés par ces schémas : valeurs distinctes non vides, triées à
- *  la française (« Écran » avant « Remise »). Un dossier vidé de ses schémas
- *  disparaît de lui-même, puisque rien ne le stocke ailleurs. */
+/** The folders these plays declare: distinct non-empty values, sorted the French way
+ *  ("Écran" before "Remise"). A folder emptied of its plays disappears on its own,
+ *  since nothing stores it anywhere else. */
 export function folders(schemas: Play[]): string[] {
   const noms = new Set(schemas.map((s) => s.folder?.trim()).filter((d): d is string => !!d))
   return [...noms].sort((a, b) => a.localeCompare(b, 'fr'))
 }
 
-/** Position du panier, normalisée, par terrain (1,575 m de la ligne de fond). */
+/** The basket's normalised position, per court (1.575 m from the baseline). */
 export const BASKET: Record<Court, Point[]> = {
   half: [{ x: 0.5, y: 1.575 / 14 }],
   full: [{ x: 0.5, y: 1.575 / 28 }, { x: 0.5, y: 1 - 1.575 / 28 }],
 }
 
-// 1-2-2 sur demi-terrain : meneur en tête de raquette, deux ailiers, deux postes bas.
+// A 1-2-2 on the half court: point guard at the top of the key, two wings, two posts.
 const SETUP: Record<Position, Point> = {
   1: { x: 0.5, y: 0.62 }, 2: { x: 0.22, y: 0.48 }, 3: { x: 0.78, y: 0.48 },
   4: { x: 0.3, y: 0.2 }, 5: { x: 0.7, y: 0.2 },
@@ -67,10 +66,9 @@ const SETUP: Record<Position, Point> = {
 const POSITIONS: Position[] = [1, 2, 3, 4, 5]
 
 /**
- * Un schéma vierge : le 1-2-2 d'attaque, une défense en miroir si demandée
- * (chaque défenseur au milieu du segment attaquant-panier), le ballon au
- * meneur. Sur terrain complet, la mise en place occupe la moitié avant.
- * L'`id` est laissé à la persistance.
+ * A blank play: the 1-2-2 offense, a mirrored defense if asked for (each defender
+ * halfway along the attacker-to-basket segment), the ball with the point guard. On a
+ * full court the setup occupies the front half. The `id` is left to persistence.
  */
 export const DEFAULT_PLAY_NAME = 'sch.nouveauNom'
 
@@ -98,16 +96,16 @@ export function newPlay(clubId: string, court: Court, defense: boolean): Omit<Pl
 }
 
 /**
- * Le temps qui suit : mêmes positions, même ballon, flèches vides. Le coach
- * fait glisser les pions là où ses flèches les envoyaient — il ne replace pas
- * cinq pions à chaque temps.
+ * The following step: same positions, same ball, no arrows. The coach drags the
+ * markers where his arrows were sending them — he does not replace five markers at
+ * every step.
  */
 export function nextStep(t: Step): Step {
   return { markers: structuredClone(t.markers), ball: structuredClone(t.ball), arrows: [] }
 }
 
-/** Distance de `p` au segment [a, b], au point le plus proche. Exportée parce que
- *  la gomme de l'éditeur cherche la flèche sous le doigt avec la même mesure. */
+/** Distance from `p` to segment [a, b], at the nearest point. Exported because the
+ *  editor's eraser finds the arrow under the finger with the same measure. */
 export function distanceToSegment(p: Point, a: Point, b: Point): number {
   const dx = b.x - a.x
   const dy = b.y - a.y
@@ -118,9 +116,9 @@ export function distanceToSegment(p: Point, a: Point, b: Point): number {
 }
 
 /**
- * Réduit un geste échantillonné à ses points saillants sans perdre la forme
- * (Ramer-Douglas-Peucker) : un tracé en L garde son coude. Le seuil est en
- * unités normalisées ; moins de trois points, le tracé est rendu tel quel.
+ * Reduces a sampled gesture to its salient points without losing its shape
+ * (Ramer-Douglas-Peucker): an L-shaped stroke keeps its corner. The threshold is in
+ * normalised units; below three points the stroke is returned as is.
  */
 export function simplifyPath(points: Point[], epsilon = 0.01): Point[] {
   if (points.length < 3) return points
@@ -139,7 +137,7 @@ export function simplifyPath(points: Point[], epsilon = 0.01): Point[] {
   ]
 }
 
-/** Copie du schéma sur le terrain donné, tous les y passés par `f`. */
+/** A copy of the play on the given court, with every y passed through `f`. */
 function remapY(s: Play, court: Court, f: (y: number) => number): Play {
   const pt = (p: Point): Point => ({ x: p.x, y: f(p.y) })
   return {
@@ -154,8 +152,8 @@ function remapY(s: Play, court: Court, f: (y: number) => number): Play {
   }
 }
 
-/** Ce qui occupe la moitié arrière (y > 0,5), désigné par une clef de traduction et
- *  le numéro de poste s'il y en a un. Le domaine nomme, l'interface rédige. */
+/** What occupies the back court (y > 0.5), named by a translation key and the position
+ *  number when there is one. The domain names, the interface writes. */
 export interface Occupant { cle: string; n?: number }
 
 function backcourtOccupant(s: Play): Occupant | null {
@@ -170,10 +168,9 @@ function backcourtOccupant(s: Play): Occupant | null {
 }
 
 /**
- * Change le terrain d'un schéma. demi → complet remappe dans la moitié avant,
- * sans perte ; complet → demi est refusé tant qu'un pion, une flèche, un objet
- * ou le ballon posé occupe la moitié arrière — remapper en silence perdrait la
- * moitié du dessin.
+ * Changes a play's court. half → full remaps into the front court, losing nothing;
+ * full → half is refused while a marker, an arrow, a prop or the loose ball occupies
+ * the back court — remapping in silence would lose half the drawing.
  */
 export function toCourt(s: Play, court: Court): { ok: Play } | { refus: Occupant } {
   if (s.court === court) return { ok: s }

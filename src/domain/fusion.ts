@@ -1,43 +1,44 @@
-/* L'extension `.js` détonne dans `src`, où le reste du domaine importe sans elle.
-   Elle est nécessaire : ce fichier est le seul de `src` qu'`api/mutate` importe, il
-   appartient donc aussi au projet `tsconfig.api`, dont la résolution `nodenext`
-   l'exige. La résolution du navigateur l'accepte, l'inverse n'est pas vrai. */
+/* The `.js` extension looks out of place in `src`, where the rest of the domain
+   imports without it. It is required: this is the only file in `src` that
+   `api/mutate` imports, so it also belongs to the `tsconfig.api` project, whose
+   `nodenext` resolution demands it. Browser resolution accepts it; the reverse is
+   not true. */
 import type { GameEvent, Match } from './types.js'
 
 /**
- * Fusionne deux versions d'une feuille de match.
+ * Merges two versions of a match sheet.
  *
- * Le cas : le coach corrige une faute depuis le banc pendant que le marqueur
- * saisit un panier. Deux appareils écrivent la même rencontre, et le dernier à
- * pousser ne doit pas effacer l'autre. C'est le seul document du produit où
- * « la modification la plus récente gagne » ne suffit pas, parce que le perdant
- * n'a pas tort — il a simplement noté autre chose.
+ * The case: the coach corrects a foul from the bench while the scorer records a
+ * basket. Two devices write the same game, and the last one to push must not
+ * erase the other. This is the one document in the product where "most recent
+ * change wins" is not enough, because the loser is not wrong — it simply recorded
+ * something else.
  *
- * Ce n'est possible sans rien inventer que parce que le domaine s'y prêtait
- * déjà : chaque évènement porte un identifiant stable et une heure murale.
+ * None of this had to be invented, because the domain already allowed for it:
+ * every event carries a stable id and a wall clock.
  *
- * Appelée **côté serveur**, dans `api/mutate`. Elle est pure et vit ici, avec le
- * reste du domaine, pour qu'on puisse la tester sans base ni réseau.
+ * Called **server-side**, from `api/mutate`. It is pure and lives here with the
+ * rest of the domain so it can be tested without a database or a network.
  */
 export function mergeMatches(stored: Match, incoming: Match): Match {
-  // Les ratures des deux côtés : une annulation faite sur un appareil vaut pour
-  // l'autre, sinon l'union ressusciterait ce qu'il vient de retirer.
+  // Retractions from both sides: an undo made on one device holds for the other,
+  // otherwise the union would resurrect what that device just removed.
   const retracted = [...new Set([...(stored.retracted ?? []), ...(incoming.retracted ?? [])])]
   const struck = new Set(retracted)
 
   const byId = new Map<string, GameEvent>()
   for (const e of [...stored.events, ...incoming.events]) if (!struck.has(e.id)) byId.set(e.id, e)
 
-  // Le départage se fait sur l'identifiant et non sur l'ordre d'arrivée : les deux
-  // appareils doivent aboutir au même journal, quel que soit l'ordre où le serveur
-  // les reçoit. Sans ça, la fusion ne serait pas commutative et deux miroirs
-  // divergeraient en affichant chacun un journal « correct ».
+  // Ties break on the id, never on arrival order: both devices must end up with
+  // the same log whatever order the server receives them in. Without that, the
+  // merge would not be commutative and two mirrors would diverge, each showing a
+  // "correct" log.
   const events = [...byId.values()].sort((a, b) => a.wallClock - b.wallClock || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
 
   return {
-    // `meta` et `roster` ne s'ajoutent pas, ils se remplacent : c'est l'écriture
-    // la plus récente qui les porte, et `api/mutate` n'appelle cette fonction que
-    // pour une écriture qui a déjà gagné l'arbitrage sur `modified_at`.
+    // `meta` and `roster` do not accumulate, they replace: the most recent write
+    // carries them, and `api/mutate` only calls this function for a write that has
+    // already won arbitration on `modified_at`.
     ...incoming,
     events,
     ...(retracted.length ? { retracted } : {}),
@@ -48,12 +49,12 @@ export function mergeMatches(stored: Match, incoming: Match): Match {
 const RANK = { setup: 0, live: 1, finished: 2 } as const
 
 /**
- * Le statut ne recule jamais.
+ * Status never moves backwards.
  *
- * Un appareil resté hors ligne une heure vide sa file avec un `status: 'live'`
- * périmé : il ne doit pas dé-terminer une rencontre close entre-temps. C'est le
- * seul champ où un écrasement retardataire serait à la fois visible et faux —
- * une feuille de match rouverte donne à croire qu'on peut encore la corriger.
+ * A device that spent an hour offline empties its queue carrying a stale
+ * `status: 'live'`: it must not un-finish a game closed in the meantime. This is
+ * the one field where a late overwrite would be both visible and wrong — a
+ * reopened match sheet suggests you can still correct it.
  */
 export function furthest(a: Match['status'], b: Match['status']): Match['status'] {
   return RANK[a] >= RANK[b] ? a : b

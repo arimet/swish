@@ -8,16 +8,16 @@ export interface StandingLine {
   pf: number; pa: number; pts: number
 }
 
-/** Clé d'une confrontation, insensible au sens domicile/extérieur : deux saisies du
- *  même match dans l'ordre inverse doivent se reconnaître. Exportée pour que l'écran
- *  de saisie (Championnat.tsx) détecte les doublons avec la même définition — une
- *  clé dupliquée ailleurs divergerait un jour en silence. */
+/** A head-to-head key, blind to home/away order: two entries of the same game the
+ *  other way round must recognise each other. Exported so the entry screen
+ *  (Championnat.tsx) detects duplicates with the same definition — a key duplicated
+ *  elsewhere would drift apart one day, in silence. */
 export const fixtureKey = (champ: string, x: string, y: string, date?: string) =>
   `${champ}|${[x, y].sort().join('~')}|${date ?? ''}`
 
 /**
- * Classement FFBB simplifié : victoire = 2 pts, défaite = 1 pt.
- * Combine nos rencontres terminées et les résultats saisis à la main.
+ * Simplified FFBB standings: a win is 2 points, a loss 1.
+ * Combines our finished games with hand-entered results.
  */
 export function standings(
   matches: Match[], results: ReportedResult[], teams: Record<string, Team>,
@@ -45,8 +45,8 @@ export function standings(
     count(champ, m.meta.clubId, m.meta.opponentId, score.a, score.b)
   }
   for (const r of results) {
-    // Une de nos rencontres fait foi : elle est saisie action par action, le résultat
-    // recopié ne l'est pas. Sans ce garde, une saisie par distraction compterait deux fois.
+    // One of our own games is authoritative: it is entered action by action, a copied
+    // result is not. Without this guard, an absent-minded entry would count twice.
     if (nôtres.has(fixtureKey(r.championshipLabel, r.homeId, r.awayId, r.date))) continue
     count(r.championshipLabel, r.homeId, r.awayId, r.homeScore, r.awayScore)
   }

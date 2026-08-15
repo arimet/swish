@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { years, hasEvents, leagues, clubsDesRencontres, ofYear, ofLeague } from './menage'
+import { years, hasEvents, leagues, clubsOfGames, ofYear, ofLeague } from './menage'
 import type { GameEvent, Match } from './types'
 
 const ev: GameEvent = { id: 'e1', type: 'PERIOD_START', wallClock: 0, period: 1, gameClock: 600 }
@@ -34,7 +34,7 @@ describe('ménage — périmètres déduits des rencontres', () => {
   })
 
   it('ne propose au vidage que les clubs qui ont des rencontres, jamais l’adversaire', () => {
-    expect(clubsDesRencontres([m('m1', 'A', '2026-01-10', 'ta'), m('m2', 'A', '2026-01-17', 'ta')])).toEqual(['ta'])
+    expect(clubsOfGames([m('m1', 'A', '2026-01-10', 'ta'), m('m2', 'A', '2026-01-17', 'ta')])).toEqual(['ta'])
   })
 
   it('ne compte comme feuille à vider qu’une rencontre du club qui porte des évènements', () => {
