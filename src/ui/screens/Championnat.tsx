@@ -53,8 +53,20 @@ function LigneEquipe({ id, nom, score, gagne, champId, modifiable, onScore }: {
 export function Championnat() {
   const { clubId, teams } = useClub()
   const { can, guard } = useAuth()
-  const [matches, setMatches] = useState<Match[]>([])
-  const [results, setResults] = useState<ReportedResult[]>([])
+  /* `null` tant que la lecture n'a pas répondu, et non `[]`.
+   *
+   * Avec un tableau vide comme valeur initiale, l'écran ne distingue pas « je n'ai
+   * pas encore lu » de « il n'y a rien » : il affichait donc « Aucun classement à
+   * afficher » pendant une image avant de le remplacer par la table. Quinze
+   * millisecondes sur cette machine — mais cette durée est celle de la lecture
+   * IndexedDB, donc elle suit la lenteur de l'appareil, et le téléphone d'un club
+   * n'est pas une machine de développement.
+   *
+   * La convention existait déjà dans le dépôt (`MatchSetup`, `TeamsList`,
+   * `SchemaList`, `Calendrier`, et `Dashboard` pour ses rencontres) ; elle manquait
+   * ici. */
+  const [matches, setMatches] = useState<Match[] | null>(null)
+  const [results, setResults] = useState<ReportedResult[] | null>(null)
   const [erreur, setErreur] = useState('')
 
   const teamsById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams])
@@ -65,7 +77,7 @@ export function Championnat() {
    *  ligne, où il était constant dans le cas courant : une seule poule. */
   const resultatsParChampionnat = useMemo(() => {
     const map = new Map<string, ReportedResult[]>()
-    for (const r of results) {
+    for (const r of results ?? []) {
       const clef = r.championshipLabel || 'Sans championnat'
       if (!map.has(clef)) map.set(clef, [])
       map.get(clef)!.push(r)
@@ -78,15 +90,15 @@ export function Championnat() {
   // déjà saisi plutôt que de partir vide — sinon la saisie ouvrirait sous « Match
   // amical » une seconde table de classement à côté de celle déjà là.
   const notreChamp = useMemo(() => {
-    const m = matches.find((mm) => mm.meta.clubId === clubId)
+    const m = (matches ?? []).find((mm) => mm.meta.clubId === clubId)
     if (m) return champLabel(m.meta)
-    return results[0]?.championshipLabel ?? ''
+    return (results ?? [])[0]?.championshipLabel ?? ''
   }, [matches, clubId, results])
 
   const rafraichir = () => Promise.all([listMatches(), listResults()]).then(([m, r]) => { setMatches(m); setResults(r) })
   useEffect(() => { rafraichir() }, [])
 
-  const groups = useMemo(() => standings(matches, results, teamsById), [matches, results, teamsById])
+  const groups = useMemo(() => standings(matches ?? [], results ?? [], teamsById), [matches, results, teamsById])
 
   // Un formulaire de saisie apparaît sur un clic, jamais d'emblée : le classement
   // est ce qu'on vient lire, la saisie d'un résultat extérieur est l'exception.
@@ -124,7 +136,7 @@ export function Championnat() {
   const dejaNotreRencontre = useMemo(() => {
     if (!homeId || !awayId || homeId === awayId) return false
     const clé = clefConfrontation(champ.trim() || 'Match amical', homeId, awayId, date || undefined)
-    return matches.some((m) => m.status === 'finished' && clefConfrontation(champLabel(m.meta), m.meta.clubId, m.meta.opponentId, m.meta.date) === clé)
+    return (matches ?? []).some((m) => m.status === 'finished' && clefConfrontation(champLabel(m.meta), m.meta.clubId, m.meta.opponentId, m.meta.date) === clé)
   }, [matches, champ, homeId, awayId, date])
 
   const scoresValides = homeScore !== '' && awayScore !== '' && Number(homeScore) >= 0 && Number(awayScore) >= 0
@@ -144,7 +156,7 @@ export function Championnat() {
     const clé = clefConfrontation(champLbl, homeId, awayId, date)
     // Deux saisies de la même confrontation — même dans l'ordre inverse — compteraient
     // deux fois au classement : rien côté domaine ne s'en protège, c'est ici qu'il faut l'empêcher.
-    if (results.some((r) => clefConfrontation(r.championshipLabel, r.homeId, r.awayId, r.date) === clé)) {
+    if ((results ?? []).some((r) => clefConfrontation(r.championshipLabel, r.homeId, r.awayId, r.date) === clé)) {
       setErreur('Ce résultat est déjà saisi pour cette confrontation.')
       return
     }
@@ -175,12 +187,14 @@ export function Championnat() {
     <div className="p-6">
       {/* 1. Le classement d'abord : c'est ce qu'on ouvre l'écran pour voir. */}
       <div className="space-y-6">
-        {results.length === 0 && (
+        {results?.length === 0 && (
           <p className="max-w-[75ch] rounded-2xl border border-dashed px-4 py-3 text-sm" style={{ borderColor: C.border, color: C.muted }}>
             Aucun résultat saisi pour l’instant : le classement ne porte que sur nos propres rencontres et reste donc incomplet.
           </p>
         )}
-        {groups.length === 0 ? (
+        {matches === null || results === null ? (
+          <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
+        ) : groups.length === 0 ? (
           <p className="rounded-2xl border border-dashed py-10 text-center text-sm" style={{ borderColor: C.border, color: C.muted }}>Aucun classement à afficher.</p>
         ) : groups.map(({ champ: c, lines }) => (
           <section key={c} className="overflow-x-auto rounded-2xl p-4" style={{ background: C.card, border: bd }}>
@@ -277,7 +291,9 @@ export function Championnat() {
           correction et la suppression restent à l'administration. */}
       <section className="mt-6 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <SectionTitle className="mb-3">Résultats saisis</SectionTitle>
-        {results.length === 0 ? (
+        {results === null ? (
+          <div className="h-16 animate-pulse rounded-xl" style={{ background: C.panel }} />
+        ) : results.length === 0 ? (
           <p className="py-4 text-center text-sm" style={{ color: C.muted }}>Rien à afficher ici pour l’instant.</p>
         ) : (
           /* Les résultats groupés par championnat, et le nom du championnat écrit

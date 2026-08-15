@@ -14,6 +14,36 @@ export function useMatch(matchId: string) {
 
   const apply = (next: Match) => { matchRef.current = next; setMatch(next) }
 
+  /**
+   * Applique l'état à l'écran, l'enregistre, et **revient en arrière** si
+   * l'enregistrement échoue.
+   *
+   * L'affichage précédait l'écriture sans jamais la vérifier, ce qui est exactement
+   * l'inverse de ce qu'une feuille de match peut se permettre. Un `saveMatch` en échec
+   * laissait l'écran afficher un panier que la base n'avait pas : le tableau
+   * d'affichage disait 42, la base 40, et le point disparaissait au rechargement.
+   * Pour un score officiel, un état qui mente est plus grave qu'une action refusée.
+   *
+   * L'optimisme reste, et il est justifié : à la table de marque, la saisie doit
+   * répondre au doigt sans attendre le disque. Ce qui manquait, c'est le retour en
+   * arrière quand la promesse n'est pas tenue.
+   *
+   * Renvoie l'issue, car « Terminer » navigue hors de la rencontre juste après :
+   * partir en croyant le match clos alors que rien n'a été écrit, c'est la même
+   * tromperie un cran plus loin.
+   */
+  const persister = useCallback(async (next: Match, precedent: Match): Promise<boolean> => {
+    apply(next); setError(null)
+    try {
+      await saveMatch(next)
+      return true
+    } catch {
+      apply(precedent)
+      setError('Enregistrement impossible sur cet appareil. L’action n’a pas été retenue — réessayez.')
+      return false
+    }
+  }, [])
+
   useEffect(() => {
     getMatch(matchId).then((m) => { matchRef.current = m ?? null; setMatch(m ?? null) })
   }, [matchId])
@@ -22,40 +52,44 @@ export function useMatch(matchId: string) {
     const current = matchRef.current
     if (!current) return
     const event = { ...input, id: newId(), wallClock: Date.now() } as GameEvent
+    /* Deux causes d'échec, deux traitements. `appendEvent` ne lance que des messages
+       intentionnels du règlement (« Impossible de marquer avant le démarrage du
+       chrono. ») : ils s'affichent tels quels, et rien n'a encore été appliqué. Une
+       panne d'écriture est autre chose, et tombait jusqu'ici dans le même `catch` —
+       elle y montrait une exception technique brute à un bénévole. */
+    let next: Match
     try {
-      const next = appendEvent(current, event)
-      apply(next); setError(null)
-      await saveMatch(next)
+      next = appendEvent(current, event)
     } catch (e) {
       setError((e as Error).message)
+      return
     }
-  }, [])
+    await persister(next, current)
+  }, [persister])
 
   /** Enchaîne plusieurs évènements en un seul état/sauvegarde atomique — évite qu'un
    * second dispatch synchrone n'écrase le premier en repartant d'un match périmé. */
   const dispatchMany = useCallback(async (inputs: EventInput[]) => {
     const current = matchRef.current
     if (!current) return
+    let next = current
     try {
-      let next = current
       for (const input of inputs) {
         const event = { ...input, id: newId(), wallClock: Date.now() } as GameEvent
         next = appendEvent(next, event)
       }
-      apply(next); setError(null)
-      await saveMatch(next)
     } catch (e) {
       setError((e as Error).message)
+      return
     }
-  }, [])
+    await persister(next, current)
+  }, [persister])
 
   const undo = useCallback(async () => {
     const current = matchRef.current
     if (!current) return
-    const next = undoLast(current)
-    apply(next); setError(null)
-    await saveMatch(next)
-  }, [])
+    await persister(undoLast(current), current)
+  }, [persister])
 
   /** Correction ciblée : retire le dernier évènement satisfaisant le prédicat. */
   const removeLast = useCallback(async (predicate: (e: GameEvent) => boolean) => {
@@ -63,18 +97,17 @@ export function useMatch(matchId: string) {
     if (!current) return
     const next = removeLastEvent(current, predicate)
     if (next === current) return
-    apply(next); setError(null)
-    await saveMatch(next)
-  }, [])
+    await persister(next, current)
+  }, [persister])
 
-  /** Clôture définitivement le match (spec §8) : passe le statut à 'finished' et persiste. */
-  const finish = useCallback(async () => {
+  /** Clôture définitivement le match (spec §8) : passe le statut à 'finished' et
+   *  persiste. Renvoie `false` si l'écriture a échoué — l'appelant ne doit alors pas
+   *  quitter la rencontre, elle n'est pas terminée. */
+  const finish = useCallback(async (): Promise<boolean> => {
     const current = matchRef.current
-    if (!current) return
-    const next: Match = { ...current, status: 'finished' }
-    apply(next); setError(null)
-    await saveMatch(next)
-  }, [])
+    if (!current) return false
+    return persister({ ...current, status: 'finished' }, current)
+  }, [persister])
 
   return { match, dispatch, dispatchMany, undo, removeLast, finish, error }
 }

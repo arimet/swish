@@ -276,7 +276,11 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
       />
       <ClockEditDialog open={editClock} seconds={seconds} max={periodLength(ls.period)}
         onClose={() => setEditClock(false)} onSubmit={(s) => setSeconds(clampClock(s))} />
-      <ConfirmDialog open={askFinish} onClose={() => setAskFinish(false)} onConfirm={async () => { await finish(); onFinish() }}
+      {/* On ne quitte la rencontre que si elle est réellement clôturée. `finish()`
+          renvoyait `void` et l'on partait quoi qu'il arrive : une écriture en échec
+          faisait sortir vers une fiche annonçant un match terminé qui ne l'était pas.
+          En cas d'échec, on reste, et le bandeau d'erreur au-dessus l'explique. */}
+      <ConfirmDialog open={askFinish} onClose={() => setAskFinish(false)} onConfirm={async () => { if (await finish()) onFinish() }}
         title="Terminer le match ?" message="Le score est figé et la rencontre passe en « terminée ». Cette action est définitive." confirmLabel="Terminer" danger />
       <SubstitutionDialog open={sub} onClose={() => setSub(false)}
         onCourtPlayers={onCourt()} benchPlayers={bench()}
