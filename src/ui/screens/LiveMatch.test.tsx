@@ -62,10 +62,10 @@ describe('LiveMatch', () => {
   })
 })
 
-// Câblage complet de l'écran, du côté de notre équipe : la table de marque n'avait
-// plus aucun test de parcours depuis la suppression de l'ancien écran à deux
-// équipes. Une inversion de `onScore`/`onMiss`, ou une rupture de la porte du cinq
-// de départ, doit faire échouer ces tests — vérifié par mutation (voir le rapport).
+// The screen's full wiring, on our team's side: the scorer's table had had no
+// journey test since the old two-team screen was removed. Swapping `onScore` and
+// `onMiss`, or breaking the starting-five gate, must make these tests fail —
+// checked by mutation.
 describe('the full run', () => {
   const ID = 'e2e'
 
