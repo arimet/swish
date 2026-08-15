@@ -5,11 +5,18 @@ import type { Schema } from '../domain/plays'
 /** File d'attente de synchronisation (offline-first) : mutations à pousser vers le serveur. */
 export interface OutboxItem {
   seq?: number
-  kind: 'team' | 'player' | 'match'
+  /** Les huit genres partagés. Le message et la convocation sont **clés sur autre
+   *  chose que `id`** — le club pour l'un, la rencontre pour l'autre — ce que la
+   *  table serveur accepte sans broncher : elle n'a qu'un couple (genre, clef). */
+  kind: 'team' | 'player' | 'match' | 'result' | 'convocation' | 'training' | 'play' | 'message'
   op: 'put' | 'del'
   id: string
   doc?: unknown
   ts: number
+  /** Quand la personne a modifié, sur cet appareil, au format ISO. C'est ce que
+   *  le serveur compare pour arbitrer un conflit — l'heure du geste, et non
+   *  celle de l'arrivée. Non indexé, donc aucune version de base à ajouter. */
+  modifiedAt: string
 }
 
 export class ScoreSheetDB extends Dexie {

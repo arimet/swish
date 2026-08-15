@@ -4,6 +4,13 @@ dist-ssr/
 *.local
 .DS_Store
 
+# Les secrets du développement local : `DATABASE_URL` et surtout
+# `SYNC_WRITE_TOKEN`, qui garde l'écriture sur la base du club. `.env.example`
+# documente les variables, il ne les contient pas.
+.env
+.env.*
+!.env.example
+
 # Logs
 logs
 *.log

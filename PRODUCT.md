@@ -93,20 +93,34 @@ read-only spectator live view.
 **Local-first is the floor.** IndexedDB is the source of truth. The app shell is
 precached and a cold open works with no network, on any route.
 
-**Multi-device sync is an intended capability**, not an experiment — spectators should
-be able to follow a match remotely. It is off by default (`VITE_SYNC_URL` empty) and
-turns on with a Redis store plus serverless functions; see `DEPLOY.md`. The app stays
-local-first when it is on, with a persistent outbox that retries when the network
-returns.
+**Multi-device sync is an intended capability**, not an experiment. It is off by
+default (`VITE_SYNC_URL` empty) and turns on with a Postgres database plus serverless
+functions; see `DEPLOY.md`.
 
-**Known gap to close, recorded so it is not rediscovered as a surprise:** when sync is
-enabled and a push fails, nothing in the interface says so. Failures are caught and the
-outbox retries silently. Because remote spectator following is an intended capability
-and not a bonus, this silence is a defect: a scorer can believe spectators are following
-a match that is not reaching them.
+When it is on, **the database is the source of truth and the device keeps a mirror** of
+it. That ordering is deliberate and load-bearing: the scorer's table writes on every
+gesture, hundreds of times over two hours, and a gym has no signal. Everything a club
+owns travels — teams, players, matches, call-ups, trainings, plays, entered results and
+the coach's message — which is what lets a player read their call-up on their own phone
+instead of only on the coach's.
+
+Two rules follow, and they are the ones to keep in mind when changing this area. The
+server wins **without exception**, including when it holds nothing: turning sync on
+replaces a device's local data. And conflicts are settled by **when a change was made**,
+not when it arrived, so a queue unblocking two hours late cannot overwrite a newer edit.
+
+**Known gap, narrowed but not closed:** a failed push is still silent where it happens.
+Administration now reports whether the server accepts this device, which covers the
+common cause — a wrong or missing token — but a scorer mid-match sees nothing if
+delivery stops. Because remote following is an intended capability and not a bonus, that
+remaining silence is a defect.
 
 **Single-team by design.** An opponent never has a roster. Any feature that would
 require entering the other side's players contradicts the positioning above.
+
+**Not everything is shared.** The role held in a tab, the player identity bound to a
+device, the chosen club, the language and the theme are device settings and stay put.
+A tablet lent to the opposing team must not push those onto it.
 
 **Terminology is French and is part of the product**, not a localisation layer: *table
 de marque* (scorer's table), *e-marque* (the federation's electronic sheet), *convocation*

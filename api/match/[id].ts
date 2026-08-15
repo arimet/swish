@@ -1,31 +1,25 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { redis, keyOf, TTL_SECONDS } from '../_redis.js'
+import { prelude } from '../_db.js'
+import { paquet } from '../_bundle.js'
 
-/** Snapshot d'une rencontre pour le suivi spectateur.
- * GET  → renvoie le « bundle » publié (match + joueurs + noms d'équipe).
- * PUT  → la table de marque publie l'état courant (best-effort, offline-first). */
+/**
+ * Le suivi spectateur d'une rencontre.
+ *
+ * **Publique, et c'est sa raison d'être** : on partage ce lien à des parents, qui
+ * n'ont ni l'application ni le jeton du club. C'est la seule route qui ne passe
+ * pas la garde de `_db.refuse`.
+ *
+ * Il n'y a plus de `PUT` : le paquet est dérivé de la table (voir `_bundle`), et
+ * la rencontre y arrive déjà par la file d'attente de la table de marque.
+ */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (prelude(req, res, 'GET')) return
+
   const id = req.query.id as string
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'content-type')
-  if (req.method === 'OPTIONS') return res.status(204).end()
-  if (!redis) return res.status(501).json({ error: 'Synchronisation non configurée' })
   if (!id) return res.status(400).json({ error: 'id manquant' })
 
-  if (req.method === 'GET') {
-    const data = await redis.get(keyOf(id))
-    if (!data) return res.status(404).json({ error: 'Rencontre introuvable' })
-    return res.status(200).json(data)
-  }
+  const p = await paquet(id)
+  if (!p) return res.status(404).json({ error: 'Rencontre introuvable' })
 
-  if (req.method === 'PUT' || req.method === 'POST') {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
-    if (!body || typeof body !== 'object') return res.status(400).json({ error: 'corps invalide' })
-    await redis.set(keyOf(id), body, { ex: TTL_SECONDS })
-    return res.status(204).end()
-  }
-
-  res.setHeader('Allow', 'GET, PUT, OPTIONS')
-  return res.status(405).end()
+  return res.status(200).json(p)
 }

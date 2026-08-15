@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getMatch, listTeams, deleteMatch, listPlayers, getConvocation, saveConvocation } from '../../persistence/repositories'
+import { remoteEnabled } from '../../persistence/remote'
 import type { Match, Team, Player } from '../../domain/types'
 import { C, bd, PageTitle, SectionTitle, TeamBadge, fmtDate , useChampLabel } from '../olive/kit'
 import { useAuth } from '../../app/auth'
@@ -175,7 +176,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
 
             {/* Comme les résultats du championnat : aucune synchronisation pour la convocation,
                 même formulation que sur l'écran Championnat pour ne pas laisser croire à deux limites différentes. */}
-            <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('apercu.convocationLocale')}</p>
+            {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('apercu.convocationLocale')}</p>}
           </>
         ) : convoqués.size === 0 ? (
           <p className="text-sm" style={{ color: C.muted }}>{trad('apercu.personneConvoquee')}</p>

@@ -14,6 +14,7 @@ import type { Convocation, Match, MessageEquipe, Player, Team, Training } from '
 import type { Schema } from '../../domain/plays'
 import { Check } from 'lucide-react'
 import { useLangue, useT } from '../../i18n'
+import { remoteEnabled } from '../../persistence/remote'
 
 export function Dashboard() {
   const trad = useT()
@@ -280,7 +281,7 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
         </button>
         {/* Comme les convocations, les entraînements et les schémas : même
             formulation, pour ne pas laisser croire à deux limites différentes. */}
-        <p className="mt-3 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('bord.messageLocal')}</p>
+        {!remoteEnabled() && <p className="mt-3 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('bord.messageLocal')}</p>}
       </section>
     )
   }

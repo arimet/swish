@@ -7,7 +7,6 @@ import { MatchMetaDialog } from '../components/MatchMetaDialog'
 import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
-import { publishBundle } from '../../app/sync'
 import { getMatch, listPlayers, listTeams, saveMatch } from '../../persistence/repositories'
 import { flushNow } from '../../persistence/remote'
 import { removeLastEvent } from '../../domain/reducer'
@@ -69,7 +68,6 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const persist = async (next: Match) => {
     setMatch(next)
     await saveMatch(next)
-    publishBundle({ match: next, players: Object.values(players), teamNames })
     // Envoi immédiat (pas d'attente du débounce de 700 ms), une fois l'écriture
     // dans la file confirmée : une correction de stats ici est typiquement
     // suivie d'une navigation qui peut déclencher une hydratation ailleurs.

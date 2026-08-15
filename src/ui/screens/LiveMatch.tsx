@@ -12,7 +12,6 @@ import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Sco
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
 import { useAuth } from '../../app/auth'
-import { syncEnabled, publishBundle } from '../../app/sync'
 import { useMatch } from '../../app/useMatch'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
@@ -75,17 +74,10 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     }
   }, [ls?.clockRunning])
 
-  // Suivi spectateur (multi-appareils) : publie l'état à chaque changement, et
-  // republie au retour du réseau (une saisie hors ligne ne se repousse sinon
-  // qu'au prochain évènement).
-  useEffect(() => {
-    if (!match || !syncEnabled()) return
-    const bundle = { match, players: Object.values(players), teamNames }
-    publishBundle(bundle)
-    const onOnline = () => publishBundle(bundle)
-    window.addEventListener('online', onOnline)
-    return () => window.removeEventListener('online', onOnline)
-  }, [match, players, teamNames])
+  /* Le suivi spectateur n'a plus rien à publier depuis ici. Il lit la rencontre
+     dans la base, où la file d'attente la porte déjà, et le serveur assemble le
+     paquet. Cet écran republiait l'état entier à chaque évènement — donc deux
+     chemins d'écriture pour une même donnée, et deux façons de se contredire. */
 
   if (!match || !ls)
     return <div className="grid min-h-dvh place-items-center text-muted-foreground">{trad('commun.chargement')}</div>

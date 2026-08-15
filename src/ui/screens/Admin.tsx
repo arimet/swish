@@ -22,6 +22,7 @@ import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { C, bd, useChampLabel } from '../olive/kit'
+import { etatSync, hydrate, jeton, remoteEnabled, setJeton, type Etat } from '../../persistence/remote'
 
 /** Une opération de ménage prête à être confirmée : ce qu'elle annonce, et ce
  *  qu'elle fait. Rien n'est exécuté avant la confirmation. */
@@ -91,10 +92,12 @@ export function Admin() {
   return (
     <div className="p-6">
       <p className="mb-6 rounded-2xl px-4 py-3 text-sm" style={{ background: C.accentBg, color: C.accent }}>
-        {trad('admin.avertissement')}
+        {trad(remoteEnabled() ? 'admin.avertissementPartage' : 'admin.avertissement')}
       </p>
 
       <div className="space-y-6">
+        <Synchronisation />
+
         <Bloc titre={trad('admin.parChampionnat')} aide={trad('admin.aideChampionnat')}>
           {championnats(matches).map((champ) => {
             const n = matches.filter(duChampionnat(champ)).length
@@ -196,6 +199,66 @@ export function Admin() {
         onConfirm={confirmer} onClose={() => setDemande(null)}
       />
     </div>
+  )
+}
+
+/**
+ * Le jeton d'écriture de la base partagée.
+ *
+ * Il est ici et non dans le dialogue des accès, parce qu'il n'est pas de la même
+ * nature que les trois codes : ceux-là disent *qui vous êtes* et vivent le temps
+ * d'un onglet ; celui-ci est un réglage d'appareil, posé une fois par la personne
+ * qui a déployé, et vérifié par le serveur.
+ *
+ * Le bloc n'apparaît pas quand l'application tourne en local — il n'y aurait rien
+ * à régler, et une porte qu'on ne peut pas ouvrir n'a pas à se montrer.
+ */
+function Synchronisation() {
+  const trad = useT()
+  const [valeur, setValeur] = useState(jeton)
+  const [etat, setEtat] = useState<Etat>(etatSync)
+  const [essai, setEssai] = useState(false)
+
+  if (!remoteEnabled()) return null
+
+  // On enregistre puis on essaie pour de bon, plutôt que d'annoncer « enregistré »
+  // sur un jeton que le serveur refusera : c'est le genre de réglage qu'on pose
+  // une fois et qu'on ne revient jamais vérifier.
+  const verifier = async () => {
+    setJeton(valeur.trim())
+    setEssai(true)
+    await hydrate()
+    setEtat(etatSync())
+    setEssai(false)
+  }
+
+  const dit = essai ? 'admin.jetonEssai'
+    : etat === 'ok' ? 'admin.jetonOk'
+    : etat === 'jeton' ? 'admin.jetonRefuse'
+    : etat === 'reseau' ? 'admin.jetonReseau'
+    : 'admin.jetonInconnu'
+  const mauvais = !essai && (etat === 'jeton' || etat === 'reseau')
+
+  return (
+    <Bloc titre={trad('admin.synchronisation')} aide={trad('admin.aideSynchronisation')}>
+      <div className="flex flex-wrap items-center gap-2 py-1">
+        <input
+          type="password" value={valeur} onChange={(e) => setValeur(e.target.value)}
+          aria-label={trad('admin.jeton')} placeholder={trad('admin.jeton')}
+          className="min-w-[12rem] flex-1 rounded-xl px-4 py-3 text-sm outline-none transition focus:border-[var(--c-accent)]"
+          style={{ background: C.panel, border: bd, color: C.text }}
+        />
+        <button onClick={verifier} disabled={essai}
+          className="rounded-xl px-5 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40"
+          style={{ background: C.brand }}>
+          {trad('admin.verifierJeton')}
+        </button>
+      </div>
+      <p aria-live="polite" className="pb-1 text-[13px] font-semibold"
+        style={{ color: mauvais ? C.danger : etat === 'ok' ? C.green : C.muted }}>
+        {trad(dit)}
+      </p>
+    </Bloc>
   )
 }
 

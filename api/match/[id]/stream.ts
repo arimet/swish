@@ -1,54 +1,57 @@
-import { Redis } from '@upstash/redis'
+import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { pool } from '../../_db.js'
+import { paquet } from '../../_bundle.js'
 
-/** Flux SSE (Server-Sent Events) : pousse le snapshot d'une rencontre aux
- * spectateurs dès qu'il change. Runtime Edge pour le streaming long. */
-export const config = { runtime: 'edge' }
+/**
+ * Flux SSE : pousse le paquet d'une rencontre aux spectateurs dès qu'il change.
+ *
+ * Le runtime passe d'Edge à Node, parce que Postgres se parle en TCP et que le
+ * runtime Edge ne l'ouvre pas. Conséquence : la boucle ne peut plus tenir cinq
+ * minutes — une fonction Vercel a une durée bornée — donc on tient cinquante
+ * secondes et on laisse `EventSource` se reconnecter, ce qu'il fait tout seul.
+ * Le client garde de toute façon son repli en interrogation périodique.
+ */
+export const config = { maxDuration: 60 }
 
-const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL
-const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN
-const redis = url && token ? new Redis({ url, token }) : null
+const DUREE_MS = 50_000
+const PAS_MS = 1500
 
-export default async function handler(req: Request): Promise<Response> {
-  const m = new URL(req.url).pathname.match(/\/match\/([^/]+)\/stream/)
-  const id = m?.[1]
-  if (!redis) return new Response('Synchronisation non configurée', { status: 501 })
-  if (!id) return new Response('id manquant', { status: 400 })
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  if (!pool) return res.status(501).end('Synchronisation non configurée')
 
-  const encoder = new TextEncoder()
-  const key = `match:${id}`
+  const id = req.query.id as string
+  if (!id) return res.status(400).end('id manquant')
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      let closed = false
-      const close = () => { if (!closed) { closed = true; try { controller.close() } catch { /* déjà fermé */ } } }
-      req.signal.addEventListener('abort', close)
+  res.writeHead(200, {
+    'content-type': 'text/event-stream; charset=utf-8',
+    'cache-control': 'no-cache, no-transform',
+    connection: 'keep-alive',
+    'access-control-allow-origin': '*',
+  })
 
-      const send = (obj: unknown) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
-      const comment = (c: string) => controller.enqueue(encoder.encode(`: ${c}\n\n`))
+  let ouvert = true
+  req.on('close', () => { ouvert = false })
 
-      let last = ''
-      const started = Date.now()
-      comment('ok')
-      // Boucle de diffusion : ~1,5 s, max 5 min puis le client (EventSource) se reconnecte.
-      while (!closed && Date.now() - started < 5 * 60 * 1000) {
-        try {
-          const data = await redis.get(key)
-          const s = data ? JSON.stringify(data) : ''
-          if (s && s !== last) { last = s; send(data) }
-          else comment('ping')
-        } catch { /* transitoire : on réessaie au tour suivant */ }
-        await new Promise((r) => setTimeout(r, 1500))
+  // On n'émet que sur changement réel : `rev` est un numéro d'écriture, donc
+  // comparer deux entiers suffit — pas besoin de sérialiser le paquet pour savoir
+  // s'il a bougé.
+  let dernier = -1
+  res.write(': ok\n\n')
+
+  const debut = Date.now()
+  while (ouvert && Date.now() - debut < DUREE_MS) {
+    try {
+      const p = await paquet(id)
+      if (p && p.rev !== dernier) {
+        dernier = p.rev
+        res.write(`data: ${JSON.stringify(p)}\n\n`)
+      } else {
+        res.write(': ping\n\n')
       }
-      close()
-    },
-  })
+    } catch { /* transitoire : on réessaie au tour suivant */ }
+    await new Promise((r) => setTimeout(r, PAS_MS))
+  }
 
-  return new Response(stream, {
-    headers: {
-      'content-type': 'text/event-stream; charset=utf-8',
-      'cache-control': 'no-cache, no-transform',
-      connection: 'keep-alive',
-      'access-control-allow-origin': '*',
-    },
-  })
+  res.end()
 }
