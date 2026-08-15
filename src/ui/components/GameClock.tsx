@@ -20,20 +20,20 @@ export function GameClock({ running, seconds, onToggle }: {
       >
         {fmt(seconds)}
       </div>
-      {/* Les deux repères sont tracés, plus collés en caractères : le « ❚❚ » de la
-          pause s'affichait en deux barres pleines d'une police au hasard, plus
-          épaisses que tout le reste du bandeau.
-          Les couleurs, elles, ont pris deux détours pour revenir ici. D'abord
-          `emerald-700` et `red-600`, du Tailwind brut hors charte. Puis une famille
-          `--sb-*` propre au bandeau, au motif qu'il ne basculait pas avec le thème —
-          sauf qu'il aurait dû, et il le fait maintenant. Le vert et le rouge de
-          l'application suffisent, et ce sont les seuls à s'ajuster au fond. */}
+      {/* Both marks are drawn, no longer pasted as characters: the pause's "❚❚" showed
+          as two solid bars from whatever font happened to be there, thicker than
+          everything else on the banner.
+          The colours took two detours to come back here. First `emerald-700` and
+          `red-600`, raw Tailwind outside the charter. Then an `--sb-*` family of the
+          banner's own, on the grounds that it did not switch with the theme — except
+          it should have, and now it does. The application's green and red are enough,
+          and they are the only ones that adjust to the background. */}
       <button
         onClick={onToggle}
-        /* Pas de `shadow-lg` : l'ombre de Tailwind est un noir pur, calibrée pour
-           flotter au-dessus d'un fond sombre. Sur le bandeau clair elle se lisait
-           comme une salissure sous le bouton. Ce bouton n'a pas besoin d'élévation
-           pour se voir — c'est l'aplat le plus saturé de l'écran. */
+        /* No `shadow-lg`: Tailwind's shadow is a pure black, calibrated to float above
+           a dark background. On the light banner it read as a smudge under the button.
+           This button needs no elevation to be seen — it is the most saturated flat
+           area on the screen. */
         className={`flex h-11 min-w-32 items-center justify-center gap-2 rounded-full px-5 text-xs font-bold uppercase tracking-wide transition active:scale-95 sm:min-w-36 sm:px-6 sm:text-sm ${
           running
             ? 'bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]'

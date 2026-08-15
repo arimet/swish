@@ -618,6 +618,10 @@ export const en: Record<string, string> = {
   'sync.refuseDetail': 'The server is refusing this device. Your entries are saved here and nothing is lost, but they no longer reach the other devices: check the token under Administration.',
 
   // ── Language and theme ────────────────────────────────────────────────────
+  'tir.terrainSaisie': 'Half court — tap the shot spot',
+
+  'partage.tropLong': 'This play is too heavy to fit in a link. Send the image or the PDF instead — a link truncated on the way would be worse than no link at all.',
+
   'lang.switch': 'Change language',
   'theme.light': 'Light mode',
   'theme.dark': 'Dark mode',

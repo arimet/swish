@@ -158,7 +158,7 @@ export function SchemaPlayer() {
             des commandes, qui restent atteignables. */}
         <div className="relative flex min-h-0 flex-1 items-center justify-center">
           <div className="h-full w-full select-none" style={{ maxWidth: large }}>
-            <PlayBoard schema={schema} stepIndex={0} steps={steps} remplit />
+            <PlayBoard schema={schema} stepIndex={0} step={steps} remplit />
           </div>
           <Zone cote="left" label={translate('lecteur.precedent')} fleche="‹" onClick={() => aller(-1)} disabled={courant === 0} />
           <Zone cote="right" label={translate('lecteur.suivant')} fleche="›" onClick={() => aller(1)} disabled={courant === last} />

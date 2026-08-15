@@ -47,11 +47,11 @@ export function PlayerActionDialog({
   const hasCorrections =
     Object.values(sc).some((n) => n > 0) || Object.values(tc).some((n) => n > 0) || fouls > 0 || misses > 0
 
-  // Sans cette annulation, fermer la popup à la main pendant le délai déclencherait
-  // une mise à jour d'état sur un composant démonté.
+  // Without this cancellation, closing the popup by hand during the delay would
+  // trigger a state update on an unmounted component.
   useEffect(() => () => clearTimeout(closeTimer.current), [])
 
-  // Le mode revient à « Réussi » à chaque fermeture : c'est le cas courant.
+  // The mode returns to "Made" on every close: that is the common case.
   const close = () => {
     clearTimeout(closeTimer.current)
     setMade(true)
@@ -68,10 +68,10 @@ export function PlayerActionDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      {/* `gap-0` : le gabarit du dialogue est une grille à `gap-4`, qui s'ajoutait aux
-          `mt-*` de chaque bloc ci-dessous — deux espacements empilés, une centaine de
-          pixels perdus. Les marges des blocs suffisent. Le débordement reste borné en
-          dernier recours : les corrections dépliées ne tiennent dans aucune fenêtre. */}
+      {/* `gap-0`: the dialog's shell is a `gap-4` grid, which added itself to the
+          `mt-*` of every block below — two stacked spacings, a hundred-odd pixels lost.
+          The blocks' own margins are enough. Overflow stays bounded as a last resort:
+          the corrections unfolded fit in no window. */}
       <DialogContent className="sm:max-w-md max-h-[92vh] gap-0 overflow-y-auto border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2.5 text-xl font-extrabold">
@@ -80,7 +80,7 @@ export function PlayerActionDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* TIR : réussi ou manqué, puis position sur le terrain */}
+        {/* SHOT: made or missed, then the spot on the court. */}
         <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
           <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{translate('action.reussi')}</Toggle>
           <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">{translate('action.manque')}</Toggle>
@@ -95,7 +95,7 @@ export function PlayerActionDialog({
           {translate('action.plusLancerFranc')}
         </button>
 
-        {/* AUTRES STATS */}
+        {/* OTHER STATS */}
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           {STATS.map((s) => (
             <button key={s.k} onClick={() => { onStat(s.k); close() }}
@@ -112,9 +112,9 @@ export function PlayerActionDialog({
           {translate('action.fautePersonnelle')}
         </button>
 
-        {/* CORRECTIONS — repliées : on ouvre cette popup pour saisir, pas pour
-            défaire. Déployées d'emblée, elles poussaient la moitié du dialogue
-            sous la ligne de flottaison et forçaient un défilement à chaque tir. */}
+        {/* CORRECTIONS — folded away: this popup is opened to record, not to undo.
+            Unfolded from the start, they pushed half the dialog below the fold and
+            forced a scroll on every shot. */}
         {hasCorrections && (
           <details className="mt-4 border-t border-[var(--c-border)] pt-3">
             <summary className="cursor-pointer list-none text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)] transition hover:text-[var(--c-text)]">

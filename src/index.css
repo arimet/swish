@@ -48,10 +48,9 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Les jetons de couleur — les deux thèmes, le chrome et le terrain — vivent
-   dans `./ui/theme/themes.css`, importé plus bas. Ils ne sont plus dédoublés
-   ici : deux définitions du même nom, c'est une chance sur deux de corriger la
-   mauvaise. */
+/* The colour tokens — both themes, the chrome and the court — live in
+   `./ui/theme/themes.css`, imported below. They are no longer duplicated here: two
+   definitions of the same name is a one-in-two chance of fixing the wrong one. */
 
 @layer base {
   * {
@@ -86,13 +85,13 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* La case à cocher, une fois pour toutes.
+/* The checkbox, once and for all.
  *
- * L'application n'en a qu'un aspect, et il était déclaré en ligne sur un site
- * (l'éditeur de schéma : accent, dix-huit pixels) et absent des deux autres — la
- * convocation et les schémas attachés à une séance gardaient donc la case native de
- * treize pixels, en gris système, qui ignore la palette et disparaît en thème sombre.
- * Une règle vaut mieux que trois styles en ligne dont deux manquent. */
+ * The application has only one look for it, and that look was declared inline on one
+ * site (the play editor: accent, eighteen pixels) and absent from the other two — the
+ * call-up and the plays attached to a session therefore kept the native thirteen-pixel
+ * box, in system grey, which ignores the palette and disappears in the dark theme.
+ * One rule beats three inline styles of which two are missing. */
 input[type='checkbox'] {
   width: 1.125rem;
   height: 1.125rem;
@@ -101,18 +100,17 @@ input[type='checkbox'] {
   cursor: pointer;
 }
 
-/* Le curseur de lecture d'un schéma : la piste reste fine, la **zone de saisie** fait
- * la hauteur d'un doigt.
+/* The play viewer's slider: the track stays thin, the **hit area** is a finger tall.
  *
- * En `h-2`, l'élément entier mesurait huit pixels de haut : la piste était jolie et
- * introuvable au pouce, alors que c'est la seule commande du lecteur qu'on fait
- * glisser. On ne peut pas simplement grandir l'élément — son fond servait de piste,
- * il serait devenu une pastille de quarante-quatre pixels. La piste passe donc au
- * pseudo-élément, et l'élément prend la hauteur du doigt.
+ * At `h-2`, the whole element was eight pixels tall: the track was pretty and
+ * impossible to find with a thumb, although it is the one control in the viewer you
+ * drag. The element cannot simply be made taller — its background served as the
+ * track, and it would have become a forty-four-pixel slab. So the track moves to a
+ * pseudo-element, and the element takes the height of a finger.
  *
- * Les deux préfixes sont nécessaires et ne peuvent pas fusionner : un sélecteur
- * inconnu invalide toute la règle qui le contient, donc `::-webkit-…` et `::-moz-…`
- * doivent rester dans des blocs séparés. */
+ * Both prefixes are needed and cannot be merged: an unknown selector invalidates the
+ * whole rule containing it, so `::-webkit-…` and `::-moz-…` must stay in separate
+ * blocks. */
 input[type='range'].piste {
   height: 2.75rem;
   background: transparent;
@@ -144,26 +142,25 @@ input[type='range'].piste::-moz-range-thumb {
   background: var(--c-brand);
 }
 
-/* Le score qui répond au doigt.
+/* The score that answers the finger.
  *
- * C'est le seul mouvement authorial de la table de marque, et il porte une
- * information que rien d'autre ne porte : *le geste a été pris en compte, de ce
- * côté-ci*. Sans lui, marquer un panier, en marquer un à la mauvaise équipe et ne
- * rien toucher du tout produisent le même écran — le pire des trois étant celui
- * qu'on ne remarque pas.
+ * It is the scorer's table's only authored motion, and it carries information nothing
+ * else carries: *the gesture was taken, on this side*. Without it, scoring a basket,
+ * scoring one for the wrong team and touching nothing at all produce the same screen —
+ * the worst of the three being the one nobody notices.
  *
- * Deux sens, parce que la cause diffère : le score monte parce qu'on a marqué,
- * il descend parce qu'on a annulé. Un panier arrive en grandissant vers sa place ;
- * une annulation part de plus grand et se retire. Le même mouvement dans les deux
- * cas dirait « quelque chose a changé » là où il faut lire « quoi ».
+ * Two directions, because the cause differs: the score goes up because someone
+ * scored, down because someone undid. A basket arrives growing into its place; an undo
+ * starts larger and withdraws. The same motion in both cases would say "something
+ * changed" where you need to read "what".
  *
- * 150 ms : la bande du retour immédiat. Au-delà, un retour se lit comme une
- * latence. La décélération est celle des arrivées assurées, pas un rebond.
+ * 150 ms: the band of immediate feedback. Beyond that, feedback reads as latency. The
+ * deceleration is that of a settled arrival, not a bounce.
  *
- * Un `@keyframes pop-in` et sa classe `.animate-pop` vivaient ici, décrits en
- * commentaire comme étant « sur un panier marqué », et branchés à rien : le geste
- * avait été pensé, jamais posé. Leur `scale(0.96)` était de toute façon invisible
- * sur un nombre de cette taille. */
+ * A `@keyframes pop-in` and its `.animate-pop` class used to live here, described in a
+ * comment as being "on a made basket", and wired to nothing: the gesture had been
+ * thought of, never placed. Its `scale(0.96)` was invisible on a number this size
+ * anyway. */
 @keyframes score-up {
   from { transform: scale(0.84); opacity: 0.5; }
   to   { transform: scale(1);    opacity: 1; }
@@ -175,65 +172,63 @@ input[type='range'].piste::-moz-range-thumb {
 .score-up   { animation: score-up 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
 .score-down { animation: score-down 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
 
-/* Le passage en bonus : au cinquième faute d'équipe dans la période
- * (`TEAM_FOUL_BONUS` dans `rules/ffbb.ts`), l'adversaire tire des lancers francs.
- * Ce n'est pas un compteur qui avance, c'est la règle du match qui change — et la
- * table de marque ne doit pas le manquer. Une arrivée, une seule fois, au montage
- * de la pastille. Deux cents millisecondes : un changement d'état, pas un accusé
- * de réception. */
+/* Going into the bonus: on the period's fifth team foul (`TEAM_FOUL_BONUS` in
+ * `rules/ffbb.ts`), the opposition shoots free throws. That is not a counter ticking
+ * up, it is the game's rule changing — and the scorer's table must not miss it. One
+ * arrival, once, when the pill mounts. Two hundred milliseconds: a change of state,
+ * not an acknowledgement. */
 @keyframes bonus-in {
   from { transform: scale(0.7); opacity: 0; }
   to   { transform: scale(1);   opacity: 1; }
 }
 .bonus-in { animation: bonus-in 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
 
-/* Ce que devient l'accusé de réception quand le mouvement dérange : l'échelle
- * tombe, la reconnaissance reste. Une coupe franche rendrait le score muet, ce qui
- * est précisément le défaut qu'on vient de corriger. */
+/* What the acknowledgement becomes when motion is unwelcome: the scaling goes, the
+ * recognition stays. A clean cut would make the score mute, which is precisely the
+ * defect we just fixed. */
 @keyframes score-flash {
   from { opacity: 0.4; }
   to   { opacity: 1; }
 }
 
-/* Ce que l'application devient quand le système demande moins de mouvement.
+/* What the application becomes when the system asks for less motion.
  *
- * Ce n'est pas un `animation: none` général, et c'est la nuance qui compte : une
- * coupe franche supprimerait aussi les animations qui *portent une information*.
- * Deux familles, deux traitements.
+ * This is not a blanket `animation: none`, and that nuance is the point: a clean cut
+ * would also remove the animations that *carry information*. Two families, two
+ * treatments.
  *
- * — Les boucles infinies (`animate-pulse` sur les pastilles « en direct »,
- *   `animate-spin` sur les attentes) ne disent rien qu'un état fixe ne dise :
- *   elles s'arrêtent, sur leur image pleine. Le point « en direct » reste
- *   visible, il cesse seulement de battre.
- * — Le score et le bonus **accusent réception**. Les supprimer rendrait le score
- *   muet, ce qui est le défaut même que ce mouvement corrige : ils gardent leur
- *   durée et perdent leur échelle, l'opacité seule portant la reconnaissance.
- * — Les entrées de dialogue (`animate-in` / `animate-out`) gardent leur état final
- *   et l'atteignent d'un coup : le déplacement disparaît, la présence reste.
+ * — Infinite loops (`animate-pulse` on the "live" pills, `animate-spin` on waits) say
+ *   nothing a fixed state does not: they stop, on their full frame. The "live" dot
+ *   stays visible, it merely stops beating.
+ * — The score and the bonus **acknowledge**. Removing them would make the score mute,
+ *   which is the very defect this motion fixes: they keep their duration and lose
+ *   their scaling, opacity alone carrying the recognition.
+ * — Dialog entrances (`animate-in` / `animate-out`) keep their final state and reach
+ *   it at once: the travel disappears, the presence stays.
  *
- * `tw-animate-css` n'embarque aucun garde de ce genre — vérifié, aucun de ses
- * fichiers ne mentionne `prefers-reduced-motion`. D'où ce bloc, ici, une fois.
+ * `tw-animate-css` ships no guard of this kind — checked, none of its files mentions
+ * `prefers-reduced-motion`. Hence this block, here, once.
  */
 @media (prefers-reduced-motion: reduce) {
-  /* Les boucles s'immobilisent sur leur dernière image, pleinement opaques. */
+  /* The loops settle on their last frame, fully opaque. */
   .animate-pulse,
   .animate-spin {
     animation: none !important;
     opacity: 1 !important;
   }
 
-  /* Le mouvement s'en va, l'accusé de réception reste : même durée, même
-     déclenchement, mais un fondu au lieu d'un changement d'échelle. C'est
-     l'« alternative intentionnelle » plutôt qu'une coupe. */
+  /* The motion goes, the acknowledgement stays: same duration, same trigger, but a
+     fade instead of a change of scale. The "intentional alternative" rather than a
+     cut. */
   .score-up,
   .score-down,
   .bonus-in {
     animation-name: score-flash !important;
   }
 
-  /* Les entrées arrivent sans trajet : plus d'échelle, plus de glissement, mais
-     l'élément est bien là, et les transitions restent assez courtes pour se lire
-     comme un changement d'état plutôt que comme un mouvement. */
+  /* Entrances arrive without travel: no scaling, no sliding, but the element is
+     definitely there, and transitions stay short enough to read as a change of state
+     rather than as motion. */
   .animate-in,
   .animate-out {
     animation-duration: 1ms !important;

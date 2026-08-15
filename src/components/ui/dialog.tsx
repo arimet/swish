@@ -31,10 +31,9 @@ function DialogOverlay({
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        // Les classes `data-closed:*` ont été retirées : le démontage est
-        // désormais immédiat (voir BASE_UI_ANIMATIONS_DISABLED dans main.tsx),
-        // donc l'animation de sortie ne serait jamais peinte. L'animation
-        // d'entrée, elle, joue toujours.
+        // The `data-closed:*` classes were removed: unmounting is now immediate
+        // (see BASE_UI_ANIMATIONS_DISABLED in main.tsx), so the exit animation
+        // would never be painted. The entrance animation still plays.
         "fixed inset-0 isolate z-50 bg-black/10 duration-100 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0",
         className
       )}
@@ -57,7 +56,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          // Idem : plus d'animation de sortie, le popup est démonté aussitôt.
+          // Same here: no exit animation, the popup is unmounted at once.
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
           className
         )}

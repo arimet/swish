@@ -213,10 +213,10 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
             cadre. Le score passe avant le réglage. */}
         <div className="mx-auto mt-2.5 flex max-w-4xl flex-wrap items-center justify-center gap-1" title={translate('live.corrigerChrono')}>
           <ClockAdjust onClick={() => setSeconds((s) => clampClock(s - 10))}>−10s</ClockAdjust>
-          <ClockAdjust ecart onClick={() => setSeconds((s) => clampClock(s - 1))}>−1s</ClockAdjust>
+          <ClockAdjust gap onClick={() => setSeconds((s) => clampClock(s - 1))}>−1s</ClockAdjust>
           <ClockAdjust onClick={() => setSeconds((s) => clampClock(s + 1))}>+1s</ClockAdjust>
-          <ClockAdjust ecart onClick={() => setSeconds((s) => clampClock(s + 10))}>+10s</ClockAdjust>
-          <ClockAdjust ecart onClick={() => setEditClock(true)}><Pencil className="mr-1 inline h-3.5 w-3.5 align-[-2px]" strokeWidth={2} />{translate('live.editer')}</ClockAdjust>
+          <ClockAdjust gap onClick={() => setSeconds((s) => clampClock(s + 10))}>+10s</ClockAdjust>
+          <ClockAdjust gap onClick={() => setEditClock(true)}><Pencil className="mr-1 inline h-3.5 w-3.5 align-[-2px]" strokeWidth={2} />{translate('live.editer')}</ClockAdjust>
         </div>
       </header>
 

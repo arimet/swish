@@ -5,8 +5,8 @@ import { RotateCcw } from 'lucide-react'
 
 type Stat = { points: number; fouls: number }
 
-/** Colonne d'équipe : entête (fautes/bonus/TM), cartes joueurs avec raccourcis
- * lancer franc et faute ; tap sur le nom = dialogue avec la carte de tir. */
+/** A team column: header (fouls/bonus/timeouts), player cards with free-throw and
+ * foul shortcuts; a tap on the name opens the dialog with the shot chart. */
 export function TeamPanel({
   title, color, players, statsByPlayer, teamFouls, bonus, timeoutsRemaining, timeoutsUsed,
   onPick, onScore, onFoul, onSub, onTimeout, onUndoTimeout,
@@ -27,31 +27,30 @@ export function TeamPanel({
   onUndoTimeout: () => void
 }) {
   const translate = useT()
-  // `bg-card` à pleine opacité, et non `bg-card/50` : un voile à cinquante pour cent
-  // rapproche la carte de son fond de moitié, ce qui annulait précisément l'écart de
-  // clarté entre les deux plans. En thème sombre, l'écran devenait un seul charbon.
+  // `bg-card` at full opacity, not `bg-card/50`: a fifty per cent veil brings the
+  // card halfway to its background, which cancelled precisely the lightness gap
+  // between the two planes. In the dark theme, the screen became a single charcoal.
   return (
     <section className="flex min-h-0 flex-1 flex-col rounded-3xl border border-border bg-card p-2.5 sm:p-4" style={{ boxShadow: `inset 0 3px 0 0 ${color}` }}>
-      {/* « Sur le terrain », et non le nom de l'équipe : le tableau d'affichage
-          juste au-dessus le donne déjà en gros, et cette répétition faisait passer
-          l'entête à deux lignes sur un téléphone. Le libellé dit maintenant quelque
-          chose que l'écran ne disait nulle part — que ces cinq-là sont en jeu. */}
+      {/* "On court", and not the team's name: the scoreboard just above already gives
+          it in large type, and the repetition pushed the header onto two lines on a
+          phone. The label now says something the screen said nowhere — that these five
+          are in the game. */}
       <header className="mb-2 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: color }} />
           <h3 className="truncate text-xs font-extrabold uppercase tracking-wide text-muted-foreground">{translate('panneau.surLeTerrain')}</h3>
-          {/* `bonus-in` : la pastille arrive au montage, une seule fois. Au
-              cinquième faute d'équipe de la période (`TEAM_FOUL_BONUS`),
-              l'adversaire tire des lancers francs — ce n'est pas un compteur qui
-              avance, c'est la règle du match qui change, et la pastille
-              apparaissait sans que rien ne le signale. */}
+          {/* `bonus-in`: the pill arrives on mount, once. On the period's fifth team
+              foul (`TEAM_FOUL_BONUS`), the opposition shoots free throws — that is not
+              a counter ticking up, it is the game's rule changing, and the pill used to
+              appear with nothing to signal it. */}
           {bonus && <span className="bonus-in rounded-md bg-[var(--c-danger-fill)] px-1.5 py-0.5 text-[12px] font-black uppercase text-[var(--c-on-danger)]">{translate('panneau.bonus')}</span>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Chip label={translate('panneau.fautes')} value={teamFouls} warn={teamFouls >= 4} />
-          {/* Temps-mort, annulation et changement : trois commandes qui vivaient
-              entre vingt et vingt-huit pixels de haut, dans un gymnase, au pouce.
-              Elles font la hauteur d'un doigt. */}
+          {/* Timeout, undo and substitution: three controls that lived between twenty
+              and twenty-eight pixels tall, in a gym, under a thumb. They are now a
+              finger tall. */}
           <span className="flex items-center overflow-hidden rounded-lg bg-muted">
             <button
               onClick={onTimeout}
@@ -83,10 +82,10 @@ export function TeamPanel({
           const st = statsByPlayer.get(p.id) ?? { points: 0, fouls: 0 }
           const out = st.fouls >= 5
           return (
-            /* Une seule ligne par joueur : le nom à gauche, les deux raccourcis à
-               droite. Empilés sous le nom, ils faisaient des cartes de cent vingt
-               pixels — trois joueurs sur cinq tenaient à l'écran d'un téléphone, et
-               il fallait faire défiler l'effectif au milieu d'une possession. */
+            /* One row per player: the name on the left, the two shortcuts on the
+               right. Stacked under the name, they made cards a hundred and twenty
+               pixels tall — three players out of five fitted on a phone screen, and you
+               had to scroll the roster in the middle of a possession. */
             <div key={p.id} className={`flex items-center gap-1.5 rounded-2xl border border-border/60 bg-background p-2 ${out ? 'opacity-40' : ''}`}>
               <button disabled={out} onClick={() => onPick(p.id, `${p.number} ${p.lastName}`)} className="flex min-w-0 flex-1 items-center gap-2.5 py-1 text-left">
                 <span className="nums grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--c-card2)] text-base font-extrabold text-[var(--c-text)]" style={{ boxShadow: `inset 0 0 0 2px ${color}` }}>
@@ -95,12 +94,11 @@ export function TeamPanel({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-bold leading-tight">{p.lastName}</span>
                   <span className="mt-0.5 flex items-center gap-1.5">
-                    {/* L'accent, et non `color` — c'est-à-dire l'encre et non le
-                        remplissage. `color` vaut la marque, un citron d'aplat : il
-                        tient l'anneau du numéro et le filet du panneau, mais écrit à
-                        1,77:1 sur une ligne claire. Le thème sombre ne le montrait
-                        pas, le citron y étant lisible partout ; c'est la passe en
-                        thème clair qui l'a trouvé. */}
+                    {/* The accent, not `color` — that is, the ink and not the fill.
+                        `color` is the brand, a flat lemon: it holds the number's ring
+                        and the panel's inset line, but writes at 1.77:1 on a light row.
+                        The dark theme did not show it, lemon being legible everywhere
+                        there; it was the light-theme pass that found it. */}
                     <span className="nums whitespace-nowrap text-xs font-black" style={{ color: C.accent }}>{st.points} pts</span>
                     <span className="flex items-center gap-0.5">
                       {[0, 1, 2, 3, 4].map((i) => <span key={i} className={`h-1.5 w-1.5 rounded-full ${i < st.fouls ? 'bg-[var(--c-danger-fill)]' : 'bg-muted-foreground/25'}`} />)}

@@ -617,6 +617,10 @@ export const fr: Record<string, string> = {
   'sync.refuseDetail': 'Le serveur refuse cet appareil. Votre saisie est enregistrée ici et rien n’est perdu, mais elle n’atteint plus les autres appareils : vérifiez le jeton dans l’administration.',
 
   // ── Langue et thème ───────────────────────────────────────────────────────
+  'tir.terrainSaisie': 'Demi-terrain — toucher le point de tir',
+
+  'partage.tropLong': 'Cette combinaison est trop chargée pour tenir dans un lien. Envoyez plutôt l’image ou le PDF — un lien tronqué en route serait pire que pas de lien.',
+
   'lang.switch': 'Changer de langue',
   'theme.light': 'Mode Jour',
   'theme.dark': 'Mode Nuit',

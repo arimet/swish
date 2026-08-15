@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import type { Player } from '../../domain/types'
 import { useT } from '../../i18n'
 
-/** Dialogue de changement : choisit un joueur qui sort et un joueur qui entre. */
+/** The substitution dialog: pick a player going off and a player coming on. */
 export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers, onSubmit }: {
   open: boolean; onClose: () => void
   onCourtPlayers: Player[]; benchPlayers: Player[]

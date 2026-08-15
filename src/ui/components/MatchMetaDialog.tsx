@@ -5,7 +5,7 @@ import { useT } from '../../i18n'
 
 type Editable = Pick<MatchMeta, 'championshipLabel' | 'matchNumber' | 'date' | 'time' | 'venue' | 'referee1' | 'referee2'>
 
-/** Édition des informations d'une rencontre (méta), depuis le résumé. */
+/** Editing a game's details (its meta), from the summary. */
 export function MatchMetaDialog({ open, meta, onClose, onSave }: {
   open: boolean; meta: MatchMeta; onClose: () => void; onSave: (patch: Editable) => void
 }) {

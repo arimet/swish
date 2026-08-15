@@ -30,7 +30,7 @@ interface Operation {
   titre: string
   message: string
   /** Texte à recopier pour confirmer — réservé à la remise à zéro complète. */
-  saisieAttendue?: string
+  expectedInput?: string
   executer: () => Promise<unknown>
 }
 
@@ -179,7 +179,7 @@ export function Admin() {
               // Le nom du club, recopié à l'identique. Le repli n'arrive pas dans la
               // coquille (le club est résolu) : il est là pour qu'aucun chemin ne laisse
               // la remise à zéro se confirmer d'un seul clic.
-              saisieAttendue: club?.name || 'EFFACER',
+              expectedInput: club?.name || 'EFFACER',
               executer: async () => {
                 await wipeAll()
                 // Le club suivi disparaît avec ses données : sans cet oubli, l'appareil
@@ -194,7 +194,7 @@ export function Admin() {
       <ConfirmDialog
         open={!!demande} danger
         title={demande?.titre ?? ''} message={demande?.message}
-        saisieAttendue={demande?.saisieAttendue}
+        expectedInput={demande?.expectedInput}
         confirmLabel={translate('admin.supprimerDefinitivement')}
         onConfirm={confirmer} onClose={() => setDemande(null)}
       />
