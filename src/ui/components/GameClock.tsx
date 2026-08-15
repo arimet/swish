@@ -1,4 +1,5 @@
 import { Pause, Play } from 'lucide-react'
+import { useT } from '../../i18n'
 
 export function fmt(seconds: number): string {
   const m = Math.floor(seconds / 60), s = seconds % 60
@@ -8,6 +9,7 @@ export function fmt(seconds: number): string {
 export function GameClock({ running, seconds, onToggle }: {
   running: boolean; seconds: number; onToggle: () => void
 }) {
+  const trad = useT()
   const low = seconds <= 60 && running
   return (
     <div className="flex flex-col items-center gap-2">
@@ -39,8 +41,8 @@ export function GameClock({ running, seconds, onToggle }: {
         } hover:brightness-110`}
       >
         {running
-          ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />Arrêter</>
-          : <><Play className="h-4 w-4 shrink-0" strokeWidth={2.5} />Démarrer</>}
+          ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{trad('chrono.arreter')}</>
+          : <><Play className="h-4 w-4 shrink-0" strokeWidth={2.5} />{trad('chrono.demarrer')}</>}
       </button>
     </div>
   )

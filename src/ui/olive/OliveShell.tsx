@@ -59,9 +59,9 @@ export function OliveShell() {
   }, [players, playerId, setPlayer])
 
   const effectif = players ?? []
-  const t = useT()
+  const trad = useT()
   const clefTitre = TITLES[pathname] ?? (pathname.startsWith('/teams') ? 'nav.equipes' : pathname.startsWith('/schemas') ? 'nav.schemas' : pathname.startsWith('/match') ? 'nav.rencontre' : 'nav.rencontres')
-  const title = t(clefTitre)
+  const title = trad(clefTitre)
   return (
     <div className="min-h-dvh lg:p-4" style={{ background: C.page }}>
       <div className="mx-auto flex h-dvh w-full max-w-[1680px] overflow-hidden lg:h-[calc(100dvh-2rem)] lg:rounded-[26px] lg:shadow-2xl" style={{ background: C.frame, color: C.text }}>
@@ -117,7 +117,7 @@ export function OliveShell() {
  *  Le même composant sert à l'en-tête mobile (`compact`) et à la barre latérale :
  *  deux copies finiraient par diverger. */
 function AccesMenu({ players, compact = false }: { players: Player[]; compact?: boolean }) {
-  const t = useT()
+  const trad = useT()
   const { role, playerId, unlock, lock, setPlayer } = useAuth()
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState('')
@@ -130,7 +130,7 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
   const valider = () => {
     const obtenu = unlock(code)
     setCode('')
-    if (!obtenu) { setErreur(t('acces.codeInconnu')); return }
+    if (!obtenu) { setErreur(trad('acces.codeInconnu')); return }
     setErreur('')
     // Seul le code joueur ouvre le choix du nom ; les autres changent le rôle,
     // que le dialogue affiche aussitôt en guise de confirmation.
@@ -141,8 +141,8 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
     <>
       <button
         onClick={ouvrir}
-        aria-label={`${t('acces.titre')} · ${t(`role.${role}`)}`}
-        title={`${t('acces.titre')} · ${t(`role.${role}`)}`}
+        aria-label={`${trad('acces.titre')} · ${trad(`role.${role}`)}`}
+        title={`${trad('acces.titre')} · ${trad(`role.${role}`)}`}
         className={compact
           ? 'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm lg:hidden'
           : 'flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition'}
@@ -152,22 +152,22 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
             posée juste au-dessus, donc il restait jaune quand l'état disait « vert,
             déverrouillé » — et il changeait de dessin d'un système à l'autre. */}
         {verrouille ? <Lock className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} /> : <LockOpen className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />}
-        {!compact && <span className="truncate">{t('acces.titre')} · {t(`role.${role}`)}</span>}
+        {!compact && <span className="truncate">{trad('acces.titre')} · {trad(`role.${role}`)}</span>}
       </button>
 
       <Dialog open={open} onOpenChange={(o) => !o && setOpen(false)}>
         <DialogContent className="sm:max-w-xs border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
           <DialogHeader>
-            <DialogTitle className="text-lg font-extrabold">{t('acces.titre')}</DialogTitle>
+            <DialogTitle className="text-lg font-extrabold">{trad('acces.titre')}</DialogTitle>
           </DialogHeader>
-          <p className="text-[13px] font-semibold">{t('acces.enCours', { role: t(`role.${role}`) })}</p>
+          <p className="text-[13px] font-semibold">{trad('acces.enCours', { role: trad(`role.${role}`) })}</p>
           <p className="text-[13px]" style={{ color: C.muted }}>
-            {moi ? t('acces.identifieComme', { nom: `${moi.lastName} ${moi.firstName}` }) : t('acces.aucuneIdentite')}
+            {moi ? trad('acces.identifieComme', { nom: `${moi.lastName} ${moi.firstName}` }) : trad('acces.aucuneIdentite')}
           </p>
 
           {choix ? (
             <>
-              <p className="text-[13px] font-semibold">{t('acces.quiEtesVous')}</p>
+              <p className="text-[13px] font-semibold">{trad('acces.quiEtesVous')}</p>
               <ul className="max-h-56 space-y-1 overflow-y-auto">
                 {[...players].sort((a, b) => a.number - b.number).map((p) => (
                   <li key={p.id}>
@@ -180,28 +180,28 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
                     </button>
                   </li>
                 ))}
-                {players.length === 0 && <li className="py-2 text-[13px]" style={{ color: C.muted }}>{t('acces.effectifVide')}</li>}
+                {players.length === 0 && <li className="py-2 text-[13px]" style={{ color: C.muted }}>{trad('acces.effectifVide')}</li>}
               </ul>
             </>
           ) : (
             <>
               <input
-                autoFocus aria-label={t('acces.codeLabel')} type="password" value={code} placeholder={t('acces.codePlaceholder')}
+                autoFocus aria-label={trad('acces.codeLabel')} type="password" value={code} placeholder={trad('acces.codePlaceholder')}
                 onChange={(e) => { setCode(e.target.value); setErreur('') }}
                 onKeyDown={(e) => e.key === 'Enter' && valider()}
                 className={`w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${erreur ? 'border-[var(--c-danger)]' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
               />
               {erreur && <p className="text-xs font-semibold text-[var(--c-danger)]">{erreur}</p>}
-              <button onClick={valider} className="rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">{t('acces.deverrouiller')}</button>
+              <button onClick={valider} className="rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">{trad('acces.deverrouiller')}</button>
             </>
           )}
 
           <div className="flex gap-2">
             {moi && !choix && (
-              <button onClick={() => setPlayer(null)} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{t('acces.nePlusMIdentifier')}</button>
+              <button onClick={() => setPlayer(null)} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{trad('acces.nePlusMIdentifier')}</button>
             )}
             {!verrouille && (
-              <button onClick={lock} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{t('acces.seVerrouiller')}</button>
+              <button onClick={lock} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{trad('acces.seVerrouiller')}</button>
             )}
           </div>
         </DialogContent>
@@ -213,7 +213,7 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
 /** Barre de navigation basse (mobile) : le menu latéral étant masqué < lg.
  *  Quatre entrées maximum — au-delà, les cibles deviennent trop étroites au pouce. */
 function MobileNav() {
-  const t = useT()
+  const trad = useT()
   const { clubId } = useClub()
   const items = clubId
     ? [...NAV_MOBILE, { icon: ICON.users, label: 'Mon équipe', to: `/teams/${clubId}`, end: true }]
@@ -225,7 +225,7 @@ function MobileNav() {
           className="flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[12px] font-bold transition"
           style={({ isActive }) => ({ color: isActive ? C.accent : C.muted, background: isActive ? C.card2 : 'transparent' })}>
           <Ic d={n.icon} className="h-5 w-5" />
-          {t(n.label)}
+          {trad(n.label)}
         </NavLink>
       ))}
     </nav>
@@ -234,7 +234,7 @@ function MobileNav() {
 
 /** Liens d'un groupe de menu de la barre latérale. */
 function NavGroup({ items, inactifSur }: { items: { icon: string; label: string; to: string; end: boolean }[]; inactifSur?: string }) {
-  const t = useT()
+  const trad = useT()
   const { pathname } = useLocation()
   /** « Équipes » s'allumait sur la fiche de mon équipe, qui est sous `/teams/` :
    *  deux entrées du menu se seraient éclairées pour une seule page. L'entrée qui
@@ -247,7 +247,7 @@ function NavGroup({ items, inactifSur }: { items: { icon: string; label: string;
         <NavLink key={n.label} to={n.to} end={n.end}
           className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
           style={({ isActive }) => ({ background: actif(isActive, n.to) ? C.card2 : 'transparent', color: actif(isActive, n.to) ? C.accent : C.muted })}>
-          {({ isActive }) => (<>{actif(isActive, n.to) && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.brand }} />}<Ic d={n.icon} />{t(n.label)}</>)}
+          {({ isActive }) => (<>{actif(isActive, n.to) && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.brand }} />}<Ic d={n.icon} />{trad(n.label)}</>)}
         </NavLink>
       ))}
     </nav>
@@ -255,7 +255,7 @@ function NavGroup({ items, inactifSur }: { items: { icon: string; label: string;
 }
 
 function Sidebar({ players }: { players: Player[] }) {
-  const t = useT()
+  const trad = useT()
   const { clubId } = useClub()
   const { can } = useAuth()
   return (
@@ -270,13 +270,13 @@ function Sidebar({ players }: { players: Player[] }) {
         <span className="text-lg font-extrabold leading-none tracking-tight">Swish</span>
       </Link>
 
-      <p className="mt-6 px-2 text-[12px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>{t('nav.monClub')}</p>
+      <p className="mt-6 px-2 text-[12px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>{trad('nav.monClub')}</p>
       <NavGroup items={NAV_TOP} />
       {clubId && (
         <NavLink to={`/teams/${clubId}`} end
           className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
           style={({ isActive }) => ({ background: isActive ? C.card2 : 'transparent', color: isActive ? C.accent : C.muted })}>
-          {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.brand }} />}<Ic d={ICON.users} />{t('nav.monEquipe')}</>)}
+          {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.brand }} />}<Ic d={ICON.users} />{trad('nav.monEquipe')}</>)}
         </NavLink>
       )}
       <NavGroup items={NAV_REST} inactifSur={clubId ? `/teams/${clubId}` : undefined} />
@@ -299,12 +299,12 @@ function Sidebar({ players }: { players: Player[] }) {
             className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition"
             style={({ isActive }) => ({ background: C.card, border: bd, color: isActive ? C.accent : C.muted })}>
             <Eraser className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
-            {t('nav.administration')}
+            {trad('nav.administration')}
           </NavLink>
         )}
         <a href="https://github.com/arimet" target="_blank" rel="noopener noreferrer"
           className="block px-2 py-1.5 text-center text-[12px] font-medium transition hover:underline" style={{ color: C.faint }}>
-          {t('nav.credit')}
+          {trad('nav.credit')}
         </a>
       </div>
     </aside>

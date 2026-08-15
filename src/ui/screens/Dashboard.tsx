@@ -13,8 +13,10 @@ import { C, Panel, TeamBadge, Vous, bd, displayClock, fmtDate } from '../olive/k
 import type { Convocation, Match, MessageEquipe, Player, Team, Training } from '../../domain/types'
 import type { Schema } from '../../domain/plays'
 import { Check } from 'lucide-react'
+import { useT } from '../../i18n'
 
 export function Dashboard() {
+  const trad = useT()
   const { clubId, club } = useClub()
   const { can, playerId } = useAuth()
   // Le tableau de bord se lit en entier ; seuls les raccourcis qui mènent à une
@@ -117,12 +119,12 @@ export function Dashboard() {
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-extrabold tracking-tight">{club.name}</h1>
             <p className="text-sm" style={{ color: C.muted }}>
-              {rec.played ? `${rec.played} rencontre${rec.played > 1 ? 's' : ''} jouée${rec.played > 1 ? 's' : ''}` : 'Aucune rencontre jouée'}
+              {rec.played ? trad('bord.rencontresJouees', { count: rec.played }) : trad('bord.aucuneRencontreJouee')}
             </p>
           </div>
           {moi && (
             <Link to={`/players/${moi.id}`} className="ml-auto shrink-0 rounded-xl px-3 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>
-              Ma fiche →
+              {trad('bord.maFiche')}
             </Link>
           )}
         </div>
@@ -143,15 +145,15 @@ export function Dashboard() {
         {aJoue ? (
           <>
             <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <Stat label="Bilan" value={`${rec.wins}V – ${rec.losses}D`} hint={`${rec.played} rencontre${rec.played > 1 ? 's' : ''}`} accent={rec.wins >= rec.losses ? C.green : C.accent} />
-              <Stat label="Points marqués" value={String(rec.avgFor)} hint="par match" />
-              <Stat label="Points encaissés" value={String(rec.avgAgainst)} hint="par match" />
-              <Stat label="Différentiel" value={diff > 0 ? `+${diff}` : String(diff)} hint="sur la saison" accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
+              <Stat label={trad('bord.bilan')} value={`${rec.wins}V – ${rec.losses}D`} hint={trad('commun.rencontre', { count: rec.played })} accent={rec.wins >= rec.losses ? C.green : C.accent} />
+              <Stat label={trad('bord.pointsMarques')} value={String(rec.avgFor)} hint={trad('bord.parMatch')} />
+              <Stat label={trad('bord.pointsEncaisses')} value={String(rec.avgAgainst)} hint={trad('bord.parMatch')} />
+              <Stat label={trad('bord.differentiel')} value={diff > 0 ? `+${diff}` : String(diff)} hint={trad('bord.surLaSaison')} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
             </div>
 
             {lines.length > 0 && (
               <div className="mt-3 flex items-center gap-2">
-                <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Forme</span>
+                <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.forme')}</span>
                 {lines.slice(0, 5).map((l) => (
                   <span key={l.match.id} className="grid h-6 w-6 place-items-center rounded-md text-[12px] font-black"
                     style={{ background: l.result === 'V' ? C.greenBg : C.dangerBg, color: l.result === 'V' ? C.green : C.danger }}>
@@ -166,9 +168,9 @@ export function Dashboard() {
         ) : null}
 
         <div className={`${aJoue ? 'mt-6' : 'mt-5'} grid gap-5 lg:grid-cols-[1fr_420px] [&>*]:min-w-0`}>
-          {aJoue && <Panel title="Meilleurs marqueurs">
+          {aJoue && <Panel title={trad('bord.meilleursMarqueurs')}>
             {scorers.length === 0 ? (
-              <Empty>Pas encore de points marqués.</Empty>
+              <Empty>{trad('bord.pasDePoints')}</Empty>
             ) : (
               <ul className="space-y-1.5">
                 {scorers.map(([pid, pts], i) => {
@@ -186,7 +188,7 @@ export function Dashboard() {
                         {/* Titre explicite : ce pourcentage ne porte que sur les tirs
                             localisés, alors que les points juste à côté comptent tout
                             (lancers francs compris) — cf. PlayerDetail. */}
-                        <span className="text-[12px] font-semibold" style={{ color: C.muted }} title="Réussite sur les tirs localisés">{pct === null ? '—' : `${pct} %`}</span>
+                        <span className="text-[12px] font-semibold" style={{ color: C.muted }} title={trad('bord.reussiteTirs')}>{pct === null ? '—' : `${pct} %`}</span>
                         <span className="w-14 text-right text-sm font-black tabular-nums">{pts} pts</span>
                       </Link>
                     </li>
@@ -198,14 +200,14 @@ export function Dashboard() {
 
           {/* La carte de tirs ne s'affiche que s'il y a des tirs : vide, c'est un
               terrain dessiné pour rien, et elle ne dit pas quoi faire. */}
-          {aJoue && <Panel title={openPlayer ? `Hot zone — ${byId[openPlayer]?.lastName ?? 'joueur'}` : 'Hot zone — équipe'}>
+          {aJoue && <Panel title={openPlayer ? trad('bord.hotZoneJoueur', { nom: byId[openPlayer]?.lastName ?? trad('bord.joueur') }) : trad('bord.hotZoneEquipe')}>
             <div className="mb-2 flex flex-wrap gap-1.5">
-              <Chip active={!openPlayer} onClick={() => setOpenPlayer(null)}>Équipe</Chip>
+              <Chip active={!openPlayer} onClick={() => setOpenPlayer(null)}>{trad('bord.equipe')}</Chip>
               {players.map((p) => (
                 <Chip key={p.id} active={openPlayer === p.id} onClick={() => setOpenPlayer(p.id)}>{p.number}</Chip>
               ))}
             </div>
-            {shownShots.length === 0 ? <Empty>Aucun tir localisé pour l’instant.</Empty> : <ShotChart shots={shownShots} minAttempts={openPlayer ? 1 : 3} />}
+            {shownShots.length === 0 ? <Empty>{trad('bord.aucunTir')}</Empty> : <ShotChart shots={shownShots} minAttempts={openPlayer ? 1 : 3} />}
           </Panel>}
         </div>
       </div>
@@ -230,6 +232,7 @@ const OUBLI_MS = 14 * 24 * 3600_000
  * la garde reste derrière eux.
  */
 function MessageDuCoach({ clubId }: { clubId: string }) {
+  const trad = useT()
   const { can, guard } = useAuth()
   const gere = can('manage')
   const [message, setMessage] = useState<MessageEquipe | null>(null)
@@ -265,18 +268,18 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
     return (
       <section className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
         <div className="mb-3 flex items-center gap-3">
-          <label htmlFor="message-equipe" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>Message à l’équipe</label>
-          <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>Fermer</button>
+          <label htmlFor="message-equipe" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{trad('bord.messageEquipe')}</label>
+          <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{trad('commun.fermer2')}</button>
         </div>
         <textarea id="message-equipe" rows={3} value={texte} onChange={(e) => setTexte(e.target.value)}
-          placeholder="Pas d’entraînement mardi, gymnase fermé."
+          placeholder={trad('bord.messagePlaceholder')}
           className="w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
         <button onClick={publier} disabled={!texte.trim()} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
-          Publier le message
+          {trad('bord.publierMessage')}
         </button>
         {/* Comme les convocations, les entraînements et les schémas : même
             formulation, pour ne pas laisser croire à deux limites différentes. */}
-        <p className="mt-3 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>Ce message reste sur cet appareil : il n’est pas synchronisé avec vos autres appareils.</p>
+        <p className="mt-3 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('bord.messageLocal')}</p>
       </section>
     )
   }
@@ -287,7 +290,7 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
     if (!gere) return null
     return (
       <button onClick={ouvrir} className="mb-5 rounded-xl px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>
-        + Message à l’équipe
+        {trad('bord.ajouterMessage')}
       </button>
     )
   }
@@ -296,15 +299,15 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
   return (
     <section data-testid="message-equipe" className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${oublié ? C.amberBd : C.accentBd}` }}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Message à l’équipe</span>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.messageEquipe')}</span>
         <span className="rounded-md px-2 py-0.5 text-[12px] font-black"
           style={oublié ? { background: C.amberBg, color: C.amber } : { background: C.accentBg, color: C.accent }}>
           {depuis(affiché.écritLe)}
         </span>
         {gere && (
           <>
-            <button onClick={ouvrir} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>Modifier</button>
-            <button onClick={effacer} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.accent }}>Effacer</button>
+            <button onClick={ouvrir} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>{trad('commun.modifierMaj')}</button>
+            <button onClick={effacer} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.accent }}>{trad('commun.effacer')}</button>
           </>
         )}
       </div>
@@ -317,7 +320,8 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
 // `live` et `next` viennent tous les deux de `mine`, déjà filtré sur
 // `meta.clubId === clubId` : notre club est donc toujours le côté A.
 function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next?: Match; teams: Record<string, Team>; gere: boolean; tientLaMarque: boolean }) {
-  const opponent = (m: Match) => teams[m.meta.opponentId]?.name ?? 'Adversaire'
+  const trad = useT()
+  const opponent = (m: Match) => teams[m.meta.opponentId]?.name ?? trad('bord.adversaire')
   if (live) {
     const ls = liveState(live)
     const dc = displayClock(live)
@@ -325,7 +329,7 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
     const opp = ls.score.b
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
-        <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.greenFill, color: C.onGreen }}>En direct</span>
+        <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.greenFill, color: C.onGreen }}>{trad('bord.enDirect')}</span>
         <span className="nums text-3xl font-black tabular-nums">{mine} – {opp}</span>
         <span className="text-sm font-bold" style={{ color: C.muted }}>contre {opponent(live)}</span>
         <span className="nums text-sm font-bold" style={{ color: C.faint }}>{dc.label} · {dc.clock}</span>
@@ -333,7 +337,7 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
             est le geste de celui qui la tient, et lui seul y est invité. */}
         {tientLaMarque && (
           <Link to={`/match/${live.id}/live`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-            Ouvrir la table de marque →
+            {trad('bord.ouvrirTable')}
           </Link>
         )}
       </div>
@@ -343,18 +347,18 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
     const f = fmtDate(next.meta.date)
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine rencontre</span>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.prochaineRencontre')}</span>
         <span className="text-sm font-bold">contre {opponent(next)}</span>
         <span className="text-sm" style={{ color: C.muted }}>{[f.long, next.meta.time, next.meta.venue].filter(Boolean).join(' · ')}</span>
-        <Link to={`/match/${next.id}`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>Voir la fiche →</Link>
+        <Link to={`/match/${next.id}`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>{trad('bord.voirFiche')}</Link>
       </div>
     )
   }
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-      <span className="text-sm" style={{ color: C.muted }}>Aucune rencontre prévue.</span>
+      <span className="text-sm" style={{ color: C.muted }}>{trad('bord.aucuneRencontrePrevue')}</span>
       {/* Planifier écrit : le raccourci ne s'affiche qu'à qui gère le club. */}
-      {gere && <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>+ Planifier une rencontre</Link>}
+      {gere && <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('bord.planifierRencontre')}</Link>}
     </div>
   )
 }
@@ -363,12 +367,13 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
  *  `fixture` exclut déjà le match en direct (voir le calcul dans `Dashboard`) : ce
  *  composant n'a donc jamais à s'en soucier, il affiche simplement ce qu'on lui donne. */
 function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fixture: Fixture | null; teams: Record<string, Team>; players: Player[]; convocation: Convocation | null; schemas: Schema[]; gere: boolean }) {
+  const trad = useT()
   if (!fixture) {
     return (
       <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
-        <span className="text-sm" style={{ color: C.muted }}>Rien de planifié pour l’instant.</span>
-        {gere && <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>+ Planifier →</Link>}
+        <span className="text-sm" style={{ color: C.muted }}>{trad('bord.rienDePlanifie')}</span>
+        {gere && <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('bord.planifier')}</Link>}
       </div>
     )
   }
@@ -382,14 +387,14 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
     return (
       <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
-        <p className="mt-1 text-sm font-bold">Entraînement</p>
+        <p className="mt-1 text-sm font-bold">{trad('bord.entrainement')}</p>
         <p className="text-sm" style={{ color: C.muted }}>{[f.long, t.time, t.place].filter(Boolean).join(' · ') || '—'}</p>
         <p className="mt-1 text-sm" style={{ color: C.muted }}>Thème : {t.theme ?? '—'}</p>
         {prévus.length > 0 && (
           <div className="mt-3 border-t pt-3" style={{ borderColor: C.border }}>
             {/* Le chemin le plus court entre « c'est mardi » et « voilà ce qu'on
                 travaille » : chaque schéma prévu ouvre directement son lecteur. */}
-            <p className="text-sm font-bold">Au programme</p>
+            <p className="text-sm font-bold">{trad('bord.auProgramme')}</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {prévus.map((s) => (
                 <Link key={s.id} to={`/schemas/${s.id}/lecteur`} className="rounded-lg px-2.5 py-1 text-[12px] font-bold"
@@ -428,7 +433,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
             convoqué » sur trois lignes à côté du bouton, la ligne se casse en deux. */}
         <div className="min-w-[180px] flex-1">
           {convoqués.length === 0 ? (
-            <p className="text-sm font-bold" style={{ color: C.amber }}>Personne n’est convoqué.</p>
+            <p className="text-sm font-bold" style={{ color: C.amber }}>{trad('bord.personneConvoquee')}</p>
           ) : (
             <>
               <p className="text-sm font-bold">{convoqués.length} convoqué{convoqués.length > 1 ? 's' : ''}</p>
@@ -442,7 +447,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
         {gere && (
           <Link to={`/match/${m.id}#convocation`} className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
             style={convoqués.length === 0 ? { background: C.brand, color: C.onBrand } : { border: bd, color: C.text }}>
-            {convoqués.length === 0 ? 'Convoquer l’équipe →' : 'Modifier la convocation →'}
+            {convoqués.length === 0 ? trad('bord.convoquerEquipe') : trad('bord.modifierConvocation')}
           </Link>
         )}
       </div>
@@ -476,27 +481,28 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
  * démarrer avec moins — mais on ne met pas cinq joueurs sur le terrain avec quatre.
  */
 function PourCommencer({ effectif, autresEquipes, clubId, gere }: { effectif: number; autresEquipes: number; clubId: string; gere: boolean }) {
+  const trad = useT()
   const etapes = [
     {
       fait: effectif >= 5,
-      titre: effectif === 0 ? 'Ajoutez vos joueurs' : `Votre effectif — ${effectif} joueur${effectif > 1 ? 's' : ''}`,
-      detail: effectif >= 5 ? 'De quoi aligner un cinq.' : 'Il en faut cinq pour aligner une équipe sur le terrain.',
+      titre: effectif === 0 ? trad('commencer.effectifVide') : trad('commencer.effectif', { n: trad('commun.joueur', { count: effectif }) }),
+      detail: effectif >= 5 ? trad('commencer.effectifPret') : trad('commencer.effectifIncomplet'),
       lien: `/teams/${clubId}`,
-      action: 'Compléter l’effectif',
+      action: trad('commencer.completer'),
     },
     {
       fait: autresEquipes > 0,
-      titre: 'Enregistrez un adversaire',
-      detail: 'Une rencontre se joue contre une équipe : il faut la créer une fois, elle resservira toute la saison.',
+      titre: trad('commencer.adversaireTitre'),
+      detail: trad('commencer.adversaireDetail'),
       lien: '/teams/new',
-      action: 'Nouvelle équipe',
+      action: trad('commencer.nouvelleEquipe'),
     },
     {
       fait: false,
-      titre: 'Planifiez la première rencontre',
-      detail: 'Date, adversaire, et la table de marque est prête à saisir.',
+      titre: trad('commencer.rencontreTitre'),
+      detail: trad('commencer.rencontreDetail'),
       lien: '/match/new',
-      action: 'Nouvelle rencontre',
+      action: trad('commencer.nouvelleRencontre'),
     },
   ]
   const courante = etapes.findIndex((e) => !e.fait)
@@ -504,12 +510,12 @@ function PourCommencer({ effectif, autresEquipes, clubId, gere }: { effectif: nu
   return (
     <section className="mt-5 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
       <h2 className="text-base font-extrabold tracking-tight">
-        {effectif >= 5 ? 'Votre effectif est prêt' : 'Pour commencer'}
+        {effectif >= 5 ? trad('commencer.titrePret') : trad('commencer.titre')}
       </h2>
       <p className="mt-1 text-[13px]" style={{ color: C.muted }}>
         {gere
-          ? 'Trois étapes, une fois pour la saison. Ce bloc disparaît dès votre première rencontre.'
-          : 'Le club n’a pas encore de rencontre. Ces étapes demandent l’accès administrateur.'}
+          ? trad('commencer.sousTitreGere')
+          : trad('commencer.sousTitreVisiteur')}
       </p>
 
       <ol className="mt-4 space-y-2">

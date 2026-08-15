@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Eye, Lock, LockOpen } from 'lucide-react'
-import { NOM_ROLE, REQUIS, type Ability } from '../../app/auth'
+import { REQUIS, type Ability } from '../../app/auth'
+import { useT } from '../../i18n'
 import { C } from '../olive/kit'
 
 /**
@@ -10,7 +11,8 @@ import { C } from '../olive/kit'
  * faut un autre code plutôt que de croire le sien cassé.
  */
 export function AccessGate({ ability, matchId, onUnlock, onExit }: { ability: Ability; matchId: string; onUnlock: () => void; onExit: () => void }) {
-  const nomAccès = NOM_ROLE[REQUIS[ability]]
+  const trad = useT()
+  const nomAccès = trad(`role.${REQUIS[ability]}`)
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-8 text-center" style={{ background: C.frame, color: C.text }}>
       {/* Le cadenas se dessine au trait et prend la couleur du texte, comme les
@@ -19,19 +21,19 @@ export function AccessGate({ ability, matchId, onUnlock, onExit }: { ability: Ab
       <span className="grid h-14 w-14 place-items-center rounded-2xl" style={{ background: C.accentBg, color: C.accent }}>
         <Lock className="h-7 w-7" strokeWidth={1.8} />
       </span>
-      <h2 className="text-2xl font-extrabold tracking-tight">Accès {nomAccès} requis</h2>
-      <p className="max-w-sm text-sm text-muted-foreground">Le code {nomAccès.toLowerCase()} est requis pour saisir la rencontre.</p>
+      <h2 className="text-2xl font-extrabold tracking-tight">{trad('garde.titre', { role: nomAccès })}</h2>
+      <p className="max-w-sm text-sm text-muted-foreground">{trad('garde.explication', { role: nomAccès.toLowerCase() })}</p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
         <button onClick={onUnlock} className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110">
           <LockOpen className="h-4 w-4" strokeWidth={2} />
-          Déverrouiller
+          {trad('acces.deverrouiller')}
         </button>
         <Link to={`/match/${matchId}/watch`} className="flex items-center gap-2 rounded-xl border border-border/70 px-5 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-muted">
           <Eye className="h-4 w-4" strokeWidth={2} />
-          Suivi spectateur
+          {trad('garde.suiviSpectateur')}
         </Link>
       </div>
-      <button onClick={onExit} className="mt-1 text-xs font-semibold text-muted-foreground hover:text-foreground">← Accueil</button>
+      <button onClick={onExit} className="mt-1 text-xs font-semibold text-muted-foreground hover:text-foreground">{trad('garde.accueil')}</button>
     </div>
   )
 }

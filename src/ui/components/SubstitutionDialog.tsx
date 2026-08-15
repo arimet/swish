@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import type { Player } from '../../domain/types'
+import { useT } from '../../i18n'
 
 /** Dialogue de changement : choisit un joueur qui sort et un joueur qui entre. */
 export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers, onSubmit }: {
@@ -8,6 +9,7 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
   onCourtPlayers: Player[]; benchPlayers: Player[]
   onSubmit: (playerOutId: string, playerInId: string) => void
 }) {
+  const trad = useT()
   const [out, setOut] = useState<string | null>(null)
   const [inId, setInId] = useState<string | null>(null)
 
@@ -21,11 +23,11 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>Changement</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{trad('panneau.changement')}</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <PickGroup title="Sort du terrain" accent="text-[var(--c-danger)]" players={onCourtPlayers}
+          <PickGroup title={trad('changement.sort')} accent="text-[var(--c-danger)]" players={onCourtPlayers}
             selected={out} onSelect={setOut} activeClass="border-transparent bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]" />
-          <PickGroup title="Entre sur le terrain" accent="text-[var(--c-green)]" players={benchPlayers}
+          <PickGroup title={trad('changement.entre')} accent="text-[var(--c-green)]" players={benchPlayers}
             selected={inId} onSelect={setInId} activeClass="border-transparent bg-[var(--c-green-fill)] text-[var(--c-on-green)]" />
         </div>
         <DialogFooter>
@@ -34,7 +36,7 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
             onClick={submit}
             className="w-full rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground transition enabled:hover:brightness-110 disabled:opacity-40"
           >
-            Valider le changement
+            {trad('changement.valider')}
           </button>
         </DialogFooter>
       </DialogContent>
@@ -46,6 +48,7 @@ function PickGroup({ title, accent, players, selected, onSelect, activeClass }: 
   title: string; accent: string; players: Player[]; selected: string | null
   onSelect: (id: string) => void; activeClass: string
 }) {
+  const trad = useT()
   return (
     <div>
       <p className={`mb-1.5 text-xs font-bold uppercase tracking-wide ${accent}`}>{title}</p>
@@ -61,7 +64,7 @@ function PickGroup({ title, accent, players, selected, onSelect, activeClass }: 
             {p.number} {p.lastName}
           </button>
         ))}
-        {players.length === 0 && <p className="col-span-2 text-xs text-muted-foreground">Aucun joueur.</p>}
+        {players.length === 0 && <p className="col-span-2 text-xs text-muted-foreground">{trad('changement.aucun')}</p>}
       </div>
     </div>
   )

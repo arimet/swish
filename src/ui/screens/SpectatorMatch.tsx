@@ -9,11 +9,13 @@ import { shotsOf } from '../../domain/shotchart'
 import { ShotChart } from '../components/ShotCourt'
 import { fmt } from '../components/GameClock'
 import { C, TeamBadge, champLabel } from '../olive/kit'
+import { useT } from '../../i18n'
 import type { Match, Player, TeamSide } from '../../domain/types'
 
 /** Page de suivi en direct pour les spectateurs (lecture seule, plein écran).
  * Rafraîchit l'état depuis la base locale ; conçue pour être projetée. */
 export function SpectatorMatch({ matchId }: { matchId: string }) {
+  const trad = useT()
   const [match, setMatch] = useState<Match | null | undefined>(undefined)
   const [players, setPlayers] = useState<Record<string, Player>>({})
   const [names, setNames] = useState<Record<TeamSide, string>>({ A: 'Locaux', B: 'Visiteurs' })
@@ -66,8 +68,8 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
     })
   }, [match?.meta.clubId, match?.meta.opponentId])
 
-  if (match === undefined) return <Screen><p style={{ color: C.muted }}>Chargement…</p></Screen>
-  if (match === null) return <Screen><p style={{ color: C.muted }}>Rencontre introuvable.</p></Screen>
+  if (match === undefined) return <Screen><p style={{ color: C.muted }}>{trad('commun.chargement')}</p></Screen>
+  if (match === null) return <Screen><p style={{ color: C.muted }}>{trad('apercu.introuvable')}</p></Screen>
 
   const ls = liveState(match)
   const live = match.status === 'live'
@@ -92,7 +94,7 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
           <span className="flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-black uppercase tracking-wide"
             style={live ? { background: C.greenFill, color: C.onGreen } : finished ? { background: C.neutralBg, color: C.muted } : { background: C.amberBg, color: C.amber }}>
             {live && <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: C.green }} />}
-            {live ? 'En direct' : finished ? 'Terminé' : 'À venir'}
+            {live ? trad('bord.enDirect') : finished ? trad('spect.termine') : trad('spect.aVenir')}
           </span>
         </div>
 
@@ -112,10 +114,10 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
         </div>
         <div className="mt-3 flex flex-col items-center gap-1">
           <span className="nums rounded-lg px-3.5 py-1.5 text-base font-black tabular-nums" style={{ background: C.card, color: finished ? C.muted : C.text, border: `1px solid ${C.border}` }}>
-            {finished ? 'FINAL' : `${periodLabel} · ${fmt(displaySec)}`}
+            {finished ? trad('resume.final').toUpperCase() : `${periodLabel} · ${fmt(displaySec)}`}
           </span>
           {!finished && ls.clockRunning && !canSimulate && (
-            <span className="text-[12px] font-semibold" style={{ color: C.faint }}>chrono mis à jour à chaque action</span>
+            <span className="text-[12px] font-semibold" style={{ color: C.faint }}>{trad('spect.chronoMaj')}</span>
           )}
         </div>
 
@@ -131,7 +133,7 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
           <OpponentPanel name={names.B} score={ls.score.b} />
         </div>
 
-        <p className="mt-6 text-center text-[12px]" style={{ color: C.faint }}>Mise à jour automatique · suivi en direct</p>
+        <p className="mt-6 text-center text-[12px]" style={{ color: C.faint }}>{trad('spect.majAuto')}</p>
       </div>
     </Screen>
   )
@@ -164,13 +166,14 @@ function TeamScore({ id, name, score, couleur }: { id: string; name: string; sco
 }
 
 function MetaRow({ label, fouls, bonus, to }: { label: string; fouls: number; bonus: boolean; to: number }) {
+  const trad = useT()
   return (
     <div className="flex items-center justify-between gap-2 rounded-xl px-3 py-2" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <span className="truncate text-[12px] font-bold" style={{ color: C.muted }}>{label}</span>
       <span className="flex shrink-0 items-center gap-2 text-[12px] font-bold">
-        {bonus && <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: C.dangerFill, color: C.onDanger }}>Bonus</span>}
-        <span style={{ color: C.faint }}>Fautes <span style={{ color: C.text }}>{fouls}</span></span>
-        <span style={{ color: C.faint }}>TM <span style={{ color: C.text }}>{to}</span></span>
+        {bonus && <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: C.dangerFill, color: C.onDanger }}>{trad('panneau.bonus')}</span>}
+        <span style={{ color: C.faint }}>{trad('panneau.fautes')} <span style={{ color: C.text }}>{fouls}</span></span>
+        <span style={{ color: C.faint }}>{trad('spect.tm')} <span style={{ color: C.text }}>{to}</span></span>
       </span>
     </div>
   )
@@ -180,11 +183,12 @@ function MetaRow({ label, fouls, bonus, to }: { label: string; fouls: number; bo
  *  possible — on affiche à la place le score réel (saisi globalement) en gros,
  *  plutôt qu'un tableau vide sous un total à 0. */
 function OpponentPanel({ name, score }: { name: string; score: number }) {
+  const trad = useT()
   return (
     <section className="flex flex-col items-center justify-center gap-2 rounded-2xl px-4 py-8 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <h3 className="text-sm font-extrabold uppercase tracking-wide">{name}</h3>
       <span className="nums text-6xl font-black leading-none tabular-nums" style={{ color: C.accent }}>{score}</span>
-      <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Score saisi globalement</p>
+      <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('spect.scoreGlobal')}</p>
     </section>
   )
 }
@@ -193,6 +197,7 @@ function StatList({ name, match, players, openId, onToggle }: {
   name: string; match: Match; players: Record<string, Player>
   openId: string | null; onToggle: (id: string | null) => void
 }) {
+  const trad = useT()
   const stats = [...playerStats(match)].sort((a, b) => b.points - a.points || a.fouls - b.fouls)
   const t = teamTotals(match).team
   const top = stats[0]?.points ?? 0
@@ -208,8 +213,8 @@ function StatList({ name, match, players, openId, onToggle }: {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-[12px] font-bold uppercase" style={{ color: C.faint }}>
-              <th className="px-3 py-2 text-left">N°</th><th className="px-2 py-2 text-left">Joueur</th>
-              <Sth>Pts</Sth><Sth>3PT</Sth><Sth>PD</Sth><Sth>Reb</Sth><Sth>CT</Sth><Sth>F</Sth>
+              <th className="px-3 py-2 text-left">{trad('equipe.numero')}</th><th className="px-2 py-2 text-left">{trad('resume.thJoueur')}</th>
+              <Sth>{trad('resume.thPts')}</Sth><Sth>{trad('resume.th3pts')}</Sth><Sth>{trad('resume.thPd')}</Sth><Sth>{trad('spect.reb')}</Sth><Sth>{trad('resume.thCt')}</Sth><Sth>{trad('spect.f')}</Sth>
             </tr>
           </thead>
           <tbody>
@@ -235,7 +240,7 @@ function StatList({ name, match, players, openId, onToggle }: {
                     <tr style={{ background: C.panel }}>
                       <td colSpan={8} className="px-3 pb-4 pt-1">
                         {shots.length === 0
-                          ? <p className="py-6 text-center text-sm" style={{ color: C.muted }}>Aucun tir localisé sur cette rencontre.</p>
+                          ? <p className="py-6 text-center text-sm" style={{ color: C.muted }}>{trad('joueur.aucunTirRencontre')}</p>
                           : <ShotChart shots={shots} minAttempts={1} />}
                       </td>
                     </tr>
@@ -243,9 +248,9 @@ function StatList({ name, match, players, openId, onToggle }: {
                 </Fragment>
               )
             })}
-            {rows.length === 0 && <tr><td colSpan={8} className="px-3 py-6 text-center text-sm" style={{ color: C.muted }}>Pas encore de statistiques.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={8} className="px-3 py-6 text-center text-sm" style={{ color: C.muted }}>{trad('spect.pasDeStats')}</td></tr>}
             <tr style={{ borderTop: `2px solid ${C.border}`, background: C.panel }}>
-              <td className="px-3 py-2"></td><td className="px-2 py-2 text-[12px] font-black uppercase">Total</td>
+              <td className="px-3 py-2"></td><td className="px-2 py-2 text-[12px] font-black uppercase">{trad('spect.total')}</td>
               <td className="px-3 py-2 text-center font-black tabular-nums" style={{ color: C.accent }}>{t.points}</td>
               <Std b>{t.threes}</Std><Std b>{t.assists}</Std><Std b>{t.offRebounds + t.defRebounds}</Std><Std b>{t.blocks}</Std><Std b>{t.fouls}</Std>
             </tr>

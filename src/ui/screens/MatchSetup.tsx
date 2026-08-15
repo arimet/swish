@@ -6,6 +6,7 @@ import { refresh } from '../../persistence/remote'
 import type { Match, Team } from '../../domain/types'
 import { C, bd, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
+import { useT } from '../../i18n'
 import { useClub } from '../../app/club'
 import { publishBundle } from '../../app/sync'
 
@@ -15,6 +16,7 @@ const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
  *  fixé d'avance, seul l'adversaire se choisit ici — il n'a pas d'effectif à
  *  détailler, son score se saisira globalement pendant le match. */
 export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
+  const trad = useT()
   const { can, guard } = useAuth()
   const { clubId, club, ready } = useClub()
   const [teams, setTeams] = useState<Team[] | null>(null) // null = pas encore chargé
@@ -69,10 +71,10 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   if (opponents.length === 0) {
     return (
       <div className="mx-auto max-w-lg">
-        <h1 className="text-2xl font-extrabold tracking-tight">Nouveau match</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">{trad('match.nouveau')}</h1>
         <div className="mt-6 rounded-2xl p-10 text-center" style={{ border: `1px dashed ${C.border}` }}>
-          <p className="text-sm" style={{ color: C.muted }}>Il faut au moins <strong style={{ color: C.text }}>une autre équipe</strong> pour créer une rencontre.</p>
-          <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>Créer une équipe →</Link>
+          <p className="text-sm" style={{ color: C.muted }}>{trad('match.ilFautEquipe')}<strong style={{ color: C.text }}>{trad('match.uneAutreEquipe')}</strong>{trad('match.pourCreer')}</p>
+          <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('match.creerEquipe')}</Link>
         </div>
       </div>
     )
@@ -84,32 +86,32 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
         <div className="flex flex-col items-center gap-2 text-center">
           <TeamBadge id={club.id} name={club.name} size="h-10 w-10 text-xs" />
           <span className="line-clamp-2 text-sm font-bold">{club.name}</span>
-          <span className="text-[12px] font-semibold" style={{ color: C.muted }}>Locaux</span>
+          <span className="text-[12px] font-semibold" style={{ color: C.muted }}>{trad('match.locaux')}</span>
         </div>
         <span className="text-lg font-black" style={{ color: C.faint }}>VS</span>
         <div className="flex flex-col items-center gap-2 text-center">
           <TeamBadge id={opponentId} name={nameOf(opponentId)} size="h-10 w-10 text-xs" />
           <span className="line-clamp-2 text-sm font-bold">{nameOf(opponentId)}</span>
-          <span className="text-[12px] font-semibold" style={{ color: C.muted }}>Visiteurs</span>
+          <span className="text-[12px] font-semibold" style={{ color: C.muted }}>{trad('match.visiteurs')}</span>
         </div>
       </div>
 
       <div className="space-y-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="champ" label="Championnat (optionnel)" value={championshipLabel} onChange={setChampionship} placeholder="ex. Pré régionale · sinon match amical" />
-          <Field id="num" label="Rencontre n° (optionnel)" value={matchNumber} onChange={setNum} placeholder="ex. 78" />
+          <Field id="champ" label={trad('match.championnat')} value={championshipLabel} onChange={setChampionship} placeholder={trad('match.champPlaceholder')} />
+          <Field id="num" label={trad('match.numero')} value={matchNumber} onChange={setNum} placeholder="ex. 78" />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="date" label="Date" type="date" value={date} onChange={setDate} />
-          <Field id="time" label="Heure" type="time" value={time} onChange={setTime} />
+          <Field id="date" label={trad('match.date')} type="date" value={date} onChange={setDate} />
+          <Field id="time" label={trad('match.heure')} type="time" value={time} onChange={setTime} />
         </div>
-        <Field id="venue" label="Lieu" value={venue} onChange={setVenue} placeholder="ex. VIGNOT" />
-        <Picker id="opp" label="Adversaire" teams={opponents} value={opponentId} onChange={setOpponentId} />
+        <Field id="venue" label={trad('match.lieu')} value={venue} onChange={setVenue} placeholder={trad('match.lieuPlaceholder')} />
+        <Picker id="opp" label={trad('match.adversaire')} teams={opponents} value={opponentId} onChange={setOpponentId} />
       </div>
 
       <div className="mt-6 flex justify-end gap-3">
-        <Link to="/" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>Annuler</Link>
-        <button onClick={() => guard('manage', create)} disabled={!canCreate} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>Planifier la rencontre →</button>
+        <Link to="/" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{trad('commun.annuler')}</Link>
+        <button onClick={() => guard('manage', create)} disabled={!canCreate} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>{trad('match.planifier')}</button>
       </div>
     </div>
   )

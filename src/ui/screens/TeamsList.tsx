@@ -5,8 +5,10 @@ import { refresh } from '../../persistence/remote'
 import type { Team } from '../../domain/types'
 import { C, bd, PageTitle, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
+import { useT } from '../../i18n'
 
 export function TeamsList() {
+  const trad = useT()
   const { can } = useAuth()
   const [teams, setTeams] = useState<Team[] | null>(null)
   const [counts, setCounts] = useState<Record<string, number>>({})
@@ -27,14 +29,14 @@ export function TeamsList() {
       {/* Créer une équipe s'écrit : le bouton ne se rend que pour qui en a le
           droit, plutôt que de réclamer un code à qui le presse. */}
       <PageTitle
-        action={can('manage') && <Link to="/teams/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>+ Nouvelle équipe</Link>} />
+        action={can('manage') && <Link to="/teams/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('equipes.nouvelle')}</Link>} />
 
       {teams === null ? (
         <div className="h-24 animate-pulse rounded-2xl" style={{ background: C.card }} />
       ) : teams.length === 0 ? (
         <div className="rounded-2xl py-16 text-center" style={{ border: `1px dashed ${C.border}` }}>
-          <p className="text-sm" style={{ color: C.muted }}>Aucune équipe pour l’instant.</p>
-          {can('manage') && <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>Créer ma première équipe →</Link>}
+          <p className="text-sm" style={{ color: C.muted }}>{trad('equipes.aucune')}</p>
+          {can('manage') && <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('bienvenue.premiereEquipe')}</Link>}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

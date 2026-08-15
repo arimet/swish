@@ -21,6 +21,7 @@ import { instantane, transitions } from '../../domain/anim'
 import { LIMITE_LIEN, encoder } from '../../domain/partage'
 import type { Schema, Temps } from '../../domain/plays'
 import { C, bd } from '../olive/kit'
+import { useT } from '../../i18n'
 import { PlayBoard } from './PlayBoard'
 import { D, W } from './ShotCourt'
 import { Link2 } from 'lucide-react'
@@ -375,6 +376,7 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
 }) {
   // `undefined` : le codage est en cours. `null` : le schéma ne tient pas dans
   // une URL, et on le dit au lieu de produire un lien qui se tronquerait.
+  const trad = useT()
   const [lien, setLien] = useState<string | null | undefined>(undefined)
   const [etat, setEtat] = useState('')
   const [occupe, setOccupe] = useState(false)
@@ -409,9 +411,9 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
     if (!lien) return
     try {
       await navigator.clipboard?.writeText(lien)
-      setEtat('Lien copié.')
+      setEtat(trad('partage.lienCopie'))
     } catch {
-      setEtat('Le presse-papiers est refusé ici : sélectionnez le lien à la main.')
+      setEtat(trad('partage.pressePapiersRefuse'))
     }
     if (navigator.share) {
       try { await navigator.share({ title: schema.nom, url: lien }) } catch { /* partage annulé */ }
@@ -422,10 +424,10 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-extrabold">Partager « {schema.nom} »</DialogTitle>
+          <DialogTitle className="text-lg font-extrabold">{trad('partage.titre', { nom: schema.nom })}</DialogTitle>
         </DialogHeader>
 
-        {lien === undefined && <p className="text-[13px]" style={{ color: C.muted }}>Préparation du lien…</p>}
+        {lien === undefined && <p className="text-[13px]" style={{ color: C.muted }}>{trad('partage.preparation')}</p>}
 
         {lien === null && (
           <p className="rounded-xl p-3 text-[13px]" style={{ background: C.amberBg, color: C.amber }}>
@@ -437,11 +439,10 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
         {lien && (
           <>
             <p className="text-[13px] leading-relaxed" style={{ color: C.muted }}>
-              Le lien contient la combinaison entière, animation comprise : celui qui le reçoit n’a rien à
-              installer et rien à synchroniser. C’est ce qui le rend long.
+              {trad('partage.explication')}
             </p>
             <input
-              readOnly value={lien} aria-label="Lien de la combinaison"
+              readOnly value={lien} aria-label={trad('partage.lienCombinaison')}
               onFocus={(e) => e.currentTarget.select()}
               className="w-full truncate rounded-xl bg-[var(--c-card2)] px-3 py-2 text-[12px] outline-none"
               style={{ border: bd, color: C.muted }}
@@ -452,7 +453,7 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
               style={{ background: C.brand }}
             >
               <Link2 className="h-4 w-4 shrink-0" strokeWidth={2} />
-              Copier le lien
+              {trad('partage.copierLien')}
             </button>
           </>
         )}
@@ -461,14 +462,14 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
             plus : un filet et un titre disent qu'on change de moyen, et chaque
             bouton annonce ce qu'il produit — un temps, tous les temps, l'animation. */}
         <div className="flex items-center gap-3 pt-1">
-          <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>Ou envoyer un fichier</span>
+          <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>{trad('partage.ouEnvoyerFichier')}</span>
           <span className="h-px flex-1" style={{ background: C.border }} />
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <Sortie label="Image PNG" quoi="ce temps" disabled={occupe} onClick={sortie('L’image', () => fabriquerPng(schema, schema.temps[tempsIndex] ?? schema.temps[0]), 'png', 'image/png')} />
-          <Sortie label="PDF" quoi="tous les temps" disabled={occupe} onClick={sortie('Le PDF', () => fabriquerPdf(schema), 'pdf', 'application/pdf')} />
+          <Sortie label={trad('partage.imagePng')} quoi={trad('partage.ceTemps')} disabled={occupe} onClick={sortie('L’image', () => fabriquerPng(schema, schema.temps[tempsIndex] ?? schema.temps[0]), 'png', 'image/png')} />
+          <Sortie label={trad('partage.pdf')} quoi={trad('partage.tousLesTemps')} disabled={occupe} onClick={sortie('Le PDF', () => fabriquerPdf(schema), 'pdf', 'application/pdf')} />
           <Sortie
-            label="GIF animé" quoi="l’animation" disabled={occupe}
+            label={trad('partage.gif')} quoi={trad('partage.animation')} disabled={occupe}
             onClick={sortie('Le GIF', () => fabriquerGif(schema, (fait, total) => setEtat(`Le GIF en préparation… ${fait} / ${total}`)), 'gif', 'image/gif')}
           />
         </div>

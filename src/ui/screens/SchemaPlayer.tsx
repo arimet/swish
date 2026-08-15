@@ -12,6 +12,7 @@ import { getPlay } from '../../persistence/repositories'
 import { ExportSchema } from '../components/ExportSchema'
 import { largeurTerrain, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
+import { useT } from '../../i18n'
 import { Pause, Play, X } from 'lucide-react'
 
 /** Une transition dure une seconde et demie, le double au ralenti. Ce n'est pas
@@ -29,6 +30,7 @@ const PAS = 50
 const moinsDeMouvement = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 export function SchemaPlayer() {
+  const trad = useT()
   const { id } = useParams<{ id: string }>()
   const [schema, setSchema] = useState<Schema | null | undefined>(undefined)
   // L'avancement, en temps décimaux : 1,5 est à mi-chemin du deuxième au
@@ -76,11 +78,11 @@ export function SchemaPlayer() {
   }, [])
 
   if (!id) return null
-  if (schema === undefined) return <Ecran><p style={{ color: C.muted }}>Chargement…</p></Ecran>
+  if (schema === undefined) return <Ecran><p style={{ color: C.muted }}>{trad('commun.chargement')}</p></Ecran>
   if (schema === null) return (
     <Ecran>
       <p style={{ color: C.muted }}>
-        Schéma introuvable. <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>← Retour</Link>
+        {trad('sch.introuvable')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{trad('equipe.retour')}</Link>
       </p>
     </Ecran>
   )
@@ -134,7 +136,7 @@ export function SchemaPlayer() {
             « Lecture », en bas. */}
         <div className="flex shrink-0 items-center gap-2">
           <Link
-            to={`/schemas/${id}`} aria-label="Quitter le lecteur" title="Quitter le lecteur"
+            to={`/schemas/${id}`} aria-label={trad('sch.quitterLecteur')} title={trad('sch.quitterLecteur')}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-base font-black" style={{ border: bd, color: C.muted }}
           >
             <X className="h-4 w-4" strokeWidth={2.5} />
@@ -146,7 +148,7 @@ export function SchemaPlayer() {
             onClick={() => { setEnLecture(false); setPartage(true) }}
             className="h-10 shrink-0 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}
           >
-            Partager
+            {trad('sch.partager')}
           </button>
         </div>
         <ExportSchema schema={schema} tempsIndex={courant} open={partage} onClose={() => setPartage(false)} />
@@ -164,9 +166,9 @@ export function SchemaPlayer() {
 
         <div className="mx-auto flex w-full shrink-0 flex-col gap-2" style={{ maxWidth: large }}>
           <div className="flex items-center gap-3">
-            <span className="w-24 shrink-0 text-sm font-extrabold">Temps {courant + 1} / {schema.temps.length}</span>
+            <span className="w-24 shrink-0 text-sm font-extrabold">{trad('sch.temps', { n: courant + 1, total: schema.temps.length })}</span>
             <input
-              type="range" aria-label="Avancement" min={0} max={dernier || 1} step={0.01} value={pos}
+              type="range" aria-label={trad('sch.avancement')} min={0} max={dernier || 1} step={0.01} value={pos}
               disabled={dernier === 0}
               onChange={(e) => { setEnLecture(false); setPos(Number(e.target.value)) }}
               className="piste min-w-0 flex-1 cursor-pointer appearance-none disabled:opacity-40"
@@ -186,13 +188,13 @@ export function SchemaPlayer() {
             style={{ background: C.brand }}
           >
             {enLecture
-              ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />Pause</>
-              : <><Play className="h-4 w-4 shrink-0" strokeWidth={2.5} />Lecture</>}
+              ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{trad('sch.pause')}</>
+              : <><Play className="h-4 w-4 shrink-0" strokeWidth={2.5} />{trad('sch.lecture')}</>}
           </button>
           <div className="grid grid-cols-3 gap-2">
-            <Bascule label="Trajets" actif={trajets} onClick={() => setTrajets((t) => !t)} />
-            <Bascule label="Boucle" actif={boucle} onClick={() => setBoucle((b) => !b)} />
-            <Bascule label="Ralenti" actif={ralenti} onClick={() => setRalenti((r) => !r)} />
+            <Bascule label={trad('sch.trajets')} actif={trajets} onClick={() => setTrajets((t) => !t)} />
+            <Bascule label={trad('sch.boucle')} actif={boucle} onClick={() => setBoucle((b) => !b)} />
+            <Bascule label={trad('sch.ralenti')} actif={ralenti} onClick={() => setRalenti((r) => !r)} />
           </div>
         </div>
       </div>

@@ -19,6 +19,7 @@ import {
 } from '../../persistence/repositories'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
+import { useT } from '../../i18n'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { C, bd } from '../olive/kit'
 
@@ -32,9 +33,12 @@ interface Operation {
   executer: () => Promise<unknown>
 }
 
-const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
+/* Le pluriel passe par le catalogue : l'ancien helper accolait un « s » au mot
+   français, ce qui ne se traduit pas — l'anglais n'accorde pas les mêmes mots au même
+   endroit, et « feuille/feuilles » n'a pas de correspondance mécanique en anglais. */
 
 export function Admin() {
+  const trad = useT()
   const { clubId, club, teams, clear } = useClub()
   const { can, guard } = useAuth()
   const navigate = useNavigate()
@@ -65,8 +69,8 @@ export function Admin() {
   }
 
   const supprimerRencontres = (libellé: string, filtre: (m: Match) => boolean, n: number) => demander({
-    titre: 'Supprimer ces rencontres ?',
-    message: `Les ${pluriel(n, 'rencontre')} de ${libellé}, leurs feuilles et leurs convocations seront supprimées. Cette action est définitive.`,
+    titre: trad('admin.supprimerRencontresTitre'),
+    message: trad('admin.supprimerRencontresTexte', { compte: trad('compte.rencontre', { count: n }), libelle: libellé }),
     executer: () => deleteMatchesWhere(filtre),
   })
 
@@ -83,74 +87,73 @@ export function Admin() {
   return (
     <div className="p-6">
       <p className="mb-6 rounded-2xl px-4 py-3 text-sm" style={{ background: C.accentBg, color: C.accent }}>
-        Ces suppressions sont définitives : il n’y a pas de corbeille, et résultats, convocations,
-        entraînements et schémas ne sont pas synchronisés — ce qui est effacé ici n’existe plus nulle part.
+        {trad('admin.avertissement')}
       </p>
 
       <div className="space-y-6">
-        <Bloc titre="Rencontres d’un championnat" aide="Les convocations attachées partent avec elles.">
+        <Bloc titre={trad('admin.parChampionnat')} aide={trad('admin.aideChampionnat')}>
           {championnats(matches).map((champ) => {
             const n = matches.filter(duChampionnat(champ)).length
             return (
-              <Ligne key={champ} libelle={champ} compte={pluriel(n, 'rencontre')} action="Supprimer"
-                aria={`Supprimer les rencontres de ${champ}`} desactive={n === 0}
+              <Ligne key={champ} libelle={champ} compte={trad('compte.rencontre', { count: n })} action={trad('commun.supprimer')}
+                aria={trad('admin.supprimerRencontresDe', { quoi: champ })} desactive={n === 0}
                 onClick={() => supprimerRencontres(`« ${champ} »`, duChampionnat(champ), n)} />
             )
           })}
-          {matches.length === 0 && <Vide>Aucune rencontre enregistrée.</Vide>}
+          {matches.length === 0 && <Vide>{trad('admin.aucuneRencontre')}</Vide>}
         </Bloc>
 
         <Bloc
           titre="Rencontres d’une année civile"
-          aide="L’application ne connaît pas la saison sportive : rien dans les données ne porte le découpage août–juin. Le regroupement se fait par année civile, et une rencontre sans date n’est jamais emportée."
+          aide={trad('admin.aideAnnee')}
         >
           {annees(matches).map((an) => {
             const n = matches.filter(deLAnnee(an)).length
             return (
-              <Ligne key={an} libelle={`Année ${an}`} compte={pluriel(n, 'rencontre')} action="Supprimer"
-                aria={`Supprimer les rencontres de l’année ${an}`} desactive={n === 0}
+              <Ligne key={an} libelle={trad('admin.annee', { an })} compte={trad('compte.rencontre', { count: n })} action={trad('commun.supprimer')}
+                aria={trad('admin.supprimerRencontresAnnee', { an })} desactive={n === 0}
                 onClick={() => supprimerRencontres(`l’année civile ${an}`, deLAnnee(an), n)} />
             )
           })}
-          {annees(matches).length === 0 && <Vide>Aucune rencontre datée.</Vide>}
+          {annees(matches).length === 0 && <Vide>{trad('admin.aucuneRencontreDatee')}</Vide>}
         </Bloc>
 
-        <Bloc titre="Statistiques d’une équipe" aide="Vider les feuilles : les rencontres et leurs dates restent, seuls les évènements enregistrés (paniers, fautes, temps de jeu) sont effacés. Pour supprimer les rencontres elles-mêmes, voir plus haut.">
+        <Bloc titre={trad('admin.statsEquipe')} aide={trad('admin.aideStats')}>
           {clubsDesRencontres(matches).map((id) => {
             const n = matches.filter(aVider(id)).length
             return (
-              <Ligne key={id} libelle={nomEquipe(id)} compte={`${pluriel(n, 'feuille')} à vider`} action="Vider"
-                aria={`Vider les feuilles de ${nomEquipe(id)}`} desactive={n === 0}
+              <Ligne key={id} libelle={nomEquipe(id)} compte={trad('admin.aVider', { compte: trad('compte.feuille', { count: n }) })} action={trad('admin.vider')}
+                aria={trad('admin.viderFeuillesDe', { nom: nomEquipe(id) })} desactive={n === 0}
                 onClick={() => demander({
-                  titre: 'Vider les feuilles ?',
-                  message: `Les évènements enregistrés de ${pluriel(n, 'rencontre')} de « ${nomEquipe(id)} » seront effacés. Les rencontres et leurs dates restent. Cette action est définitive.`,
+                  titre: trad('admin.viderTitre'),
+                  message: trad('admin.viderTexte', { compte: trad('compte.rencontre', { count: n }), nom: nomEquipe(id) }),
                   executer: () => clearClubStats(id),
                 })} />
             )
           })}
-          {matches.length === 0 && <Vide>Aucune rencontre enregistrée.</Vide>}
+          {matches.length === 0 && <Vide>{trad('admin.aucuneRencontre')}</Vide>}
         </Bloc>
 
-        <Bloc titre="Le reste, en bloc">
-          <Ligne libelle="Résultats saisis du championnat" compte={pluriel(results.length, 'résultat')} action="Supprimer"
-            aria="Supprimer les résultats saisis" desactive={results.length === 0}
+        <Bloc titre={trad('admin.leReste')}>
+          <Ligne libelle={trad('admin.resultatsLibelle')} compte={trad('compte.resultat', { count: results.length })} action={trad('commun.supprimer')}
+            aria={trad('admin.supprimerResultats')} desactive={results.length === 0}
             onClick={() => demander({
-              titre: 'Supprimer les résultats saisis ?',
-              message: `Les ${pluriel(results.length, 'résultat')} relevés à la main seront supprimés. Le classement ne portera plus que sur nos propres rencontres. Cette action est définitive.`,
+              titre: trad('admin.supprimerResultatsTitre'),
+              message: trad('admin.supprimerResultatsTexte', { compte: trad('compte.resultat', { count: results.length }) }),
               executer: deleteAllResults,
             })} />
-          <Ligne libelle={`Entraînements de ${club?.name ?? 'ce club'}`} compte={pluriel(séances.length, 'séance')} action="Supprimer"
-            aria="Supprimer les entraînements" desactive={séances.length === 0}
+          <Ligne libelle={trad('admin.entrainementsDe', { nom: club?.name ?? trad('admin.ceClub') })} compte={trad('compte.seance', { count: séances.length })} action={trad('commun.supprimer')}
+            aria={trad('admin.supprimerEntrainements')} desactive={séances.length === 0}
             onClick={() => demander({
-              titre: 'Supprimer les entraînements ?',
-              message: `Les ${pluriel(séances.length, 'séance')} de « ${club?.name ?? 'ce club'} » seront supprimées. Cette action est définitive.`,
+              titre: trad('admin.supprimerEntrainementsTitre'),
+              message: trad('admin.supprimerEntrainementsTexte', { compte: trad('compte.seance', { count: séances.length }), nom: club?.name ?? trad('admin.ceClub') }),
               executer: () => deleteTrainingsOfClub(clubId),
             })} />
-          <Ligne libelle={`Schémas de ${club?.name ?? 'ce club'}`} compte={pluriel(plays.length, 'schéma')} action="Supprimer"
-            aria="Supprimer les schémas" desactive={plays.length === 0}
+          <Ligne libelle={trad('admin.schemasDe', { nom: club?.name ?? trad('admin.ceClub') })} compte={trad('compte.schema', { count: plays.length })} action={trad('commun.supprimer')}
+            aria={trad('admin.supprimerSchemas')} desactive={plays.length === 0}
             onClick={() => demander({
-              titre: 'Supprimer les schémas ?',
-              message: `Les ${pluriel(plays.length, 'schéma')} de « ${club?.name ?? 'ce club'} » seront supprimés, et retirés des entraînements qui les travaillaient. Cette action est définitive.`,
+              titre: trad('admin.supprimerSchemasTitre'),
+              message: trad('admin.supprimerSchemasTexte', { compte: trad('compte.schema', { count: plays.length }), nom: club?.name ?? trad('admin.ceClub') }),
               executer: () => deletePlaysOfClub(clubId),
             })} />
         </Bloc>
@@ -158,19 +161,17 @@ export function Admin() {
         {/* La remise à zéro à part, et derrière la recopie du nom du club : un clic
             unique n'est pas à la hauteur d'une action qui vide tout l'appareil. */}
         <section className="rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>Tout effacer</p>
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{trad('admin.toutEffacer')}</p>
           <p className="mb-3 text-[13px]" style={{ color: C.muted }}>
-            Remise à zéro complète de cet appareil : équipes, joueurs, rencontres, résultats,
-            convocations, entraînements, schémas et le message à l’équipe. L’application repart
-            sur l’écran de bienvenue.
+            {trad('admin.remiseAZero')}
           </p>
           <Ligne
-            libelle="Toutes les données de cet appareil"
-            compte={`${pluriel(teams.length, 'équipe')} · ${pluriel(matches.length, 'rencontre')} · ${pluriel(results.length, 'résultat')} · ${pluriel(trainings.length, 'séance')}`}
-            action="Tout effacer" aria="Tout effacer" desactive={teams.length === 0 && matches.length === 0}
+            libelle={trad('admin.toutesLesDonnees')}
+            compte={`${trad('compte.equipe', { count: teams.length })} · ${trad('compte.rencontre', { count: matches.length })} · ${trad('compte.resultat', { count: results.length })} · ${trad('compte.seance', { count: trainings.length })}`}
+            action={trad('admin.toutEffacer')} aria={trad('admin.toutEffacer')} desactive={teams.length === 0 && matches.length === 0}
             onClick={() => demander({
-              titre: 'Tout effacer ?',
-              message: `Toutes les données de cet appareil seront supprimées : ${pluriel(teams.length, 'équipe')} et leurs joueurs, ${pluriel(matches.length, 'rencontre')}, ${pluriel(results.length, 'résultat')} saisis, ${pluriel(trainings.length, 'séance')} et tous les schémas. Cette action est définitive.`,
+              titre: trad('admin.toutEffacerTitre'),
+              message: trad('admin.toutEffacerTexte', { equipes: trad('compte.equipe', { count: teams.length }), rencontres: trad('compte.rencontre', { count: matches.length }), resultats: trad('compte.resultat', { count: results.length }), seances: trad('compte.seance', { count: trainings.length }) }),
               // Le nom du club, recopié à l'identique. Le repli n'arrive pas dans la
               // coquille (le club est résolu) : il est là pour qu'aucun chemin ne laisse
               // la remise à zéro se confirmer d'un seul clic.
@@ -190,7 +191,7 @@ export function Admin() {
         open={!!demande} danger
         title={demande?.titre ?? ''} message={demande?.message}
         saisieAttendue={demande?.saisieAttendue}
-        confirmLabel="Supprimer définitivement"
+        confirmLabel={trad('admin.supprimerDefinitivement')}
         onConfirm={confirmer} onClose={() => setDemande(null)}
       />
     </div>

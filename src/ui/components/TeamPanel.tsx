@@ -1,5 +1,6 @@
 import type { Player, ScoreKind } from '../../domain/types'
 import { C } from '../olive/kit'
+import { useT } from '../../i18n'
 import { RotateCcw } from 'lucide-react'
 
 type Stat = { points: number; fouls: number }
@@ -25,6 +26,7 @@ export function TeamPanel({
   onTimeout: () => void
   onUndoTimeout: () => void
 }) {
+  const trad = useT()
   // `bg-card` à pleine opacité, et non `bg-card/50` : un voile à cinquante pour cent
   // rapproche la carte de son fond de moitié, ce qui annulait précisément l'écart de
   // clarté entre les deux plans. En thème sombre, l'écran devenait un seul charbon.
@@ -37,16 +39,16 @@ export function TeamPanel({
       <header className="mb-2 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: color }} />
-          <h3 className="truncate text-xs font-extrabold uppercase tracking-wide text-muted-foreground">Sur le terrain</h3>
+          <h3 className="truncate text-xs font-extrabold uppercase tracking-wide text-muted-foreground">{trad('panneau.surLeTerrain')}</h3>
           {/* `bonus-in` : la pastille arrive au montage, une seule fois. Au
               cinquième faute d'équipe de la période (`TEAM_FOUL_BONUS`),
               l'adversaire tire des lancers francs — ce n'est pas un compteur qui
               avance, c'est la règle du match qui change, et la pastille
               apparaissait sans que rien ne le signale. */}
-          {bonus && <span className="bonus-in rounded-md bg-[var(--c-danger-fill)] px-1.5 py-0.5 text-[12px] font-black uppercase text-[var(--c-on-danger)]">Bonus</span>}
+          {bonus && <span className="bonus-in rounded-md bg-[var(--c-danger-fill)] px-1.5 py-0.5 text-[12px] font-black uppercase text-[var(--c-on-danger)]">{trad('panneau.bonus')}</span>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <Chip label="Fautes" value={teamFouls} warn={teamFouls >= 4} />
+          <Chip label={trad('panneau.fautes')} value={teamFouls} warn={teamFouls >= 4} />
           {/* Temps-mort, annulation et changement : trois commandes qui vivaient
               entre vingt et vingt-huit pixels de haut, dans un gymnase, au pouce.
               Elles font la hauteur d'un doigt. */}
@@ -54,7 +56,7 @@ export function TeamPanel({
             <button
               onClick={onTimeout}
               disabled={timeoutsRemaining <= 0}
-              title="Prendre un temps-mort"
+              title={trad('panneau.tempsMort')}
               className="flex h-11 items-center gap-1 px-3 text-xs font-bold text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] disabled:opacity-40"
             >
               TM<span className="nums text-foreground">{timeoutsRemaining}</span>
@@ -62,14 +64,14 @@ export function TeamPanel({
             <button
               onClick={onUndoTimeout}
               disabled={timeoutsUsed <= 0}
-              title="Annuler le dernier temps-mort"
-              aria-label={`Annuler le dernier temps-mort ${title}`}
+              title={trad('panneau.annulerTMTitre')}
+              aria-label={trad('panneau.annulerTM', { equipe: title })}
               className="h-11 w-11 border-l border-background/60 text-xs text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] disabled:opacity-30"
             >
               <RotateCcw className="mx-auto h-4 w-4" strokeWidth={2.5} />
             </button>
           </span>
-          <button onClick={onSub} title="Changement" aria-label={`Changement ${title}`}
+          <button onClick={onSub} title={trad('panneau.changement')} aria-label={trad('panneau.changementEquipe', { equipe: title })}
             className="grid h-11 w-11 place-items-center rounded-lg bg-muted text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]">
             ⇄
           </button>
@@ -111,7 +113,7 @@ export function TeamPanel({
             </div>
           )
         })}
-        {players.length === 0 && <p className="col-span-full py-6 text-center text-sm text-muted-foreground">Aucun joueur sur le terrain.</p>}
+        {players.length === 0 && <p className="col-span-full py-6 text-center text-sm text-muted-foreground">{trad('panneau.personne')}</p>}
       </div>
     </section>
   )
