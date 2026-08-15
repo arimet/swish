@@ -30,8 +30,8 @@ describe('ThemeProvider', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(false)
   })
 
-  // La bascule vit maintenant dans l'en-tête, donc le choix peut se mémoriser :
-  // un « Nuit » relu au démarrage n'enferme plus personne, on en sort d'un clic.
+  // The toggle now lives in the header, so the choice can be remembered: a saved
+  // dark theme read back on start traps nobody, it is one click away.
   it('picks the saved dark theme back up on start', () => {
     localStorage.setItem(THEME_KEY, 'dark')
     render(<ThemeProvider><div>x</div></ThemeProvider>)
