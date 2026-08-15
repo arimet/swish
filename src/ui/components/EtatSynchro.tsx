@@ -49,8 +49,8 @@ export function SyncState({ compact = false }: { compact?: boolean }) {
   return (
     <span
       role="status"
-      title={translate(blocked ? 'sync.refuseDetail' : 'sync.horsReseauDetail')}
-      aria-label={`${translate('sync.compte', { count: health.pending })} — ${translate(blocked ? 'sync.refuseDetail' : 'sync.horsReseauDetail')}`}
+      title={translate(blocked ? 'sync.refusedDetail' : 'sync.offlineDetail')}
+      aria-label={`${translate('sync.pending', { count: health.pending })} — ${translate(blocked ? 'sync.refusedDetail' : 'sync.offlineDetail')}`}
       className="flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-bold"
       style={{ background: tint.bg, color: tint.ink }}
     >
@@ -58,7 +58,7 @@ export function SyncState({ compact = false }: { compact?: boolean }) {
       {/* The count alone when room is short — it is what carries the information, the
           label only names it. The accessible name stays whole. */}
       <span className="nums">{health.pending}</span>
-      {!compact && <span>{translate(blocked ? 'sync.refuse' : 'sync.horsReseau')}</span>}
+      {!compact && <span>{translate(blocked ? 'sync.refused' : 'sync.offline')}</span>}
     </span>
   )
 }

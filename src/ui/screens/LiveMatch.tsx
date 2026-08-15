@@ -42,7 +42,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   const { match, dispatch, dispatchMany, undo, removeLast, finish, error } = useMatch(matchId)
   const [askFinish, setAskFinish] = useState(false)
   const [players, setPlayers] = useState<Record<string, Player>>({})
-  const [teamNames, setTeamNames] = useState<{ A: string; B: string }>({ A: translate('nav.monEquipe'), B: translate('match.adversaire') })
+  const [teamNames, setTeamNames] = useState<{ A: string; B: string }>({ A: translate('nav.myTeam'), B: translate('match.opponent') })
   const [seconds, setSeconds] = useState(600)
   const [pick, setPick] = useState<{ id: string; name: string } | null>(null)
   const [starters, setStarters] = useState<string[]>([])
@@ -58,7 +58,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     Promise.all([listPlayers(match.meta.clubId), listTeams()]).then(([a, teams]) => {
       setPlayers(Object.fromEntries(a.map((p) => [p.id, p])))
       const byId = Object.fromEntries(teams.map((t) => [t.id, t.name]))
-      setTeamNames({ A: byId[match.meta.clubId] ?? translate('nav.monEquipe'), B: byId[match.meta.opponentId] ?? translate('match.adversaire') })
+      setTeamNames({ A: byId[match.meta.clubId] ?? translate('nav.myTeam'), B: byId[match.meta.opponentId] ?? translate('match.opponent') })
     })
   }, [match?.meta.clubId, match?.meta.opponentId, translate])
 
@@ -81,7 +81,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
      paths for the same data, and two ways to contradict each other. */
 
   if (!match || !ls)
-    return <div className="grid min-h-dvh place-items-center text-muted-foreground">{translate('commun.chargement')}</div>
+    return <div className="grid min-h-dvh place-items-center text-muted-foreground">{translate('common.loading')}</div>
 
   if (!can('score'))
     return <AccessGate ability="score" matchId={matchId} onUnlock={() => guard('score', () => {})} onExit={() => navigate('/')} />
@@ -179,7 +179,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
                 screen where people record for two hours would be the only one saying
                 nothing about an interrupted share. */}
             <SyncState compact />
-            <Link to={`/match/${match.id}`} aria-label={translate('live.quitter')} title={translate('live.quitter')}
+            <Link to={`/match/${match.id}`} aria-label={translate('live.leave')} title={translate('live.leave')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><X className="h-5 w-5" strokeWidth={2.5} /></Link>
             <PeriodStrip current={ls.period} />
           </div>
@@ -187,15 +187,15 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
               row. They wrap — they no longer leave the screen, as "Finish" did, out of
               reach. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <Link to={`/match/${match.id}/watch`} target="_blank" aria-label={translate('live.suivi')} title={translate('live.suivi')}
+            <Link to={`/match/${match.id}/watch`} target="_blank" aria-label={translate('live.spectatorView')} title={translate('live.spectatorView')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><Eye className="h-[18px] w-[18px]" strokeWidth={2} /></Link>
-            <SbButton onClick={undo} title={translate('live.annulerTitre')}>{translate('live.annuler')}</SbButton>
-            <SbButton onClick={nextPeriod} title={translate('live.periodeTitre')}>{translate('live.periode')}</SbButton>
+            <SbButton onClick={undo} title={translate('live.undoTitle')}>{translate('live.undo')}</SbButton>
+            <SbButton onClick={nextPeriod} title={translate('live.periodTitle')}>{translate('live.period')}</SbButton>
             {/* A gap before the irreversible. "Finish" freezes the score; it sat eight
                 pixels from "Next period", which is the width of a badly placed
                 thumb. */}
             <span className="w-3 shrink-0" aria-hidden />
-            <SbButton onClick={() => setAskFinish(true)} danger>{translate('live.terminer')}</SbButton>
+            <SbButton onClick={() => setAskFinish(true)} danger>{translate('live.finish')}</SbButton>
           </div>
         </div>
 
@@ -211,12 +211,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
             column: at five finger-wide buttons that column grew wider than the screen
             and pushed both scores out of frame. The score comes before the
             adjustment. */}
-        <div className="mx-auto mt-2.5 flex max-w-4xl flex-wrap items-center justify-center gap-1" title={translate('live.corrigerChrono')}>
+        <div className="mx-auto mt-2.5 flex max-w-4xl flex-wrap items-center justify-center gap-1" title={translate('live.fixClock')}>
           <ClockAdjust onClick={() => setSeconds((s) => clampClock(s - 10))}>−10s</ClockAdjust>
           <ClockAdjust gap onClick={() => setSeconds((s) => clampClock(s - 1))}>−1s</ClockAdjust>
           <ClockAdjust onClick={() => setSeconds((s) => clampClock(s + 1))}>+1s</ClockAdjust>
           <ClockAdjust gap onClick={() => setSeconds((s) => clampClock(s + 10))}>+10s</ClockAdjust>
-          <ClockAdjust gap onClick={() => setEditClock(true)}><Pencil className="mr-1 inline h-3.5 w-3.5 align-[-2px]" strokeWidth={2} />{translate('live.editer')}</ClockAdjust>
+          <ClockAdjust gap onClick={() => setEditClock(true)}><Pencil className="mr-1 inline h-3.5 w-3.5 align-[-2px]" strokeWidth={2} />{translate('live.editClock')}</ClockAdjust>
         </div>
       </header>
 
@@ -229,12 +229,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         <span className="min-w-0 truncate text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {OPP_POINTS.map(({ k, n }) => (
-            <button key={k} onClick={() => oppScore(k)} aria-label={translate('live.ajouterPoints', { count: n, team: teamNames.B })}
+            <button key={k} onClick={() => oppScore(k)} aria-label={translate('live.addPoints', { count: n, team: teamNames.B })}
               className="nums h-11 min-w-11 rounded-lg bg-[var(--c-card2)] px-3 text-sm font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90">
               +{n}
             </button>
           ))}
-          <button onClick={removeOppScore} aria-label={translate('live.retirerPanier', { team: teamNames.B })}
+          <button onClick={removeOppScore} aria-label={translate('live.removeBasket', { team: teamNames.B })}
             className="h-11 w-11 rounded-lg bg-[var(--c-card2)] text-sm font-bold text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90">
             <RotateCcw className="mx-auto h-4 w-4" strokeWidth={2.5} />
           </button>
@@ -279,7 +279,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
           announcing a finished game that was not. On failure we stay, and the error
           band above explains it. */}
       <ConfirmDialog open={askFinish} onClose={() => setAskFinish(false)} onConfirm={async () => { if (await finish()) onFinish() }}
-        title={translate('live.terminerTitre')} message={translate('live.terminerTexte')} confirmLabel={translate('live.terminer')} danger />
+        title={translate('live.finishTitle')} message={translate('live.finishText')} confirmLabel={translate('live.finish')} danger />
       <SubstitutionDialog open={sub} onClose={() => setSub(false)}
         onCourtPlayers={onCourt()} benchPlayers={bench()}
         onSubmit={(playerOutId, playerInId) => dispatch({ type: 'SUBSTITUTION', team: 'A', playerOutId, playerInId, period: ls.period, gameClock: seconds })} />

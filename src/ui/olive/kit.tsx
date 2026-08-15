@@ -99,7 +99,7 @@ export function useLeagueLabel() {
   const translate = useT()
   return (v: MatchMeta | string) => {
     const l = typeof v === 'string' ? v : leagueLabel(v)
-    return l === FRIENDLY ? translate('commun.matchAmical') : l
+    return l === FRIENDLY ? translate('common.friendly') : l
   }
 }
 export function displayClock(m: Match) {
@@ -130,7 +130,7 @@ export function You() {
   const translate = useT()
   return (
     <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase tracking-wide"
-      style={{ background: C.accentBg, color: C.accent }}>{translate('commun.vous')}</span>
+      style={{ background: C.accentBg, color: C.accent }}>{translate('common.you')}</span>
   )
 }
 
@@ -153,7 +153,7 @@ export function TeamBadge({ id, name, size = 'h-8 w-8 text-[12px]' }: { id: stri
 export function MatchCard({ m, teams }: { m: Match; teams: Record<string, Team> }) {
   const translate = useT()
   const champ = useLeagueLabel()
-  const a = teams[m.meta.clubId]?.name ?? translate('commun.equipeA'), b = teams[m.meta.opponentId]?.name ?? translate('commun.equipeB')
+  const a = teams[m.meta.clubId]?.name ?? translate('common.teamA'), b = teams[m.meta.opponentId]?.name ?? translate('common.teamB')
   const { score } = liveState(m); const dc = displayClock(m)
   const to = m.status === 'finished' ? `/match/${m.id}/summary` : m.status === 'live' ? `/match/${m.id}/live` : `/match/${m.id}`
   const leadA = score.a > score.b, leadB = score.b > score.a, setup = m.status === 'setup'

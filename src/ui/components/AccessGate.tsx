@@ -21,19 +21,19 @@ export function AccessGate({ ability, matchId, onUnlock, onExit }: { ability: Ab
       <span className="grid h-14 w-14 place-items-center rounded-2xl" style={{ background: C.accentBg, color: C.accent }}>
         <Lock className="h-7 w-7" strokeWidth={1.8} />
       </span>
-      <h2 className="text-2xl font-extrabold tracking-tight">{translate('garde.titre', { role: accessName })}</h2>
-      <p className="max-w-sm text-sm text-muted-foreground">{translate('garde.explication', { role: accessName.toLowerCase() })}</p>
+      <h2 className="text-2xl font-extrabold tracking-tight">{translate('gate.title', { role: accessName })}</h2>
+      <p className="max-w-sm text-sm text-muted-foreground">{translate('gate.explanation', { role: accessName.toLowerCase() })}</p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
         <button onClick={onUnlock} className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110">
           <LockOpen className="h-4 w-4" strokeWidth={2} />
-          {translate('acces.deverrouiller')}
+          {translate('access.unlock')}
         </button>
         <Link to={`/match/${matchId}/watch`} className="flex items-center gap-2 rounded-xl border border-border/70 px-5 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-muted">
           <Eye className="h-4 w-4" strokeWidth={2} />
-          {translate('garde.suiviSpectateur')}
+          {translate('gate.spectatorView')}
         </Link>
       </div>
-      <button onClick={onExit} className="mt-1 text-xs font-semibold text-muted-foreground hover:text-foreground">{translate('garde.accueil')}</button>
+      <button onClick={onExit} className="mt-1 text-xs font-semibold text-muted-foreground hover:text-foreground">{translate('gate.home')}</button>
     </div>
   )
 }

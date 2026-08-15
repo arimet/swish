@@ -23,7 +23,7 @@ export function ProgressionChart({ points, width = 720, height = 300, colorA = '
   const xTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(maxT * f))
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label={translate('resume.progressionAria')}>
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label={translate('summary.progressionAria')}>
       {/* Grid + Y scale */}
       {yTicks.map((v) => (
         <g key={`y${v}`}>

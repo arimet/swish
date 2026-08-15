@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPending(null)
       action()
     } else {
-      setError(translate('acces.codeIncorrect', { role: translate(`role.${REQUIRED[pending.ability]}`) }))
+      setError(translate('access.wrongCode', { role: translate(`role.${REQUIRED[pending.ability]}`) }))
     }
   }
 
@@ -137,20 +137,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           <DialogHeader>
             <DialogTitle className="text-lg font-extrabold">
               <Lock className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-              {translate('acces.requis', { role: pending ? translate(`role.${REQUIRED[pending.ability]}`) : '' })}
+              {translate('access.required', { role: pending ? translate(`role.${REQUIRED[pending.ability]}`) : '' })}
             </DialogTitle>
           </DialogHeader>
-          <p className="text-[13px]" style={{ color: C.muted }}>{translate('acces.necessiteCode')}</p>
+          <p className="text-[13px]" style={{ color: C.muted }}>{translate('access.needsCode')}</p>
           <input
-            autoFocus type="password" value={code} placeholder={translate('acces.codePlaceholder')}
+            autoFocus type="password" value={code} placeholder={translate('access.codePlaceholder')}
             onChange={(e) => { setCode(e.target.value); setError('') }}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
             className={`mt-2 w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${error ? 'border-[var(--c-danger)]' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
           />
           {error && <p className="text-xs font-semibold text-[var(--c-danger)]">{error}</p>}
           <div className="mt-2 flex gap-2">
-            <button onClick={close} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{translate('commun.annuler')}</button>
-            <button onClick={submit} className="flex-1 rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">{translate('acces.deverrouiller')}</button>
+            <button onClick={close} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{translate('common.cancel')}</button>
+            <button onClick={submit} className="flex-1 rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">{translate('access.unlock')}</button>
           </div>
         </DialogContent>
       </Dialog>

@@ -124,23 +124,23 @@ function withoutDefense(t: Step): Step {
  */
 const HANDLE: { key: Tool; label: string; icon: string }[] = [
   // The move cursor's four-way arrow, and the notebook's eraser.
-  { key: 'deplacer', label: 'outil.deplacer', icon: 'M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3' },
-  { key: 'gomme', label: 'outil.gomme', icon: 'm7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21M22 21H7M5 11l9 9' },
+  { key: 'deplacer', label: 'tool.move', icon: 'M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3' },
+  { key: 'gomme', label: 'tool.eraser', icon: 'm7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21M22 21H7M5 11l9 9' },
 ]
 const DRAW: { key: Stroke; label: string }[] = [
-  { key: 'cut', label: 'outil.course' },
-  { key: 'screen', label: 'outil.ecran' },
-  { key: 'pass', label: 'outil.passe' },
-  { key: 'dribble', label: 'outil.dribble' },
+  { key: 'cut', label: 'tool.cut' },
+  { key: 'screen', label: 'tool.screen' },
+  { key: 'pass', label: 'tool.pass' },
+  { key: 'dribble', label: 'tool.dribble' },
 ]
 const PLACE: { key: Tool; label: string }[] = [
-  { key: 'ball', label: 'outil.ballon' },
-  { key: 'objet', label: 'outil.objets' },
+  { key: 'ball', label: 'tool.ball' },
+  { key: 'objet', label: 'tool.props' },
 ]
 const PROP_KINDS: { key: Prop['kind']; label: string }[] = [
-  { key: 'cone', label: 'outil.plot' },
-  { key: 'ball', label: 'outil.ballonPose' },
-  { key: 'ladder', label: 'outil.echelle' },
+  { key: 'cone', label: 'tool.cone' },
+  { key: 'ball', label: 'tool.looseBall' },
+  { key: 'ladder', label: 'tool.ladder' },
 ]
 
 const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
@@ -179,7 +179,7 @@ export function SchemaEdit() {
   if (schema === null) return (
     <div className="p-4 sm:p-6">
       <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
-        {translate('sch.introuvable')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{translate('equipe.retour')}</Link>
+        {translate('play.notFound')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{translate('team.back')}</Link>
       </p>
     </div>
   )
@@ -279,7 +279,7 @@ export function SchemaEdit() {
 
   const changeCourt = (court: Court) => guard('manage', () => {
     const r = toCourt(play, court)
-    if ('refused' in r) { setRefused(translate('sch.refusDemi', { occupant: translate(r.refused.key, { n: r.refused.n ?? 0 }) })); return }
+    if ('refused' in r) { setRefused(translate('play.halfCourtRefused', { occupant: translate(r.refused.key, { n: r.refused.n ?? 0 }) })); return }
     setRefused('')
     // Changing the court remaps every coordinate: the stacked entries are in the old
     // scale and restoring them would put the markers anywhere — at worst in the back
@@ -345,9 +345,9 @@ export function SchemaEdit() {
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Link to="/schemas" aria-label={translate('edit.retourSchemas')} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
+        <Link to="/schemas" aria-label={translate('edit.backToPlays')} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
         <input
-          aria-label={translate('edit.nomSchema')} value={name} onChange={(e) => setName(e.target.value)}
+          aria-label={translate('edit.playName')} value={name} onChange={(e) => setName(e.target.value)}
           onBlur={saveName}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           style={{ ...field, flex: '1 1 180px', minWidth: 0, fontWeight: 800 }}
@@ -360,7 +360,7 @@ export function SchemaEdit() {
           className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
           style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}
         >
-          {translate('sch.jouer')}
+          {translate('play.play')}
         </Link>
       </div>
 
@@ -373,21 +373,21 @@ export function SchemaEdit() {
               people tap: on mobile, a slightly long press otherwise selects the button's
               label instead of pressing it. */}
           <div className="mb-3 flex select-none flex-wrap items-center gap-2">
-            <ToolGroup title={translate('edit.manipuler')}>
+            <ToolGroup title={translate('edit.handle')}>
               {HANDLE.map((o) => (
                 <ToolButton key={o.key} label={translate(o.label)} active={tool === o.key} onClick={() => setTool(o.key)}>
                   <Ic d={o.icon} className="h-[19px] w-[19px]" />
                 </ToolButton>
               ))}
             </ToolGroup>
-            <ToolGroup title={translate('edit.tracer')}>
+            <ToolGroup title={translate('edit.draw')}>
               {DRAW.map((t) => (
                 <ToolButton key={t.key} label={translate(t.label)} active={tool === t.key} onClick={() => setTool(t.key)}>
                   <StrokeGlyph stroke={t.key} />
                 </ToolButton>
               ))}
             </ToolGroup>
-            <ToolGroup title={translate('edit.poser')}>
+            <ToolGroup title={translate('edit.place')}>
               {PLACE.map((o) => (
                 <ToolButton key={o.key} label={translate(o.label)} active={tool === o.key} onClick={() => setTool(o.key)}>
                   <PlaceGlyph what={o.key} active={tool === o.key} />
@@ -397,11 +397,11 @@ export function SchemaEdit() {
             {/* An explicit accessible name: a bare "Undo" is confused with the cancel
                 button of the confirmation dialogs. */}
             <button
-              onClick={undoLast} disabled={!undoStack[index]?.length} aria-label={translate('edit.annulerDerniere')}
+              onClick={undoLast} disabled={!undoStack[index]?.length} aria-label={translate('edit.undoLast')}
               className="ml-auto flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold disabled:opacity-40"
               style={{ background: C.card, border: bd, color: C.text }}
             >
-              <span className="text-base leading-none">↩</span> {translate('commun.annuler')}
+              <span className="text-base leading-none">↩</span> {translate('common.cancel')}
             </button>
           </div>
           {tool === 'objet' && (
@@ -443,13 +443,13 @@ export function SchemaEdit() {
               states it shows. */}
           <div className="mt-4 flex select-none items-center gap-2" style={{ maxWidth: stripWidth }}>
             <p className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>
-              {translate('sch.temps', { n: index + 1, total: play.steps.length })}
+              {translate('play.step', { n: index + 1, total: play.steps.length })}
             </p>
             <div className="ml-auto flex items-center gap-1.5">
-              <StepControl label={translate('edit.reculerTemps')} onClick={() => moveStep(-1)} disabled={index === 0}>◀</StepControl>
-              <StepControl label={translate('edit.avancerTemps')} onClick={() => moveStep(1)} disabled={index === play.steps.length - 1}>▶</StepControl>
+              <StepControl label={translate('edit.stepBack')} onClick={() => moveStep(-1)} disabled={index === 0}>◀</StepControl>
+              <StepControl label={translate('edit.stepForward')} onClick={() => moveStep(1)} disabled={index === play.steps.length - 1}>▶</StepControl>
               {/* A play always has at least one step: the last cannot be deleted. */}
-              <StepControl label={translate('edit.supprimerTemps')} onClick={deleteStep} disabled={play.steps.length === 1} danger><X className="h-4 w-4" strokeWidth={2.5} /></StepControl>
+              <StepControl label={translate('edit.deleteStep')} onClick={deleteStep} disabled={play.steps.length === 1} danger><X className="h-4 w-4" strokeWidth={2.5} /></StepControl>
             </div>
           </div>
 
@@ -457,7 +457,7 @@ export function SchemaEdit() {
           <div className="mt-2 flex select-none items-stretch gap-2 overflow-x-auto pb-1" style={{ maxWidth: stripWidth }}>
             {play.steps.map((_, i) => (
               <button
-                key={i} aria-label={translate('edit.tempsN', { n: i + 1 })} aria-pressed={i === index} onClick={() => setStepIndex(i)}
+                key={i} aria-label={translate('edit.stepN', { n: i + 1 })} aria-pressed={i === index} onClick={() => setStepIndex(i)}
                 className="w-20 shrink-0 rounded-xl p-1"
                 style={{ background: C.card, border: i === index ? `2px solid ${C.accent}` : bd }}
               >
@@ -466,19 +466,19 @@ export function SchemaEdit() {
               </button>
             ))}
             <button
-              onClick={addStep} aria-label={translate('edit.ajouterTemps')}
+              onClick={addStep} aria-label={translate('edit.addStep')}
               className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-[12px] font-bold"
               style={{ background: C.card, border: `1px dashed ${C.border}`, color: C.muted }}
             >
               <span className="text-lg leading-none" style={{ color: C.accent }}>+</span>
-              {translate('edit.temps')}
+              {translate('edit.step')}
             </button>
           </div>
         </div>
 
         <aside className="space-y-4">
           <section className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-            <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('edit.terrain')}</p>
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('edit.court')}</p>
             <div className="flex gap-2">
               {(['half', 'full'] as Court[]).map((t) => (
                 <button
@@ -486,7 +486,7 @@ export function SchemaEdit() {
                   className="min-w-0 flex-1 rounded-xl py-2 text-xs font-bold"
                   style={play.court === t ? { background: C.brand, color: C.onBrand } : { background: C.panel, border: bd, color: C.text }}
                 >
-                  {translate(t === 'half' ? 'sch.demiTerrain' : 'sch.terrainComplet')}
+                  {translate(t === 'half' ? 'play.halfCourt' : 'play.fullCourt')}
                 </button>
               ))}
             </div>
@@ -497,7 +497,7 @@ export function SchemaEdit() {
                 aligned with the rest of the card. */}
             <label className="-mx-2 mt-3 flex items-center gap-2 rounded-lg px-2 py-2.5 text-sm font-semibold">
               <input type="checkbox" checked={play.defense} onChange={(e) => changeDefense(e.target.checked)} />
-              {translate('edit.defense')}
+              {translate('edit.defence')}
             </label>
           </section>
 
@@ -508,16 +508,16 @@ export function SchemaEdit() {
               onBlur={saveNote}
               placeholder={translate('edit.notePlaceholder')} style={{ ...field, width: '100%' }}
             />
-            {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('sch.schemasLocaux')}</p>}
+            {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('play.playsLocal')}</p>}
           </section>
         </aside>
       </div>
 
       <ConfirmDialog
         open={askDefense} danger
-        title={translate('edit.retirerDefenseTitre')}
-        message={translate('edit.retirerDefenseTexte')}
-        confirmLabel={translate('commun.retirer')} onConfirm={removeDefense} onClose={() => setAskDefense(false)}
+        title={translate('edit.removeDefenceTitle')}
+        message={translate('edit.removeDefenceText')}
+        confirmLabel={translate('common.remove')} onConfirm={removeDefense} onClose={() => setAskDefense(false)}
       />
     </div>
   )

@@ -66,7 +66,7 @@ function SpectatorRoute() {
  *  use it. */
 function Loading() {
   const translate = useT()
-  return <div className="grid min-h-dvh place-items-center text-muted-foreground" role="status" aria-live="polite">{translate('commun.chargement')}</div>
+  return <div className="grid min-h-dvh place-items-center text-muted-foreground" role="status" aria-live="polite">{translate('common.loading')}</div>
 }
 
 /** As long as no valid club is set, the application is the welcome screen. The

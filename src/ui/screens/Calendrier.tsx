@@ -141,10 +141,10 @@ export function Calendrier() {
             <button onClick={() => guard('manage', () => setFormOpen(true))}
               className="rounded-xl px-4 py-2.5 text-sm font-bold"
               style={{ background: TRAINING_BG, color: TRAINING_INK, border: `1px solid ${TRAINING_INK}55` }}>
-              {translate('cal.nouvelEntrainement')}
+              {translate('calendar.newTraining')}
             </button>
             <Link to="/match/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-              {translate('cal.nouvelleRencontre')}
+              {translate('calendar.newGame')}
             </Link>
           </div>
         )}
@@ -153,17 +153,17 @@ export function Calendrier() {
       {formOpen && (
         <section className="mb-6 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${TRAINING_INK}44` }}>
           <div className="mb-4 flex items-center gap-3">
-            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: TRAINING_INK }}>{translate('cal.titreEntrainement')}</p>
-            <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: TRAINING_INK }}>{translate('calendar.trainingTitle')}</p>
+            <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('common.closeShort')}</button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="entr-date" label={translate('cal.dateEntrainement')} type="date" value={date} onChange={setDate} />
-            <Field id="entr-time" label={translate('match.heure')} type="time" value={time} onChange={setTime} />
-            <Field id="entr-place" label={translate('match.lieu')} value={place} onChange={setPlace} />
-            <Field id="entr-theme" label={translate('cal.theme')} value={theme} onChange={setTheme} />
+            <Field id="entr-date" label={translate('calendar.trainingDate')} type="date" value={date} onChange={setDate} />
+            <Field id="entr-time" label={translate('match.time')} type="time" value={time} onChange={setTime} />
+            <Field id="entr-place" label={translate('match.venue')} value={place} onChange={setPlace} />
+            <Field id="entr-theme" label={translate('calendar.focus')} value={theme} onChange={setTheme} />
           </div>
           <button onClick={add} disabled={!date || !clubId} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: TRAINING_INK }}>
-            {translate('cal.ajouterEntrainement')}
+            {translate('calendar.addTraining')}
           </button>
         </section>
       )}
@@ -174,11 +174,11 @@ export function Calendrier() {
         // The invitation to plan is addressed only to whoever can; everyone else
         // simply reads that nothing is scheduled.
         <div className="rounded-2xl py-16 text-center" style={{ border: `1px dashed ${C.border}` }}>
-          <p className="text-sm font-bold">{translate('cal.saisonVierge')}</p>
+          <p className="text-sm font-bold">{translate('calendar.blankSeason')}</p>
           <p className="mt-1 text-sm" style={{ color: C.muted }}>
             {manages
-              ? translate('cal.videGere')
-              : translate('cal.videVisiteur')}
+              ? translate('calendar.emptyManager')
+              : translate('calendar.emptyVisitor')}
           </p>
         </div>
       ) : (
@@ -192,8 +192,8 @@ export function Calendrier() {
             const gameCount = items.filter((i) => i.kind === 'match').length
             const trainingCount = items.filter((i) => i.kind === 'training').length
             const summary = [
-              gameCount ? translate('compte.rencontre', { count: gameCount }) : '',
-              trainingCount ? translate('compte.entrainement', { count: trainingCount }) : '',
+              gameCount ? translate('count.game', { count: gameCount }) : '',
+              trainingCount ? translate('count.training', { count: trainingCount }) : '',
             ].filter(Boolean).join(' · ')
             // The past is faded rather than hidden: people want to walk back up the
             // season, but nothing already played should compete for the eye with what is
@@ -225,7 +225,7 @@ export function Calendrier() {
                     <div className="min-w-0">
                       {featured && (
                         <p className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.accent }}>
-                          {isToday ? translate('commun.aujourdhui') : translate('bord.prochaineEcheance')}
+                          {isToday ? translate('common.today') : translate('dashboard.nextFixture')}
                         </p>
                       )}
                       <p className="truncate text-sm font-extrabold">{summary}</p>
@@ -254,14 +254,14 @@ export function Calendrier() {
       {/* Like the call-ups and the outside results: worded the same way as on the
           standings screen and the game record, so as not to suggest two different limits
           — the decision covered the trainings just as much. */}
-      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('cal.entrainementsLocaux')}</p>}
+      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('calendar.trainingsLocal')}</p>}
 
       <ConfirmDialog open={!!toDelete} onClose={() => setToDelete(null)} onConfirm={remove}
-        title={translate('cal.supprimerSeanceTitre')}
+        title={translate('calendar.deleteSessionTitle')}
         message={toDelete
-          ? translate('cal.supprimerSeanceTexte', { date: fmtDate(toDelete.date).long || toDelete.date })
+          ? translate('calendar.deleteSessionText', { date: fmtDate(toDelete.date).long || toDelete.date })
           : ''}
-        confirmLabel={translate('commun.supprimer')} danger />
+        confirmLabel={translate('common.delete')} danger />
     </div>
   )
 }
@@ -281,7 +281,7 @@ function GameCard({ m, teams, manages }: { m: Match; teams: Record<string, Team>
       {manages && m.status === 'setup' && (
         <Link to={`/match/${m.id}#convocation`} className="rounded-xl px-3 py-1.5 text-center text-[12px] font-bold"
           style={{ background: C.accentBg, color: C.accent }}>
-          {translate('cal.convoquer')}
+          {translate('calendar.callUp')}
         </Link>
       )}
     </div>
@@ -294,7 +294,7 @@ function GameCard({ m, teams, manages }: { m: Match; teams: Record<string, Team>
 function MonthBar({ iso }: { iso: string }) {
   const translate = useT()
   const d = new Date(iso + 'T00:00:00')
-  const label = Number.isNaN(d.getTime()) ? translate('commun.sansDate') : `${longMonth(d)} ${d.getFullYear()}`
+  const label = Number.isNaN(d.getTime()) ? translate('common.noDate') : `${longMonth(d)} ${d.getFullYear()}`
   return (
     <div className="flex items-center gap-3 xl:col-span-2">
       <h2 className="text-[12px] font-black uppercase tracking-[0.18em]" style={{ color: C.muted }}>{label}</h2>
@@ -331,25 +331,25 @@ function TrainingCard({ t, schemas, manages, onToggleSchema, onDelete }: { t: Tr
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: TRAINING_BG, color: TRAINING_INK }}>{translate('cal.entrainement')}</span>
+          <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: TRAINING_BG, color: TRAINING_INK }}>{translate('calendar.training')}</span>
           {t.time && <span className="ml-auto text-[12px] font-bold" style={{ color: C.muted }}>{t.time}</span>}
         </div>
-        <p className="mt-2 truncate text-sm font-bold">{t.theme || translate('cal.seanceLibre')}</p>
+        <p className="mt-2 truncate text-sm font-bold">{t.theme || translate('calendar.openSession')}</p>
 
         {/* `<details>` rather than local state: the browser already knows how to
             unfold, and twenty plays unfolded by default would drown the calendar. */}
         <details className="mt-2">
           <summary className="flex cursor-pointer items-center gap-2 text-[12px] font-bold" style={{ color: TRAINING_INK }}>
-            {translate('cal.schemasTravailles')}
+            {translate('calendar.playsWorkedOn')}
             {attached.length > 0 && (
               <span className="rounded-md px-1.5 py-0.5 font-black" style={{ background: TRAINING_BG, color: TRAINING_INK }}>
-                {translate('cal.schemaCompte', { count: attached.length })}
+                {translate('calendar.playCount', { count: attached.length })}
               </span>
             )}
           </summary>
           {!manages ? (
             attached.length === 0 ? (
-              <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{translate('cal.aucunSchemaSeance')}</p>
+              <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{translate('calendar.noPlayInSession')}</p>
             ) : (
               <div className="mt-2 grid gap-1.5">
                 {attached.map((s) => (
@@ -358,7 +358,7 @@ function TrainingCard({ t, schemas, manages, onToggleSchema, onDelete }: { t: Tr
               </div>
             )
           ) : schemas.length === 0 ? (
-            <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{translate('cal.bibliothequeVide')}</p>
+            <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{translate('calendar.emptyLibrary')}</p>
           ) : (
             <div className="mt-2 grid gap-1.5">
               {schemas.map((s) => {
@@ -379,7 +379,7 @@ function TrainingCard({ t, schemas, manages, onToggleSchema, onDelete }: { t: Tr
           {/* `grid h-9 w-9` and not `px-1.5 py-0.5`: the target was 26 × 18, under the
               twenty-four-pixel minimum — and it is a **deletion**, the most unfortunate
               combination of a target you miss and a gesture you cannot undo. */}
-          {manages && <button onClick={onDelete} aria-label={translate('cal.supprimerEntrainement')} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-black transition hover:bg-[var(--c-danger-bg)] hover:text-[var(--c-danger)]" style={{ color: C.accent }}><X className="h-4 w-4" strokeWidth={2.5} /></button>}
+          {manages && <button onClick={onDelete} aria-label={translate('calendar.deleteTraining')} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-black transition hover:bg-[var(--c-danger-bg)] hover:text-[var(--c-danger)]" style={{ color: C.accent }}><X className="h-4 w-4" strokeWidth={2.5} /></button>}
         </div>
       </div>
     </div>

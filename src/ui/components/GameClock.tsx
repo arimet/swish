@@ -41,8 +41,8 @@ export function GameClock({ running, seconds, onToggle }: {
         } hover:brightness-110`}
       >
         {running
-          ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('chrono.arreter')}</>
-          : <><Play className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('chrono.demarrer')}</>}
+          ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('clock.stop')}</>
+          : <><Play className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('clock.start')}</>}
       </button>
     </div>
   )

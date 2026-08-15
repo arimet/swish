@@ -39,15 +39,15 @@ export function TeamPanel({
       <header className="mb-2 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: color }} />
-          <h3 className="truncate text-xs font-extrabold uppercase tracking-wide text-muted-foreground">{translate('panneau.surLeTerrain')}</h3>
+          <h3 className="truncate text-xs font-extrabold uppercase tracking-wide text-muted-foreground">{translate('panel.onCourt')}</h3>
           {/* `bonus-in`: the pill arrives on mount, once. On the period's fifth team
               foul (`TEAM_FOUL_BONUS`), the opposition shoots free throws — that is not
               a counter ticking up, it is the game's rule changing, and the pill used to
               appear with nothing to signal it. */}
-          {bonus && <span className="bonus-in rounded-md bg-[var(--c-danger-fill)] px-1.5 py-0.5 text-[12px] font-black uppercase text-[var(--c-on-danger)]">{translate('panneau.bonus')}</span>}
+          {bonus && <span className="bonus-in rounded-md bg-[var(--c-danger-fill)] px-1.5 py-0.5 text-[12px] font-black uppercase text-[var(--c-on-danger)]">{translate('panel.bonus')}</span>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <Chip label={translate('panneau.fautes')} value={teamFouls} warn={teamFouls >= 4} />
+          <Chip label={translate('panel.fouls')} value={teamFouls} warn={teamFouls >= 4} />
           {/* Timeout, undo and substitution: three controls that lived between twenty
               and twenty-eight pixels tall, in a gym, under a thumb. They are now a
               finger tall. */}
@@ -55,7 +55,7 @@ export function TeamPanel({
             <button
               onClick={onTimeout}
               disabled={timeoutsRemaining <= 0}
-              title={translate('panneau.tempsMort')}
+              title={translate('panel.timeout')}
               className="flex h-11 items-center gap-1 px-3 text-xs font-bold text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] disabled:opacity-40"
             >
               TM<span className="nums text-foreground">{timeoutsRemaining}</span>
@@ -63,14 +63,14 @@ export function TeamPanel({
             <button
               onClick={onUndoTimeout}
               disabled={timeoutsUsed <= 0}
-              title={translate('panneau.annulerTMTitre')}
-              aria-label={translate('panneau.annulerTM', { team: title })}
+              title={translate('panel.undoTimeoutTitle')}
+              aria-label={translate('panel.undoTimeout', { team: title })}
               className="h-11 w-11 border-l border-background/60 text-xs text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] disabled:opacity-30"
             >
               <RotateCcw className="mx-auto h-4 w-4" strokeWidth={2.5} />
             </button>
           </span>
-          <button onClick={onSub} title={translate('panneau.changement')} aria-label={translate('panneau.changementEquipe', { team: title })}
+          <button onClick={onSub} title={translate('panel.substitution')} aria-label={translate('panel.substitutionFor', { team: title })}
             className="grid h-11 w-11 place-items-center rounded-lg bg-muted text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]">
             ⇄
           </button>
@@ -111,7 +111,7 @@ export function TeamPanel({
             </div>
           )
         })}
-        {players.length === 0 && <p className="col-span-full py-6 text-center text-sm text-muted-foreground">{translate('panneau.personne')}</p>}
+        {players.length === 0 && <p className="col-span-full py-6 text-center text-sm text-muted-foreground">{translate('panel.nobody')}</p>}
       </div>
     </section>
   )

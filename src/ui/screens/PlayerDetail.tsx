@@ -52,7 +52,7 @@ export function PlayerDetail() {
     return (
       <div className="p-6">
         <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
-          {translate('joueur.introuvable')} <Link to="/teams" className="font-bold" style={{ color: C.accent }}>{translate('equipe.retourEquipes')}</Link>
+          {translate('player.notFound')} <Link to="/teams" className="font-bold" style={{ color: C.accent }}>{translate('team.backToTeams')}</Link>
         </p>
       </div>
     )
@@ -67,7 +67,7 @@ export function PlayerDetail() {
   return (
     <div className="p-6">
       <Link to={team ? `/teams/${team.id}` : '/teams'} className="inline-block rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>
-        ← {team?.name ?? translate('nav.equipes')}
+        ← {team?.name ?? translate('nav.teams')}
       </Link>
 
       <div className="mb-6 mt-4 flex items-center gap-3">
@@ -79,7 +79,7 @@ export function PlayerDetail() {
                 everyone, this mention aside. */}
             {playerId === player.id && (
               <span className="shrink-0 rounded-md px-2 py-0.5 text-[12px] font-black uppercase tracking-wide"
-                style={{ background: C.accentBg, color: C.accent }}>{translate('joueur.cestVous')}</span>
+                style={{ background: C.accentBg, color: C.accent }}>{translate('player.thisIsYou')}</span>
             )}
           </h1>
           {team && (
@@ -93,44 +93,44 @@ export function PlayerDetail() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatCard label={translate('equipe.rencontres')} value={String(played)} hint={translate('equipe.jouees')} />
-        <StatCard label={translate('joueur.pointsParMatch')} value={perGame(career.points, played)} hint={translate('equipe.auTotal', { n: career.points })} />
-        <StatCard label={translate('joueur.reussiteTirs')} value={pct.fg === null ? '—' : `${pct.fg} %`} hint={translate('compte.tirLocalise', { count: shotsCareer.length })} accent={C.accent} />
-        <StatCard label={translate('joueur.reussite3pts')} value={pct.three === null ? '—' : `${pct.three} %`} hint={translate('joueur.surLaCarriere')} />
-        <StatCard label={translate('joueur.tempsJeuMoyen')} value={played ? fmt(Math.round(career.seconds / played)) : '—'} hint={translate('joueur.parMatchHint')} />
+        <StatCard label={translate('team.games')} value={String(played)} hint={translate('team.played')} />
+        <StatCard label={translate('player.pointsPerGame')} value={perGame(career.points, played)} hint={translate('team.inTotal', { n: career.points })} />
+        <StatCard label={translate('player.shootingPct')} value={pct.fg === null ? '—' : `${pct.fg} %`} hint={translate('count.locatedShot', { count: shotsCareer.length })} accent={C.accent} />
+        <StatCard label={translate('player.threePct')} value={pct.three === null ? '—' : `${pct.three} %`} hint={translate('player.overTheCareer')} />
+        <StatCard label={translate('player.avgCourtTime')} value={played ? fmt(Math.round(career.seconds / played)) : '—'} hint={translate('player.perGameHint')} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[420px_1fr] [&>*]:min-w-0">
         <div className="space-y-6">
-          <Panel title={translate('joueur.hotZoneCarriere')}>
+          <Panel title={translate('player.careerHotZone')}>
             {shotsCareer.length === 0 ? (
-              <Empty>{translate('bord.aucunTir')}</Empty>
+              <Empty>{translate('dashboard.noShot')}</Empty>
             ) : (
               <ShotChart shots={shotsCareer} />
             )}
           </Panel>
 
-          <Panel title={translate('joueur.statistiques')}>
+          <Panel title={translate('player.statistics')}>
             <div className="mb-1 flex items-center justify-between text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>
-              <span>{translate('joueur.parMatch')}</span>
-              <span className="flex gap-4"><span className="w-8 text-right">{translate('joueur.cumul')}</span><span className="w-14 text-right">{translate('joueur.moyenne')}</span></span>
+              <span>{translate('player.perGame')}</span>
+              <span className="flex gap-4"><span className="w-8 text-right">{translate('player.total')}</span><span className="w-14 text-right">{translate('player.average')}</span></span>
             </div>
-            <StatRow label={translate('joueur.passesDecisives')} total={career.assists} games={played} />
-            <StatRow label={translate('joueur.rebondsOffensifs')} total={career.offRebounds} games={played} />
-            <StatRow label={translate('joueur.rebondsDefensifs')} total={career.defRebounds} games={played} />
-            <StatRow label={translate('joueur.contres')} total={career.blocks} games={played} />
-            <StatRow label={translate('joueur.fautes')} total={career.fouls} games={played} />
-            <p className="mb-1 mt-4 text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('joueur.repartition')}</p>
-            <StatRow label={translate('joueur.deuxInterieurs')} total={career.twoInside} games={played} />
-            <StatRow label={translate('joueur.deuxExterieurs')} total={career.twoOutside} games={played} />
-            <StatRow label={translate('joueur.troisPts')} total={career.threes} games={played} />
-            <StatRow label={translate('joueur.lancersFrancs')} total={career.freeThrows} games={played} />
+            <StatRow label={translate('player.assists')} total={career.assists} games={played} />
+            <StatRow label={translate('player.offRebounds')} total={career.offRebounds} games={played} />
+            <StatRow label={translate('player.defRebounds')} total={career.defRebounds} games={played} />
+            <StatRow label={translate('player.blocks')} total={career.blocks} games={played} />
+            <StatRow label={translate('player.fouls')} total={career.fouls} games={played} />
+            <p className="mb-1 mt-4 text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('player.breakdown')}</p>
+            <StatRow label={translate('player.twosInside')} total={career.twoInside} games={played} />
+            <StatRow label={translate('player.twosOutside')} total={career.twoOutside} games={played} />
+            <StatRow label={translate('player.threes')} total={career.threes} games={played} />
+            <StatRow label={translate('player.freeThrows')} total={career.freeThrows} games={played} />
           </Panel>
         </div>
 
-        <Panel title={translate('equipe.rencontres')}>
+        <Panel title={translate('team.games')}>
           {ordered.length === 0 ? (
-            <Empty>{translate('joueur.aucuneRencontreJouee')}</Empty>
+            <Empty>{translate('player.noGamePlayed')}</Empty>
           ) : (
             <ul className="space-y-1.5">
               {ordered.map((m) => {
@@ -149,22 +149,22 @@ export function PlayerDetail() {
                       <div className="border-t px-3 py-3" style={{ borderColor: C.border }}>
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                           <ul className="grid flex-1 grid-cols-2 gap-x-4 gap-y-1 text-[12px] font-semibold" style={{ color: C.muted }}>
-                            <li className="col-span-2 font-bold" style={{ color: C.text }}>{translate('compte.pt', { count: s?.points ?? 0 })}</li>
-                            <li>{translate('compte.tirReussi', { count: s?.fieldGoalsMade ?? 0 })}</li>
-                            <li>{translate('compte.manque', { count: s?.misses ?? 0 })}</li>
-                            <li>{translate('compte.passeDecisive', { count: s?.assists ?? 0 })}</li>
-                            <li>{translate('compte.contre', { count: s?.blocks ?? 0 })}</li>
-                            <li>{translate('compte.rebondOff', { count: s?.offRebounds ?? 0 })}</li>
-                            <li>{translate('compte.rebondDef', { count: s?.defRebounds ?? 0 })}</li>
-                            <li>{translate('compte.faute', { count: s?.fouls ?? 0 })}</li>
+                            <li className="col-span-2 font-bold" style={{ color: C.text }}>{translate('count.pt', { count: s?.points ?? 0 })}</li>
+                            <li>{translate('count.madeShot', { count: s?.fieldGoalsMade ?? 0 })}</li>
+                            <li>{translate('count.miss', { count: s?.misses ?? 0 })}</li>
+                            <li>{translate('count.assist', { count: s?.assists ?? 0 })}</li>
+                            <li>{translate('count.block', { count: s?.blocks ?? 0 })}</li>
+                            <li>{translate('count.offRebound', { count: s?.offRebounds ?? 0 })}</li>
+                            <li>{translate('count.defRebound', { count: s?.defRebounds ?? 0 })}</li>
+                            <li>{translate('count.foul', { count: s?.fouls ?? 0 })}</li>
                             <li>{fmt(playingTimes(m).get(id) ?? 0)} de jeu</li>
                           </ul>
                           <div className="shrink-0 sm:w-44">
-                            {shots.length === 0 ? <Empty>{translate('joueur.aucunTirRencontre')}</Empty> : <ShotChart shots={shots} minAttempts={1} />}
+                            {shots.length === 0 ? <Empty>{translate('player.noShotInGame')}</Empty> : <ShotChart shots={shots} minAttempts={1} />}
                           </div>
                         </div>
                         <Link to={`/match/${m.id}/summary`} className="mt-2 inline-block text-xs font-bold" style={{ color: C.accent }}>
-                          {translate('joueur.voirFeuille')}
+                          {translate('player.viewSheet')}
                         </Link>
                       </div>
                     )}

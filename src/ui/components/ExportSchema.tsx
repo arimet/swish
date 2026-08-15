@@ -392,13 +392,13 @@ export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
    *  the device cannot draw, say so plainly. */
   const out = (label: string, faire: () => Promise<Blob>, ext: string, type: string) => async () => {
     setBusy(true)
-    setStatus(translate('partage.enPreparation', { what: label }))
+    setStatus(translate('share.building', { what: label }))
     try {
       const blob = await faire()
       await deliver(new File([blob], fileName(schema, ext), { type }))
-      setStatus(translate('partage.pret', { what: label, kb: Math.round(blob.size / 1024) }))
+      setStatus(translate('share.ready', { what: label, kb: Math.round(blob.size / 1024) }))
     } catch {
-      setStatus(translate('partage.echecFichier', { what: label }))
+      setStatus(translate('share.fileFailed', { what: label }))
     } finally {
       setBusy(false)
     }
@@ -408,9 +408,9 @@ export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
     if (!link) return
     try {
       await navigator.clipboard?.writeText(link)
-      setStatus(translate('partage.lienCopie'))
+      setStatus(translate('share.linkCopied'))
     } catch {
-      setStatus(translate('partage.pressePapiersRefuse'))
+      setStatus(translate('share.clipboardRefused'))
     }
     if (navigator.share) {
       try { await navigator.share({ title: schema.name, url: link }) } catch { /* share cancelled */ }
@@ -421,24 +421,24 @@ export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-extrabold">{translate('partage.titre', { name: schema.name })}</DialogTitle>
+          <DialogTitle className="text-lg font-extrabold">{translate('share.title', { name: schema.name })}</DialogTitle>
         </DialogHeader>
 
-        {link === undefined && <p className="text-[13px]" style={{ color: C.muted }}>{translate('partage.preparation')}</p>}
+        {link === undefined && <p className="text-[13px]" style={{ color: C.muted }}>{translate('share.preparing')}</p>}
 
         {link === null && (
           <p className="rounded-xl p-3 text-[13px]" style={{ background: C.amberBg, color: C.amber }}>
-            {translate('partage.tropLong')}
+            {translate('share.tooLong')}
           </p>
         )}
 
         {link && (
           <>
             <p className="text-[13px] leading-relaxed" style={{ color: C.muted }}>
-              {translate('partage.explication')}
+              {translate('share.explanation')}
             </p>
             <input
-              readOnly value={link} aria-label={translate('partage.lienCombinaison')}
+              readOnly value={link} aria-label={translate('share.playLink')}
               onFocus={(e) => e.currentTarget.select()}
               className="w-full truncate rounded-xl bg-[var(--c-card2)] px-3 py-2 text-[12px] outline-none"
               style={{ border: bd, color: C.muted }}
@@ -449,7 +449,7 @@ export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
               style={{ background: C.brand }}
             >
               <Link2 className="h-4 w-4 shrink-0" strokeWidth={2} />
-              {translate('partage.copierLien')}
+              {translate('share.copyLink')}
             </button>
           </>
         )}
@@ -458,15 +458,15 @@ export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
             and a heading say the medium changes, and each button announces what it
             produces — one step, every step, the animation. */}
         <div className="flex items-center gap-3 pt-1">
-          <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>{translate('partage.ouEnvoyerFichier')}</span>
+          <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>{translate('share.orSendAFile')}</span>
           <span className="h-px flex-1" style={{ background: C.border }} />
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <FileButton label={translate('partage.imagePng')} what={translate('partage.ceTemps')} disabled={busy} onClick={out(translate('partage.lImage'), () => makePng(schema, schema.steps[stepIndex] ?? schema.steps[0]), 'png', 'image/png')} />
-          <FileButton label={translate('partage.pdf')} what={translate('partage.tousLesTemps')} disabled={busy} onClick={out(translate('partage.lePdf'), () => makePdf(schema), 'pdf', 'application/pdf')} />
+          <FileButton label={translate('share.png')} what={translate('share.thisStep')} disabled={busy} onClick={out(translate('share.theImage'), () => makePng(schema, schema.steps[stepIndex] ?? schema.steps[0]), 'png', 'image/png')} />
+          <FileButton label={translate('share.pdf')} what={translate('share.everyStep')} disabled={busy} onClick={out(translate('share.thePdf'), () => makePdf(schema), 'pdf', 'application/pdf')} />
           <FileButton
-            label={translate('partage.gif')} what={translate('partage.animation')} disabled={busy}
-            onClick={out(translate('partage.leGif'), () => makeGif(schema, (done, total) => setStatus(translate('partage.gifProgression', { done: done, total }))), 'gif', 'image/gif')}
+            label={translate('share.gif')} what={translate('share.animation')} disabled={busy}
+            onClick={out(translate('share.theGif'), () => makeGif(schema, (done, total) => setStatus(translate('share.gifProgress', { done: done, total }))), 'gif', 'image/gif')}
           />
         </div>
 

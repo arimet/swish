@@ -17,21 +17,21 @@ export function Summary({ match, players, teamNames }: { match: Match; players: 
   const score = liveState(match).score
   return (
     <div className="space-y-8 p-4">
-      <Button className="no-print" onClick={printSummary}>{translate('imprime.exporter')}</Button>
+      <Button className="no-print" onClick={printSummary}>{translate('print.export')}</Button>
       <TeamBox match={match} players={players} />
       <OpponentLine name={teamNames.B} score={score.b} />
       <section>
-        <h3 className="font-bold mb-2">{translate('imprime.donneesRatios')}</h3>
+        <h3 className="font-bold mb-2">{translate('print.ratios')}</h3>
         <ul className="text-sm grid grid-cols-2 gap-x-8 max-w-xl">
-          <li>{translate('imprime.avantageMax')} — A {ratios.A.maxLead} / B {ratios.B.maxLead}</li>
-          <li>{translate('imprime.serieMax')} — A {ratios.A.maxRun} / B {ratios.B.maxRun}</li>
-          <li>{translate('imprime.pointsDuBanc')} — A {teamTotals(match).bench.points}</li>
-          <li>{translate('imprime.egalites')} — {ratios.ties}</li>
-          <li>{translate('imprime.dureeAvantage')} — A {fmt(ratios.A.leadDurationSec)} / B {fmt(ratios.B.leadDurationSec)}</li>
+          <li>{translate('print.largestLead')} — A {ratios.A.maxLead} / B {ratios.B.maxLead}</li>
+          <li>{translate('print.longestRun')} — A {ratios.A.maxRun} / B {ratios.B.maxRun}</li>
+          <li>{translate('print.benchPoints')} — A {teamTotals(match).bench.points}</li>
+          <li>{translate('print.ties')} — {ratios.ties}</li>
+          <li>{translate('print.timeInFront')} — A {fmt(ratios.A.leadDurationSec)} / B {fmt(ratios.B.leadDurationSec)}</li>
         </ul>
       </section>
       <section>
-        <h3 className="font-bold mb-2">{translate('resume.progression')}</h3>
+        <h3 className="font-bold mb-2">{translate('summary.progression')}</h3>
         <ProgressionChart points={scoreProgression(match)} />
       </section>
     </div>
@@ -44,9 +44,9 @@ function OpponentLine({ name, score }: { name: string; score: number }) {
   const translate = useT()
   return (
     <section>
-      <h3 className="font-bold mb-2">{translate('imprime.visiteurs')}</h3>
+      <h3 className="font-bold mb-2">{translate('print.away')}</h3>
       <p className="border border-black p-2 text-sm">
-        {translate('imprime.scoreGlobal', { name, score })}
+        {translate('print.totalScore', { name, score })}
       </p>
     </section>
   )
@@ -59,14 +59,14 @@ function TeamBox({ match, players }: { match: Match; players: Record<string, Pla
   const totals = teamTotals(match)
   return (
     <section>
-      <h3 className="font-bold mb-2">{translate('imprime.locaux')}</h3>
+      <h3 className="font-bold mb-2">{translate('print.home')}</h3>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{translate('equipe.numero')}</TableHead><TableHead>{translate('imprime.nomPrenom')}</TableHead><TableHead>5</TableHead>
-            <TableHead>{translate('resume.thTps')}</TableHead><TableHead>{translate('resume.thPts')}</TableHead><TableHead>{translate('resume.thTirs')}</TableHead>
-            <TableHead>{translate('resume.th3pts')}</TableHead><TableHead>{translate('resume.th2Int')}</TableHead><TableHead>{translate('resume.th2Ext')}</TableHead>
-            <TableHead>{translate('resume.thLf')}</TableHead><TableHead>{translate('resume.thFtes')}</TableHead>
+            <TableHead>{translate('team.number')}</TableHead><TableHead>{translate('print.nameAndFirstName')}</TableHead><TableHead>5</TableHead>
+            <TableHead>{translate('summary.thTime')}</TableHead><TableHead>{translate('summary.thPts')}</TableHead><TableHead>{translate('summary.thFg')}</TableHead>
+            <TableHead>{translate('summary.th3pt')}</TableHead><TableHead>{translate('summary.th2in')}</TableHead><TableHead>{translate('summary.th2out')}</TableHead>
+            <TableHead>{translate('summary.thFt')}</TableHead><TableHead>{translate('summary.thPf')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -86,7 +86,7 @@ function TeamBox({ match, players }: { match: Match; players: Record<string, Pla
             )
           })}
           <TableRow className="font-semibold">
-            <TableCell colSpan={4}>{translate('imprime.totalEquipe')}</TableCell>
+            <TableCell colSpan={4}>{translate('print.teamTotal')}</TableCell>
             <TableCell>{totals.team.points}</TableCell><TableCell>{totals.team.fieldGoalsMade}</TableCell>
             <TableCell>{totals.team.threes}</TableCell><TableCell>{totals.team.twoInside}</TableCell>
             <TableCell>{totals.team.twoOutside}</TableCell><TableCell>{totals.team.freeThrows}</TableCell>

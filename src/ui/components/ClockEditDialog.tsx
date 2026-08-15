@@ -27,7 +27,7 @@ export function ClockEditDialog({ open, seconds, max, onClose, onSubmit }: {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-xs border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-extrabold">{translate('chrono.editer')}</DialogTitle>
+          <DialogTitle className="text-lg font-extrabold">{translate('clock.edit')}</DialogTitle>
         </DialogHeader>
         <input
           autoFocus
@@ -40,17 +40,17 @@ export function ClockEditDialog({ open, seconds, max, onClose, onSubmit }: {
             valid ? 'border-[var(--c-border)] focus:border-[var(--c-accent)]' : 'border-[var(--c-danger)]'
           }`}
         />
-        <p className="mt-1.5 text-center text-xs text-[var(--c-muted)]">{translate('chrono.format', { max: fmt(max) })}</p>
+        <p className="mt-1.5 text-center text-xs text-[var(--c-muted)]">{translate('clock.format', { max: fmt(max) })}</p>
         <div className="mt-4 flex gap-2">
           <button onClick={onClose} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">
-            {translate('commun.annuler')}
+            {translate('common.cancel')}
           </button>
           <button
             disabled={!valid}
             onClick={submit}
             className="flex-1 rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110 disabled:opacity-40"
           >
-            {translate('chrono.valider')}
+            {translate('clock.confirm')}
           </button>
         </div>
       </DialogContent>

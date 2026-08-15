@@ -40,7 +40,7 @@ export function useMatch(matchId: string) {
       return true
     } catch {
       apply(previous)
-      setError(translate('erreur.enregistrement'))
+      setError(translate('error.save'))
       return false
     }
   }, [translate])

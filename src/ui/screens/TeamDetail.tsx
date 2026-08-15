@@ -61,7 +61,7 @@ export function TeamDetail() {
 
   if (!id) return null
   if (team === undefined) return <div className="p-6"><div className="h-24 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
-  if (team === null) return <div className="p-6"><p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>{translate('equipe.introuvable')} <Link to="/teams" className="font-bold" style={{ color: C.accent }}>{translate('equipe.retour')}</Link></p></div>
+  if (team === null) return <div className="p-6"><p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>{translate('team.notFound')} <Link to="/teams" className="font-bold" style={{ color: C.accent }}>{translate('team.back')}</Link></p></div>
 
   const saveCoach = () => {
     if (coach === (team.coach ?? '')) return
@@ -113,25 +113,25 @@ export function TeamDetail() {
 
   return (
     <div className="p-6">
-      <Link to="/teams" className="inline-block rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('equipe.retourEquipes')}</Link>
+      <Link to="/teams" className="inline-block rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('team.backToTeams')}</Link>
       <div className="mb-6 mt-4 flex items-center gap-3">
         <TeamBadge id={id} name={team.name} size="h-12 w-12 text-base" />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{team.name}</h1>
-          <p className="text-sm" style={{ color: C.muted }}>{translate('commun.joueur', { count: players.length })}{team.coach ? ` · ${translate('equipe.coachSuffixe', { name: team.coach })}` : ''}</p>
+          <p className="text-sm" style={{ color: C.muted }}>{translate('common.player', { count: players.length })}{team.coach ? ` · ${translate('team.coachSuffix', { name: team.coach })}` : ''}</p>
         </div>
         {/* As on the summary and the game record: the right is checked when the dialog
             opens, not re-derived afterwards. Accepted — locking yourself out between
             the opening and the confirmation only happens by handing the device over
             mid-action. */}
-        {manages && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}>{translate('commun.supprimer')}</button>}
+        {manages && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}>{translate('common.delete')}</button>}
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
-        title={translate('equipe.supprimerTitre')} message={translate('equipe.supprimerTexte', { name: team.name })} confirmLabel={translate('commun.supprimer')} danger />
+        title={translate('team.deleteTitle')} message={translate('team.deleteText', { name: team.name })} confirmLabel={translate('common.delete')} danger />
       <ConfirmDialog open={!!toRemove} onClose={() => setToRemove(null)} onConfirm={removePlayer}
-        title={toRemove ? translate('equipe.retirerTitre', { name: `${toRemove.lastName} ${toRemove.firstName}` }) : ''}
-        message={translate('equipe.retirerTexte')}
-        confirmLabel={translate('commun.retirer')} danger />
+        title={toRemove ? translate('team.removePlayerTitle', { name: `${toRemove.lastName} ${toRemove.firstName}` }) : ''}
+        message={translate('team.removePlayerText')}
+        confirmLabel={translate('common.remove')} danger />
 
       {/* The season's figures only appear from one game played onwards. Otherwise it
           was four tiles reading "0" and "—", and two panels announcing the absence of
@@ -140,21 +140,21 @@ export function TeamDetail() {
           roster, hence the first they see after founding their club. What is left, the
           roster, is precisely what they have just accomplished. */}
       {rec.played > 0 && <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label={translate('equipe.rencontres')} value={String(rec.played)} hint={upcoming.length ? translate('equipe.aVenir', { n: upcoming.length }) : translate('equipe.jouees')} />
-        <StatCard label={translate('bord.bilan')} value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? translate('equipe.pourcentVictoires', { n: Math.round((rec.wins / rec.played) * 100) }) : '—'} accent={rec.wins >= rec.losses ? C.green : C.accent} />
-        <StatCard label={translate('bord.pointsMarques')} value={rec.played ? String(rec.avgFor) : '—'} hint={rec.played ? translate('equipe.auTotal', { n: rec.pointsFor }) : translate('bord.parMatch')} />
-        <StatCard label={translate('bord.differentiel')} value={diff > 0 ? `+${diff}` : String(diff)} hint={translate('equipe.encaissesParMatch', { n: rec.avgAgainst })} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
+        <StatCard label={translate('team.games')} value={String(rec.played)} hint={upcoming.length ? translate('team.upcoming', { n: upcoming.length }) : translate('team.played')} />
+        <StatCard label={translate('dashboard.record')} value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? translate('team.winPct', { n: Math.round((rec.wins / rec.played) * 100) }) : '—'} accent={rec.wins >= rec.losses ? C.green : C.accent} />
+        <StatCard label={translate('dashboard.pointsFor')} value={rec.played ? String(rec.avgFor) : '—'} hint={rec.played ? translate('team.inTotal', { n: rec.pointsFor }) : translate('dashboard.perGame')} />
+        <StatCard label={translate('dashboard.differential')} value={diff > 0 ? `+${diff}` : String(diff)} hint={translate('team.concededPerGame', { n: rec.avgAgainst })} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
       </div>}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px] [&>*]:min-w-0">
         <div className="space-y-6">
-          {lines.length > 0 && <Panel title={translate('equipe.derniersMatchs')}>
+          {lines.length > 0 && <Panel title={translate('team.recentGames')}>
             {lines.length === 0 ? (
-              <Empty>{translate('equipe.aucuneRencontre')}</Empty>
+              <Empty>{translate('team.noGame')}</Empty>
             ) : (
               <ul className="space-y-1.5">
                 {lines.slice(0, 8).map((l) => {
-                  const opp = teamsById[l.opponentId]?.name ?? translate('match.adversaire')
+                  const opp = teamsById[l.opponentId]?.name ?? translate('match.opponent')
                   const f = fmtDate(l.match.meta.date)
                   const to = l.match.status === 'finished' ? `/match/${l.match.id}/summary` : l.match.status === 'live' ? `/match/${l.match.id}/live` : `/match/${l.match.id}`
                   return (
@@ -174,9 +174,9 @@ export function TeamDetail() {
             )}
           </Panel>}
 
-          {scorers.length > 0 && <Panel title={translate('bord.meilleursMarqueurs')}>
+          {scorers.length > 0 && <Panel title={translate('dashboard.topScorers')}>
             {scorers.length === 0 ? (
-              <Empty>{translate('bord.pasDePoints')}</Empty>
+              <Empty>{translate('dashboard.noPointsYet')}</Empty>
             ) : (
               <ul className="space-y-1.5">
                 {/* Every row leads to the player's record, as on the dashboard: it is
@@ -195,7 +195,7 @@ export function TeamDetail() {
                       >
                         <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.accent : C.faint }}>{i + 1}</span>
                         <NumBadge n={p?.number ?? '?'} />
-                        <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : translate('commun.joueurMot')}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : translate('common.playerWord')}</span>
                         <span className="text-sm font-black tabular-nums" style={{ color: C.text }}>{pts} <span className="text-[12px] font-semibold" style={{ color: C.muted }}>pts</span></span>
                       </Link>
                     </li>
@@ -207,14 +207,14 @@ export function TeamDetail() {
         </div>
 
         <div className="space-y-6">
-          <Panel title={translate('equipe.effectif')}>
+          <Panel title={translate('team.roster')}>
             {/* The coach field writes: without the right it does not show. The name
                 stays readable at the top of the record, next to the player count. */}
             {manages && (
               <>
-                <label htmlFor="coach" className="mb-1.5 block text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('equipe.entraineur')}</label>
+                <label htmlFor="coach" className="mb-1.5 block text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('team.coach')}</label>
                 <input id="coach" value={coach} onChange={(e) => setCoach(e.target.value)} onBlur={saveCoach} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                  placeholder={translate('equipe.entraineurPlaceholder')} style={{ ...field, width: '100%' }} className="mb-4" />
+                  placeholder={translate('team.coachPlaceholder')} style={{ ...field, width: '100%' }} className="mb-4" />
               </>
             )}
             <ul className="mb-4 space-y-1.5">
@@ -237,9 +237,9 @@ export function TeamDetail() {
                         the visible label, which overlapped the name on a phone. */}
                     {manages && (
                       <>
-                        <button aria-label={translate(editingId === p.id ? 'equipe.fermerJoueur' : 'equipe.modifierJoueur', { name: p.lastName })}
+                        <button aria-label={translate(editingId === p.id ? 'team.closePlayer' : 'team.editPlayer', { name: p.lastName })}
                           onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold" style={{ color: C.muted }}>
-                          {translate(editingId === p.id ? 'commun.fermer' : 'commun.modifier')}
+                          {translate(editingId === p.id ? 'common.close' : 'common.edit')}
                         </button>
                         {/* Removal stays outside the expanded area: it is a destructive
                             action, it must not end up mixed in with the edit fields.
@@ -247,57 +247,57 @@ export function TeamDetail() {
                             "edit", and stood twenty-four pixels tall. A destruction is not
                             signalled with the colour of ordinary buttons, and is not aimed
                             at with the barely tolerable minimum. */}
-                        <button onClick={() => setToRemove(p)} aria-label={translate('equipe.retirerJoueur', { name: `${p.lastName} ${p.firstName}` })}
-                          className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold transition hover:bg-[var(--c-danger-bg)]" style={{ color: C.danger }}>{translate('equipe.retirer')}</button>
+                        <button onClick={() => setToRemove(p)} aria-label={translate('team.removeNamedPlayer', { name: `${p.lastName} ${p.firstName}` })}
+                          className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold transition hover:bg-[var(--c-danger-bg)]" style={{ color: C.danger }}>{translate('team.remove')}</button>
                       </>
                     )}
                   </div>
                   {editingId === p.id && (
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <div>
-                        <label htmlFor={`edit-birth-${p.id}`} className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('equipe.naissance')}</label>
+                        <label htmlFor={`edit-birth-${p.id}`} className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('team.birth')}</label>
                         <input id={`edit-birth-${p.id}`} type="date" value={editBirth} onChange={(e) => setEditBirth(e.target.value)} style={{ ...field, width: '100%' }} />
                       </div>
                       <div>
-                        <label htmlFor={`edit-height-${p.id}`} className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('equipe.tailleJoueur')}</label>
+                        <label htmlFor={`edit-height-${p.id}`} className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('team.playerHeight')}</label>
                         <input id={`edit-height-${p.id}`} type="number" inputMode="numeric" value={editHeight} onChange={(e) => setEditHeight(e.target.value)} style={{ ...field, width: '100%' }} />
                       </div>
-                      <button onClick={() => saveEdit(p)} className="col-span-2 rounded-xl py-2 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('commun.enregistrer')}</button>
+                      <button onClick={() => saveEdit(p)} className="col-span-2 rounded-xl py-2 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('common.save')}</button>
                     </div>
                   )}
                 </li>
               ))}
-              {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>{manages ? translate('equipe.aucunJoueurAjoutez') : translate('equipe.aucunJoueurEffectif')}</li>}
+              {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>{manages ? translate('team.noPlayerAddOne') : translate('team.noPlayerInRoster')}</li>}
             </ul>
             {/* Recruiting is administrative: the button does not show without the
                 right. Opening the form is already a write, so the guard stays here and
                 not only at save time. */}
             {!manages ? null : !addingPlayer ? (
               <button onClick={() => guard('manage', () => setAddingPlayer(true))} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-                {translate('equipe.ajouterJoueur')}
+                {translate('team.addPlayer')}
               </button>
             ) : (
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('equipe.nouveauJoueur')}</p>
-                <button onClick={() => setAddingPlayer(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('team.newPlayer')}</p>
+                <button onClick={() => setAddingPlayer(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('common.closeShort')}</button>
               </div>
               <div className="grid grid-cols-[56px_1fr] gap-2">
-                <input placeholder={translate('equipe.numero')} value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center' }} />
-                <input placeholder={translate('equipe.nom')} value={ln} onChange={(e) => setLn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={field} />
+                <input placeholder={translate('team.number')} value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center' }} />
+                <input placeholder={translate('team.lastName')} value={ln} onChange={(e) => setLn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={field} />
               </div>
-              <input placeholder={translate('equipe.prenom')} value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={{ ...field, width: '100%' }} />
+              <input placeholder={translate('team.firstName')} value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={{ ...field, width: '100%' }} />
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label htmlFor="add-birth" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('equipe.dateNaissance')}</label>
+                  <label htmlFor="add-birth" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('team.birthDate')}</label>
                   <input id="add-birth" type="date" value={birth} onChange={(e) => setBirth(e.target.value)} style={{ ...field, width: '100%' }} />
                 </div>
                 <div>
-                  <label htmlFor="add-height" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('equipe.taille')}</label>
+                  <label htmlFor="add-height" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('team.height')}</label>
                   <input id="add-height" type="number" inputMode="numeric" value={height} onChange={(e) => setHeight(e.target.value)} style={{ ...field, width: '100%' }} />
                 </div>
               </div>
-              <button onClick={addPlayer} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('equipe.ajouterLeJoueur')}</button>
+              <button onClick={addPlayer} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('team.addThisPlayer')}</button>
             </div>
             )}
           </Panel>

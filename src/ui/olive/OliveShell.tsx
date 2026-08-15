@@ -18,13 +18,13 @@ import { useClub } from '../../app/club'
    does not exist yet. Translation happens at render time, in `NavGroup` and
    `MobileNav`. The catalogue test recognises them by their shape. */
 const NAV_TOP = [
-  { icon: ICON.trophy, label: 'nav.tableauDeBord', to: '/', end: true },
+  { icon: ICON.trophy, label: 'nav.dashboard', to: '/', end: true },
 ]
 const NAV_REST = [
-  { icon: ICON.cal, label: 'nav.calendrier', to: '/calendrier', end: false },
-  { icon: ICON.trophy, label: 'nav.championnat', to: '/championnat', end: false },
-  { icon: ICON.users, label: 'nav.equipes', to: '/teams', end: false },
-  { icon: ICON.matches, label: 'nav.schemas', to: '/schemas', end: false },
+  { icon: ICON.cal, label: 'nav.calendar', to: '/calendrier', end: false },
+  { icon: ICON.trophy, label: 'nav.standings', to: '/championnat', end: false },
+  { icon: ICON.users, label: 'nav.teams', to: '/teams', end: false },
+  { icon: ICON.matches, label: 'nav.plays', to: '/schemas', end: false },
 ]
 /* The bottom bar holds four entries, and the plays are one of them: the play viewer
    is made for the time-out, hence for a phone — it was the one screen of the
@@ -35,15 +35,15 @@ const NAV_MOBILE = [
   /* "Home" and not "Dashboard": the long label wrapped onto two lines in a 94px slot
      and pushed its entry half a line below the other three. The sidebar has the room
      and keeps the full name. */
-  { icon: ICON.trophy, label: 'nav.accueil', to: '/', end: true },
-  { icon: ICON.cal, label: 'nav.calendrier', to: '/calendrier', end: false },
-  { icon: ICON.matches, label: 'nav.schemas', to: '/schemas', end: false },
+  { icon: ICON.trophy, label: 'nav.home', to: '/', end: true },
+  { icon: ICON.cal, label: 'nav.calendar', to: '/calendrier', end: false },
+  { icon: ICON.matches, label: 'nav.plays', to: '/schemas', end: false },
 ]
 // "My team" targets `/teams/<clubId>`: without a club set it would be a link to
 // `/teams/undefined` — the entry is only added once the club is known.
 const TITLES: Record<string, string> = {
-  '/': 'nav.tableauDeBord', '/calendrier': 'nav.calendrier', '/championnat': 'nav.championnat',
-  '/teams': 'nav.equipes', '/schemas': 'nav.schemas', '/match/new': 'nav.nouvelleRencontre',
+  '/': 'nav.dashboard', '/calendrier': 'nav.calendar', '/championnat': 'nav.standings',
+  '/teams': 'nav.teams', '/schemas': 'nav.plays', '/match/new': 'nav.newGame',
   '/admin': 'nav.administration',
 }
 
@@ -69,7 +69,7 @@ export function OliveShell() {
 
   const roster = players ?? []
   const translate = useT()
-  const titleKey = TITLES[pathname] ?? (pathname.startsWith('/teams') ? 'nav.equipes' : pathname.startsWith('/schemas') ? 'nav.schemas' : pathname.startsWith('/match') ? 'nav.rencontre' : 'nav.rencontres')
+  const titleKey = TITLES[pathname] ?? (pathname.startsWith('/teams') ? 'nav.teams' : pathname.startsWith('/schemas') ? 'nav.plays' : pathname.startsWith('/match') ? 'nav.game' : 'nav.games')
   const title = translate(titleKey)
   return (
     <div className="min-h-dvh lg:p-4" style={{ background: C.page }}>
@@ -140,7 +140,7 @@ function AccessMenu({ players, compact = false }: { players: Player[]; compact?:
   const submit = () => {
     const obtained = unlock(code)
     setCode('')
-    if (!obtained) { setError(translate('acces.codeInconnu')); return }
+    if (!obtained) { setError(translate('access.unknownCode')); return }
     setError('')
     // Only the player code opens the name picker; the others change the role, which
     // the dialog shows straight away as confirmation.
@@ -151,8 +151,8 @@ function AccessMenu({ players, compact = false }: { players: Player[]; compact?:
     <>
       <button
         onClick={open_}
-        aria-label={`${translate('acces.titre')} · ${translate(`role.${role}`)}`}
-        title={`${translate('acces.titre')} · ${translate(`role.${role}`)}`}
+        aria-label={`${translate('access.title')} · ${translate(`role.${role}`)}`}
+        title={`${translate('access.title')} · ${translate(`role.${role}`)}`}
         className={compact
           ? 'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm lg:hidden'
           : 'flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition'}
@@ -162,22 +162,22 @@ function AccessMenu({ players, compact = false }: { players: Player[]; compact?:
             above, so it stayed yellow while the state said "green, unlocked" — and it
             changed shape from one operating system to the next. */}
         {locked ? <Lock className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} /> : <LockOpen className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />}
-        {!compact && <span className="truncate">{translate('acces.titre')} · {translate(`role.${role}`)}</span>}
+        {!compact && <span className="truncate">{translate('access.title')} · {translate(`role.${role}`)}</span>}
       </button>
 
       <Dialog open={open} onOpenChange={(o) => !o && setOpen(false)}>
         <DialogContent className="sm:max-w-xs border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
           <DialogHeader>
-            <DialogTitle className="text-lg font-extrabold">{translate('acces.titre')}</DialogTitle>
+            <DialogTitle className="text-lg font-extrabold">{translate('access.title')}</DialogTitle>
           </DialogHeader>
-          <p className="text-[13px] font-semibold">{translate('acces.enCours', { role: translate(`role.${role}`) })}</p>
+          <p className="text-[13px] font-semibold">{translate('access.current', { role: translate(`role.${role}`) })}</p>
           <p className="text-[13px]" style={{ color: C.muted }}>
-            {me ? translate('acces.identifieComme', { name: `${me.lastName} ${me.firstName}` }) : translate('acces.aucuneIdentite')}
+            {me ? translate('access.identifiedAs', { name: `${me.lastName} ${me.firstName}` }) : translate('access.noIdentity')}
           </p>
 
           {picking ? (
             <>
-              <p className="text-[13px] font-semibold">{translate('acces.quiEtesVous')}</p>
+              <p className="text-[13px] font-semibold">{translate('access.whoAreYou')}</p>
               <ul className="max-h-56 space-y-1 overflow-y-auto">
                 {[...players].sort((a, b) => a.number - b.number).map((p) => (
                   <li key={p.id}>
@@ -190,28 +190,28 @@ function AccessMenu({ players, compact = false }: { players: Player[]; compact?:
                     </button>
                   </li>
                 ))}
-                {players.length === 0 && <li className="py-2 text-[13px]" style={{ color: C.muted }}>{translate('acces.effectifVide')}</li>}
+                {players.length === 0 && <li className="py-2 text-[13px]" style={{ color: C.muted }}>{translate('access.emptyRoster')}</li>}
               </ul>
             </>
           ) : (
             <>
               <input
-                autoFocus aria-label={translate('acces.codeLabel')} type="password" value={code} placeholder={translate('acces.codePlaceholder')}
+                autoFocus aria-label={translate('access.codeLabel')} type="password" value={code} placeholder={translate('access.codePlaceholder')}
                 onChange={(e) => { setCode(e.target.value); setError('') }}
                 onKeyDown={(e) => e.key === 'Enter' && submit()}
                 className={`w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${error ? 'border-[var(--c-danger)]' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
               />
               {error && <p className="text-xs font-semibold text-[var(--c-danger)]">{error}</p>}
-              <button onClick={submit} className="rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">{translate('acces.deverrouiller')}</button>
+              <button onClick={submit} className="rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">{translate('access.unlock')}</button>
             </>
           )}
 
           <div className="flex gap-2">
             {me && !picking && (
-              <button onClick={() => setPlayer(null)} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{translate('acces.nePlusMIdentifier')}</button>
+              <button onClick={() => setPlayer(null)} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{translate('access.forgetMe')}</button>
             )}
             {!locked && (
-              <button onClick={lock} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{translate('acces.seVerrouiller')}</button>
+              <button onClick={lock} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{translate('access.lock')}</button>
             )}
           </div>
         </DialogContent>
@@ -226,8 +226,8 @@ function MobileNav() {
   const translate = useT()
   const { clubId } = useClub()
   const items = clubId
-    ? [...NAV_MOBILE, { icon: ICON.users, label: 'nav.monEquipe', to: `/teams/${clubId}`, end: true }]
-    : [...NAV_MOBILE, { icon: ICON.users, label: 'nav.equipes', to: '/teams', end: false }]
+    ? [...NAV_MOBILE, { icon: ICON.users, label: 'nav.myTeam', to: `/teams/${clubId}`, end: true }]
+    : [...NAV_MOBILE, { icon: ICON.users, label: 'nav.teams', to: '/teams', end: false }]
   return (
     <nav className="flex shrink-0 items-stretch justify-around gap-1 border-t px-1 pb-[env(safe-area-inset-bottom)] pt-1 lg:hidden" style={{ borderColor: C.border, background: C.panel }}>
       {items.map((n) => (
@@ -280,13 +280,13 @@ function Sidebar({ players }: { players: Player[] }) {
         <span className="text-lg font-extrabold leading-none tracking-tight">Swish</span>
       </Link>
 
-      <p className="mt-6 px-2 text-[12px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>{translate('nav.monClub')}</p>
+      <p className="mt-6 px-2 text-[12px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>{translate('nav.myClub')}</p>
       <NavGroup items={NAV_TOP} />
       {clubId && (
         <NavLink to={`/teams/${clubId}`} end
           className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
           style={({ isActive }) => ({ background: isActive ? C.card2 : 'transparent', color: isActive ? C.accent : C.muted })}>
-          {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.brand }} />}<Ic d={ICON.users} />{translate('nav.monEquipe')}</>)}
+          {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.brand }} />}<Ic d={ICON.users} />{translate('nav.myTeam')}</>)}
         </NavLink>
       )}
       <NavGroup items={NAV_REST} mutedOn={clubId ? `/teams/${clubId}` : undefined} />

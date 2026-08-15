@@ -76,11 +76,11 @@ export function SchemaPlayer() {
   }, [])
 
   if (!id) return null
-  if (schema === undefined) return <Screen><p style={{ color: C.muted }}>{translate('commun.chargement')}</p></Screen>
+  if (schema === undefined) return <Screen><p style={{ color: C.muted }}>{translate('common.loading')}</p></Screen>
   if (schema === null) return (
     <Screen>
       <p style={{ color: C.muted }}>
-        {translate('sch.introuvable')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{translate('equipe.retour')}</Link>
+        {translate('play.notFound')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{translate('team.back')}</Link>
       </p>
     </Screen>
   )
@@ -134,7 +134,7 @@ export function SchemaPlayer() {
             "Play", at the bottom. */}
         <div className="flex shrink-0 items-center gap-2">
           <Link
-            to={`/schemas/${id}`} aria-label={translate('sch.quitterLecteur')} title={translate('sch.quitterLecteur')}
+            to={`/schemas/${id}`} aria-label={translate('play.leaveViewer')} title={translate('play.leaveViewer')}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-base font-black" style={{ border: bd, color: C.muted }}
           >
             <X className="h-4 w-4" strokeWidth={2.5} />
@@ -146,7 +146,7 @@ export function SchemaPlayer() {
             onClick={() => { setPlaying(false); setSharing(true) }}
             className="h-10 shrink-0 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}
           >
-            {translate('sch.partager')}
+            {translate('play.share')}
           </button>
         </div>
         <ExportSchema schema={schema} stepIndex={current} open={sharing} onClose={() => setSharing(false)} />
@@ -158,15 +158,15 @@ export function SchemaPlayer() {
           <div className="h-full w-full select-none" style={{ maxWidth: boardWidth }}>
             <PlayBoard schema={schema} stepIndex={0} step={step} remplit />
           </div>
-          <HalfScreen side="left" label={translate('lecteur.precedent')} chevron="‹" onClick={() => go(-1)} disabled={current === 0} />
-          <HalfScreen side="right" label={translate('lecteur.suivant')} chevron="›" onClick={() => go(1)} disabled={current === last} />
+          <HalfScreen side="left" label={translate('viewer.previous')} chevron="‹" onClick={() => go(-1)} disabled={current === 0} />
+          <HalfScreen side="right" label={translate('viewer.next')} chevron="›" onClick={() => go(1)} disabled={current === last} />
         </div>
 
         <div className="mx-auto flex w-full shrink-0 flex-col gap-2" style={{ maxWidth: boardWidth }}>
           <div className="flex items-center gap-3">
-            <span className="w-24 shrink-0 text-sm font-extrabold">{translate('sch.temps', { n: current + 1, total: schema.steps.length })}</span>
+            <span className="w-24 shrink-0 text-sm font-extrabold">{translate('play.step', { n: current + 1, total: schema.steps.length })}</span>
             <input
-              type="range" aria-label={translate('sch.avancement')} min={0} max={last || 1} step={0.01} value={pos}
+              type="range" aria-label={translate('play.progress')} min={0} max={last || 1} step={0.01} value={pos}
               disabled={last === 0}
               onChange={(e) => { setPlaying(false); setPos(Number(e.target.value)) }}
               className="piste min-w-0 flex-1 cursor-pointer appearance-none disabled:opacity-40"
@@ -180,18 +180,18 @@ export function SchemaPlayer() {
               and a fourth setting, some day, will break nothing. */}
           <button
             onClick={() => (playing ? setPlaying(false) : play())} disabled={last === 0}
-            aria-label={translate(playing ? 'sch.pause' : 'sch.lecture')}
+            aria-label={translate(playing ? 'play.pause' : 'play.playback')}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-[var(--c-on-brand)] disabled:opacity-40"
             style={{ background: C.brand }}
           >
             {playing
-              ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('sch.pause')}</>
-              : <><PlayIcon className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('sch.lecture')}</>}
+              ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('play.pause')}</>
+              : <><PlayIcon className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('play.playback')}</>}
           </button>
           <div className="grid grid-cols-3 gap-2">
-            <Toggle label={translate('sch.trajets')} active={paths} onClick={() => setPaths((t) => !t)} />
-            <Toggle label={translate('sch.boucle')} active={looping} onClick={() => setLooping((b) => !b)} />
-            <Toggle label={translate('sch.ralenti')} active={slow} onClick={() => setSlow((r) => !r)} />
+            <Toggle label={translate('play.paths')} active={paths} onClick={() => setPaths((t) => !t)} />
+            <Toggle label={translate('play.loop')} active={looping} onClick={() => setLooping((b) => !b)} />
+            <Toggle label={translate('play.slowMotion')} active={slow} onClick={() => setSlow((r) => !r)} />
           </div>
         </div>
       </div>
