@@ -40,7 +40,7 @@ function tokens(marque: string): Record<string, string> {
   if (correspondants.length === 0) throw new Error(`bloc introuvable dans themes.css : ${marque}`)
   const out: Record<string, string> = {}
   for (const bloc of correspondants) {
-    for (const [, name, valeur] of bloc[2].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) out[name] = valeur.trim()
+    for (const [, name, value] of bloc[2].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) out[name] = value.trim()
   }
   return out
 }

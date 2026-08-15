@@ -135,8 +135,8 @@ describe('Découpe des zones au cadre du terrain', () => {
   it('donne à la découpe le cadre dessiné, et non des valeurs recopiées', () => {
     const { container } = render(<ShotChart shots={[]} />)
     const decoupe = container.querySelector('clipPath rect')!
-    for (const [attr, valeur] of Object.entries(cadre()))
-      expect(decoupe.getAttribute(attr)).toBe(String(valeur))
+    for (const [attr, value] of Object.entries(cadre()))
+      expect(decoupe.getAttribute(attr)).toBe(String(value))
   })
 })
 

@@ -110,8 +110,8 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
               bandeau charbon et illisible ici, où le score est posé sur le fond clair
               de la page. Emprunter les couleurs d'une surface pour les employer sur
               une autre, c'est ce qui a produit un score blanc sur blanc. */}
-          <TeamScore id={match.meta.clubId} name={names.A} score={ls.score.a} couleur={C.text} />
-          <TeamScore id={match.meta.opponentId} name={names.B} score={ls.score.b} couleur={C.accent} />
+          <TeamScore id={match.meta.clubId} name={names.A} score={ls.score.a} color={C.text} />
+          <TeamScore id={match.meta.opponentId} name={names.B} score={ls.score.b} color={C.accent} />
         </div>
         <div className="mt-3 flex flex-col items-center gap-1">
           <span className="nums rounded-lg px-3.5 py-1.5 text-base font-black tabular-nums" style={{ background: C.card, color: finished ? C.muted : C.text, border: `1px solid ${C.border}` }}>
@@ -156,12 +156,12 @@ function Screen({ children }: { children: ReactNode }) {
  * l'adversaire en citron. L'écusson, lui, garde sa couleur de club — c'est là que
  * l'identité a un sens.
  */
-function TeamScore({ id, name, score, couleur }: { id: string; name: string; score: number; couleur: string }) {
+function TeamScore({ id, name, score, color }: { id: string; name: string; score: number; color: string }) {
   return (
     <div className="flex min-w-0 flex-col items-center gap-1.5 text-center">
       <TeamBadge id={id} name={name} size="h-10 w-10 text-xs sm:h-14 sm:w-14 sm:text-sm" />
       <span className="line-clamp-2 min-h-[2.4em] w-full text-sm font-extrabold leading-tight sm:min-h-0 sm:text-lg">{name}</span>
-      <span className="nums text-5xl font-black leading-none tabular-nums sm:text-7xl" style={{ color: couleur }}>{score}</span>
+      <span className="nums text-5xl font-black leading-none tabular-nums sm:text-7xl" style={{ color: color }}>{score}</span>
     </div>
   )
 }

@@ -20,7 +20,7 @@ import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
 import { newId } from '../../domain/ids'
-import { decoder } from '../../domain/partage'
+import { decode } from '../../domain/partage'
 import type { Play } from '../../domain/plays'
 import { savePlay } from '../../persistence/repositories'
 import { courtWidth, PlayBoard } from '../components/PlayBoard'
@@ -40,7 +40,7 @@ export function SchemaRecu() {
 
   useEffect(() => {
     let vivant = true
-    decoder(code).then((s) => { if (vivant) setSchema(s) })
+    decode(code).then((s) => { if (vivant) setSchema(s) })
     return () => { vivant = false }
   }, [code])
 

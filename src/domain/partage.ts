@@ -93,7 +93,7 @@ function estTransport(v: unknown): v is Transport {
 }
 
 /** The inverse. Returns `null` on text that is not a valid play. */
-export async function decoder(code: string): Promise<Play | null> {
+export async function decode(code: string): Promise<Play | null> {
   if (!code) return null
   try {
     const stream = enFlux(depuisB64url(code)).pipeThrough(new DecompressionStream('deflate-raw'))

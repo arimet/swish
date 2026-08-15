@@ -34,7 +34,7 @@ export function TeamDetail() {
   const [askDelete, setAskDelete] = useState(false)
   // Le joueur lui-même et non un booléen : le dialogue doit pouvoir le nommer, sinon
   // « Retirer ce joueur ? » ne dit pas lequel dans une liste de onze.
-  const [aRetirer, setARetirer] = useState<Player | null>(null)
+  const [toRemove, setToRemove] = useState<Player | null>(null)
   const [team, setTeam] = useState<Team | null | undefined>(undefined)
   const [players, setPlayers] = useState<Player[]>([])
   const [matches, setMatches] = useState<Match[]>([])
@@ -86,8 +86,8 @@ export function TeamDetail() {
    * convocations, mais ses actions déjà saisies restent dans les rencontres jouées, où
    * elles perdent son nom. C'est vérifié dans le dépôt, pas supposé.
    */
-  const removePlayer = () => { const p = aRetirer; if (!p) return
-    guard('manage', async () => { await deletePlayer(p.id); setARetirer(null); refresh() }) }
+  const removePlayer = () => { const p = toRemove; if (!p) return
+    guard('manage', async () => { await deletePlayer(p.id); setToRemove(null); refresh() }) }
   const startEdit = (p: Player) => { setEditingId(p.id); setEditBirth(p.birthDate ?? ''); setEditHeight(p.height ? String(p.height) : '') }
   // L'identifiant du joueur survit à la modification : c'est lui qui porte tout
   // son historique de tirs et de statistiques, le recréer le lui ferait perdre.
@@ -127,8 +127,8 @@ export function TeamDetail() {
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
         title={translate('equipe.supprimerTitre')} message={translate('equipe.supprimerTexte', { name: team.name })} confirmLabel={translate('commun.supprimer')} danger />
-      <ConfirmDialog open={!!aRetirer} onClose={() => setARetirer(null)} onConfirm={removePlayer}
-        title={aRetirer ? translate('equipe.retirerTitre', { name: `${aRetirer.lastName} ${aRetirer.firstName}` }) : ''}
+      <ConfirmDialog open={!!toRemove} onClose={() => setToRemove(null)} onConfirm={removePlayer}
+        title={toRemove ? translate('equipe.retirerTitre', { name: `${toRemove.lastName} ${toRemove.firstName}` }) : ''}
         message={translate('equipe.retirerTexte')}
         confirmLabel={translate('commun.retirer')} danger />
 
@@ -246,7 +246,7 @@ export function TeamDetail() {
                             gris, et faisait vingt-quatre pixels de haut. Une destruction ne se
                             signale pas avec la couleur des boutons ordinaires, et ne se vise pas au
                             minimum tolérable. */}
-                        <button onClick={() => setARetirer(p)} aria-label={translate('equipe.retirerJoueur', { name: `${p.lastName} ${p.firstName}` })}
+                        <button onClick={() => setToRemove(p)} aria-label={translate('equipe.retirerJoueur', { name: `${p.lastName} ${p.firstName}` })}
                           className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold transition hover:bg-[var(--c-danger-bg)]" style={{ color: C.danger }}>{translate('equipe.retirer')}</button>
                       </>
                     )}

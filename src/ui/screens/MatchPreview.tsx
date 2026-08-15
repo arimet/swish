@@ -23,7 +23,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [askDelete, setAskDelete] = useState(false)
   const [players, setPlayers] = useState<Player[]>([])
-  const [convoqués, setConvoqués] = useState<Set<string>>(new Set())
+  const [calledUp, setCalledUp] = useState<Set<string>>(new Set())
   const [meetTime, setMeetTime] = useState('')
   const [meetPlace, setMeetPlace] = useState('')
   const [note, setNote] = useState('')
@@ -60,7 +60,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
       // (la cascade de `deletePlayer` ne répare que l'avenir), et resterait sinon
       // compté sans case à décocher.
       const rosterIds = new Set(ps.map((p) => p.id))
-      setConvoqués(new Set((conv?.playerIds ?? []).filter((id) => rosterIds.has(id))))
+      setCalledUp(new Set((conv?.playerIds ?? []).filter((id) => rosterIds.has(id))))
       setMeetTime(conv?.meetTime ?? '')
       setMeetPlace(conv?.meetPlace ?? '')
       setNote(conv?.note ?? '')
@@ -90,16 +90,16 @@ export function MatchPreview({ matchId }: { matchId: string }) {
   const start = () => guard('score', () => navigate(`/match/${match.id}/live`))
   const remove = async () => { await deleteMatch(match.id); navigate('/calendrier') }
 
-  const basculerConvoqué = (id: string) => guard('manage', () => {
-    setConvoqués((prev) => {
+  const toggleCalledUp = (id: string) => guard('manage', () => {
+    setCalledUp((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id); else next.add(id)
       return next
     })
   })
-  const enregistrerConvocation = () => guard('manage', async () => {
+  const saveCallUp = () => guard('manage', async () => {
     await saveConvocation({
-      matchId: match.id, playerIds: [...convoqués],
+      matchId: match.id, playerIds: [...calledUp],
       meetTime: meetTime.trim() || undefined, meetPlace: meetPlace.trim() || undefined, note: note.trim() || undefined,
     })
   })
@@ -144,7 +144,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
           {/* Affiché en permanence, pas seulement après enregistrement : douze convoqués
               pour un match où l'on n'en inscrit que dix doit se voir sans compter les cases. */}
           <span className="rounded-md px-2 py-1 text-[12px] font-black" style={{ background: C.accentBg, color: C.accent }}>
-            {translate('compte.convoque', { count: convoqués.size })}
+            {translate('compte.convoque', { count: calledUp.size })}
           </span>
         </div>
 
@@ -156,7 +156,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
           <>
             <div className="grid gap-2 sm:grid-cols-2">
               {[...players].sort((a, b) => a.number - b.number).map((p) => (
-                <CaseJoueur key={p.id} player={p} checked={convoqués.has(p.id)} onToggle={() => basculerConvoqué(p.id)} />
+                <PlayerCheckbox key={p.id} player={p} checked={calledUp.has(p.id)} onToggle={() => toggleCalledUp(p.id)} />
               ))}
             </div>
 
@@ -170,7 +170,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
                 className="mt-1.5 w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
             </div>
 
-            <button onClick={enregistrerConvocation} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+            <button onClick={saveCallUp} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
               {translate('apercu.enregistrerConvocation')}
             </button>
 
@@ -178,12 +178,12 @@ export function MatchPreview({ matchId }: { matchId: string }) {
                 même formulation que sur l'écran Championnat pour ne pas laisser croire à deux limites différentes. */}
             {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('apercu.convocationLocale')}</p>}
           </>
-        ) : convoqués.size === 0 ? (
+        ) : calledUp.size === 0 ? (
           <p className="text-sm" style={{ color: C.muted }}>{translate('apercu.personneConvoquee')}</p>
         ) : (
           <>
             <div className="grid gap-2 sm:grid-cols-2">
-              {[...players].filter((p) => convoqués.has(p.id)).sort((a, b) => a.number - b.number).map((p) => (
+              {[...players].filter((p) => calledUp.has(p.id)).sort((a, b) => a.number - b.number).map((p) => (
                 <span key={p.id} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: C.panel }}>
                   <span className="text-xs font-black" style={{ color: C.accent }}>N°{p.number}</span>
                   {p.lastName} {p.firstName}
@@ -261,7 +261,7 @@ function Field({ id, label, value, onChange, type = 'text' }: { id: string; labe
     </div>
   )
 }
-function CaseJoueur({ player, checked, onToggle }: { player: Player; checked: boolean; onToggle: () => void }) {
+function PlayerCheckbox({ player, checked, onToggle }: { player: Player; checked: boolean; onToggle: () => void }) {
   const id = `convoque-${player.id}`
   return (
     <label htmlFor={id} className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: C.panel }}>

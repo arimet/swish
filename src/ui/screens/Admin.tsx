@@ -31,7 +31,7 @@ interface Operation {
   message: string
   /** Texte à recopier pour confirmer — réservé à la remise à zéro complète. */
   expectedInput?: string
-  executer: () => Promise<unknown>
+  run: () => Promise<unknown>
 }
 
 /* Le pluriel passe par le catalogue : l'ancien helper accolait un « s » au mot
@@ -51,11 +51,11 @@ export function Admin() {
   // l'ouverture du dialogue, comme sur la fiche d'équipe et la bibliothèque.
   const [demande, setDemande] = useState<Operation | null>(null)
 
-  const recharger = useCallback(async () => {
+  const reload = useCallback(async () => {
     const [ms, rs, ts, ps] = await Promise.all([listMatches(), listResults(), listTrainings(), clubId ? listPlays(clubId) : []])
     setMatches(ms); setResults(rs); setTrainings(ts); setPlays(ps)
   }, [clubId])
-  useEffect(() => { recharger() }, [recharger])
+  useEffect(() => { reload() }, [reload])
 
   /* « Match amical » est la valeur stockée pour une rencontre sans championnat, et
      elle sert de clef de regroupement ici : on la traduit au moment de l'écrire, pas
@@ -66,17 +66,17 @@ export function Admin() {
 
   // Garder d'abord, muter ensuite : la table de marque ne voit pas s'ouvrir un
   // dialogue de confirmation qu'elle n'aurait pas le droit de valider.
-  const demander = (op: Operation) => guard('manage', () => setDemande(op))
+  const ask = (op: Operation) => guard('manage', () => setDemande(op))
   const confirmer = async () => {
     if (!demande) return
-    await demande.executer()
-    await recharger()
+    await demande.run()
+    await reload()
   }
 
-  const supprimerRencontres = (libellé: string, filtre: (m: Match) => boolean, n: number) => demander({
+  const supprimerRencontres = (libellé: string, filtre: (m: Match) => boolean, n: number) => ask({
     titre: translate('admin.supprimerRencontresTitre'),
     message: translate('admin.supprimerRencontresTexte', { count: translate('compte.rencontre', { count: n }), label: libellé }),
-    executer: () => deleteMatchesWhere(filtre),
+    run: () => deleteMatchesWhere(filtre),
   })
 
   // La coquille ne monte cet écran que derrière un club résolu ; la branche sans
@@ -103,7 +103,7 @@ export function Admin() {
             const n = matches.filter(ofLeague(champ)).length
             return (
               <Row key={champ} libelle={leagueName(champ)} count={translate('compte.rencontre', { count: n })} action={translate('commun.supprimer')}
-                aria={translate('admin.supprimerRencontresDe', { what: leagueName(champ) })} desactive={n === 0}
+                aria={translate('admin.supprimerRencontresDe', { what: leagueName(champ) })} disabled={n === 0}
                 onClick={() => supprimerRencontres(`« ${leagueName(champ)} »`, ofLeague(champ), n)} />
             )
           })}
@@ -115,7 +115,7 @@ export function Admin() {
             const n = matches.filter(ofYear(year)).length
             return (
               <Row key={year} libelle={translate('admin.annee', { year })} count={translate('compte.rencontre', { count: n })} action={translate('commun.supprimer')}
-                aria={translate('admin.supprimerRencontresAnnee', { year })} desactive={n === 0}
+                aria={translate('admin.supprimerRencontresAnnee', { year })} disabled={n === 0}
                 onClick={() => supprimerRencontres(translate('admin.anneeCivile', { year }), ofYear(year), n)} />
             )
           })}
@@ -127,11 +127,11 @@ export function Admin() {
             const n = matches.filter(hasEvents(id)).length
             return (
               <Row key={id} libelle={teamName(id)} count={translate('admin.aVider', { count: translate('compte.feuille', { count: n }) })} action={translate('admin.vider')}
-                aria={translate('admin.viderFeuillesDe', { name: teamName(id) })} desactive={n === 0}
-                onClick={() => demander({
+                aria={translate('admin.viderFeuillesDe', { name: teamName(id) })} disabled={n === 0}
+                onClick={() => ask({
                   titre: translate('admin.viderTitre'),
                   message: translate('admin.viderTexte', { count: translate('compte.rencontre', { count: n }), name: teamName(id) }),
-                  executer: () => clearClubStats(id),
+                  run: () => clearClubStats(id),
                 })} />
             )
           })}
@@ -140,25 +140,25 @@ export function Admin() {
 
         <Bloc titre={translate('admin.leReste')}>
           <Row libelle={translate('admin.resultatsLibelle')} count={translate('compte.resultat', { count: results.length })} action={translate('commun.supprimer')}
-            aria={translate('admin.supprimerResultats')} desactive={results.length === 0}
-            onClick={() => demander({
+            aria={translate('admin.supprimerResultats')} disabled={results.length === 0}
+            onClick={() => ask({
               titre: translate('admin.supprimerResultatsTitre'),
               message: translate('admin.supprimerResultatsTexte', { count: translate('compte.resultat', { count: results.length }) }),
-              executer: deleteAllResults,
+              run: deleteAllResults,
             })} />
           <Row libelle={translate('admin.entrainementsDe', { name: club?.name ?? translate('admin.ceClub') })} count={translate('compte.seance', { count: sessions.length })} action={translate('commun.supprimer')}
-            aria={translate('admin.supprimerEntrainements')} desactive={sessions.length === 0}
-            onClick={() => demander({
+            aria={translate('admin.supprimerEntrainements')} disabled={sessions.length === 0}
+            onClick={() => ask({
               titre: translate('admin.supprimerEntrainementsTitre'),
               message: translate('admin.supprimerEntrainementsTexte', { count: translate('compte.seance', { count: sessions.length }), name: club?.name ?? translate('admin.ceClub') }),
-              executer: () => deleteTrainingsOfClub(clubId),
+              run: () => deleteTrainingsOfClub(clubId),
             })} />
           <Row libelle={translate('admin.schemasDe', { name: club?.name ?? translate('admin.ceClub') })} count={translate('compte.schema', { count: plays.length })} action={translate('commun.supprimer')}
-            aria={translate('admin.supprimerSchemas')} desactive={plays.length === 0}
-            onClick={() => demander({
+            aria={translate('admin.supprimerSchemas')} disabled={plays.length === 0}
+            onClick={() => ask({
               titre: translate('admin.supprimerSchemasTitre'),
               message: translate('admin.supprimerSchemasTexte', { count: translate('compte.schema', { count: plays.length }), name: club?.name ?? translate('admin.ceClub') }),
-              executer: () => deletePlaysOfClub(clubId),
+              run: () => deletePlaysOfClub(clubId),
             })} />
         </Bloc>
 
@@ -172,15 +172,15 @@ export function Admin() {
           <Row
             libelle={translate('admin.toutesLesDonnees')}
             count={`${translate('compte.equipe', { count: teams.length })} · ${translate('compte.rencontre', { count: matches.length })} · ${translate('compte.resultat', { count: results.length })} · ${translate('compte.seance', { count: trainings.length })}`}
-            action={translate('admin.toutEffacer')} aria={translate('admin.toutEffacer')} desactive={teams.length === 0 && matches.length === 0}
-            onClick={() => demander({
+            action={translate('admin.toutEffacer')} aria={translate('admin.toutEffacer')} disabled={teams.length === 0 && matches.length === 0}
+            onClick={() => ask({
               titre: translate('admin.toutEffacerTitre'),
               message: translate('admin.toutEffacerTexte', { teams: translate('compte.equipe', { count: teams.length }), games: translate('compte.rencontre', { count: matches.length }), results: translate('compte.resultat', { count: results.length }), sessions: translate('compte.seance', { count: trainings.length }) }),
               // Le nom du club, recopié à l'identique. Le repli n'arrive pas dans la
               // coquille (le club est résolu) : il est là pour qu'aucun chemin ne laisse
               // la remise à zéro se confirmer d'un seul clic.
               expectedInput: club?.name || 'EFFACER',
-              executer: async () => {
+              run: async () => {
                 await wipeAll()
                 // Le club suivi disparaît avec ses données : sans cet oubli, l'appareil
                 // resterait épinglé sur un club fantôme (cf. la fiche d'équipe).
@@ -215,7 +215,7 @@ export function Admin() {
  */
 function Synchronisation() {
   const translate = useT()
-  const [valeur, setValeur] = useState(token)
+  const [value, setValue] = useState(token)
   const [etat, setEtat] = useState<State>(syncState)
   const [essai, setEssai] = useState(false)
 
@@ -224,8 +224,8 @@ function Synchronisation() {
   // On enregistre puis on essaie pour de bon, plutôt que d'annoncer « enregistré »
   // sur un jeton que le serveur refusera : c'est le genre de réglage qu'on pose
   // une fois et qu'on ne revient jamais vérifier.
-  const verifier = async () => {
-    setToken(valeur.trim())
+  const verify = async () => {
+    setToken(value.trim())
     setEssai(true)
     await hydrate()
     setEtat(syncState())
@@ -243,12 +243,12 @@ function Synchronisation() {
     <Bloc titre={translate('admin.synchronisation')} aide={translate('admin.aideSynchronisation')}>
       <div className="flex flex-wrap items-center gap-2 py-1">
         <input
-          type="password" value={valeur} onChange={(e) => setValeur(e.target.value)}
+          type="password" value={value} onChange={(e) => setValue(e.target.value)}
           aria-label={translate('admin.jeton')} placeholder={translate('admin.jeton')}
           className="min-w-[12rem] flex-1 rounded-xl px-4 py-3 text-sm outline-none transition focus:border-[var(--c-accent)]"
           style={{ background: C.panel, border: bd, color: C.text }}
         />
-        <button onClick={verifier} disabled={essai}
+        <button onClick={verify} disabled={essai}
           className="rounded-xl px-5 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40"
           style={{ background: C.brand }}>
           {translate('admin.verifierJeton')}
@@ -275,15 +275,15 @@ function Bloc({ titre, aide, children }: { titre: string; aide?: string; childre
 /** Une opération : ce qu'elle vise, ce qu'elle détruit (compté), et son bouton.
  *  Le compte est toujours affiché, y compris à zéro — c'est lui qui explique
  *  pourquoi le bouton est éteint. */
-function Row({ libelle, count, action, aria, desactive, onClick }: {
-  libelle: string; count: string; action: string; aria: string; desactive: boolean; onClick: () => void
+function Row({ libelle, count, action, aria, disabled, onClick }: {
+  libelle: string; count: string; action: string; aria: string; disabled: boolean; onClick: () => void
 }) {
   return (
     <li className="flex flex-wrap items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: C.panel }}>
       <span className="min-w-0 flex-1 truncate text-sm font-bold">{libelle}</span>
       <span className="shrink-0 text-[12px] font-semibold tabular-nums" style={{ color: C.muted }}>{count}</span>
       <button
-        onClick={onClick} disabled={desactive} aria-label={aria}
+        onClick={onClick} disabled={disabled} aria-label={aria}
         className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40"
         style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}
       >

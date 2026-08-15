@@ -27,14 +27,14 @@ const ARRIVEE = 0.2 * 1400
 const MILIEU = (DEPART + ARRIVEE) / 2
 
 /** Ce que le système répond à `prefers-reduced-motion`, réglé test par test. */
-let moinsDeMouvement = false
+let reducedMotion = false
 
 beforeEach(async () => {
-  moinsDeMouvement = false
+  reducedMotion = false
   // jsdom n'a pas `matchMedia` : sans cette doublure, le lecteur ne peut pas
   // demander au système s'il faut supprimer l'interpolation.
   window.matchMedia = ((media: string) => ({
-    media, matches: moinsDeMouvement, onchange: null,
+    media, matches: reducedMotion, onchange: null,
     addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
     addListener: () => {}, removeListener: () => {},
   })) as unknown as typeof window.matchMedia
@@ -177,7 +177,7 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
   })
 
   it('sous « prefers-reduced-motion », la lecture saute d’un temps au suivant', async () => {
-    moinsDeMouvement = true
+    reducedMotion = true
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
     // Pas d'interpolation du tout : à mi-course on est encore exactement au

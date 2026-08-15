@@ -27,7 +27,7 @@ const PAS = 50
 /** Le système demande-t-il moins de mouvement ? On le lit au démarrage de la
  *  lecture ; ce n'est pas un confort, c'est la seule façon correcte de traiter
  *  quelqu'un que le mouvement dérange. */
-const moinsDeMouvement = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 export function SchemaPlayer() {
   const translate = useT()
@@ -44,7 +44,7 @@ export function SchemaPlayer() {
   // ouverture à l'autre, comme la boucle et le ralenti — un réglage sur trois qui
   // se souviendrait serait le plus déroutant des trois.
   const [trajets, setTrajets] = useState(false)
-  const [partage, setPartage] = useState(false)
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => { if (id) getPlay(id).then((s) => setSchema(s ?? null)) }, [id])
 
@@ -53,7 +53,7 @@ export function SchemaPlayer() {
   useEffect(() => {
     if (!enLecture) return
     const duree = ralenti ? DUREE * 2 : DUREE
-    const saute = moinsDeMouvement()
+    const saute = reducedMotion()
     const pas = saute ? duree : PAS
     const iv = window.setInterval(() => setPos((p) => {
       const suivant = saute ? Math.floor(p) + 1 : p + pas / duree
@@ -72,9 +72,9 @@ export function SchemaPlayer() {
   // Onglet en arrière-plan : on coupe. Une animation qui continue vide la
   // batterie et se retrouve à un endroit imprévu au retour.
   useEffect(() => {
-    const cacher = () => { if (document.hidden) setEnLecture(false) }
-    document.addEventListener('visibilitychange', cacher)
-    return () => document.removeEventListener('visibilitychange', cacher)
+    const hide = () => { if (document.hidden) setEnLecture(false) }
+    document.addEventListener('visibilitychange', hide)
+    return () => document.removeEventListener('visibilitychange', hide)
   }, [])
 
   if (!id) return null
@@ -145,13 +145,13 @@ export function SchemaPlayer() {
           {/* La lecture s'arrête pendant le partage : on ne fabrique pas une image
               du temps qu'on est en train de quitter. */}
           <button
-            onClick={() => { setEnLecture(false); setPartage(true) }}
+            onClick={() => { setEnLecture(false); setSharing(true) }}
             className="h-10 shrink-0 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}
           >
             {translate('sch.partager')}
           </button>
         </div>
-        <ExportSchema schema={schema} stepIndex={courant} open={partage} onClose={() => setPartage(false)} />
+        <ExportSchema schema={schema} stepIndex={courant} open={sharing} onClose={() => setSharing(false)} />
 
         {/* Le terrain, et par-dessus les deux moitiés d'écran : au temps-mort on
             ne vise pas un bouton de quarante pixels. Elles s'arrêtent au-dessus
