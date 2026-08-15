@@ -5,6 +5,7 @@ import { liveState } from '../../rules/ffbb'
 import { champLabel, periodLength } from '../../domain/ids'
 import { fmt } from '../components/GameClock'
 import type { Match, Team } from '../../domain/types'
+import { useT } from '../../i18n'
 
 export { champLabel }
 
@@ -106,9 +107,10 @@ export const ICON = {
 /** Marque discrète du joueur identifié sur cet appareil. Elle met en avant, elle
  *  ne protège rien : l'identité et les droits d'écriture sont deux axes séparés. */
 export function Vous() {
+  const trad = useT()
   return (
     <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase tracking-wide"
-      style={{ background: C.accentBg, color: C.accent }}>vous</span>
+      style={{ background: C.accentBg, color: C.accent }}>{trad('commun.vous')}</span>
   )
 }
 

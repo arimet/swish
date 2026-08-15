@@ -2,22 +2,23 @@ import { useEffect, useRef, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ShotPicker, SHOT_FEEDBACK_MS } from './ShotCourt'
 import { C } from '../olive/kit'
+import { useT } from '../../i18n'
 import { kindAt, ZONE_LABELS, zoneAt } from '../../domain/shotzones'
 import type { Shot } from '../../domain/shotchart'
 import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types'
 import { TriangleAlert } from 'lucide-react'
 
 const SCORES: { k: ScoreKind; label: string; pts: number }[] = [
-  { k: '2int', label: '2 pts intérieur', pts: 2 },
-  { k: '2ext', label: '2 pts extérieur', pts: 2 },
-  { k: '3', label: '3 points', pts: 3 },
-  { k: 'lf', label: 'Lancer franc', pts: 1 },
+  { k: '2int', label: 'action.2int', pts: 2 },
+  { k: '2ext', label: 'action.2ext', pts: 2 },
+  { k: '3', label: 'action.3', pts: 3 },
+  { k: 'lf', label: 'action.lancerFranc', pts: 1 },
 ]
 const STATS: { k: StatKind; label: string }[] = [
-  { k: 'assist', label: 'Passe déc.' },
-  { k: 'block', label: 'Contre' },
-  { k: 'reb_off', label: 'Rebond off.' },
-  { k: 'reb_def', label: 'Rebond déf.' },
+  { k: 'assist', label: 'action.passe' },
+  { k: 'block', label: 'action.contre' },
+  { k: 'reb_off', label: 'action.rebOff' },
+  { k: 'reb_def', label: 'action.rebDef' },
 ]
 const ZERO_S: Record<ScoreKind, number> = { '2int': 0, '2ext': 0, '3': 0, lf: 0 }
 const ZERO_T: Record<StatKind, number> = { assist: 0, reb_off: 0, reb_def: 0, block: 0 }
@@ -37,6 +38,7 @@ export function PlayerActionDialog({
   onRemoveScore: (kind: ScoreKind) => void; onRemoveFoul: () => void
   onRemoveStat: (kind: StatKind) => void; onRemoveMiss: () => void
 }) {
+  const trad = useT()
   const [made, setMade] = useState(true)
   const [confirmation, setConfirmation] = useState<{ spot: ShotSpot; label: string; made: boolean } | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -60,7 +62,7 @@ export function PlayerActionDialog({
   const pick = (spot: ShotSpot) => {
     const kind = kindAt(spot.x, spot.y)
     if (made) onScore(kind, spot); else onMiss(kind, spot)
-    setConfirmation({ spot, made, label: `${made ? POINTS_LABEL[kind] : 'MANQUÉ'} · ${ZONE_LABELS[zoneAt(spot.x, spot.y)]}` })
+    setConfirmation({ spot, made, label: `${made ? POINTS_LABEL[kind] : trad('action.manqueMaj')} · ${ZONE_LABELS[zoneAt(spot.x, spot.y)]}` })
     closeTimer.current = setTimeout(close, SHOT_FEEDBACK_MS)
   }
 
@@ -80,17 +82,17 @@ export function PlayerActionDialog({
 
         {/* TIR : réussi ou manqué, puis position sur le terrain */}
         <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
-          <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">Réussi</Toggle>
-          <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">Manqué</Toggle>
+          <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{trad('action.reussi')}</Toggle>
+          <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">{trad('action.manque')}</Toggle>
         </div>
         <p className="mt-2 text-[12px] font-semibold text-[var(--c-muted)]">
-          {made ? 'Touchez l’endroit du tir : la zone donne les points.' : 'Touchez l’endroit du tir manqué.'}
+          {made ? trad('action.consigneReussi') : trad('action.consigneManque')}
         </p>
         <div className="mt-2"><ShotPicker onPick={pick} confirmation={confirmation} shots={shots} /></div>
 
         <button onClick={() => { onScore('lf'); close() }}
           className="mt-3 w-full rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] py-3 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-accent)] active:scale-[0.98]">
-          + 1 Lancer franc
+          {trad('action.plusLancerFranc')}
         </button>
 
         {/* AUTRES STATS */}
@@ -98,7 +100,7 @@ export function PlayerActionDialog({
           {STATS.map((s) => (
             <button key={s.k} onClick={() => { onStat(s.k); close() }}
               className="flex items-center justify-between rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] px-3.5 py-2.5 text-left transition hover:border-[var(--c-green)] hover:bg-[var(--c-panel)] active:scale-[0.97]">
-              <span className="text-[13px] font-semibold text-[var(--c-text)]">{s.label}</span>
+              <span className="text-[13px] font-semibold text-[var(--c-text)]">{trad(s.label)}</span>
               <span className="text-base font-black text-[var(--c-green)]">+1</span>
             </button>
           ))}
@@ -107,7 +109,7 @@ export function PlayerActionDialog({
         <button onClick={() => { onFoul('personal'); close() }}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--c-danger-bg)] py-3.5 text-base font-bold text-[var(--c-danger)] transition hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)] active:scale-[0.98]">
           <TriangleAlert className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-          Faute personnelle
+          {trad('action.fautePersonnelle')}
         </button>
 
         {/* CORRECTIONS — repliées : on ouvre cette popup pour saisir, pas pour
@@ -116,23 +118,23 @@ export function PlayerActionDialog({
         {hasCorrections && (
           <details className="mt-4 border-t border-[var(--c-border)] pt-3">
             <summary className="cursor-pointer list-none text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)] transition hover:text-[var(--c-text)]">
-              ▾ Corriger — retirer une action
+              {trad('action.corriger')}
             </summary>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {SCORES.map((s) => (
-                <RemoveBtn key={s.k} label={s.label} value={`−${s.pts}`} disabled={sc[s.k] <= 0} onClick={() => { onRemoveScore(s.k); close() }} />
+                <RemoveBtn key={s.k} label={trad(s.label)} value={`−${s.pts}`} disabled={sc[s.k] <= 0} onClick={() => { onRemoveScore(s.k); close() }} />
               ))}
               {STATS.map((s) => (
-                <RemoveBtn key={s.k} label={s.label} value="−1" disabled={tc[s.k] <= 0} onClick={() => { onRemoveStat(s.k); close() }} />
+                <RemoveBtn key={s.k} label={trad(s.label)} value="−1" disabled={tc[s.k] <= 0} onClick={() => { onRemoveStat(s.k); close() }} />
               ))}
             </div>
             <button disabled={misses <= 0} onClick={() => { onRemoveMiss(); close() }}
               className="mt-2 w-full rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] py-2.5 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)] disabled:opacity-35 disabled:hover:border-[var(--c-border)]">
-              − Retirer le dernier tir manqué {misses > 0 && <span className="text-[var(--c-muted)]">({misses})</span>}
+              {trad('action.retirerTirManque')} {misses > 0 && <span className="text-[var(--c-muted)]">({misses})</span>}
             </button>
             <button disabled={fouls <= 0} onClick={() => { onRemoveFoul(); close() }}
               className="mt-2 w-full rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] py-2.5 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)] disabled:opacity-35 disabled:hover:border-[var(--c-border)]">
-              − Retirer une faute {fouls > 0 && <span className="text-[var(--c-muted)]">({fouls})</span>}
+              {trad('action.retirerFaute')} {fouls > 0 && <span className="text-[var(--c-muted)]">({fouls})</span>}
             </button>
           </details>
         )}

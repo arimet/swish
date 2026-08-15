@@ -117,7 +117,15 @@ export function LangProvider({ children }: { children: ReactNode }) {
   return <Ctx.Provider value={valeur}>{children}</Ctx.Provider>
 }
 
-/** La fonction de traduction du composant courant. */
+/**
+ * La fonction de traduction du composant courant.
+ *
+ * Par convention on l'affecte à `trad` et non à `t`, alors que `t` est l'usage dans
+ * l'écosystème. La raison est concrète : `t` est déjà pris une quinzaine de fois dans
+ * ce dépôt comme nom de paramètre — `teams.map((t) => …)`, `trainings.filter((t) => …)`,
+ * `const t = teamTotals(match).team`. TypeScript signale bien la collision, mais la
+ * signaler quinze fois pour un caractère gagné est un mauvais échange.
+ */
 export function useT(): Traduire {
   return useContext(Ctx).t
 }

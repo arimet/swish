@@ -12,6 +12,7 @@ import {
 } from '../../domain/plays'
 import { getPlay, savePlay } from '../../persistence/repositories'
 import { useAuth } from '../../app/auth'
+import { useT } from '../../i18n'
 import { largeurTerrain, PlayBoard, versSvg } from '../components/PlayBoard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { D, W } from '../components/ShotCourt'
@@ -121,28 +122,29 @@ function sansDefense(t: Temps): Temps {
  */
 const MANIPULER: { cle: Outil; libelle: string; icone: string }[] = [
   // La croix fléchée du curseur de déplacement, et la gomme du carnet.
-  { cle: 'deplacer', libelle: 'Déplacer', icone: 'M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3' },
-  { cle: 'gomme', libelle: 'Gomme', icone: 'm7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21M22 21H7M5 11l9 9' },
+  { cle: 'deplacer', libelle: 'outil.deplacer', icone: 'M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3' },
+  { cle: 'gomme', libelle: 'outil.gomme', icone: 'm7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21M22 21H7M5 11l9 9' },
 ]
 const TRACER: { cle: Trait; libelle: string }[] = [
-  { cle: 'course', libelle: 'Course' },
-  { cle: 'ecran', libelle: 'Écran' },
-  { cle: 'passe', libelle: 'Passe' },
-  { cle: 'dribble', libelle: 'Dribble' },
+  { cle: 'course', libelle: 'outil.course' },
+  { cle: 'ecran', libelle: 'outil.ecran' },
+  { cle: 'passe', libelle: 'outil.passe' },
+  { cle: 'dribble', libelle: 'outil.dribble' },
 ]
 const POSER: { cle: Outil; libelle: string }[] = [
-  { cle: 'ballon', libelle: 'Ballon' },
-  { cle: 'objet', libelle: 'Objets' },
+  { cle: 'ballon', libelle: 'outil.ballon' },
+  { cle: 'objet', libelle: 'outil.objets' },
 ]
 const SORTES: { cle: ObjetPose['sorte']; libelle: string }[] = [
-  { cle: 'plot', libelle: 'Plot' },
-  { cle: 'ballon', libelle: 'Ballon posé' },
-  { cle: 'echelle', libelle: 'Échelle' },
+  { cle: 'plot', libelle: 'outil.plot' },
+  { cle: 'ballon', libelle: 'outil.ballonPose' },
+  { cle: 'echelle', libelle: 'outil.echelle' },
 ]
 
 const champ: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
 
 export function SchemaEdit() {
+  const trad = useT()
   const { id } = useParams<{ id: string }>()
   const { can, guard } = useAuth()
   const [schema, setSchema] = useState<Schema | null | undefined>(undefined)
@@ -175,7 +177,7 @@ export function SchemaEdit() {
   if (schema === null) return (
     <div className="p-4 sm:p-6">
       <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
-        Schéma introuvable. <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>← Retour</Link>
+        {trad('sch.introuvable')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{trad('equipe.retour')}</Link>
       </p>
     </div>
   )
@@ -341,9 +343,9 @@ export function SchemaEdit() {
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Link to="/schemas" aria-label="Retour aux schémas" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
+        <Link to="/schemas" aria-label={trad('edit.retourSchemas')} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
         <input
-          aria-label="Nom du schéma" value={nom} onChange={(e) => setNom(e.target.value)}
+          aria-label={trad('edit.nomSchema')} value={nom} onChange={(e) => setNom(e.target.value)}
           onBlur={enregistrerNom}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           style={{ ...champ, flex: '1 1 180px', minWidth: 0, fontWeight: 800 }}
@@ -356,7 +358,7 @@ export function SchemaEdit() {
           className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
           style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}
         >
-          ▶ Jouer
+          {trad('sch.jouer')}
         </Link>
       </div>
 
@@ -369,23 +371,23 @@ export function SchemaEdit() {
               partout où l'on tape : sur mobile, un appui un peu long sélectionne sinon
               le libellé du bouton au lieu de le presser. */}
           <div className="mb-3 flex select-none flex-wrap items-center gap-2">
-            <Famille titre="Manipuler">
+            <Famille titre={trad('edit.manipuler')}>
               {MANIPULER.map((o) => (
-                <OutilBouton key={o.cle} libelle={o.libelle} actif={outil === o.cle} onClick={() => setOutil(o.cle)}>
+                <OutilBouton key={o.cle} libelle={trad(o.libelle)} actif={outil === o.cle} onClick={() => setOutil(o.cle)}>
                   <Ic d={o.icone} className="h-[19px] w-[19px]" />
                 </OutilBouton>
               ))}
             </Famille>
-            <Famille titre="Tracer">
+            <Famille titre={trad('edit.tracer')}>
               {TRACER.map((t) => (
-                <OutilBouton key={t.cle} libelle={t.libelle} actif={outil === t.cle} onClick={() => setOutil(t.cle)}>
+                <OutilBouton key={t.cle} libelle={trad(t.libelle)} actif={outil === t.cle} onClick={() => setOutil(t.cle)}>
                   <TraitDessine trait={t.cle} />
                 </OutilBouton>
               ))}
             </Famille>
-            <Famille titre="Poser">
+            <Famille titre={trad('edit.poser')}>
               {POSER.map((o) => (
-                <OutilBouton key={o.cle} libelle={o.libelle} actif={outil === o.cle} onClick={() => setOutil(o.cle)}>
+                <OutilBouton key={o.cle} libelle={trad(o.libelle)} actif={outil === o.cle} onClick={() => setOutil(o.cle)}>
                   <PoserDessine quoi={o.cle} actif={outil === o.cle} />
                 </OutilBouton>
               ))}
@@ -393,11 +395,11 @@ export function SchemaEdit() {
             {/* Nom accessible explicite : « Annuler » tout court se confond avec le
                 bouton d'abandon des dialogues de confirmation. */}
             <button
-              onClick={annuler} disabled={!pile[index]?.length} aria-label="Annuler la dernière action"
+              onClick={annuler} disabled={!pile[index]?.length} aria-label={trad('edit.annulerDerniere')}
               className="ml-auto flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold disabled:opacity-40"
               style={{ background: C.card, border: bd, color: C.text }}
             >
-              <span className="text-base leading-none">↩</span> Annuler
+              <span className="text-base leading-none">↩</span> {trad('commun.annuler')}
             </button>
           </div>
           {outil === 'objet' && (
@@ -408,7 +410,7 @@ export function SchemaEdit() {
                   className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
                   style={sorteObjet === s.cle ? { background: C.amberBg, color: C.amber, border: `1px solid ${C.amber}` } : { background: C.card, border: bd, color: C.muted }}
                 >
-                  {s.libelle}
+                  {trad(s.libelle)}
                 </button>
               ))}
             </div>
@@ -463,7 +465,7 @@ export function SchemaEdit() {
               </button>
             ))}
             <button
-              onClick={ajouterTemps} aria-label="Ajouter un temps"
+              onClick={ajouterTemps} aria-label={trad('edit.ajouterTemps')}
               className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-[12px] font-bold"
               style={{ background: C.card, border: `1px dashed ${C.border}`, color: C.muted }}
             >
@@ -475,7 +477,7 @@ export function SchemaEdit() {
 
         <aside className="space-y-4">
           <section className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-            <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Terrain</p>
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('edit.terrain')}</p>
             <div className="flex gap-2">
               {(['demi', 'complet'] as Terrain[]).map((t) => (
                 <button
@@ -499,22 +501,22 @@ export function SchemaEdit() {
           </section>
 
           <section className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-            <label htmlFor="schema-note" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Note</label>
+            <label htmlFor="schema-note" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('edit.note')}</label>
             <input
               id="schema-note" value={note} onChange={(e) => setNote(e.target.value)}
               onBlur={enregistrerNote}
-              placeholder="Consigne, variante, rappel…" style={{ ...champ, width: '100%' }}
+              placeholder={trad('edit.notePlaceholder')} style={{ ...champ, width: '100%' }}
             />
-            <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>Ces schémas restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
+            <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('sch.schemasLocaux')}</p>
           </section>
         </aside>
       </div>
 
       <ConfirmDialog
         open={askDefense} danger
-        title="Retirer la défense ?"
-        message="Les cinq croix et les flèches qui en partent seront supprimées de tous les temps."
-        confirmLabel="Retirer" onConfirm={retirerDefense} onClose={() => setAskDefense(false)}
+        title={trad('edit.retirerDefenseTitre')}
+        message={trad('edit.retirerDefenseTexte')}
+        confirmLabel={trad('commun.retirer')} onConfirm={retirerDefense} onClose={() => setAskDefense(false)}
       />
     </div>
   )

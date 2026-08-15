@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { fmt } from './GameClock'
+import { useT } from '../../i18n'
 
 /** Saisie manuelle du chrono (format MM:SS ou secondes brutes), borné à `max`. */
 function parseClock(text: string): number | null {
@@ -14,6 +15,7 @@ function parseClock(text: string): number | null {
 export function ClockEditDialog({ open, seconds, max, onClose, onSubmit }: {
   open: boolean; seconds: number; max: number; onClose: () => void; onSubmit: (seconds: number) => void
 }) {
+  const trad = useT()
   const [text, setText] = useState('')
   useEffect(() => { if (open) setText(fmt(seconds)) }, [open, seconds])
 
@@ -25,7 +27,7 @@ export function ClockEditDialog({ open, seconds, max, onClose, onSubmit }: {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-xs border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-extrabold">Éditer le chrono</DialogTitle>
+          <DialogTitle className="text-lg font-extrabold">{trad('chrono.editer')}</DialogTitle>
         </DialogHeader>
         <input
           autoFocus
@@ -38,17 +40,17 @@ export function ClockEditDialog({ open, seconds, max, onClose, onSubmit }: {
             valid ? 'border-[var(--c-border)] focus:border-[var(--c-accent)]' : 'border-[var(--c-danger)]'
           }`}
         />
-        <p className="mt-1.5 text-center text-xs text-[var(--c-muted)]">Format MM:SS — max {fmt(max)}</p>
+        <p className="mt-1.5 text-center text-xs text-[var(--c-muted)]">{trad('chrono.format', { max: fmt(max) })}</p>
         <div className="mt-4 flex gap-2">
           <button onClick={onClose} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">
-            Annuler
+            {trad('commun.annuler')}
           </button>
           <button
             disabled={!valid}
             onClick={submit}
             className="flex-1 rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110 disabled:opacity-40"
           >
-            Valider
+            {trad('chrono.valider')}
           </button>
         </div>
       </DialogContent>

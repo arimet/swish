@@ -8,6 +8,7 @@ import { playerCareer, ageAt } from '../../domain/career'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { ShotChart } from '../components/ShotCourt'
 import { fmt } from '../components/GameClock'
+import { useT } from '../../i18n'
 import { C, NumBadge, Panel, TeamBadge, bd, champLabel, fmtDate } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import type { Match, Player, Team } from '../../domain/types'
@@ -21,6 +22,7 @@ const parMatch = (total: number, games: number) =>
 const plur = (n: number) => (n > 1 ? 's' : '')
 
 export function PlayerDetail() {
+  const trad = useT()
   const { id } = useParams<{ id: string }>()
   const { playerId } = useAuth()
   const [player, setPlayer] = useState<Player | null | undefined>(undefined)
@@ -52,7 +54,7 @@ export function PlayerDetail() {
     return (
       <div className="p-6">
         <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
-          Joueur introuvable. <Link to="/teams" className="font-bold" style={{ color: C.accent }}>← Équipes</Link>
+          {trad('joueur.introuvable')} <Link to="/teams" className="font-bold" style={{ color: C.accent }}>{trad('equipe.retourEquipes')}</Link>
         </p>
       </div>
     )
@@ -79,7 +81,7 @@ export function PlayerDetail() {
                 identique pour tout le monde, à cette mention près. */}
             {playerId === player.id && (
               <span className="shrink-0 rounded-md px-2 py-0.5 text-[12px] font-black uppercase tracking-wide"
-                style={{ background: C.accentBg, color: C.accent }}>C’est vous</span>
+                style={{ background: C.accentBg, color: C.accent }}>{trad('joueur.cestVous')}</span>
             )}
           </h1>
           {team && (
@@ -102,25 +104,25 @@ export function PlayerDetail() {
 
       <div className="grid gap-6 lg:grid-cols-[420px_1fr] [&>*]:min-w-0">
         <div className="space-y-6">
-          <Panel title="Hot zone — carrière">
+          <Panel title={trad('joueur.hotZoneCarriere')}>
             {shotsCareer.length === 0 ? (
-              <Empty>Aucun tir localisé pour l’instant.</Empty>
+              <Empty>{trad('bord.aucunTir')}</Empty>
             ) : (
               <ShotChart shots={shotsCareer} />
             )}
           </Panel>
 
-          <Panel title="Statistiques">
+          <Panel title={trad('joueur.statistiques')}>
             <div className="mb-1 flex items-center justify-between text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>
-              <span>Par match</span>
-              <span className="flex gap-4"><span className="w-8 text-right">Cumul</span><span className="w-14 text-right">Moy.</span></span>
+              <span>{trad('joueur.parMatch')}</span>
+              <span className="flex gap-4"><span className="w-8 text-right">{trad('joueur.cumul')}</span><span className="w-14 text-right">{trad('joueur.moyenne')}</span></span>
             </div>
             <StatRow label="Passes décisives" total={career.assists} games={played} />
             <StatRow label="Rebonds offensifs" total={career.offRebounds} games={played} />
             <StatRow label="Rebonds défensifs" total={career.defRebounds} games={played} />
             <StatRow label="Contres" total={career.blocks} games={played} />
             <StatRow label="Fautes" total={career.fouls} games={played} />
-            <p className="mb-1 mt-4 text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Répartition des paniers</p>
+            <p className="mb-1 mt-4 text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('joueur.repartition')}</p>
             <StatRow label="2 pts intérieurs" total={career.twoInside} games={played} />
             <StatRow label="2 pts extérieurs" total={career.twoOutside} games={played} />
             <StatRow label="3 pts" total={career.threes} games={played} />
@@ -128,9 +130,9 @@ export function PlayerDetail() {
           </Panel>
         </div>
 
-        <Panel title="Rencontres">
+        <Panel title={trad('equipe.rencontres')}>
           {ordered.length === 0 ? (
-            <Empty>Aucune rencontre jouée.</Empty>
+            <Empty>{trad('joueur.aucuneRencontreJouee')}</Empty>
           ) : (
             <ul className="space-y-1.5">
               {ordered.map((m) => {
@@ -160,11 +162,11 @@ export function PlayerDetail() {
                             <li>{fmt(playingTimes(m).get(id) ?? 0)} de jeu</li>
                           </ul>
                           <div className="shrink-0 sm:w-44">
-                            {shots.length === 0 ? <Empty>Aucun tir localisé sur cette rencontre.</Empty> : <ShotChart shots={shots} minAttempts={1} />}
+                            {shots.length === 0 ? <Empty>{trad('joueur.aucunTirRencontre')}</Empty> : <ShotChart shots={shots} minAttempts={1} />}
                           </div>
                         </div>
                         <Link to={`/match/${m.id}/summary`} className="mt-2 inline-block text-xs font-bold" style={{ color: C.accent }}>
-                          Voir la feuille de match →
+                          {trad('joueur.voirFeuille')}
                         </Link>
                       </div>
                     )}

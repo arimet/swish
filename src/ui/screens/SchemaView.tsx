@@ -10,11 +10,13 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { Schema } from '../../domain/plays'
 import { getPlay } from '../../persistence/repositories'
 import { useAuth } from '../../app/auth'
+import { useT } from '../../i18n'
 import { ExportSchema } from '../components/ExportSchema'
 import { largeurTerrain, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
 
 export function SchemaView() {
+  const trad = useT()
   const { id } = useParams<{ id: string }>()
   const { can, guard } = useAuth()
   const navigate = useNavigate()
@@ -29,7 +31,7 @@ export function SchemaView() {
   if (schema === null) return (
     <div className="p-6">
       <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
-        Schéma introuvable. <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>← Retour</Link>
+        {trad('sch.introuvable')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{trad('equipe.retour')}</Link>
       </p>
     </div>
   )
@@ -43,7 +45,7 @@ export function SchemaView() {
   return (
     <div className="p-6">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Link to="/schemas" aria-label="Retour aux schémas" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
+        <Link to="/schemas" aria-label={trad('sch.retourSchemas')} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
         <div className="min-w-0 flex-1 basis-40">
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.nom}</h1>
           {/* Les mêmes marques que sur la carte de la bibliothèque : on reconnaît
@@ -53,7 +55,7 @@ export function SchemaView() {
               {schema.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'}
             </span>
             <span>{schema.temps.length} temps</span>
-            {schema.defense && <span>· défense</span>}
+            {schema.defense && <span>{trad('sch.defense')}</span>}
           </p>
         </div>
         {/* Un seul bouton plein par écran : « Jouer », ce qu'on vient chercher au
@@ -62,9 +64,9 @@ export function SchemaView() {
             il reste en contour, comme Modifier — qui garde son code administrateur
             et ne se rend que pour qui le possède. */}
         <div className="flex shrink-0 items-center gap-2">
-          <button onClick={() => setPartage(true)} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>Partager</button>
-          {can('manage') && <button onClick={modifier} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>Modifier</button>}
-          <Link to={`/schemas/${id}/lecteur`} className="flex h-11 items-center rounded-xl px-4 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>▶ Jouer</Link>
+          <button onClick={() => setPartage(true)} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>{trad('sch.partager')}</button>
+          {can('manage') && <button onClick={modifier} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>{trad('commun.modifierMaj')}</button>}
+          <Link to={`/schemas/${id}/lecteur`} className="flex h-11 items-center rounded-xl px-4 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('sch.jouer')}</Link>
         </div>
       </div>
 
@@ -85,14 +87,14 @@ export function SchemaView() {
       <div className="mt-3 select-none" style={{ maxWidth: largeurTerrain(schema.terrain) }}>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => aller(-1)} aria-label="Temps précédent" disabled={index === 0}
+            onClick={() => aller(-1)} aria-label={trad('lecteur.precedent')} disabled={index === 0}
             className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-sm font-black disabled:opacity-30" style={{ background: C.card, border: bd, color: C.text }}
           >
             ◀
           </button>
           <span className="flex-1 text-center text-sm font-extrabold">Temps {index + 1} / {schema.temps.length}</span>
           <button
-            onClick={() => aller(1)} aria-label="Temps suivant" disabled={index === dernier}
+            onClick={() => aller(1)} aria-label={trad('lecteur.suivant')} disabled={index === dernier}
             className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-sm font-black disabled:opacity-30" style={{ background: C.card, border: bd, color: C.text }}
           >
             ▶

@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { appendEvent, undoLast, removeLastEvent } from '../domain/reducer'
 import { newId } from '../domain/ids'
 import { getMatch, saveMatch } from '../persistence/repositories'
+import { useT } from '../i18n'
 import type { GameEvent, Match } from '../domain/types'
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
 type EventInput = DistributiveOmit<GameEvent, 'id' | 'wallClock'>
 
 export function useMatch(matchId: string) {
+  const trad = useT()
   const [match, setMatch] = useState<Match | null>(null)
   const [error, setError] = useState<string | null>(null)
   const matchRef = useRef<Match | null>(null)
@@ -61,11 +63,12 @@ export function useMatch(matchId: string) {
     try {
       next = appendEvent(current, event)
     } catch (e) {
-      setError((e as Error).message)
+      // Le domaine renvoie une clef de règle, pas une phrase : voir `validateEvent`.
+      setError(trad((e as Error).message))
       return
     }
     await persister(next, current)
-  }, [persister])
+  }, [persister, trad])
 
   /** Enchaîne plusieurs évènements en un seul état/sauvegarde atomique — évite qu'un
    * second dispatch synchrone n'écrase le premier en repartant d'un match périmé. */
@@ -79,11 +82,11 @@ export function useMatch(matchId: string) {
         next = appendEvent(next, event)
       }
     } catch (e) {
-      setError((e as Error).message)
+      setError(trad((e as Error).message))
       return
     }
     await persister(next, current)
-  }, [persister])
+  }, [persister, trad])
 
   const undo = useCallback(async () => {
     const current = matchRef.current

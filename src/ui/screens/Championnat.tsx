@@ -6,6 +6,7 @@ import type { Match, ReportedResult } from '../../domain/types'
 import { C, bd, champLabel, SectionTitle, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
+import { useT } from '../../i18n'
 import { X } from 'lucide-react'
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
@@ -51,6 +52,7 @@ function LigneEquipe({ id, nom, score, gagne, champId, modifiable, onScore }: {
 }
 
 export function Championnat() {
+  const trad = useT()
   const { clubId, teams } = useClub()
   const { can, guard } = useAuth()
   /* `null` tant que la lecture n'a pas répondu, et non `[]`.
@@ -149,7 +151,7 @@ export function Championnat() {
     if (!peutAjouter) return
     // Au basket, il y a prolongation : un match nul n'existe pas.
     if (Number(homeScore) === Number(awayScore)) {
-      setErreur('Un match nul n’existe pas au basket : il y a prolongation.')
+      setErreur(trad('champ.nulImpossible'))
       return
     }
     const champLbl = champ.trim() || 'Match amical'
@@ -157,7 +159,7 @@ export function Championnat() {
     // Deux saisies de la même confrontation — même dans l'ordre inverse — compteraient
     // deux fois au classement : rien côté domaine ne s'en protège, c'est ici qu'il faut l'empêcher.
     if ((results ?? []).some((r) => clefConfrontation(r.championshipLabel, r.homeId, r.awayId, r.date) === clé)) {
-      setErreur('Ce résultat est déjà saisi pour cette confrontation.')
+      setErreur(trad('champ.dejaSaisi'))
       return
     }
     setErreur('')
@@ -189,22 +191,22 @@ export function Championnat() {
       <div className="space-y-6">
         {results?.length === 0 && (
           <p className="max-w-[75ch] rounded-2xl border border-dashed px-4 py-3 text-sm" style={{ borderColor: C.border, color: C.muted }}>
-            Aucun résultat saisi pour l’instant : le classement ne porte que sur nos propres rencontres et reste donc incomplet.
+            {trad('champ.aucunResultat')}
           </p>
         )}
         {matches === null || results === null ? (
           <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
         ) : groups.length === 0 ? (
-          <p className="rounded-2xl border border-dashed py-10 text-center text-sm" style={{ borderColor: C.border, color: C.muted }}>Aucun classement à afficher.</p>
+          <p className="rounded-2xl border border-dashed py-10 text-center text-sm" style={{ borderColor: C.border, color: C.muted }}>{trad('champ.aucunClassement')}</p>
         ) : groups.map(({ champ: c, lines }) => (
           <section key={c} className="overflow-x-auto rounded-2xl p-4" style={{ background: C.card, border: bd }}>
             <SectionTitle className="mb-3">{c}</SectionTitle>
             <table className="w-full text-sm sm:min-w-[520px]">
               <thead>
                 <tr className="text-left text-[12px] font-bold uppercase" style={{ color: C.faint }}>
-                  <th className="py-1.5 pr-2">#</th><th className="pr-2">Équipe</th>
+                  <th className="py-1.5 pr-2">#</th><th className="pr-2">{trad('champ.equipe')}</th>
                   <th className="hidden px-2 text-center sm:table-cell">J</th><th className="px-2 text-center">V</th><th className="px-2 text-center">D</th>
-                  <th className="hidden px-2 text-center sm:table-cell">Pour</th><th className="hidden px-2 text-center sm:table-cell">Contre</th><th className="px-2 text-center">Diff</th><th className="px-2 text-center">Pts</th>
+                  <th className="hidden px-2 text-center sm:table-cell">{trad('champ.pour')}</th><th className="hidden px-2 text-center sm:table-cell">{trad('champ.contre')}</th><th className="px-2 text-center">{trad('champ.diff')}</th><th className="px-2 text-center">{trad('champ.pts')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -251,26 +253,26 @@ export function Championnat() {
       <section className={saisieOuverte ? 'mt-8 rounded-2xl p-5' : 'mt-6'} style={saisieOuverte ? { background: C.card, border: bd } : undefined}>
         {!saisieOuverte ? (
           <button onClick={() => guard('manage', () => setSaisieOuverte(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-            + Saisir un résultat
+            {trad('champ.saisirResultat')}
           </button>
         ) : (
         <>
         <div className="mb-4 flex items-center gap-3">
-          <SectionTitle>Saisir un résultat extérieur</SectionTitle>
-          <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>Fermer</button>
+          <SectionTitle>{trad('champ.saisirTitre')}</SectionTitle>
+          <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{trad('commun.fermer2')}</button>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Picker id="champ-home" label="Équipe reçue" value={homeId} onChange={changeHomeId} teams={teams} />
-          <Picker id="champ-away" label="Équipe visiteuse" value={awayId} onChange={changeAwayId} teams={teams} />
-          <Field id="champ-home-score" label="Score équipe reçue" type="number" min={0} value={homeScore} onChange={changeHomeScore} />
-          <Field id="champ-away-score" label="Score équipe visiteuse" type="number" min={0} value={awayScore} onChange={changeAwayScore} />
-          <Field id="champ-date" label="Date de la rencontre" type="date" value={date} onChange={changeDate} />
-          <Field id="champ-label" label="Championnat" value={champ} onChange={changeChamp} />
+          <Picker id="champ-home" label={trad('champ.equipeRecue')} value={homeId} onChange={changeHomeId} teams={teams} />
+          <Picker id="champ-away" label={trad('champ.equipeVisiteuse')} value={awayId} onChange={changeAwayId} teams={teams} />
+          <Field id="champ-home-score" label={trad('champ.scoreRecue')} type="number" min={0} value={homeScore} onChange={changeHomeScore} />
+          <Field id="champ-away-score" label={trad('champ.scoreVisiteuse')} type="number" min={0} value={awayScore} onChange={changeAwayScore} />
+          <Field id="champ-date" label={trad('champ.dateRencontre')} type="date" value={date} onChange={changeDate} />
+          <Field id="champ-label" label={trad('champ.championnat')} value={champ} onChange={changeChamp} />
         </div>
 
         {dejaNotreRencontre && (
           <p className="mt-3 rounded-xl px-3 py-2 text-sm" style={{ background: C.amberBg, color: C.amber }}>
-            Cette confrontation correspond déjà à une de nos rencontres : elle est connue et le classement l’ignorera.
+            {trad('champ.dejaConnue')}
           </p>
         )}
         {/* Un refus se dit en danger, pas en couleur de marque : sur un fond
@@ -280,7 +282,7 @@ export function Championnat() {
         )}
 
         <button onClick={ajouter} disabled={!peutAjouter} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
-          Ajouter le résultat
+          {trad('champ.ajouterResultat')}
         </button>
         </>
         )}
@@ -290,11 +292,11 @@ export function Championnat() {
       {/* 3. La liste des résultats saisis. Elle se lit par tout le monde ; la
           correction et la suppression restent à l'administration. */}
       <section className="mt-6 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <SectionTitle className="mb-3">Résultats saisis</SectionTitle>
+        <SectionTitle className="mb-3">{trad('champ.resultatsSaisis')}</SectionTitle>
         {results === null ? (
           <div className="h-16 animate-pulse rounded-xl" style={{ background: C.panel }} />
         ) : results.length === 0 ? (
-          <p className="py-4 text-center text-sm" style={{ color: C.muted }}>Rien à afficher ici pour l’instant.</p>
+          <p className="py-4 text-center text-sm" style={{ color: C.muted }}>{trad('champ.rienAAfficher')}</p>
         ) : (
           /* Les résultats groupés par championnat, et le nom du championnat écrit
              une fois par groupe — pas une fois par ligne.
@@ -340,7 +342,7 @@ export function Championnat() {
                   />
                 </div>
                 {peutCorriger && (
-                  <button onClick={() => supprimer(r.id)} aria-label="Supprimer ce résultat"
+                  <button onClick={() => supprimer(r.id)} aria-label={trad('champ.supprimerResultat')}
                     className="shrink-0 rounded-lg p-1.5" style={{ color: C.danger }}>
                     <X className="h-4 w-4" strokeWidth={2.5} />
                   </button>
@@ -355,7 +357,7 @@ export function Championnat() {
         {/* Les résultats saisis à la main ne passent pas par la synchronisation : sans
             cette mention, un utilisateur qui ouvre l'app sur un autre appareil trouverait
             un classement vide sans comprendre pourquoi. */}
-        <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>Ces résultats restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
+        <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('champ.resultatsLocaux')}</p>
       </section>
     </div>
   )
@@ -370,11 +372,12 @@ function Field({ id, label, value, onChange, type = 'text', min }: { id: string;
   )
 }
 function Picker({ id, label, value, onChange, teams }: { id: string; label: string; value: string; onChange: (id: string) => void; teams: { id: string; name: string }[] }) {
+  const trad = useT()
   return (
     <div>
       <label htmlFor={id} className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</label>
       <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className="mt-1.5 w-full text-sm" style={field}>
-        <option value="">— Choisir —</option>
+        <option value="">{trad('champ.choisir')}</option>
         {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
       </select>
     </div>

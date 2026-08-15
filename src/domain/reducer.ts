@@ -15,19 +15,28 @@ function clockStartedThisPeriod(events: GameEvent[], period: number): boolean {
   return events.some((e) => e.period === period && e.type === 'CLOCK_START')
 }
 
+/**
+ * La règle violée, sous forme de **clef de traduction** — ou `null` si l'évènement
+ * passe.
+ *
+ * Ces messages étaient du français en dur, et ils remontent jusqu'au bandeau d'erreur
+ * de la table de marque : ils restaient donc français dans une interface anglaise.
+ * Le domaine ne peut pas les traduire lui-même — c'est du code pur, appelé hors de
+ * React, qui ne connaît pas la langue courante. Il nomme la règle, l'interface la dit.
+ */
 export function validateEvent(match: Match, event: GameEvent): string | null {
   const { events } = match
   switch (event.type) {
     case 'CLOCK_START':
-      if (clockRunning(events)) return 'Le chrono tourne déjà.'
+      if (clockRunning(events)) return 'regle.chronoDejaLance'
       return null
     case 'CLOCK_STOP':
-      if (!clockRunning(events)) return 'Le chrono est déjà arrêté.'
+      if (!clockRunning(events)) return 'regle.chronoDejaArrete'
       return null
     case 'SCORE':
     case 'MISS':
       if (!clockStartedThisPeriod(events, event.period))
-        return 'Impossible de marquer avant le démarrage du chrono.'
+        return 'regle.avantChrono'
       return null
     default:
       return null

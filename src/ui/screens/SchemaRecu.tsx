@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
+import { useT } from '../../i18n'
 import { newId } from '../../domain/ids'
 import { decoder } from '../../domain/partage'
 import type { Schema } from '../../domain/plays'
@@ -26,6 +27,7 @@ import { largeurTerrain, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
 
 export function SchemaRecu() {
+  const trad = useT()
   const { hash } = useLocation()
   const { guard } = useAuth()
   const { clubId, ready } = useClub()
@@ -42,18 +44,17 @@ export function SchemaRecu() {
     return () => { vivant = false }
   }, [code])
 
-  if (schema === undefined) return <Ecran><p style={{ color: C.muted }}>Ouverture du lien…</p></Ecran>
+  if (schema === undefined) return <Ecran><p style={{ color: C.muted }}>{trad('recu.ouverture')}</p></Ecran>
   if (schema === null) return (
     <Ecran>
       <div className="grid min-h-dvh place-items-center p-6 text-center">
         <div>
-          <p className="text-lg font-extrabold">Ce lien est incomplet ou abîmé.</p>
+          <p className="text-lg font-extrabold">{trad('recu.lienAbime')}</p>
           <p className="mt-2 text-sm" style={{ color: C.muted }}>
-            Le schéma voyage entier dans le lien : une messagerie qui le coupe le rend illisible.
-            Demandez qu’on vous le renvoie.
+            {trad('recu.lienExplication')}
           </p>
           <Link to="/" className="mt-5 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-            Ouvrir Swish →
+            {trad('recu.ouvrirSwish')}
           </Link>
         </div>
       </div>
@@ -82,7 +83,7 @@ export function SchemaRecu() {
     <Ecran>
       <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-3 p-4">
         <div>
-          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>Combinaison reçue</p>
+          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>{trad('recu.titre')}</p>
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.nom}</h1>
           <p className="text-sm" style={{ color: C.muted }}>
             {schema.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'} · {schema.temps.length} temps{schema.defense ? ' · défense' : ''}
@@ -96,25 +97,25 @@ export function SchemaRecu() {
         </div>
 
         <div className="flex select-none items-center gap-3" style={{ maxWidth: large }}>
-          <Pas label="Temps précédent" onClick={() => aller(-1)} disabled={index === 0}>◀</Pas>
+          <Pas label={trad('lecteur.precedent')} onClick={() => aller(-1)} disabled={index === 0}>◀</Pas>
           <span className="flex-1 text-center text-sm font-extrabold">Temps {index + 1} / {schema.temps.length}</span>
-          <Pas label="Temps suivant" onClick={() => aller(1)} disabled={index === dernier}>▶</Pas>
+          <Pas label={trad('lecteur.suivant')} onClick={() => aller(1)} disabled={index === dernier}>▶</Pas>
         </div>
 
         {/* Tant que les équipes ne sont pas chargées, on ne sait pas si un club
             est réglé : proposer l'un ou l'autre trop tôt ferait clignoter l'écran. */}
         {ready && (clubId ? (
           <button onClick={ajouter} className="rounded-2xl py-3.5 text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: large }}>
-            + Ajouter à ma bibliothèque
+            {trad('recu.ajouter')}
           </button>
         ) : (
           <Link to="/" className="rounded-2xl py-3.5 text-center text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: large }}>
-            Choisir un club pour l’ajouter →
+            {trad('recu.choisirClub')}
           </Link>
         ))}
 
         <p className="text-[12px]" style={{ color: C.faint }}>
-          Ce lien contient la combinaison entière : il n’y a rien à installer, et il ne périme pas.
+          {trad('recu.rienAInstaller')}
         </p>
       </div>
     </Ecran>

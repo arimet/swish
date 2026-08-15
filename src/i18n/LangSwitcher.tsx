@@ -16,12 +16,12 @@ import { LANGUES, useLangue, useT } from './index'
  */
 export function LangSwitcher() {
   const { langue, setLangue } = useLangue()
-  const t = useT()
+  const trad = useT()
   const suivante = LANGUES[(LANGUES.findIndex((l) => l.code === langue) + 1) % LANGUES.length]
   return (
     <button
       onClick={() => setLangue(suivante.code)}
-      aria-label={`${t('langue.changer')} — ${suivante.nom}`}
+      aria-label={`${trad('langue.changer')} — ${suivante.nom}`}
       title={suivante.nom}
       className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-[12px] font-black uppercase tracking-tight text-foreground transition hover:bg-muted active:scale-95"
     >

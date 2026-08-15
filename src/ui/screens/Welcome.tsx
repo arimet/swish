@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useClub } from '../../app/club'
 import { C, bd, Ic, ICON, TeamBadge } from '../olive/kit'
+import { useT } from '../../i18n'
 
 /** Premier lancement : choisir le club suivi. Affiché à la place du shell tant
  *  qu'aucun club valide n'est réglé — ce n'est pas une route dont on s'échappe.
@@ -10,26 +11,27 @@ import { C, bd, Ic, ICON, TeamBadge } from '../olive/kit'
  *  jamais. Cet écran, lui, est du contenu — le texte secondaire y tombait à
  *  4,2:1, il tient 5,3:1 sur le cadre. */
 export function Welcome() {
+  const trad = useT()
   const { teams, ready, setClub } = useClub()
   // Tant que la liste des équipes n'est pas arrivée, on ne sait pas si le club
   // est vide : éviter d'afficher un instant « aucune équipe » à tort.
-  if (!ready) return <div className="grid min-h-dvh place-items-center" style={{ background: C.frame, color: C.muted }}>Chargement…</div>
+  if (!ready) return <div className="grid min-h-dvh place-items-center" style={{ background: C.frame, color: C.muted }}>{trad('commun.chargement')}</div>
   return (
     <div className="grid min-h-dvh place-items-center p-6" style={{ background: C.frame, color: C.text }}>
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-2xl" style={{ background: C.brand, color: C.onBrand }}><Ic d={ICON.ball} className="h-6 w-6" /></span>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">Bienvenue sur Swish</h1>
-            <p className="text-sm" style={{ color: C.muted }}>Quel club suivez-vous ?</p>
+            <h1 className="text-2xl font-extrabold tracking-tight">{trad('bienvenue.titre')}</h1>
+            <p className="text-sm" style={{ color: C.muted }}>{trad('bienvenue.question')}</p>
           </div>
         </div>
 
         {teams.length === 0 ? (
           <div className="rounded-2xl p-8 text-center" style={{ border: `1px dashed ${C.border}` }}>
-            <p className="text-sm" style={{ color: C.muted }}>Aucune équipe enregistrée pour l’instant.</p>
+            <p className="text-sm" style={{ color: C.muted }}>{trad('bienvenue.aucuneEquipe')}</p>
             <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-              Créer ma première équipe →
+              {trad('bienvenue.premiereEquipe')}
             </Link>
           </div>
         ) : (
@@ -49,7 +51,7 @@ export function Welcome() {
         )}
 
         <p className="mt-5 text-center text-[12px]" style={{ color: C.faint }}>
-          Ce choix se modifie ensuite depuis le menu.
+          {trad('bienvenue.modifiable')}
         </p>
       </div>
     </div>

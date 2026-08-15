@@ -121,9 +121,15 @@ into hard constraints.
 ## Brand Commitments
 
 - **Name:** Swish.
-- **Language:** French, throughout — labels, messages, errors, exports, and the design
-  charter. The users are a French amateur club; this is a commitment, and English copy
-  in the product would be a regression.
+- **Language:** French is the product's language and its default. The users are a French
+  amateur club, and the vocabulary follows the federation's own terms; a French-first
+  interface is a commitment, not an accident of who wrote it.
+  **English exists alongside it**, switchable from the header of every screen, so other
+  clubs can fork Swish and use it — the README makes that offer, and it would be hollow
+  if the interface stayed monolingual. The two are not equal: French is the reference,
+  and a key missing from English falls back to French rather than showing an
+  identifier. Adding a screen means adding both, and the catalogue test fails on a key
+  the French side does not have.
 - **Voice:** plain and factual, the vocabulary of a coach and a scorer rather than of
   software. Controls name the action; errors name the problem and the recovery.
 - The visual world lives in `DESIGN.md` and is not restated here.

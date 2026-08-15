@@ -9,6 +9,7 @@ import { jourISO, nextFixture } from '../../domain/fixtures'
 import { C, bd, Ic, ICON, MatchCard, PageTitle, fmtDate } from '../olive/kit'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useClub } from '../../app/club'
+import { useT } from '../../i18n'
 import { useAuth } from '../../app/auth'
 import { X } from 'lucide-react'
 
@@ -29,6 +30,7 @@ const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
 type CalItem = { key: string; time: string } & ({ kind: 'match'; match: Match } | { kind: 'training'; training: Training })
 
 export function Calendrier() {
+  const trad = useT()
   const { clubId } = useClub()
   const { can, guard } = useAuth()
   // Planifier relève du club : ce qui l'écrit ne s'affiche que pour qui le gère.
@@ -141,10 +143,10 @@ export function Calendrier() {
             <button onClick={() => guard('manage', () => setSaisieOuverte(true))}
               className="rounded-xl px-4 py-2.5 text-sm font-bold"
               style={{ background: ENTR_BG, color: ENTR_COLOR, border: `1px solid ${ENTR_COLOR}55` }}>
-              + Nouvel entraînement
+              {trad('cal.nouvelEntrainement')}
             </button>
             <Link to="/match/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-              + Nouvelle rencontre
+              {trad('cal.nouvelleRencontre')}
             </Link>
           </div>
         )}
@@ -153,17 +155,17 @@ export function Calendrier() {
       {saisieOuverte && (
         <section className="mb-6 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${ENTR_COLOR}44` }}>
           <div className="mb-4 flex items-center gap-3">
-            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: ENTR_COLOR }}>Nouvel entraînement</p>
-            <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>Fermer</button>
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: ENTR_COLOR }}>{trad('cal.titreEntrainement')}</p>
+            <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{trad('commun.fermer2')}</button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="entr-date" label="Date de l'entraînement" type="date" value={date} onChange={setDate} />
-            <Field id="entr-time" label="Heure" type="time" value={time} onChange={setTime} />
-            <Field id="entr-place" label="Lieu" value={place} onChange={setPlace} />
-            <Field id="entr-theme" label="Thème" value={theme} onChange={setTheme} />
+            <Field id="entr-date" label={trad('cal.dateEntrainement')} type="date" value={date} onChange={setDate} />
+            <Field id="entr-time" label={trad('match.heure')} type="time" value={time} onChange={setTime} />
+            <Field id="entr-place" label={trad('match.lieu')} value={place} onChange={setPlace} />
+            <Field id="entr-theme" label={trad('cal.theme')} value={theme} onChange={setTheme} />
           </div>
           <button onClick={ajouter} disabled={!date || !clubId} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: ENTR_COLOR }}>
-            Ajouter l'entraînement
+            {trad('cal.ajouterEntrainement')}
           </button>
         </section>
       )}
@@ -174,11 +176,11 @@ export function Calendrier() {
         // L'invitation à planifier ne s'adresse qu'à qui le peut ; les autres
         // lisent simplement qu'il n'y a rien de prévu.
         <div className="rounded-2xl py-16 text-center" style={{ border: `1px dashed ${C.border}` }}>
-          <p className="text-sm font-bold">La saison est encore vierge.</p>
+          <p className="text-sm font-bold">{trad('cal.saisonVierge')}</p>
           <p className="mt-1 text-sm" style={{ color: C.muted }}>
             {gere
-              ? 'Planifiez une rencontre ou une séance : elles se rangeront ici, par date.'
-              : 'Les rencontres et les séances apparaîtront ici, par date, dès qu’elles seront planifiées.'}
+              ? trad('cal.videGere')
+              : trad('cal.videVisiteur')}
           </p>
         </div>
       ) : (
@@ -254,14 +256,14 @@ export function Calendrier() {
       {/* Comme les convocations et les résultats extérieurs : même formulation que sur
           les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux
           limites différentes — la décision couvrait aussi bien les entraînements. */}
-      <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>Ces entraînements restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
+      <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('cal.entrainementsLocaux')}</p>
 
       <ConfirmDialog open={!!aSupprimer} onClose={() => setASupprimer(null)} onConfirm={supprimer}
-        title="Supprimer cette séance ?"
+        title={trad('cal.supprimerSeanceTitre')}
         message={aSupprimer
-          ? `La séance du ${fmtDate(aSupprimer.date).long || aSupprimer.date} est retirée du calendrier. Les schémas qui y étaient rattachés restent dans la bibliothèque.`
+          ? trad('cal.supprimerSeanceTexte', { date: fmtDate(aSupprimer.date).long || aSupprimer.date })
           : ''}
-        confirmLabel="Supprimer" danger />
+        confirmLabel={trad('commun.supprimer')} danger />
     </div>
   )
 }
@@ -272,6 +274,7 @@ export function Calendrier() {
  *  posé À CÔTÉ de la carte et non dedans : `MatchCard` est elle-même un lien, et
  *  un lien dans un lien n'est pas du HTML valide. */
 function CarteRencontre({ m, teams, gere }: { m: Match; teams: Record<string, Team>; gere: boolean }) {
+  const trad = useT()
   return (
     <div className="flex flex-col gap-1.5">
       <MatchCard m={m} teams={teams} />
@@ -280,7 +283,7 @@ function CarteRencontre({ m, teams, gere }: { m: Match; teams: Record<string, Te
       {gere && m.status === 'setup' && (
         <Link to={`/match/${m.id}#convocation`} className="rounded-xl px-3 py-1.5 text-center text-[12px] font-bold"
           style={{ background: C.accentBg, color: C.accent }}>
-          Convoquer →
+          {trad('cal.convoquer')}
         </Link>
       )}
     </div>
@@ -317,6 +320,7 @@ function Field({ id, label, value, onChange, type = 'text' }: { id: string; labe
  *  d'une rencontre, pour qui peut les cocher. Les autres lisent le programme de
  *  la séance sans pouvoir le changer : c'est ce qui les intéresse. */
 function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Training; schemas: Schema[]; gere: boolean; onToggleSchema: (playId: string) => void; onDelete: () => void }) {
+  const trad = useT()
   // Le compte affiché est celui des schémas qui existent : un entraînement peut
   // citer un schéma supprimé (base antérieure à la cascade de `deletePlay`), et
   // le compter ferait mentir la ligne — la faute corrigée au projet 6 sur les
@@ -329,7 +333,7 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: ENTR_BG, color: ENTR_COLOR }}>Entraînement</span>
+          <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: ENTR_BG, color: ENTR_COLOR }}>{trad('cal.entrainement')}</span>
           {t.time && <span className="ml-auto text-[12px] font-bold" style={{ color: C.muted }}>{t.time}</span>}
         </div>
         <p className="mt-2 truncate text-sm font-bold">{t.theme || 'Séance libre'}</p>
@@ -338,16 +342,16 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
             vingt schémas dépliés d'office noieraient le calendrier. */}
         <details className="mt-2">
           <summary className="flex cursor-pointer items-center gap-2 text-[12px] font-bold" style={{ color: ENTR_COLOR }}>
-            Schémas travaillés
+            {trad('cal.schemasTravailles')}
             {attachés.length > 0 && (
               <span className="rounded-md px-1.5 py-0.5 font-black" style={{ background: ENTR_BG, color: ENTR_COLOR }}>
-                {attachés.length} schéma{attachés.length > 1 ? 's' : ''}
+                {trad('cal.schemaCompte', { count: attachés.length })}
               </span>
             )}
           </summary>
           {!gere ? (
             attachés.length === 0 ? (
-              <p className="mt-2 text-[12px]" style={{ color: C.faint }}>Aucun schéma prévu pour cette séance.</p>
+              <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{trad('cal.aucunSchemaSeance')}</p>
             ) : (
               <div className="mt-2 grid gap-1.5">
                 {attachés.map((s) => (
@@ -356,7 +360,7 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
               </div>
             )
           ) : schemas.length === 0 ? (
-            <p className="mt-2 text-[12px]" style={{ color: C.faint }}>Aucun schéma dans la bibliothèque.</p>
+            <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{trad('cal.bibliothequeVide')}</p>
           ) : (
             <div className="mt-2 grid gap-1.5">
               {schemas.map((s) => {
@@ -378,7 +382,7 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
               minimum de vingt-quatre pixels — et c'est une **suppression**, la
               combinaison la plus fâcheuse entre une cible qu'on rate et un geste qu'on
               ne défait pas. */}
-          {gere && <button onClick={onDelete} aria-label="Supprimer cet entraînement" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-black transition hover:bg-[var(--c-danger-bg)] hover:text-[var(--c-danger)]" style={{ color: C.accent }}><X className="h-4 w-4" strokeWidth={2.5} /></button>}
+          {gere && <button onClick={onDelete} aria-label={trad('cal.supprimerEntrainement')} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-black transition hover:bg-[var(--c-danger-bg)] hover:text-[var(--c-danger)]" style={{ color: C.accent }}><X className="h-4 w-4" strokeWidth={2.5} /></button>}
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@ import { dossiers, nouveauSchema, type Schema } from '../../domain/plays'
 import { deletePlay, listPlays, savePlay } from '../../persistence/repositories'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
+import { useT } from '../../i18n'
 import { PlayBoard } from '../components/PlayBoard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { C, bd, Ic, ICON, PageTitle } from '../olive/kit'
@@ -36,6 +37,7 @@ const dossierDe = (s: Schema) => s.dossier?.trim() ?? ''
 const DATALIST = 'dossiers-connus'
 
 export function SchemaList() {
+  const trad = useT()
   const { clubId } = useClub()
   const { can, guard } = useAuth()
   const gere = can('manage')
@@ -108,7 +110,7 @@ export function SchemaList() {
       <PageTitle
         action={gere && (
           <button onClick={creer} className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-            + Nouveau schéma
+            {trad('sch.nouveau')}
           </button>
         )}
       />
@@ -125,20 +127,19 @@ export function SchemaList() {
           <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl" style={{ background: C.accentBg, color: C.accent }}>
             <Ic d={ICON.matches} className="h-7 w-7" />
           </span>
-          <p className="text-base font-extrabold">La bibliothèque est vide.</p>
+          <p className="text-base font-extrabold">{trad('sch.bibliothequeVide')}</p>
           {gere ? (
             <>
               <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
-                Posez vos cinq joueurs, tirez leurs trajectoires au doigt, empilez les temps : la combinaison
-                se rejoue ensuite au temps-mort, animée, sur le téléphone.
+                {trad('sch.videGere')}
               </p>
               <button onClick={creer} className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-                Dessiner ma première combinaison →
+                {trad('sch.dessinerPremiere')}
               </button>
             </>
           ) : (
             <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
-              Les combinaisons dessinées par le coach apparaîtront ici, à revoir avant l’entraînement.
+              {trad('sch.videVisiteur')}
             </p>
           )}
         </div>
@@ -147,12 +148,12 @@ export function SchemaList() {
           <div className="mb-4 flex flex-wrap items-center gap-3">
             {/* Les onglets se déduisent des schémas : un dossier vidé disparaît de
                 lui-même, et « Sans dossier » ne s'affiche que s'il reste à ranger. */}
-            <div role="group" aria-label="Dossiers" className="flex flex-wrap gap-1.5">
-              <Onglet actif={dossierActif === null} onClick={() => setDossierActif(null)}>Tous</Onglet>
+            <div role="group" aria-label={trad('sch.dossiers')} className="flex flex-wrap gap-1.5">
+              <Onglet actif={dossierActif === null} onClick={() => setDossierActif(null)}>{trad('sch.tous')}</Onglet>
               {listeDossiers.map((d) => (
                 <Onglet key={d} actif={dossierActif === d} onClick={() => setDossierActif(d)}>{d}</Onglet>
               ))}
-              {aDesNonRanges && <Onglet actif={dossierActif === ''} onClick={() => setDossierActif('')}>Sans dossier</Onglet>}
+              {aDesNonRanges && <Onglet actif={dossierActif === ''} onClick={() => setDossierActif('')}>{trad('sch.sansDossier')}</Onglet>}
             </div>
             {/* La loupe dans le champ : sur une barre de dossiers qui s'allonge, un
                 rectangle nu ne se distingue plus d'un onglet de plus. */}
@@ -162,7 +163,7 @@ export function SchemaList() {
               </span>
               <input
                 type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
-                aria-label="Rechercher un schéma" placeholder="Rechercher (nom ou note)…"
+                aria-label={trad('sch.rechercher')} placeholder={trad('sch.rechercherPlaceholder')}
                 className="h-10 w-full rounded-xl pl-9 pr-3 text-sm"
                 style={{ background: C.panel, border: bd, color: C.text }}
               />
@@ -175,7 +176,7 @@ export function SchemaList() {
 
           {visibles.length === 0 ? (
             <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
-              Aucun schéma ne correspond à cette recherche.
+              {trad('sch.aucunResultat')}
             </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
@@ -199,7 +200,7 @@ export function SchemaList() {
                         {s.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'}
                       </span>
                       <span>{s.temps.length} temps</span>
-                      {s.defense && <span>· défense</span>}
+                      {s.defense && <span>{trad('sch.defense')}</span>}
                     </p>
                     {s.note && <p className="mt-1 truncate text-[12px]" style={{ color: C.faint }}>{s.note}</p>}
                   </Link>
@@ -218,12 +219,12 @@ export function SchemaList() {
                         onSubmit={(e) => { e.preventDefault(); ranger(s) }}
                       >
                         <input
-                          list={DATALIST} aria-label="Dossier" autoFocus value={enRangement.valeur}
+                          list={DATALIST} aria-label={trad('sch.dossier')} autoFocus value={enRangement.valeur}
                           onChange={(e) => setEnRangement({ id: s.id, valeur: e.target.value })}
-                          placeholder="Nom du dossier" className="min-w-0 flex-1 rounded-lg px-2 py-1 text-[12px] font-semibold"
+                          placeholder={trad('sch.nomDossier')} className="min-w-0 flex-1 rounded-lg px-2 py-1 text-[12px] font-semibold"
                           style={{ background: C.panel, border: bd, color: C.text }}
                         />
-                        <button type="submit" className="rounded-lg px-2 py-1.5" style={{ color: C.accent }}>Ranger</button>
+                        <button type="submit" className="rounded-lg px-2 py-1.5" style={{ color: C.accent }}>{trad('sch.ranger')}</button>
                       </form>
                     ) : (
                       <button
@@ -247,19 +248,19 @@ export function SchemaList() {
                       className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl text-[13px] font-black"
                       style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}
                     >
-                      ▶ Jouer
+                      {trad('sch.jouer')}
                     </Link>
                     {gere && (
                       <>
                         <button
-                          onClick={() => dupliquer(s)} aria-label="Dupliquer" title="Dupliquer"
+                          onClick={() => dupliquer(s)} aria-label={trad('sch.dupliquer')} title={trad('sch.dupliquer')}
                           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
                           style={{ background: C.card2, border: bd, color: C.muted }}
                         >
                           <Ic d={ICONE_COPIE} className="h-[17px] w-[17px]" />
                         </button>
                         <button
-                          onClick={() => guard('manage', () => setASupprimer(s))} aria-label="Supprimer" title="Supprimer"
+                          onClick={() => guard('manage', () => setASupprimer(s))} aria-label={trad('commun.supprimer')} title={trad('commun.supprimer')}
                           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
                           style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}
                         >
@@ -277,13 +278,13 @@ export function SchemaList() {
 
       {/* Même formulation que les entraînements et les résultats extérieurs :
           une seule limite à retenir, pas une par écran. */}
-      <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>Ces schémas restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
+      <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('sch.schemasLocaux')}</p>
 
       <ConfirmDialog
         open={!!aSupprimer} danger
-        title="Supprimer le schéma ?"
-        message={aSupprimer ? `« ${aSupprimer.nom} » et tous ses temps seront supprimés. Cette action est définitive.` : undefined}
-        confirmLabel="Supprimer" onConfirm={supprimer} onClose={() => setASupprimer(null)}
+        title={trad('sch.supprimerTitre')}
+        message={aSupprimer ? trad('sch.supprimerTexte', { nom: aSupprimer.nom }) : undefined}
+        confirmLabel={trad('commun.supprimer')} onConfirm={supprimer} onClose={() => setASupprimer(null)}
       />
     </div>
   )
