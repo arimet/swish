@@ -61,7 +61,7 @@ export function SchemaList() {
   // otherwise a visitor would leave empty plays behind their refusals.
   const create = () => guard('manage', async () => {
     if (!clubId) return
-    const s: Play = { id: newId(), ...newPlay(clubId, 'half', false), name: translate('sch.nouveauNom') }
+    const s: Play = { id: newId(), ...newPlay(clubId, 'half', false), name: translate('play.newName') }
     await savePlay(s)
     navigate(`/schemas/${s.id}/edit`)
   })
@@ -69,7 +69,7 @@ export function SchemaList() {
   const duplicate = (s: Play) => guard('manage', async () => {
     // Deep copy: the steps and their arrows would otherwise be shared, and touching
     // up the copy would modify the original.
-    await savePlay({ ...structuredClone(s), id: newId(), name: translate('sch.copieDe', { name: s.name }) })
+    await savePlay({ ...structuredClone(s), id: newId(), name: translate('play.copyOf', { name: s.name }) })
     reload()
   })
 
@@ -110,7 +110,7 @@ export function SchemaList() {
       <PageTitle
         action={manages && (
           <button onClick={create} className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-            {translate('sch.nouveau')}
+            {translate('play.new')}
           </button>
         )}
       />
@@ -127,19 +127,19 @@ export function SchemaList() {
           <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl" style={{ background: C.accentBg, color: C.accent }}>
             <Ic d={ICON.matches} className="h-7 w-7" />
           </span>
-          <p className="text-base font-extrabold">{translate('sch.bibliothequeVide')}</p>
+          <p className="text-base font-extrabold">{translate('play.emptyLibrary')}</p>
           {manages ? (
             <>
               <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
-                {translate('sch.videGere')}
+                {translate('play.emptyManager')}
               </p>
               <button onClick={create} className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-                {translate('sch.dessinerPremiere')}
+                {translate('play.drawFirst')}
               </button>
             </>
           ) : (
             <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
-              {translate('sch.videVisiteur')}
+              {translate('play.emptyVisitor')}
             </p>
           )}
         </div>
@@ -148,12 +148,12 @@ export function SchemaList() {
           <div className="mb-4 flex flex-wrap items-center gap-3">
             {/* The tabs are derived from the plays: an emptied folder disappears on
                 its own, and "Unfiled" only shows while something is left to file. */}
-            <div role="group" aria-label={translate('sch.dossiers')} className="flex flex-wrap gap-1.5">
-              <Tab active={activeFolder === null} onClick={() => setActiveFolder(null)}>{translate('sch.tous')}</Tab>
+            <div role="group" aria-label={translate('play.folders')} className="flex flex-wrap gap-1.5">
+              <Tab active={activeFolder === null} onClick={() => setActiveFolder(null)}>{translate('play.all')}</Tab>
               {folderList.map((d) => (
                 <Tab key={d} active={activeFolder === d} onClick={() => setActiveFolder(d)}>{d}</Tab>
               ))}
-              {hasUnfiled && <Tab active={activeFolder === ''} onClick={() => setActiveFolder('')}>{translate('sch.sansDossier')}</Tab>}
+              {hasUnfiled && <Tab active={activeFolder === ''} onClick={() => setActiveFolder('')}>{translate('play.unfiled')}</Tab>}
             </div>
             {/* The magnifier inside the field: on a folder bar that keeps growing, a
                 bare rectangle no longer reads as anything but one more tab. */}
@@ -163,7 +163,7 @@ export function SchemaList() {
               </span>
               <input
                 type="search" value={query} onChange={(e) => setQuery(e.target.value)}
-                aria-label={translate('sch.rechercher')} placeholder={translate('sch.rechercherPlaceholder')}
+                aria-label={translate('play.search')} placeholder={translate('play.searchPlaceholder')}
                 className="h-10 w-full rounded-xl pl-9 pr-3 text-sm"
                 style={{ background: C.panel, border: bd, color: C.text }}
               />
@@ -176,7 +176,7 @@ export function SchemaList() {
 
           {visible.length === 0 ? (
             <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
-              {translate('sch.aucunResultat')}
+              {translate('play.noResult')}
             </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
@@ -197,10 +197,10 @@ export function SchemaList() {
                     <h3 className="mt-2.5 truncate text-[15px] font-extrabold tracking-tight">{s.name}</h3>
                     <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold" style={{ color: C.muted }}>
                       <span className="rounded-md px-1.5 py-0.5" style={{ background: C.card2 }}>
-                        {translate(s.court === 'half' ? 'sch.demiTerrain' : 'sch.terrainComplet')}
+                        {translate(s.court === 'half' ? 'play.halfCourt' : 'play.fullCourt')}
                       </span>
-                      <span>{translate('sch.compteTemps', { count: s.steps.length })}</span>
-                      {s.defense && <span>{translate('sch.defense')}</span>}
+                      <span>{translate('play.stepCount', { count: s.steps.length })}</span>
+                      {s.defense && <span>{translate('play.defence')}</span>}
                     </p>
                     {s.note && <p className="mt-1 truncate text-[12px]" style={{ color: C.faint }}>{s.note}</p>}
                   </Link>
@@ -211,7 +211,7 @@ export function SchemaList() {
                   <div className="mt-2 text-[12px] font-bold">
                     {!manages ? (
                       <span className="inline-block rounded-md px-1.5 py-0.5" style={{ background: C.card2, color: s.folder ? C.accent : C.faint }}>
-                        {s.folder || translate('sch.sansDossier')}
+                        {s.folder || translate('play.unfiled')}
                       </span>
                     ) : pickingFolder?.id === s.id ? (
                       <form
@@ -219,19 +219,19 @@ export function SchemaList() {
                         onSubmit={(e) => { e.preventDefault(); setFolder(s) }}
                       >
                         <input
-                          list={DATALIST} aria-label={translate('sch.dossier')} autoFocus value={pickingFolder.value}
+                          list={DATALIST} aria-label={translate('play.folder')} autoFocus value={pickingFolder.value}
                           onChange={(e) => setPickingFolder({ id: s.id, value: e.target.value })}
-                          placeholder={translate('sch.nomDossier')} className="min-w-0 flex-1 rounded-lg px-2 py-1 text-[12px] font-semibold"
+                          placeholder={translate('play.folderName')} className="min-w-0 flex-1 rounded-lg px-2 py-1 text-[12px] font-semibold"
                           style={{ background: C.panel, border: bd, color: C.text }}
                         />
-                        <button type="submit" className="rounded-lg px-2 py-1.5" style={{ color: C.accent }}>{translate('sch.ranger')}</button>
+                        <button type="submit" className="rounded-lg px-2 py-1.5" style={{ color: C.accent }}>{translate('play.file')}</button>
                       </form>
                     ) : (
                       <button
-                        onClick={() => openFolderPicker(s)} aria-label={translate('sch.dossierDe', { name: s.name })}
+                        onClick={() => openFolderPicker(s)} aria-label={translate('play.folderOf', { name: s.name })}
                         className="rounded-md px-2 py-1.5" style={{ background: C.card2, color: s.folder ? C.accent : C.faint }}
                       >
-                        {s.folder || translate('sch.sansDossier')}
+                        {s.folder || translate('play.unfiled')}
                       </button>
                     )}
                   </div>
@@ -248,19 +248,19 @@ export function SchemaList() {
                       className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl text-[13px] font-black"
                       style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}
                     >
-                      {translate('sch.jouer')}
+                      {translate('play.play')}
                     </Link>
                     {manages && (
                       <>
                         <button
-                          onClick={() => duplicate(s)} aria-label={translate('sch.dupliquer')} title={translate('sch.dupliquer')}
+                          onClick={() => duplicate(s)} aria-label={translate('play.duplicate')} title={translate('play.duplicate')}
                           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
                           style={{ background: C.card2, border: bd, color: C.muted }}
                         >
                           <Ic d={ICON_COPY} className="h-[17px] w-[17px]" />
                         </button>
                         <button
-                          onClick={() => guard('manage', () => setToDelete(s))} aria-label={translate('commun.supprimer')} title={translate('commun.supprimer')}
+                          onClick={() => guard('manage', () => setToDelete(s))} aria-label={translate('common.delete')} title={translate('common.delete')}
                           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
                           style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}
                         >
@@ -278,13 +278,13 @@ export function SchemaList() {
 
       {/* Worded the same way as the trainings and the outside results: one limit to
           remember, not one per screen. */}
-      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('sch.schemasLocaux')}</p>}
+      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('play.playsLocal')}</p>}
 
       <ConfirmDialog
         open={!!toDelete} danger
-        title={translate('sch.supprimerTitre')}
-        message={toDelete ? translate('sch.supprimerTexte', { name: toDelete.name }) : undefined}
-        confirmLabel={translate('commun.supprimer')} onConfirm={remove} onClose={() => setToDelete(null)}
+        title={translate('play.deleteTitle')}
+        message={toDelete ? translate('play.deleteText', { name: toDelete.name }) : undefined}
+        confirmLabel={translate('common.delete')} onConfirm={remove} onClose={() => setToDelete(null)}
       />
     </div>
   )

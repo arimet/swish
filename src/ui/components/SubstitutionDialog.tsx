@@ -23,11 +23,11 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>{translate('panneau.changement')}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{translate('panel.substitution')}</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <PickGroup title={translate('changement.sort')} accent="text-[var(--c-danger)]" players={onCourtPlayers}
+          <PickGroup title={translate('sub.out')} accent="text-[var(--c-danger)]" players={onCourtPlayers}
             selected={out} onSelect={setOut} activeClass="border-transparent bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]" />
-          <PickGroup title={translate('changement.entre')} accent="text-[var(--c-green)]" players={benchPlayers}
+          <PickGroup title={translate('sub.in')} accent="text-[var(--c-green)]" players={benchPlayers}
             selected={inId} onSelect={setInId} activeClass="border-transparent bg-[var(--c-green-fill)] text-[var(--c-on-green)]" />
         </div>
         <DialogFooter>
@@ -36,7 +36,7 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
             onClick={submit}
             className="w-full rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground transition enabled:hover:brightness-110 disabled:opacity-40"
           >
-            {translate('changement.valider')}
+            {translate('sub.confirm')}
           </button>
         </DialogFooter>
       </DialogContent>
@@ -64,7 +64,7 @@ function PickGroup({ title, accent, players, selected, onSelect, activeClass }: 
             {p.number} {p.lastName}
           </button>
         ))}
-        {players.length === 0 && <p className="col-span-2 text-xs text-muted-foreground">{translate('changement.aucun')}</p>}
+        {players.length === 0 && <p className="col-span-2 text-xs text-muted-foreground">{translate('sub.none')}</p>}
       </div>
     </div>
   )

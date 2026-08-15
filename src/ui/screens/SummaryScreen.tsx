@@ -48,8 +48,8 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       for (const p of roster) map[p.id] = p
       setPlayers(map)
       setTeamNames({
-        A: teams.find((t) => t.id === m.meta.clubId)?.name ?? translate('commun.notreEquipe'),
-        B: teams.find((t) => t.id === m.meta.opponentId)?.name ?? translate('match.adversaire'),
+        A: teams.find((t) => t.id === m.meta.clubId)?.name ?? translate('common.ourTeam'),
+        B: teams.find((t) => t.id === m.meta.opponentId)?.name ?? translate('match.opponent'),
       })
       setMatch(m)
     })
@@ -57,7 +57,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   }, [matchId, translate])
 
   if (match === undefined) return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
-  if (match === null) return <div className="p-6"><p className="py-16 text-center text-sm" style={{ color: C.muted }}>{translate('apercu.introuvable')}</p></div>
+  if (match === null) return <div className="p-6"><p className="py-16 text-center text-sm" style={{ color: C.muted }}>{translate('preview.notFound')}</p></div>
 
   const ls = liveState(match)
   const score = ls.score
@@ -108,15 +108,15 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   return (
     <div className="p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <button onClick={onHome} className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('garde.accueil')}</button>
+        <button onClick={onHome} className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('gate.home')}</button>
         <div className="flex flex-wrap items-center gap-2.5">
-          <Link to={`/match/${match.id}/watch`} target="_blank" className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.muted }}><Eye className="h-4 w-4" strokeWidth={2} />{translate('resume.suivi')}</Link>
+          <Link to={`/match/${match.id}/watch`} target="_blank" className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.muted }}><Eye className="h-4 w-4" strokeWidth={2} />{translate('summary.spectatorView')}</Link>
           {/* Correcting the details or the stats after the fact belongs to
               administration: both buttons render only for it. Reading the sheet,
               following it and exporting it stay ungated for everyone. */}
           {can('manage') && (
             <>
-              <button onClick={() => guard('manage', () => setShowEdit(true))} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}><Pencil className="h-4 w-4" strokeWidth={2} />{translate('resume.infos')}</button>
+              <button onClick={() => guard('manage', () => setShowEdit(true))} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}><Pencil className="h-4 w-4" strokeWidth={2} />{translate('summary.details')}</button>
               {/* The right is checked when correction mode opens, not re-derived
                   afterwards: an administrator who opens "Correct stats" and then locks
                   themselves out keeps a writing correction mode until they leave it.
@@ -127,17 +127,17 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
               <button onClick={() => (editStats ? setEditStats(false) : guard('manage', () => setEditStats(true)))}
                 className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={editStats ? { background: C.brand, color: C.onBrand } : { border: bd, color: C.text }}>
                 {editStats
-                  ? <><Check className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('resume.terminer')}</>
-                  : <><Pencil className="h-4 w-4 shrink-0" strokeWidth={2} />{translate('resume.corrigerStats')}</>}
+                  ? <><Check className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('summary.done')}</>
+                  : <><Pencil className="h-4 w-4 shrink-0" strokeWidth={2} />{translate('summary.correctStats')}</>}
               </button>
             </>
           )}
-          <button onClick={printSummary} className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}><Download className="h-4 w-4" strokeWidth={2} />{translate('resume.exporterPdf')}</button>
+          <button onClick={printSummary} className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}><Download className="h-4 w-4" strokeWidth={2} />{translate('summary.exportPdf')}</button>
         </div>
       </div>
       {editStats && (
         <div className="mb-4 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}>
-          {translate('resume.modeCorrection')}
+          {translate('summary.correctionMode')}
         </div>
       )}
       <MatchMetaDialog open={showEdit} meta={match.meta} onClose={() => setShowEdit(false)} onSave={saveMeta} />
@@ -163,7 +163,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       <div className="overflow-hidden rounded-3xl" style={{ background: C.frame, border: bd }}>
         <div className="flex items-center justify-between px-6 pt-5">
           <span className="truncate text-[12px] font-bold" style={{ color: C.muted }}>{champ(meta)}</span>
-          <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.neutralBg, color: C.muted }}>{translate('resume.final')}</span>
+          <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.neutralBg, color: C.muted }}>{translate('summary.final')}</span>
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-6 py-5 sm:gap-8">
           <FinalSide id={meta.clubId} name={teamNames.A} score={score.a} win={score.a >= score.b} align="right" />
@@ -171,10 +171,10 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
           <FinalSide id={meta.opponentId} name={teamNames.B} score={score.b} win={score.b > score.a} align="left" />
         </div>
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t px-6 py-3 text-[12px] font-semibold" style={{ borderColor: C.border, color: C.faint }}>
-          {meta.matchNumber && <span>{translate('apercu.rencontreNumero', { n: meta.matchNumber })}</span>}
+          {meta.matchNumber && <span>{translate('preview.gameNumber', { n: meta.matchNumber })}</span>}
           {f.long && <span className="capitalize">{f.long}</span>}
           {meta.venue && <span>{meta.venue}</span>}
-          {(meta.referee1 || meta.referee2) && <span>{translate('impression.arbitres')} · {[meta.referee1, meta.referee2].filter(Boolean).join(', ')}</span>}
+          {(meta.referee1 || meta.referee2) && <span>{translate('print.referees')} · {[meta.referee1, meta.referee2].filter(Boolean).join(', ')}</span>}
         </div>
       </div>
 
@@ -187,12 +187,12 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
 
       {/* INDICATORS */}
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-        <Stat label={translate('resume.plusLargeEcart')} a={ratios.A.maxLead} b={ratios.B.maxLead} />
-        <Stat label={translate('resume.plusLongueSerie')} a={ratios.A.maxRun} b={ratios.B.maxRun} />
-        <Stat label={translate('resume.pointsBanc')} a={teamTotals(match).bench.points} b="—" />
-        <Stat label={translate('resume.tempsEnTete')} a={fmt(ratios.A.leadDurationSec)} b={fmt(ratios.B.leadDurationSec)} />
+        <Stat label={translate('summary.largestLead')} a={ratios.A.maxLead} b={ratios.B.maxLead} />
+        <Stat label={translate('summary.longestRun')} a={ratios.A.maxRun} b={ratios.B.maxRun} />
+        <Stat label={translate('summary.benchPoints')} a={teamTotals(match).bench.points} b="—" />
+        <Stat label={translate('summary.timeInFront')} a={fmt(ratios.A.leadDurationSec)} b={fmt(ratios.B.leadDurationSec)} />
         <div className="rounded-2xl p-4" style={{ background: C.card, border: bd }}>
-          <p className="text-[12px] font-bold tracking-wide" style={{ color: C.faint }}>{translate('resume.egalites')}</p>
+          <p className="text-[12px] font-bold tracking-wide" style={{ color: C.faint }}>{translate('summary.ties')}</p>
           <p className="mt-1 text-2xl font-black tabular-nums">{ratios.ties}</p>
         </div>
       </div>
@@ -200,7 +200,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       {/* PROGRESSION */}
       <section className="mt-6 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('resume.progression')}</p>
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('summary.progression')}</p>
           <span className="flex items-center gap-4 text-xs font-bold">
             {/* Two series, so two colours from the charter and not two hashes: a
                 one-pixel line in dark navy was invisible on the dark card, and nothing
@@ -261,8 +261,8 @@ function OpponentCard({ teamId, name, score }: { teamId: string; name: string; s
     <section className="flex items-center gap-4 overflow-hidden rounded-2xl px-5 py-4" style={{ background: C.card, border: bd }}>
       <TeamBadge id={teamId} name={name} size="h-11 w-11 text-xs" />
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-extrabold uppercase tracking-wide">{translate('resume.visiteurs', { name: name })}</h3>
-        <p className="mt-0.5 text-[12px] font-semibold" style={{ color: C.faint }}>{translate('resume.scoreGlobal')}</p>
+        <h3 className="truncate text-sm font-extrabold uppercase tracking-wide">{translate('summary.away', { name: name })}</h3>
+        <p className="mt-0.5 text-[12px] font-semibold" style={{ color: C.faint }}>{translate('summary.totalScore')}</p>
       </div>
       <span className="text-3xl font-black tabular-nums" style={{ color: C.accent }}>{score}</span>
     </section>
@@ -285,14 +285,14 @@ function TeamTable({ match, players, name, onPick }: { match: Match; players: Re
     <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: bd, ...(onPick ? { boxShadow: `0 0 0 1px ${C.accentBd}` } : {}) }}>
       <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: `1px solid ${C.border}` }}>
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: C.brand }} />
-        <h3 className="text-sm font-extrabold uppercase tracking-wide">{translate('resume.locaux', { name: name })}</h3>
-        {onPick && <span className="ml-auto text-[12px] font-bold" style={{ color: C.accent }}><Pencil className="mr-1 inline h-3 w-3 align-[-1px]" strokeWidth={2} />{translate('resume.cliquezLigne')}</span>}
+        <h3 className="text-sm font-extrabold uppercase tracking-wide">{translate('summary.home', { name: name })}</h3>
+        {onPick && <span className="ml-auto text-[12px] font-bold" style={{ color: C.accent }}><Pencil className="mr-1 inline h-3 w-3 align-[-1px]" strokeWidth={2} />{translate('summary.clickARow')}</span>}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-[12px] font-bold uppercase" style={{ color: C.faint }}>
-              <Th left>{translate('equipe.numero')}</Th><Th left>{translate('resume.thJoueur')}</Th><Th>5</Th><Th>{translate('resume.thTps')}</Th><Th>{translate('resume.thPts')}</Th><Th>{translate('resume.thTirs')}</Th><Th>{translate('resume.thPctTirs')}</Th><Th>{translate('resume.th3pts')}</Th><Th>{translate('resume.th2Int')}</Th><Th>{translate('resume.th2Ext')}</Th><Th>{translate('resume.thLf')}</Th><Th>{translate('resume.thPd')}</Th><Th>{translate('resume.thRo')}</Th><Th>{translate('resume.thRd')}</Th><Th>{translate('resume.thCt')}</Th><Th>{translate('resume.thFtes')}</Th>
+              <Th left>{translate('team.number')}</Th><Th left>{translate('summary.thPlayer')}</Th><Th>5</Th><Th>{translate('summary.thTime')}</Th><Th>{translate('summary.thPts')}</Th><Th>{translate('summary.thFg')}</Th><Th>{translate('summary.thFgPct')}</Th><Th>{translate('summary.th3pt')}</Th><Th>{translate('summary.th2in')}</Th><Th>{translate('summary.th2out')}</Th><Th>{translate('summary.thFt')}</Th><Th>{translate('summary.thAst')}</Th><Th>{translate('summary.thOreb')}</Th><Th>{translate('summary.thDreb')}</Th><Th>{translate('summary.thBlk')}</Th><Th>{translate('summary.thPf')}</Th>
             </tr>
           </thead>
           <tbody>
@@ -317,7 +317,7 @@ function TeamTable({ match, players, name, onPick }: { match: Match; players: Re
               )
             })}
             <tr style={{ borderTop: `2px solid ${C.border}`, background: C.panel }}>
-              <Td left></Td><Td left><span className="font-black uppercase text-[12px]">{translate('resume.totalEquipe')}</span></Td><Td></Td><Td></Td>
+              <Td left></Td><Td left><span className="font-black uppercase text-[12px]">{translate('summary.teamTotal')}</span></Td><Td></Td><Td></Td>
               <Td><span className="font-black" style={{ color: C.accent }}>{totals.team.points}</span></Td>
               <Td><b>{totals.team.fieldGoalsMade}</b></Td><Td></Td><Td><b>{totals.team.threes}</b></Td><Td><b>{totals.team.twoInside}</b></Td><Td><b>{totals.team.twoOutside}</b></Td><Td><b>{totals.team.freeThrows}</b></Td>
               <Td><b>{totals.team.assists}</b></Td><Td><b>{totals.team.offRebounds}</b></Td><Td><b>{totals.team.defRebounds}</b></Td><Td><b>{totals.team.blocks}</b></Td>

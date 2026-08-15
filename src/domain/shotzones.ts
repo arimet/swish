@@ -26,13 +26,13 @@ export const ZONES: ShotZone[] = [
  *  outside React, with no knowledge of the current language. The caller translates —
  *  the same rule as for the domain's rule messages. */
 export const ZONE_LABELS: Record<ShotZone, string> = {
-  paint: 'zone.raquette',
-  mid_left: 'zone.midGauche',
-  mid_center: 'zone.midAxe',
-  mid_right: 'zone.midDroite',
-  corner3_left: 'zone.cornerGauche',
-  top3: 'zone.aile3',
-  corner3_right: 'zone.cornerDroit',
+  paint: 'zone.paint',
+  mid_left: 'zone.midLeft',
+  mid_center: 'zone.midCentre',
+  mid_right: 'zone.midRight',
+  corner3_left: 'zone.cornerLeft',
+  top3: 'zone.wing3',
+  corner3_right: 'zone.cornerRight',
 }
 
 /**

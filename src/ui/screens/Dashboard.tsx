@@ -119,12 +119,12 @@ export function Dashboard() {
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-extrabold tracking-tight">{club.name}</h1>
             <p className="text-sm" style={{ color: C.muted }}>
-              {rec.played ? translate('bord.rencontresJouees', { count: rec.played }) : translate('bord.aucuneRencontreJouee')}
+              {rec.played ? translate('dashboard.gamesPlayed', { count: rec.played }) : translate('dashboard.noGamePlayed')}
             </p>
           </div>
           {me && (
             <Link to={`/players/${me.id}`} className="ml-auto shrink-0 rounded-xl px-3 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>
-              {translate('bord.maFiche')}
+              {translate('dashboard.myRecord')}
             </Link>
           )}
         </div>
@@ -146,15 +146,15 @@ export function Dashboard() {
         {hasPlayed ? (
           <>
             <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <Stat label={translate('bord.bilan')} value={`${rec.wins}V – ${rec.losses}D`} hint={translate('commun.rencontre', { count: rec.played })} accent={rec.wins >= rec.losses ? C.green : C.accent} />
-              <Stat label={translate('bord.pointsMarques')} value={String(rec.avgFor)} hint={translate('bord.parMatch')} />
-              <Stat label={translate('bord.pointsEncaisses')} value={String(rec.avgAgainst)} hint={translate('bord.parMatch')} />
-              <Stat label={translate('bord.differentiel')} value={diff > 0 ? `+${diff}` : String(diff)} hint={translate('bord.surLaSaison')} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
+              <Stat label={translate('dashboard.record')} value={`${rec.wins}V – ${rec.losses}D`} hint={translate('common.game', { count: rec.played })} accent={rec.wins >= rec.losses ? C.green : C.accent} />
+              <Stat label={translate('dashboard.pointsFor')} value={String(rec.avgFor)} hint={translate('dashboard.perGame')} />
+              <Stat label={translate('dashboard.pointsAgainst')} value={String(rec.avgAgainst)} hint={translate('dashboard.perGame')} />
+              <Stat label={translate('dashboard.differential')} value={diff > 0 ? `+${diff}` : String(diff)} hint={translate('dashboard.overTheSeason')} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
             </div>
 
             {lines.length > 0 && (
               <div className="mt-3 flex items-center gap-2">
-                <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.forme')}</span>
+                <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('dashboard.form')}</span>
                 {lines.slice(0, 5).map((l) => (
                   <span key={l.match.id} className="grid h-6 w-6 place-items-center rounded-md text-[12px] font-black"
                     style={{ background: l.result === 'V' ? C.greenBg : C.dangerBg, color: l.result === 'V' ? C.green : C.danger }}>
@@ -169,9 +169,9 @@ export function Dashboard() {
         ) : null}
 
         <div className={`${hasPlayed ? 'mt-6' : 'mt-5'} grid gap-5 lg:grid-cols-[1fr_420px] [&>*]:min-w-0`}>
-          {hasPlayed && <Panel title={translate('bord.meilleursMarqueurs')}>
+          {hasPlayed && <Panel title={translate('dashboard.topScorers')}>
             {scorers.length === 0 ? (
-              <Empty>{translate('bord.pasDePoints')}</Empty>
+              <Empty>{translate('dashboard.noPointsYet')}</Empty>
             ) : (
               <ul className="space-y-1.5">
                 {scorers.map(([pid, pts], i) => {
@@ -184,12 +184,12 @@ export function Dashboard() {
                         style={isMe ? { background: C.accentBg, border: `1px solid ${C.accentBd}` } : { background: C.panel }}>
                         <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.accent : C.faint }}>{i + 1}</span>
                         <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p?.number ?? '?'}</span>
-                        <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : translate('commun.joueurMot')}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : translate('common.playerWord')}</span>
                         {isMe && <You />}
                         {/* An explicit title: this percentage only covers located shots,
                             whereas the points right next to it count everything (free
                             throws included) — cf. PlayerDetail. */}
-                        <span className="text-[12px] font-semibold" style={{ color: C.muted }} title={translate('bord.reussiteTirs')}>{pct === null ? '—' : `${pct} %`}</span>
+                        <span className="text-[12px] font-semibold" style={{ color: C.muted }} title={translate('dashboard.shootingPct')}>{pct === null ? '—' : `${pct} %`}</span>
                         <span className="w-14 text-right text-sm font-black tabular-nums">{pts} pts</span>
                       </Link>
                     </li>
@@ -201,14 +201,14 @@ export function Dashboard() {
 
           {/* The shot chart only shows when there are shots: empty, it is a court drawn
               for nothing, and it does not say what to do. */}
-          {hasPlayed && <Panel title={openPlayer ? translate('bord.hotZoneJoueur', { name: byId[openPlayer]?.lastName ?? translate('bord.joueur') }) : translate('bord.hotZoneEquipe')}>
+          {hasPlayed && <Panel title={openPlayer ? translate('dashboard.playerHotZone', { name: byId[openPlayer]?.lastName ?? translate('dashboard.player') }) : translate('dashboard.teamHotZone')}>
             <div className="mb-2 flex flex-wrap gap-1.5">
-              <Chip active={!openPlayer} onClick={() => setOpenPlayer(null)}>{translate('bord.equipe')}</Chip>
+              <Chip active={!openPlayer} onClick={() => setOpenPlayer(null)}>{translate('dashboard.team')}</Chip>
               {players.map((p) => (
                 <Chip key={p.id} active={openPlayer === p.id} onClick={() => setOpenPlayer(p.id)}>{p.number}</Chip>
               ))}
             </div>
-            {shownShots.length === 0 ? <Empty>{translate('bord.aucunTir')}</Empty> : <ShotChart shots={shownShots} minAttempts={openPlayer ? 1 : 3} />}
+            {shownShots.length === 0 ? <Empty>{translate('dashboard.noShot')}</Empty> : <ShotChart shots={shownShots} minAttempts={openPlayer ? 1 : 3} />}
           </Panel>}
         </div>
       </div>
@@ -269,18 +269,18 @@ function CoachMessage({ clubId }: { clubId: string }) {
     return (
       <section className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
         <div className="mb-3 flex items-center gap-3">
-          <label htmlFor="message-equipe" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('bord.messageEquipe')}</label>
-          <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
+          <label htmlFor="message-equipe" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('dashboard.teamMessage')}</label>
+          <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('common.closeShort')}</button>
         </div>
         <textarea id="message-equipe" rows={3} value={text} onChange={(e) => setText(e.target.value)}
-          placeholder={translate('bord.messagePlaceholder')}
+          placeholder={translate('dashboard.messagePlaceholder')}
           className="w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
         <button onClick={publish} disabled={!text.trim()} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
-          {translate('bord.publierMessage')}
+          {translate('dashboard.publishMessage')}
         </button>
         {/* Like the call-ups, the trainings and the plays: worded the same way, so as
             not to suggest two different limits. */}
-        {!remoteEnabled() && <p className="mt-3 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('bord.messageLocal')}</p>}
+        {!remoteEnabled() && <p className="mt-3 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('dashboard.messageLocal')}</p>}
       </section>
     )
   }
@@ -291,7 +291,7 @@ function CoachMessage({ clubId }: { clubId: string }) {
     if (!manages) return null
     return (
       <button onClick={openForm} className="mb-5 rounded-xl px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>
-        {translate('bord.ajouterMessage')}
+        {translate('dashboard.addMessage')}
       </button>
     )
   }
@@ -300,15 +300,15 @@ function CoachMessage({ clubId }: { clubId: string }) {
   return (
     <section data-testid="team-message" className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${forgotten ? C.amberBd : C.accentBd}` }}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.messageEquipe')}</span>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('dashboard.teamMessage')}</span>
         <span className="rounded-md px-2 py-0.5 text-[12px] font-black"
           style={forgotten ? { background: C.amberBg, color: C.amber } : { background: C.accentBg, color: C.accent }}>
-          {since(shown.writtenAt, lang) ?? translate('commun.aLInstant')}
+          {since(shown.writtenAt, lang) ?? translate('common.justNow')}
         </span>
         {manages && (
           <>
-            <button onClick={openForm} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>{translate('commun.modifierMaj')}</button>
-            <button onClick={erase} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.accent }}>{translate('commun.effacer')}</button>
+            <button onClick={openForm} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>{translate('common.editCaps')}</button>
+            <button onClick={erase} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.accent }}>{translate('common.erase')}</button>
           </>
         )}
       </div>
@@ -322,7 +322,7 @@ function CoachMessage({ clubId }: { clubId: string }) {
 // `meta.clubId === clubId`: our club is therefore always side A.
 function Banner({ live, next, teams, manages, keepsScore }: { live?: Match; next?: Match; teams: Record<string, Team>; manages: boolean; keepsScore: boolean }) {
   const translate = useT()
-  const opponent = (m: Match) => teams[m.meta.opponentId]?.name ?? translate('bord.adversaire')
+  const opponent = (m: Match) => teams[m.meta.opponentId]?.name ?? translate('dashboard.opponent')
   if (live) {
     const ls = liveState(live)
     const dc = displayClock(live)
@@ -330,15 +330,15 @@ function Banner({ live, next, teams, manages, keepsScore }: { live?: Match; next
     const opp = ls.score.b
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
-        <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.greenFill, color: C.onGreen }}>{translate('bord.enDirect')}</span>
+        <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.greenFill, color: C.onGreen }}>{translate('dashboard.live')}</span>
         <span className="nums text-3xl font-black tabular-nums">{mine} – {opp}</span>
-        <span className="text-sm font-bold" style={{ color: C.muted }}>{translate('bord.contre', { team: opponent(live) })}</span>
+        <span className="text-sm font-bold" style={{ color: C.muted }}>{translate('dashboard.versus', { team: opponent(live) })}</span>
         <span className="nums text-sm font-bold" style={{ color: C.faint }}>{dc.label} · {dc.clock}</span>
         {/* Everyone reads the live score; opening the scorer's table is the gesture of
             whoever keeps it, and they alone are invited to. */}
         {keepsScore && (
           <Link to={`/match/${live.id}/live`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-            {translate('bord.ouvrirTable')}
+            {translate('dashboard.openScorersTable')}
           </Link>
         )}
       </div>
@@ -348,18 +348,18 @@ function Banner({ live, next, teams, manages, keepsScore }: { live?: Match; next
     const f = fmtDate(next.meta.date)
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.prochaineRencontre')}</span>
-        <span className="text-sm font-bold">{translate('bord.contre', { team: opponent(next) })}</span>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('dashboard.nextGame')}</span>
+        <span className="text-sm font-bold">{translate('dashboard.versus', { team: opponent(next) })}</span>
         <span className="text-sm" style={{ color: C.muted }}>{[f.long, next.meta.time, next.meta.venue].filter(Boolean).join(' · ')}</span>
-        <Link to={`/match/${next.id}`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>{translate('bord.voirFiche')}</Link>
+        <Link to={`/match/${next.id}`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>{translate('dashboard.viewRecord')}</Link>
       </div>
     )
   }
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-      <span className="text-sm" style={{ color: C.muted }}>{translate('bord.aucuneRencontrePrevue')}</span>
+      <span className="text-sm" style={{ color: C.muted }}>{translate('dashboard.noGameScheduled')}</span>
       {/* Planning writes: the shortcut only shows to whoever manages the club. */}
-      {manages && <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('bord.planifierRencontre')}</Link>}
+      {manages && <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('dashboard.planGame')}</Link>}
     </div>
   )
 }
@@ -372,9 +372,9 @@ function NextFixture({ fixture, teams, players, convocation, schemas, manages }:
   if (!fixture) {
     return (
       <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.prochaineEcheance')}</span>
-        <span className="text-sm" style={{ color: C.muted }}>{translate('bord.rienDePlanifie')}</span>
-        {manages && <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('bord.planifier')}</Link>}
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('dashboard.nextFixture')}</span>
+        <span className="text-sm" style={{ color: C.muted }}>{translate('dashboard.nothingPlanned')}</span>
+        {manages && <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('dashboard.plan')}</Link>}
       </div>
     )
   }
@@ -387,15 +387,15 @@ function NextFixture({ fixture, teams, players, convocation, schemas, manages }:
     const upcoming = schemas.filter((s) => t.playIds?.includes(s.id))
     return (
       <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.prochaineEcheance')}</span>
-        <p className="mt-1 text-sm font-bold">{translate('bord.entrainement')}</p>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('dashboard.nextFixture')}</span>
+        <p className="mt-1 text-sm font-bold">{translate('dashboard.training')}</p>
         <p className="text-sm" style={{ color: C.muted }}>{[f.long, t.time, t.place].filter(Boolean).join(' · ') || '—'}</p>
-        <p className="mt-1 text-sm" style={{ color: C.muted }}>{translate('bord.themeSeance', { theme: t.theme ?? '—' })}</p>
+        <p className="mt-1 text-sm" style={{ color: C.muted }}>{translate('dashboard.sessionFocus', { theme: t.theme ?? '—' })}</p>
         {upcoming.length > 0 && (
           <div className="mt-3 border-t pt-3" style={{ borderColor: C.border }}>
             {/* The shortest path between "it is Tuesday" and "here is what we are
                 working on": each scheduled play opens its viewer directly. */}
-            <p className="text-sm font-bold">{translate('bord.auProgramme')}</p>
+            <p className="text-sm font-bold">{translate('dashboard.onTheProgramme')}</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {upcoming.map((s) => (
                 <Link key={s.id} to={`/schemas/${s.id}/lecteur`} className="rounded-lg px-2.5 py-1 text-[12px] font-bold"
@@ -412,7 +412,7 @@ function NextFixture({ fixture, teams, players, convocation, schemas, manages }:
 
   const m = fixture.match
   const f = fmtDate(m.meta.date)
-  const opponent = teams[m.meta.opponentId]?.name ?? translate('match.adversaire')
+  const opponent = teams[m.meta.opponentId]?.name ?? translate('match.opponent')
   const calledUp = (convocation?.playerIds ?? [])
     .map((id) => players.find((p) => p.id === id))
     .filter((p): p is Player => !!p)
@@ -420,8 +420,8 @@ function NextFixture({ fixture, teams, players, convocation, schemas, manages }:
 
   return (
     <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-      <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.prochaineEcheance')}</span>
-      <p className="mt-1 text-sm font-bold">{translate('bord.contre', { team: opponent })}</p>
+      <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('dashboard.nextFixture')}</span>
+      <p className="mt-1 text-sm font-bold">{translate('dashboard.versus', { team: opponent })}</p>
       <p className="text-sm" style={{ color: C.muted }}>{[f.long, m.meta.time, m.meta.venue].filter(Boolean).join(' · ') || '—'}</p>
       {/* The call-up lives on the game's record, where it belongs — but this is where
           people look at it. The link goes straight there, to the anchor: without it,
@@ -434,11 +434,11 @@ function NextFixture({ fixture, teams, players, convocation, schemas, manages }:
             three lines beside the button, the row breaks in two. */}
         <div className="min-w-[180px] flex-1">
           {calledUp.length === 0 ? (
-            <p className="text-sm font-bold" style={{ color: C.amber }}>{translate('bord.personneConvoquee')}</p>
+            <p className="text-sm font-bold" style={{ color: C.amber }}>{translate('dashboard.nobodyCalledUp')}</p>
           ) : (
             <>
-              <p className="text-sm font-bold">{translate('compte.convoque', { count: calledUp.length })}</p>
-              {meetingPoint && <p className="mt-0.5 text-sm" style={{ color: C.muted }}>{translate('apercu.rendezVous', { detail: meetingPoint })}</p>}
+              <p className="text-sm font-bold">{translate('count.calledUp', { count: calledUp.length })}</p>
+              {meetingPoint && <p className="mt-0.5 text-sm" style={{ color: C.muted }}>{translate('preview.meetingPoint', { detail: meetingPoint })}</p>}
               <p className="mt-1 text-sm" style={{ color: C.muted }}>{calledUp.map((p) => `${p.lastName} ${p.firstName}`).join(', ')}</p>
             </>
           )}
@@ -448,7 +448,7 @@ function NextFixture({ fixture, teams, players, convocation, schemas, manages }:
         {manages && (
           <Link to={`/match/${m.id}#convocation`} className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
             style={calledUp.length === 0 ? { background: C.brand, color: C.onBrand } : { border: bd, color: C.text }}>
-            {calledUp.length === 0 ? translate('bord.convoquerEquipe') : translate('bord.modifierConvocation')}
+            {calledUp.length === 0 ? translate('dashboard.callUpTeam') : translate('dashboard.editCallUp')}
           </Link>
         )}
       </div>
@@ -485,24 +485,24 @@ function GettingStarted({ roster, otherTeams, clubId, manages }: { roster: numbe
   const steps = [
     {
       done: roster >= 5,
-      title: roster === 0 ? translate('commencer.effectifVide') : translate('commencer.effectif', { n: translate('commun.joueur', { count: roster }) }),
-      detail: roster >= 5 ? translate('commencer.effectifPret') : translate('commencer.effectifIncomplet'),
+      title: roster === 0 ? translate('start.rosterEmpty') : translate('start.roster', { n: translate('common.player', { count: roster }) }),
+      detail: roster >= 5 ? translate('start.rosterReady') : translate('start.rosterIncomplete'),
       to: `/teams/${clubId}`,
-      action: translate('commencer.completer'),
+      action: translate('start.complete'),
     },
     {
       done: otherTeams > 0,
-      title: translate('commencer.adversaireTitre'),
-      detail: translate('commencer.adversaireDetail'),
+      title: translate('start.opponentTitle'),
+      detail: translate('start.opponentDetail'),
       to: '/teams/new',
-      action: translate('commencer.nouvelleEquipe'),
+      action: translate('start.newTeam'),
     },
     {
       done: false,
-      title: translate('commencer.rencontreTitre'),
-      detail: translate('commencer.rencontreDetail'),
+      title: translate('start.gameTitle'),
+      detail: translate('start.gameDetail'),
       to: '/match/new',
-      action: translate('commencer.nouvelleRencontre'),
+      action: translate('start.newGame'),
     },
   ]
   const current = steps.findIndex((e) => !e.done)
@@ -510,12 +510,12 @@ function GettingStarted({ roster, otherTeams, clubId, manages }: { roster: numbe
   return (
     <section className="mt-5 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
       <h2 className="text-base font-extrabold tracking-tight">
-        {roster >= 5 ? translate('commencer.titrePret') : translate('commencer.titre')}
+        {roster >= 5 ? translate('start.titleReady') : translate('start.title')}
       </h2>
       <p className="mt-1 text-[13px]" style={{ color: C.muted }}>
         {manages
-          ? translate('commencer.sousTitreGere')
-          : translate('commencer.sousTitreVisiteur')}
+          ? translate('start.subtitleManager')
+          : translate('start.subtitleVisitor')}
       </p>
 
       <ol className="mt-4 space-y-2">

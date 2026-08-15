@@ -21,7 +21,7 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
   const [players, setPlayers] = useState<Record<string, Player>>({})
   // Placeholders until the real names arrive: the effects below replace them within
   // the first frames, but a projected screen must never show an empty label.
-  const [names, setNames] = useState<Record<TeamSide, string>>(() => ({ A: translate('match.locaux'), B: translate('match.visiteurs') }))
+  const [names, setNames] = useState<Record<TeamSide, string>>(() => ({ A: translate('match.home'), B: translate('match.away') }))
   const [nowMs, setNowMs] = useState(() => Date.now())
   // One shot chart open across the whole screen: it is often projected in the hall,
   // and two charts at once would make it unreadable from a distance.
@@ -65,14 +65,14 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
       for (const p of roster) map[p.id] = p
       setPlayers(map)
       setNames({
-        A: teams.find((t) => t.id === match.meta.clubId)?.name ?? translate('match.locaux'),
-        B: teams.find((t) => t.id === match.meta.opponentId)?.name ?? translate('match.visiteurs'),
+        A: teams.find((t) => t.id === match.meta.clubId)?.name ?? translate('match.home'),
+        B: teams.find((t) => t.id === match.meta.opponentId)?.name ?? translate('match.away'),
       })
     })
   }, [match?.meta.clubId, match?.meta.opponentId, translate])
 
-  if (match === undefined) return <Screen><p style={{ color: C.muted }}>{translate('commun.chargement')}</p></Screen>
-  if (match === null) return <Screen><p style={{ color: C.muted }}>{translate('apercu.introuvable')}</p></Screen>
+  if (match === undefined) return <Screen><p style={{ color: C.muted }}>{translate('common.loading')}</p></Screen>
+  if (match === null) return <Screen><p style={{ color: C.muted }}>{translate('preview.notFound')}</p></Screen>
 
   const ls = liveState(match)
   const live = match.status === 'live'
@@ -98,7 +98,7 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
           <span className="flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-black uppercase tracking-wide"
             style={live ? { background: C.greenFill, color: C.onGreen } : finished ? { background: C.neutralBg, color: C.muted } : { background: C.amberBg, color: C.amber }}>
             {live && <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: C.green }} />}
-            {live ? translate('bord.enDirect') : finished ? translate('spect.termine') : translate('spect.aVenir')}
+            {live ? translate('dashboard.live') : finished ? translate('spectator.finished') : translate('spectator.upcoming')}
           </span>
         </div>
 
@@ -118,10 +118,10 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
         </div>
         <div className="mt-3 flex flex-col items-center gap-1">
           <span className="nums rounded-lg px-3.5 py-1.5 text-base font-black tabular-nums" style={{ background: C.card, color: finished ? C.muted : C.text, border: `1px solid ${C.border}` }}>
-            {finished ? translate('resume.final').toUpperCase() : `${periodLabel} · ${fmt(displaySec)}`}
+            {finished ? translate('summary.final').toUpperCase() : `${periodLabel} · ${fmt(displaySec)}`}
           </span>
           {!finished && ls.clockRunning && !canSimulate && (
-            <span className="text-[12px] font-semibold" style={{ color: C.faint }}>{translate('spect.chronoMaj')}</span>
+            <span className="text-[12px] font-semibold" style={{ color: C.faint }}>{translate('spectator.clockNote')}</span>
           )}
         </div>
 
@@ -138,7 +138,7 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
           <OpponentPanel name={names.B} score={ls.score.b} />
         </div>
 
-        <p className="mt-6 text-center text-[12px]" style={{ color: C.faint }}>{translate('spect.majAuto')}</p>
+        <p className="mt-6 text-center text-[12px]" style={{ color: C.faint }}>{translate('spectator.autoRefresh')}</p>
       </div>
     </Screen>
   )
@@ -175,9 +175,9 @@ function MetaRow({ label, fouls, bonus, to }: { label: string; fouls: number; bo
     <div className="flex items-center justify-between gap-2 rounded-xl px-3 py-2" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <span className="truncate text-[12px] font-bold" style={{ color: C.muted }}>{label}</span>
       <span className="flex shrink-0 items-center gap-2 text-[12px] font-bold">
-        {bonus && <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: C.dangerFill, color: C.onDanger }}>{translate('panneau.bonus')}</span>}
-        <span style={{ color: C.faint }}>{translate('panneau.fautes')} <span style={{ color: C.text }}>{fouls}</span></span>
-        <span style={{ color: C.faint }}>{translate('spect.tm')} <span style={{ color: C.text }}>{to}</span></span>
+        {bonus && <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: C.dangerFill, color: C.onDanger }}>{translate('panel.bonus')}</span>}
+        <span style={{ color: C.faint }}>{translate('panel.fouls')} <span style={{ color: C.text }}>{fouls}</span></span>
+        <span style={{ color: C.faint }}>{translate('spectator.to')} <span style={{ color: C.text }}>{to}</span></span>
       </span>
     </div>
   )
@@ -192,7 +192,7 @@ function OpponentPanel({ name, score }: { name: string; score: number }) {
     <section className="flex flex-col items-center justify-center gap-2 rounded-2xl px-4 py-8 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <h3 className="text-sm font-extrabold uppercase tracking-wide">{name}</h3>
       <span className="nums text-6xl font-black leading-none tabular-nums" style={{ color: C.accent }}>{score}</span>
-      <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('spect.scoreGlobal')}</p>
+      <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('spectator.totalScore')}</p>
     </section>
   )
 }
@@ -217,8 +217,8 @@ function StatList({ name, match, players, openId, onToggle }: {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-[12px] font-bold uppercase" style={{ color: C.faint }}>
-              <th className="px-3 py-2 text-left">{translate('equipe.numero')}</th><th className="px-2 py-2 text-left">{translate('resume.thJoueur')}</th>
-              <Sth>{translate('resume.thPts')}</Sth><Sth>{translate('resume.th3pts')}</Sth><Sth>{translate('resume.thPd')}</Sth><Sth>{translate('spect.reb')}</Sth><Sth>{translate('resume.thCt')}</Sth><Sth>{translate('spect.f')}</Sth>
+              <th className="px-3 py-2 text-left">{translate('team.number')}</th><th className="px-2 py-2 text-left">{translate('summary.thPlayer')}</th>
+              <Sth>{translate('summary.thPts')}</Sth><Sth>{translate('summary.th3pt')}</Sth><Sth>{translate('summary.thAst')}</Sth><Sth>{translate('spectator.reb')}</Sth><Sth>{translate('summary.thBlk')}</Sth><Sth>{translate('spectator.pf')}</Sth>
             </tr>
           </thead>
           <tbody>
@@ -244,7 +244,7 @@ function StatList({ name, match, players, openId, onToggle }: {
                     <tr style={{ background: C.panel }}>
                       <td colSpan={8} className="px-3 pb-4 pt-1">
                         {shots.length === 0
-                          ? <p className="py-6 text-center text-sm" style={{ color: C.muted }}>{translate('joueur.aucunTirRencontre')}</p>
+                          ? <p className="py-6 text-center text-sm" style={{ color: C.muted }}>{translate('player.noShotInGame')}</p>
                           : <ShotChart shots={shots} minAttempts={1} />}
                       </td>
                     </tr>
@@ -252,9 +252,9 @@ function StatList({ name, match, players, openId, onToggle }: {
                 </Fragment>
               )
             })}
-            {rows.length === 0 && <tr><td colSpan={8} className="px-3 py-6 text-center text-sm" style={{ color: C.muted }}>{translate('spect.pasDeStats')}</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={8} className="px-3 py-6 text-center text-sm" style={{ color: C.muted }}>{translate('spectator.noStats')}</td></tr>}
             <tr style={{ borderTop: `2px solid ${C.border}`, background: C.panel }}>
-              <td className="px-3 py-2"></td><td className="px-2 py-2 text-[12px] font-black uppercase">{translate('spect.total')}</td>
+              <td className="px-3 py-2"></td><td className="px-2 py-2 text-[12px] font-black uppercase">{translate('spectator.total')}</td>
               <td className="px-3 py-2 text-center font-black tabular-nums" style={{ color: C.accent }}>{t.points}</td>
               <Std b>{t.threes}</Std><Std b>{t.assists}</Std><Std b>{t.offRebounds + t.defRebounds}</Std><Std b>{t.blocks}</Std><Std b>{t.fouls}</Std>
             </tr>

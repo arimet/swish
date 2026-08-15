@@ -206,7 +206,7 @@ function Ball({ t, h }: { t: Step; h: number }) {
     }
   }
   if (!at) return null
-  return <circle aria-label={translate('sch.ballon')} cx={at.x} cy={at.y} r={28} fill={T.ball} stroke={T.court} strokeWidth={6} />
+  return <circle aria-label={translate('play.ball')} cx={at.x} cy={at.y} r={28} fill={T.ball} stroke={T.court} strokeWidth={6} />
 }
 
 /** Cone, loose ball, agility ladder: the drill's equipment, shared by every step. */
@@ -255,7 +255,7 @@ export function PlayBoard({ schema, stepIndex, step, onPointerDown, onPointerMov
     <svg
       viewBox={`0 0 ${W} ${h}`}
       role={interactive ? 'application' : 'img'}
-      aria-label={translate('sch.tableauTactique', { name: schema.name })}
+      aria-label={translate('play.board', { name: schema.name })}
       onPointerDown={apercu ? undefined : onPointerDown}
       onPointerMove={apercu ? undefined : onPointerMove}
       onPointerUp={apercu ? undefined : onPointerUp}

@@ -70,7 +70,7 @@ const POSITIONS: Position[] = [1, 2, 3, 4, 5]
  * halfway along the attacker-to-basket segment), the ball with the point guard. On a
  * full court the setup occupies the front half. The `id` is left to persistence.
  */
-export const DEFAULT_PLAY_NAME = 'sch.nouveauNom'
+export const DEFAULT_PLAY_NAME = 'play.newName'
 
 export function newPlay(clubId: string, court: Court, defense: boolean): Omit<Play, 'id'> {
   const basket = BASKET[court][0]
@@ -158,12 +158,12 @@ export interface Occupant { key: string; n?: number }
 
 function backcourtOccupant(s: Play): Occupant | null {
   for (const t of s.steps) {
-    for (const p of t.markers) if (p.at.y > 0.5) return { key: 'sch.occPoste', n: p.position }
-    for (const fl of t.arrows) if (fl.points.some((p) => p.y > 0.5)) return { key: 'sch.occFleche', n: fl.from.position }
+    for (const p of t.markers) if (p.at.y > 0.5) return { key: 'play.occPosition', n: p.position }
+    for (const fl of t.arrows) if (fl.points.some((p) => p.y > 0.5)) return { key: 'play.occArrow', n: fl.from.position }
   }
-  const noms: Record<Prop['kind'], string> = { cone: 'sch.occPlot', ball: 'sch.occBallonPose', ladder: 'sch.occEchelle' }
+  const noms: Record<Prop['kind'], string> = { cone: 'play.occCone', ball: 'play.occLooseBall', ladder: 'play.occLadder' }
   for (const o of s.props) if (o.at.y > 0.5) return { key: noms[o.kind] }
-  for (const t of s.steps) if ('x' in t.ball && t.ball.y > 0.5) return { key: 'sch.occBallon' }
+  for (const t of s.steps) if ('x' in t.ball && t.ball.y > 0.5) return { key: 'play.occBall' }
   return null
 }
 

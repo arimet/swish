@@ -10,7 +10,7 @@ import { translator } from './index'
  *
  * The defect this file catches cannot be caught any other way: a key written in a
  * component but absent from the catalogue **compiles**, passes type checking, and
- * shows on screen as it is — "nav.calendrier" spelled out in the navigation bar. That
+ * shows on screen as it is — "nav.calendar" spelled out in the navigation bar. That
  * happened during the shell's migration, between two steps, without a single tool
  * blinking.
  *
@@ -38,7 +38,7 @@ function sources(): string[] {
  *
  * The first version only read `t('…')`, and a mutation caught it out: the navigation
  * labels and the page titles are keys filed in module-level arrays —
- * `{ label: 'nav.calendrier' }` — and translated at render time. A typo went through
+ * `{ label: 'nav.calendar' }` — and translated at render time. A typo went through
  * unseen there, which is exactly the case we are trying to cover.
  *
  * So keys are recognised by their **shape**: a family known to the catalogue, a dot,
@@ -105,9 +105,9 @@ describe('the translation catalogue', () => {
   })
 
   it('interpolates and agrees the plural in both languages', () => {
-    expect(translator('fr')('commun.joueur', { count: 1 })).toBe('1 joueur')
-    expect(translator('fr')('commun.joueur', { count: 3 })).toBe('3 joueurs')
-    expect(translator('en')('commun.joueur', { count: 1 })).toBe('1 player')
-    expect(translator('en')('commun.joueur', { count: 3 })).toBe('3 players')
+    expect(translator('fr')('common.player', { count: 1 })).toBe('1 joueur')
+    expect(translator('fr')('common.player', { count: 3 })).toBe('3 joueurs')
+    expect(translator('en')('common.player', { count: 1 })).toBe('1 player')
+    expect(translator('en')('common.player', { count: 3 })).toBe('3 players')
   })
 })

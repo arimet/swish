@@ -27,15 +27,15 @@ export function validateEvent(match: Match, event: GameEvent): string | null {
   const { events } = match
   switch (event.type) {
     case 'CLOCK_START':
-      if (clockRunning(events)) return 'regle.chronoDejaLance'
+      if (clockRunning(events)) return 'rule.clockAlreadyRunning'
       return null
     case 'CLOCK_STOP':
-      if (!clockRunning(events)) return 'regle.chronoDejaArrete'
+      if (!clockRunning(events)) return 'rule.clockAlreadyStopped'
       return null
     case 'SCORE':
     case 'MISS':
       if (!clockStartedThisPeriod(events, event.period))
-        return 'regle.avantChrono'
+        return 'rule.beforeClockStarts'
       return null
     default:
       return null

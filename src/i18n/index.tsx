@@ -13,7 +13,7 @@ import { en } from './en'
  *
  * Direct consequence on the fallback: a key missing from English falls back to
  * **French**, never to the key itself. A half-translated screen is still a screen
- * you can use; a screen strewn with `dashboard.emptyTitle` is not.
+ * you can use; a screen strewn with raw dotted identifiers is not.
  */
 export type Lang = 'fr' | 'en'
 
@@ -126,7 +126,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
     document.documentElement.lang = lang
     // The tab title follows too: `index.html` can only carry one, and it would stay
     // French in an application switched to English.
-    document.title = translator(lang)('app.titre')
+    document.title = translator(lang)('app.title')
   }, [lang])
 
   const setLang = useCallback((l: Lang) => {

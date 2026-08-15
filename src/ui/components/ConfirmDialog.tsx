@@ -17,8 +17,8 @@ export function ConfirmDialog({ open, title, message, confirmLabel, cancelLabel,
   const [typed, setTyped] = useState('')
   /* The default labels resolve here and not in the signature: a default parameter
      cannot call a hook. */
-  const confirmText = confirmLabel ?? translate('commun.confirmer')
-  const cancelText = cancelLabel ?? translate('commun.annuler')
+  const confirmText = confirmLabel ?? translate('common.confirm')
+  const cancelText = cancelLabel ?? translate('common.cancel')
   // The input resets on every close: reopening the dialog must not find the
   // confirmation already filled in from last time.
   const close = () => { setTyped(''); onClose() }
@@ -31,7 +31,7 @@ export function ConfirmDialog({ open, title, message, confirmLabel, cancelLabel,
         {expectedInput && (
           <>
             <label htmlFor="confirm-saisie" className="mt-1 text-[13px] font-semibold">
-              {translate('dialogue.saisissez', { text: expectedInput ?? '' })}
+              {translate('dialog.typeToConfirm', { text: expectedInput ?? '' })}
             </label>
             <input
               id="confirm-saisie" autoFocus value={typed} onChange={(e) => setTyped(e.target.value)}

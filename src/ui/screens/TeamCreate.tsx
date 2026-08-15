@@ -51,29 +51,29 @@ export function TeamCreate() {
 
   return (
     <div className="p-6">
-      <Link to="/teams" className="-mx-2 inline-block px-2 py-1.5 text-sm font-semibold" style={{ color: C.muted }}>{translate('equipe.retourEquipes')}</Link>
+      <Link to="/teams" className="-mx-2 inline-block px-2 py-1.5 text-sm font-semibold" style={{ color: C.muted }}>{translate('team.backToTeams')}</Link>
       {/* A real heading, no longer the subtitle that stood in for one: this screen
           lives outside the shell, so its header does not name it on its behalf. */}
-      <h1 className="mb-6 mt-2 text-2xl font-extrabold tracking-tight">{translate('creation.titre')}</h1>
+      <h1 className="mb-6 mt-2 text-2xl font-extrabold tracking-tight">{translate('create.title')}</h1>
 
       <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
         <div className="space-y-5 self-start rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-          <div><Label htmlFor="team-name">{translate('creation.nomEquipe')}</Label>
-            <input id="team-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={translate('creation.nomPlaceholder')} style={{ ...field, width: '100%' }} /></div>
-          <div><Label htmlFor="team-coach">{translate('equipe.entraineur')}</Label>
-            <input id="team-coach" value={coach} onChange={(e) => setCoach(e.target.value)} placeholder={translate('creation.entraineurPlaceholder')} style={{ ...field, width: '100%' }} /></div>
-          <p className="text-[12px]" style={{ color: C.muted }}>{translate('creation.joueurAjoute', { count: roster.length })}</p>
+          <div><Label htmlFor="team-name">{translate('create.teamName')}</Label>
+            <input id="team-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={translate('create.namePlaceholder')} style={{ ...field, width: '100%' }} /></div>
+          <div><Label htmlFor="team-coach">{translate('team.coach')}</Label>
+            <input id="team-coach" value={coach} onChange={(e) => setCoach(e.target.value)} placeholder={translate('create.coachPlaceholder')} style={{ ...field, width: '100%' }} /></div>
+          <p className="text-[12px]" style={{ color: C.muted }}>{translate('create.playerAdded', { count: roster.length })}</p>
         </div>
 
         <div className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-          <Label>{translate('creation.joueurs')}</Label>
+          <Label>{translate('create.players')}</Label>
           {roster.length > 0 && (
             <ul className="mb-3 grid gap-1.5 sm:grid-cols-2">
               {roster.map((p, i) => (
                 <li key={i} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: C.panel }}>
                   <NumBadge n={p.number} size="h-7 w-7 rounded-lg text-xs" />
                   <span className="font-semibold">{p.lastName}</span><span style={{ color: C.muted }}>{p.firstName}</span>
-                  <button onClick={() => setRoster((r) => r.filter((_, j) => j !== i))} className="ml-auto text-xs font-semibold" style={{ color: C.accent }}>{translate('equipe.retirer')}</button>
+                  <button onClick={() => setRoster((r) => r.filter((_, j) => j !== i))} className="ml-auto text-xs font-semibold" style={{ color: C.accent }}>{translate('team.remove')}</button>
                 </li>
               ))}
             </ul>
@@ -83,15 +83,15 @@ export function TeamCreate() {
               moment you check you are filling the right box, and a screen reader
               announced nothing but "edit text". */}
           <div className="grid grid-cols-[68px_1fr_1fr_44px] items-end gap-2">
-            <div><Label htmlFor="roster-num">{translate('equipe.numero')}</Label>
+            <div><Label htmlFor="roster-num">{translate('team.number')}</Label>
               <input id="roster-num" value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center', width: '100%' }} /></div>
-            <div><Label htmlFor="roster-last">{translate('equipe.nom')}</Label>
+            <div><Label htmlFor="roster-last">{translate('team.lastName')}</Label>
               <input id="roster-last" value={ln} onChange={(e) => setLn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addToRoster()} style={{ ...field, width: '100%' }} /></div>
-            <div><Label htmlFor="roster-first">{translate('equipe.prenom')}</Label>
+            <div><Label htmlFor="roster-first">{translate('team.firstName')}</Label>
               <input id="roster-first" value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addToRoster()} style={{ ...field, width: '100%' }} /></div>
-            <button onClick={addToRoster} aria-label={translate('creation.ajouterJoueur')} className="grid h-11 w-11 place-items-center rounded-xl text-xl font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>+</button>
+            <button onClick={addToRoster} aria-label={translate('create.addPlayer')} className="grid h-11 w-11 place-items-center rounded-xl text-xl font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>+</button>
           </div>
-          {roster.length === 0 && <p className="mt-3 text-sm" style={{ color: C.muted }}>{translate('creation.consigne')}</p>}
+          {roster.length === 0 && <p className="mt-3 text-sm" style={{ color: C.muted }}>{translate('create.instruction')}</p>}
         </div>
       </div>
 
@@ -106,9 +106,9 @@ export function TeamCreate() {
           protect, and the administrator code defends data rather than access. From the
           second team on, the gate goes back to work. */}
       <div className="mt-6 flex justify-end gap-3">
-        <Link to="/teams" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('commun.annuler')}</Link>
+        <Link to="/teams" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('common.cancel')}</Link>
         <button onClick={() => (founding ? create() : guard('manage', create))} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
-          {founding ? translate('creation.creerMonEquipe') : translate('creation.creerEquipe')}
+          {founding ? translate('create.createMyTeam') : translate('create.createTeam')}
         </button>
       </div>
     </div>

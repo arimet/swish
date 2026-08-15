@@ -30,7 +30,7 @@ export function SchemaView() {
   if (schema === null) return (
     <div className="p-6">
       <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
-        {translate('sch.introuvable')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{translate('equipe.retour')}</Link>
+        {translate('play.notFound')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{translate('team.back')}</Link>
       </p>
     </div>
   )
@@ -44,17 +44,17 @@ export function SchemaView() {
   return (
     <div className="p-6">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Link to="/schemas" aria-label={translate('sch.retourSchemas')} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
+        <Link to="/schemas" aria-label={translate('play.backToPlays')} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
         <div className="min-w-0 flex-1 basis-40">
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.name}</h1>
           {/* The same marks as on the library card: you recognise at a glance the
               play you have just opened. */}
           <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold" style={{ color: C.muted }}>
             <span className="rounded-md px-1.5 py-0.5" style={{ background: C.card2 }}>
-              {translate(schema.court === 'half' ? 'sch.demiTerrain' : 'sch.terrainComplet')}
+              {translate(schema.court === 'half' ? 'play.halfCourt' : 'play.fullCourt')}
             </span>
-            <span>{translate('sch.compteTemps', { count: schema.steps.length })}</span>
-            {schema.defense && <span>{translate('sch.defense')}</span>}
+            <span>{translate('play.stepCount', { count: schema.steps.length })}</span>
+            {schema.defense && <span>{translate('play.defence')}</span>}
           </p>
         </div>
         {/* One filled button per screen: "Play", which is what you come to the
@@ -63,9 +63,9 @@ export function SchemaView() {
             like Edit — which keeps its administrator code and only renders for
             whoever holds it. */}
         <div className="flex shrink-0 items-center gap-2">
-          <button onClick={() => setSharing(true)} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>{translate('sch.partager')}</button>
-          {can('manage') && <button onClick={edit} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>{translate('commun.modifierMaj')}</button>}
-          <Link to={`/schemas/${id}/lecteur`} className="flex h-11 items-center rounded-xl px-4 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('sch.jouer')}</Link>
+          <button onClick={() => setSharing(true)} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>{translate('play.share')}</button>
+          {can('manage') && <button onClick={edit} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>{translate('common.editCaps')}</button>}
+          <Link to={`/schemas/${id}/lecteur`} className="flex h-11 items-center rounded-xl px-4 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('play.play')}</Link>
         </div>
       </div>
 
@@ -86,14 +86,14 @@ export function SchemaView() {
       <div className="mt-3 select-none" style={{ maxWidth: courtWidth(schema.court) }}>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => go(-1)} aria-label={translate('lecteur.precedent')} disabled={index === 0}
+            onClick={() => go(-1)} aria-label={translate('viewer.previous')} disabled={index === 0}
             className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-sm font-black disabled:opacity-30" style={{ background: C.card, border: bd, color: C.text }}
           >
             ◀
           </button>
-          <span className="flex-1 text-center text-sm font-extrabold">{translate('sch.temps', { n: index + 1, total: schema.steps.length })}</span>
+          <span className="flex-1 text-center text-sm font-extrabold">{translate('play.step', { n: index + 1, total: schema.steps.length })}</span>
           <button
-            onClick={() => go(1)} aria-label={translate('lecteur.suivant')} disabled={index === last}
+            onClick={() => go(1)} aria-label={translate('viewer.next')} disabled={index === last}
             className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-sm font-black disabled:opacity-30" style={{ background: C.card, border: bd, color: C.text }}
           >
             ▶

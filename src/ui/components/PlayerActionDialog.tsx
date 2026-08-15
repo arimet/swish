@@ -9,16 +9,16 @@ import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types
 import { TriangleAlert } from 'lucide-react'
 
 const SCORES: { k: ScoreKind; label: string; pts: number }[] = [
-  { k: '2int', label: 'action.2int', pts: 2 },
-  { k: '2ext', label: 'action.2ext', pts: 2 },
-  { k: '3', label: 'action.3', pts: 3 },
-  { k: 'lf', label: 'action.lancerFranc', pts: 1 },
+  { k: '2int', label: 'action.twoInside', pts: 2 },
+  { k: '2ext', label: 'action.twoOutside', pts: 2 },
+  { k: '3', label: 'action.three', pts: 3 },
+  { k: 'lf', label: 'action.freeThrow', pts: 1 },
 ]
 const STATS: { k: StatKind; label: string }[] = [
-  { k: 'assist', label: 'action.passe' },
-  { k: 'block', label: 'action.contre' },
-  { k: 'reb_off', label: 'action.rebOff' },
-  { k: 'reb_def', label: 'action.rebDef' },
+  { k: 'assist', label: 'action.assist' },
+  { k: 'block', label: 'action.block' },
+  { k: 'reb_off', label: 'action.offRebound' },
+  { k: 'reb_def', label: 'action.defRebound' },
 ]
 const ZERO_S: Record<ScoreKind, number> = { '2int': 0, '2ext': 0, '3': 0, lf: 0 }
 const ZERO_T: Record<StatKind, number> = { assist: 0, reb_off: 0, reb_def: 0, block: 0 }
@@ -62,7 +62,7 @@ export function PlayerActionDialog({
   const pick = (spot: ShotSpot) => {
     const kind = kindAt(spot.x, spot.y)
     if (made) onScore(kind, spot); else onMiss(kind, spot)
-    setConfirmation({ spot, made, label: `${made ? POINTS_LABEL[kind] : translate('action.manqueMaj')} · ${translate(ZONE_LABELS[zoneAt(spot.x, spot.y)])}` })
+    setConfirmation({ spot, made, label: `${made ? POINTS_LABEL[kind] : translate('action.missedCaps')} · ${translate(ZONE_LABELS[zoneAt(spot.x, spot.y)])}` })
     closeTimer.current = setTimeout(close, SHOT_FEEDBACK_MS)
   }
 
@@ -82,17 +82,17 @@ export function PlayerActionDialog({
 
         {/* SHOT: made or missed, then the spot on the court. */}
         <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
-          <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{translate('action.reussi')}</Toggle>
-          <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">{translate('action.manque')}</Toggle>
+          <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{translate('action.made')}</Toggle>
+          <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">{translate('action.missed')}</Toggle>
         </div>
         <p className="mt-2 text-[12px] font-semibold text-[var(--c-muted)]">
-          {made ? translate('action.consigneReussi') : translate('action.consigneManque')}
+          {made ? translate('action.madeHint') : translate('action.missedHint')}
         </p>
         <div className="mt-2"><ShotPicker onPick={pick} confirmation={confirmation} shots={shots} /></div>
 
         <button onClick={() => { onScore('lf'); close() }}
           className="mt-3 w-full rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] py-3 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-accent)] active:scale-[0.98]">
-          {translate('action.plusLancerFranc')}
+          {translate('action.addFreeThrow')}
         </button>
 
         {/* OTHER STATS */}
@@ -109,7 +109,7 @@ export function PlayerActionDialog({
         <button onClick={() => { onFoul('personal'); close() }}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--c-danger-bg)] py-3.5 text-base font-bold text-[var(--c-danger)] transition hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)] active:scale-[0.98]">
           <TriangleAlert className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-          {translate('action.fautePersonnelle')}
+          {translate('action.personalFoul')}
         </button>
 
         {/* CORRECTIONS — folded away: this popup is opened to record, not to undo.
@@ -118,7 +118,7 @@ export function PlayerActionDialog({
         {hasCorrections && (
           <details className="mt-4 border-t border-[var(--c-border)] pt-3">
             <summary className="cursor-pointer list-none text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)] transition hover:text-[var(--c-text)]">
-              {translate('action.corriger')}
+              {translate('action.correct')}
             </summary>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {SCORES.map((s) => (
@@ -130,11 +130,11 @@ export function PlayerActionDialog({
             </div>
             <button disabled={misses <= 0} onClick={() => { onRemoveMiss(); close() }}
               className="mt-2 w-full rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] py-2.5 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)] disabled:opacity-35 disabled:hover:border-[var(--c-border)]">
-              {translate('action.retirerTirManque')} {misses > 0 && <span className="text-[var(--c-muted)]">({misses})</span>}
+              {translate('action.removeMiss')} {misses > 0 && <span className="text-[var(--c-muted)]">({misses})</span>}
             </button>
             <button disabled={fouls <= 0} onClick={() => { onRemoveFoul(); close() }}
               className="mt-2 w-full rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] py-2.5 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)] disabled:opacity-35 disabled:hover:border-[var(--c-border)]">
-              {translate('action.retirerFaute')} {fouls > 0 && <span className="text-[var(--c-muted)]">({fouls})</span>}
+              {translate('action.removeFoul')} {fouls > 0 && <span className="text-[var(--c-muted)]">({fouls})</span>}
             </button>
           </details>
         )}

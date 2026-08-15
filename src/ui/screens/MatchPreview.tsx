@@ -75,7 +75,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
     if (hash === '#convocation' && players.length) document.getElementById('convocation')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
   }, [hash, players.length])
 
-  if (match === null) return <p className="py-16 text-center text-sm" style={{ color: C.muted }}>{translate('apercu.introuvable')}</p>
+  if (match === null) return <p className="py-16 text-center text-sm" style={{ color: C.muted }}>{translate('preview.notFound')}</p>
 
   const nameOf = (id: string) => teams[id]?.name ?? '—'
   const f = fmtDate(match.meta.date)
@@ -104,13 +104,13 @@ export function MatchPreview({ matchId }: { matchId: string }) {
   })
 
   const statusPill =
-    match.status === 'live' ? { label: translate('commun.enCours'), bg: C.greenBg, fg: C.green }
-    : match.status === 'finished' ? { label: translate('commun.terminee'), bg: C.neutralBg, fg: C.muted }
-    : { label: translate('commun.aVenir'), bg: C.amberBg, fg: C.amber }
+    match.status === 'live' ? { label: translate('common.inProgress'), bg: C.greenBg, fg: C.green }
+    : match.status === 'finished' ? { label: translate('common.finished'), bg: C.neutralBg, fg: C.muted }
+    : { label: translate('common.upcoming'), bg: C.amberBg, fg: C.amber }
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageTitle action={<Link to="/calendrier" className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('apercu.retourCalendrier')}</Link>} />
+      <PageTitle action={<Link to="/calendrier" className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('preview.backToCalendar')}</Link>} />
 
       <div className="rounded-2xl p-6" style={{ background: C.card, border: bd }}>
         {/* The league used to be the page's "subtitle"; it was not one, it is a fact
@@ -119,31 +119,31 @@ export function MatchPreview({ matchId }: { matchId: string }) {
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <span className="rounded-md px-2 py-1 text-[12px] font-black uppercase" style={{ background: statusPill.bg, color: statusPill.fg }}>{statusPill.label}</span>
           <span className="min-w-0 truncate text-[12px] font-bold" style={{ color: C.muted }}>{champ(match.meta)}</span>
-          {match.meta.matchNumber && <span className="ml-auto text-[12px] font-bold" style={{ color: C.faint }}>{translate('apercu.rencontreNumero', { n: match.meta.matchNumber })}</span>}
+          {match.meta.matchNumber && <span className="ml-auto text-[12px] font-bold" style={{ color: C.faint }}>{translate('preview.gameNumber', { n: match.meta.matchNumber })}</span>}
         </div>
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <TeamCol id={match.meta.clubId} name={nameOf(match.meta.clubId)} role={translate('match.locaux')} coach={match.meta.coachA} count={match.roster.length} />
-          <span className="text-xl font-black" style={{ color: C.faint }}>{translate('apercu.vs')}</span>
+          <TeamCol id={match.meta.clubId} name={nameOf(match.meta.clubId)} role={translate('match.home')} coach={match.meta.coachA} count={match.roster.length} />
+          <span className="text-xl font-black" style={{ color: C.faint }}>{translate('preview.vs')}</span>
           {/* The opposition has no roster entered for this game: no player count to show. */}
-          <TeamCol id={match.meta.opponentId} name={nameOf(match.meta.opponentId)} role={translate('match.visiteurs')} coach={teams[match.meta.opponentId]?.coach} />
+          <TeamCol id={match.meta.opponentId} name={nameOf(match.meta.opponentId)} role={translate('match.away')} coach={teams[match.meta.opponentId]?.coach} />
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3 border-t pt-5 sm:grid-cols-3" style={{ borderColor: C.border }}>
-          <Info label={translate('match.date')} value={f.long || translate('apercu.aDefinir')} />
-          <Info label={translate('match.heure')} value={match.meta.time || '—'} />
-          <Info label={translate('match.lieu')} value={match.meta.venue || '—'} />
+          <Info label={translate('match.date')} value={f.long || translate('preview.toBeSet')} />
+          <Info label={translate('match.time')} value={match.meta.time || '—'} />
+          <Info label={translate('match.venue')} value={match.meta.venue || '—'} />
         </div>
       </div>
 
       {/* `scroll-mt-6`: the anchor stops below the top edge, not flush against it. */}
       <div id="convocation" className="mt-6 scroll-mt-6 rounded-2xl p-6" style={{ background: C.card, border: bd }}>
         <div className="mb-4 flex items-center justify-between">
-          <SectionTitle>{translate('apercu.convocation')}</SectionTitle>
+          <SectionTitle>{translate('preview.callUp')}</SectionTitle>
           {/* Shown at all times, not only after saving: twelve called up for a game
               where only ten can be listed must be visible without counting boxes. */}
           <span className="rounded-md px-2 py-1 text-[12px] font-black" style={{ background: C.accentBg, color: C.accent }}>
-            {translate('compte.convoque', { count: calledUp.size })}
+            {translate('count.calledUp', { count: calledUp.size })}
           </span>
         </div>
 
@@ -160,26 +160,26 @@ export function MatchPreview({ matchId }: { matchId: string }) {
             </div>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Field id="convoc-heure" label={translate('apercu.heureRdv')} type="time" value={meetTime} onChange={setMeetTime} />
-              <Field id="convoc-lieu" label={translate('apercu.lieuRdv')} value={meetPlace} onChange={setMeetPlace} />
+              <Field id="convoc-heure" label={translate('preview.meetTime')} type="time" value={meetTime} onChange={setMeetTime} />
+              <Field id="convoc-lieu" label={translate('preview.meetPlace')} value={meetPlace} onChange={setMeetPlace} />
             </div>
             <div className="mt-4">
-              <label htmlFor="convoc-note" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('apercu.consignes')}</label>
+              <label htmlFor="convoc-note" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('preview.instructions')}</label>
               <textarea id="convoc-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)}
                 className="mt-1.5 w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
             </div>
 
             <button onClick={saveCallUp} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-              {translate('apercu.enregistrerConvocation')}
+              {translate('preview.saveCallUp')}
             </button>
 
             {/* Like the league results: no synchronisation for the call-up, worded the
                 same way as on the standings screen so as not to suggest two different
                 limits. */}
-            {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('apercu.convocationLocale')}</p>}
+            {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('preview.callUpLocal')}</p>}
           </>
         ) : calledUp.size === 0 ? (
-          <p className="text-sm" style={{ color: C.muted }}>{translate('apercu.personneConvoquee')}</p>
+          <p className="text-sm" style={{ color: C.muted }}>{translate('preview.nobodyCalledUp')}</p>
         ) : (
           <>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -191,7 +191,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
               ))}
             </div>
             {(meetTime || meetPlace) && (
-              <p className="mt-4 text-sm" style={{ color: C.muted }}>{translate('apercu.rendezVous', { detail: [meetTime, meetPlace].filter(Boolean).join(' · ') })}</p>
+              <p className="mt-4 text-sm" style={{ color: C.muted }}>{translate('preview.meetingPoint', { detail: [meetTime, meetPlace].filter(Boolean).join(' · ') })}</p>
             )}
             {note && <p className="mt-1 whitespace-pre-wrap text-sm" style={{ color: C.muted }}>{note}</p>}
           </>
@@ -209,19 +209,19 @@ export function MatchPreview({ matchId }: { matchId: string }) {
             to. */}
         {manages && (
           <button onClick={() => guard('manage', () => setAskDelete(true))} className="mr-auto rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: `1px solid ${C.border}`, color: C.muted }}>
-            {translate('commun.supprimer')}
+            {translate('common.delete')}
           </button>
         )}
         <div className="flex flex-wrap items-center gap-3">
-          <Link to={`/match/${match.id}/watch`} target="_blank" className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}><Eye className="h-4 w-4" strokeWidth={2} />{translate('garde.suiviSpectateur')}</Link>
+          <Link to={`/match/${match.id}/watch`} target="_blank" className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}><Eye className="h-4 w-4" strokeWidth={2} />{translate('gate.spectatorView')}</Link>
           {match.status === 'finished' ? (
-            <Link to={`/match/${match.id}/summary`} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('apercu.voirResume')}</Link>
+            <Link to={`/match/${match.id}/summary`} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('preview.viewSummary')}</Link>
           ) : (
             // Starting or resuming is the scorer's table's gesture: the button is
             // theirs, and does not appear to a visitor reading the record.
             keepsScore && (
               <button onClick={start} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-                {translate(match.status === 'live' ? 'apercu.reprendreRencontre' : 'apercu.demarrerRencontre')}
+                {translate(match.status === 'live' ? 'preview.resumeGame' : 'preview.startGame')}
               </button>
             )
           )}
@@ -229,7 +229,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
       </div>
 
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={remove}
-        title={translate('apercu.supprimerTitre')} message={translate('apercu.supprimerTexte')} confirmLabel={translate('commun.supprimer')} danger />
+        title={translate('preview.deleteTitle')} message={translate('preview.deleteText')} confirmLabel={translate('common.delete')} danger />
     </div>
   )
 }
@@ -241,8 +241,8 @@ function TeamCol({ id, name, role, coach, count }: { id: string; name: string; r
       <TeamBadge id={id} name={name} size="h-14 w-14 text-sm" />
       <span className="line-clamp-2 text-base font-extrabold">{name}</span>
       <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{role}</span>
-      {coach && <span className="text-[12px]" style={{ color: C.faint }}>{translate('apercu.coach', { name: coach })}</span>}
-      {count !== undefined && <span className="text-[12px]" style={{ color: C.faint }}>{translate('commun.joueur', { count })}</span>}
+      {coach && <span className="text-[12px]" style={{ color: C.faint }}>{translate('preview.coach', { name: coach })}</span>}
+      {count !== undefined && <span className="text-[12px]" style={{ color: C.faint }}>{translate('common.player', { count })}</span>}
     </div>
   )
 }

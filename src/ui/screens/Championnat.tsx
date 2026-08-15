@@ -32,7 +32,7 @@ function TeamRow({ id, name, score, won, fieldId, editable, onScore }: {
       <span className="min-w-0 flex-1 truncate text-sm" style={{ color: won ? C.text : C.muted, fontWeight: won ? 800 : 600 }}>{name}</span>
       {editable ? (
         <>
-          <label htmlFor={fieldId} className="sr-only">{translate('champ.scoreDe', { name })}</label>
+          <label htmlFor={fieldId} className="sr-only">{translate('standings.scoreOf', { name })}</label>
           <input
             id={fieldId} type="number" min={0} defaultValue={score}
             style={{ ...field, width: 64, height: 34 }} className="nums shrink-0 text-center text-sm"
@@ -153,7 +153,7 @@ export function Championnat() {
     if (!canAdd) return
     // In basketball there is overtime: a draw does not exist.
     if (Number(homeScore) === Number(awayScore)) {
-      setError(translate('champ.nulImpossible'))
+      setError(translate('standings.noDraws'))
       return
     }
     const leagueLabelValue = league.trim() || FRIENDLY
@@ -162,7 +162,7 @@ export function Championnat() {
     // the standings: nothing in the domain guards against it, so it must be prevented
     // here.
     if ((results ?? []).some((r) => fixtureKey(r.championshipLabel, r.homeId, r.awayId, r.date) === key)) {
-      setError(translate('champ.dejaSaisi'))
+      setError(translate('standings.alreadyEntered'))
       return
     }
     setError('')
@@ -194,22 +194,22 @@ export function Championnat() {
       <div className="space-y-6">
         {results?.length === 0 && (
           <p className="max-w-[75ch] rounded-2xl border border-dashed px-4 py-3 text-sm" style={{ borderColor: C.border, color: C.muted }}>
-            {translate('champ.aucunResultat')}
+            {translate('standings.noResult')}
           </p>
         )}
         {matches === null || results === null ? (
           <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
         ) : groups.length === 0 ? (
-          <p className="rounded-2xl border border-dashed py-10 text-center text-sm" style={{ borderColor: C.border, color: C.muted }}>{translate('champ.aucunClassement')}</p>
+          <p className="rounded-2xl border border-dashed py-10 text-center text-sm" style={{ borderColor: C.border, color: C.muted }}>{translate('standings.noTable')}</p>
         ) : groups.map(({ league: c, lines }) => (
           <section key={c} className="overflow-x-auto rounded-2xl p-4" style={{ background: C.card, border: bd }}>
             <SectionTitle className="mb-3">{c}</SectionTitle>
             <table className="w-full text-sm sm:min-w-[520px]">
               <thead>
                 <tr className="text-left text-[12px] font-bold uppercase" style={{ color: C.faint }}>
-                  <th className="py-1.5 pr-2">#</th><th className="pr-2">{translate('champ.equipe')}</th>
+                  <th className="py-1.5 pr-2">#</th><th className="pr-2">{translate('standings.team')}</th>
                   <th className="hidden px-2 text-center sm:table-cell">J</th><th className="px-2 text-center">V</th><th className="px-2 text-center">D</th>
-                  <th className="hidden px-2 text-center sm:table-cell">{translate('champ.pour')}</th><th className="hidden px-2 text-center sm:table-cell">{translate('champ.contre')}</th><th className="px-2 text-center">{translate('champ.diff')}</th><th className="px-2 text-center">{translate('champ.pts')}</th>
+                  <th className="hidden px-2 text-center sm:table-cell">{translate('standings.for')}</th><th className="hidden px-2 text-center sm:table-cell">{translate('standings.against')}</th><th className="px-2 text-center">{translate('standings.diff')}</th><th className="px-2 text-center">{translate('standings.pts')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -256,26 +256,26 @@ export function Championnat() {
       <section className={formOpen ? 'mt-8 rounded-2xl p-5' : 'mt-6'} style={formOpen ? { background: C.card, border: bd } : undefined}>
         {!formOpen ? (
           <button onClick={() => guard('manage', () => setFormOpen(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-            {translate('champ.saisirResultat')}
+            {translate('standings.enterResult')}
           </button>
         ) : (
         <>
         <div className="mb-4 flex items-center gap-3">
-          <SectionTitle>{translate('champ.saisirTitre')}</SectionTitle>
-          <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
+          <SectionTitle>{translate('standings.enterTitle')}</SectionTitle>
+          <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('common.closeShort')}</button>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Picker id="champ-home" label={translate('champ.equipeRecue')} value={homeId} onChange={changeHomeId} teams={teams} />
-          <Picker id="champ-away" label={translate('champ.equipeVisiteuse')} value={awayId} onChange={changeAwayId} teams={teams} />
-          <Field id="champ-home-score" label={translate('champ.scoreRecue')} type="number" min={0} value={homeScore} onChange={changeHomeScore} />
-          <Field id="champ-away-score" label={translate('champ.scoreVisiteuse')} type="number" min={0} value={awayScore} onChange={changeAwayScore} />
-          <Field id="champ-date" label={translate('champ.dateRencontre')} type="date" value={date} onChange={changeDate} />
-          <Field id="champ-label" label={translate('champ.championnat')} value={league} onChange={changeLeague} />
+          <Picker id="champ-home" label={translate('standings.homeTeam')} value={homeId} onChange={changeHomeId} teams={teams} />
+          <Picker id="champ-away" label={translate('standings.awayTeam')} value={awayId} onChange={changeAwayId} teams={teams} />
+          <Field id="champ-home-score" label={translate('standings.homeScore')} type="number" min={0} value={homeScore} onChange={changeHomeScore} />
+          <Field id="champ-away-score" label={translate('standings.awayScore')} type="number" min={0} value={awayScore} onChange={changeAwayScore} />
+          <Field id="champ-date" label={translate('standings.gameDate')} type="date" value={date} onChange={changeDate} />
+          <Field id="champ-label" label={translate('standings.league')} value={league} onChange={changeLeague} />
         </div>
 
         {alreadyOurGame && (
           <p className="mt-3 rounded-xl px-3 py-2 text-sm" style={{ background: C.amberBg, color: C.amber }}>
-            {translate('champ.dejaConnue')}
+            {translate('standings.alreadyOurGame')}
           </p>
         )}
         {/* A refusal speaks in danger, not in the brand's colour: on an accent
@@ -285,7 +285,7 @@ export function Championnat() {
         )}
 
         <button onClick={add} disabled={!canAdd} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
-          {translate('champ.ajouterResultat')}
+          {translate('standings.addResult')}
         </button>
         </>
         )}
@@ -295,11 +295,11 @@ export function Championnat() {
       {/* 3. The list of entered results. Everyone reads it; correcting and deleting
           stay with administration. */}
       <section className="mt-6 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <SectionTitle className="mb-3">{translate('champ.resultatsSaisis')}</SectionTitle>
+        <SectionTitle className="mb-3">{translate('standings.enteredResults')}</SectionTitle>
         {results === null ? (
           <div className="h-16 animate-pulse rounded-xl" style={{ background: C.panel }} />
         ) : results.length === 0 ? (
-          <p className="py-4 text-center text-sm" style={{ color: C.muted }}>{translate('champ.rienAAfficher')}</p>
+          <p className="py-4 text-center text-sm" style={{ color: C.muted }}>{translate('standings.nothingToShow')}</p>
         ) : (
           /* The results grouped by league, and the league's name written once per
              group — not once per row.
@@ -315,7 +315,7 @@ export function Championnat() {
             {resultsByLeague.map(([league, rows]) => (
               <div key={league}>
                 {resultsByLeague.length > 1 && (
-                  <p className="mb-1 text-[12px] font-bold" style={{ color: C.faint }}>{league || translate('commun.sansChampionnat')}</p>
+                  <p className="mb-1 text-[12px] font-bold" style={{ color: C.faint }}>{league || translate('common.noLeague')}</p>
                 )}
                 {/* Rules, not cards. Each row used to be a card laid inside the
                     section's card: two nested frames for a hierarchy that has only one
@@ -343,7 +343,7 @@ export function Championnat() {
                   />
                 </div>
                 {canCorrect && (
-                  <button onClick={() => remove(r.id)} aria-label={translate('champ.supprimerResultat')}
+                  <button onClick={() => remove(r.id)} aria-label={translate('standings.deleteResult')}
                     className="shrink-0 rounded-lg p-1.5" style={{ color: C.danger }}>
                     <X className="h-4 w-4" strokeWidth={2.5} />
                   </button>
@@ -358,7 +358,7 @@ export function Championnat() {
         {/* Hand-entered results do not go through the synchronisation: without this
             note, someone opening the app on another device would find empty standings
             without understanding why. */}
-        {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('champ.resultatsLocaux')}</p>}
+        {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('standings.resultsLocal')}</p>}
       </section>
     </div>
   )
@@ -378,7 +378,7 @@ function Picker({ id, label, value, onChange, teams }: { id: string; label: stri
     <div>
       <label htmlFor={id} className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</label>
       <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className="mt-1.5 w-full text-sm" style={field}>
-        <option value="">{translate('champ.choisir')}</option>
+        <option value="">{translate('standings.choose')}</option>
         {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
       </select>
     </div>

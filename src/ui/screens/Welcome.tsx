@@ -15,23 +15,23 @@ export function Welcome() {
   const { teams, ready, setClub } = useClub()
   // Until the team list has arrived we do not know whether the club is empty:
   // avoid flashing "no team" for a moment when it is not true.
-  if (!ready) return <div className="grid min-h-dvh place-items-center" style={{ background: C.frame, color: C.muted }}>{translate('commun.chargement')}</div>
+  if (!ready) return <div className="grid min-h-dvh place-items-center" style={{ background: C.frame, color: C.muted }}>{translate('common.loading')}</div>
   return (
     <div className="grid min-h-dvh place-items-center p-6" style={{ background: C.frame, color: C.text }}>
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-2xl" style={{ background: C.brand, color: C.onBrand }}><Ic d={ICON.ball} className="h-6 w-6" /></span>
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">{translate('bienvenue.titre')}</h1>
-            <p className="text-sm" style={{ color: C.muted }}>{translate('bienvenue.question')}</p>
+            <h1 className="text-2xl font-extrabold tracking-tight">{translate('welcome.title')}</h1>
+            <p className="text-sm" style={{ color: C.muted }}>{translate('welcome.question')}</p>
           </div>
         </div>
 
         {teams.length === 0 ? (
           <div className="rounded-2xl p-8 text-center" style={{ border: `1px dashed ${C.border}` }}>
-            <p className="text-sm" style={{ color: C.muted }}>{translate('bienvenue.aucuneEquipe')}</p>
+            <p className="text-sm" style={{ color: C.muted }}>{translate('welcome.noTeam')}</p>
             <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-              {translate('bienvenue.premiereEquipe')}
+              {translate('welcome.firstTeam')}
             </Link>
           </div>
         ) : (
@@ -51,7 +51,7 @@ export function Welcome() {
         )}
 
         <p className="mt-5 text-center text-[12px]" style={{ color: C.faint }}>
-          {translate('bienvenue.modifiable')}
+          {translate('welcome.changeable')}
         </p>
       </div>
     </div>

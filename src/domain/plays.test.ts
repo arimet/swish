@@ -81,7 +81,7 @@ describe('toCourt', () => {
     const s: Play = { id: 'x', ...newPlay('c1', 'full', false) }
     s.steps[0].markers[2].at = { x: 0.5, y: 0.8 }   // position 3 in the back court
     const r = toCourt(s, 'half')
-    expect('refused' in r && r.refused).toEqual({ key: 'sch.occPoste', n: 3 })
+    expect('refused' in r && r.refused).toEqual({ key: 'play.occPosition', n: 3 })
   })
 
   it('accepts full to half when everything fits in the front court', () => {

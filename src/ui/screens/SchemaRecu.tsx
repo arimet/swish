@@ -44,17 +44,17 @@ export function SchemaRecu() {
     return () => { alive = false }
   }, [code])
 
-  if (schema === undefined) return <Screen><p style={{ color: C.muted }}>{translate('recu.ouverture')}</p></Screen>
+  if (schema === undefined) return <Screen><p style={{ color: C.muted }}>{translate('received.opening')}</p></Screen>
   if (schema === null) return (
     <Screen>
       <div className="grid min-h-dvh place-items-center p-6 text-center">
         <div>
-          <p className="text-lg font-extrabold">{translate('recu.lienAbime')}</p>
+          <p className="text-lg font-extrabold">{translate('received.brokenLink')}</p>
           <p className="mt-2 text-sm" style={{ color: C.muted }}>
-            {translate('recu.lienExplication')}
+            {translate('received.brokenLinkHint')}
           </p>
           <Link to="/" className="mt-5 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-            {translate('recu.ouvrirSwish')}
+            {translate('received.openSwish')}
           </Link>
         </div>
       </div>
@@ -82,10 +82,10 @@ export function SchemaRecu() {
     <Screen>
       <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-3 p-4">
         <div>
-          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('recu.titre')}</p>
+          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('received.title')}</p>
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.name}</h1>
           <p className="text-sm" style={{ color: C.muted }}>
-            {translate(schema.court === 'half' ? 'sch.demiTerrain' : 'sch.terrainComplet')} · {translate('sch.compteTemps', { count: schema.steps.length })}{schema.defense ? ` ${translate('sch.defense')}` : ''}
+            {translate(schema.court === 'half' ? 'play.halfCourt' : 'play.fullCourt')} · {translate('play.stepCount', { count: schema.steps.length })}{schema.defense ? ` ${translate('play.defence')}` : ''}
           </p>
         </div>
 
@@ -96,25 +96,25 @@ export function SchemaRecu() {
         </div>
 
         <div className="flex select-none items-center gap-3" style={{ maxWidth: boardWidth }}>
-          <StepButton label={translate('lecteur.precedent')} onClick={() => go(-1)} disabled={index === 0}>◀</StepButton>
-          <span className="flex-1 text-center text-sm font-extrabold">{translate('sch.temps', { n: index + 1, total: schema.steps.length })}</span>
-          <StepButton label={translate('lecteur.suivant')} onClick={() => go(1)} disabled={index === last}>▶</StepButton>
+          <StepButton label={translate('viewer.previous')} onClick={() => go(-1)} disabled={index === 0}>◀</StepButton>
+          <span className="flex-1 text-center text-sm font-extrabold">{translate('play.step', { n: index + 1, total: schema.steps.length })}</span>
+          <StepButton label={translate('viewer.next')} onClick={() => go(1)} disabled={index === last}>▶</StepButton>
         </div>
 
         {/* Until the teams are loaded we do not know whether a club is set: offering
             one or the other too early would make the screen flicker. */}
         {ready && (clubId ? (
           <button onClick={add} className="rounded-2xl py-3.5 text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: boardWidth }}>
-            {translate('recu.ajouter')}
+            {translate('received.add')}
           </button>
         ) : (
           <Link to="/" className="rounded-2xl py-3.5 text-center text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: boardWidth }}>
-            {translate('recu.choisirClub')}
+            {translate('received.chooseClub')}
           </Link>
         ))}
 
         <p className="text-[12px]" style={{ color: C.faint }}>
-          {translate('recu.rienAInstaller')}
+          {translate('received.nothingToInstall')}
         </p>
       </div>
     </Screen>

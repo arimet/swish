@@ -60,7 +60,7 @@ export function Admin() {
      grouping key here: it is translated at the moment of writing it, not before, or
      the two languages would carve out two different groups. */
   const leagueName = useLeagueLabel()
-  const teamName = useCallback((id: string) => teams.find((t) => t.id === id)?.name ?? translate('commun.equipe'), [teams, translate])
+  const teamName = useCallback((id: string) => teams.find((t) => t.id === id)?.name ?? translate('common.team'), [teams, translate])
   const sessions = useMemo(() => trainings.filter((t) => t.clubId === clubId), [trainings, clubId])
 
   // Guard first, mutate second: the scorer's table does not see a confirmation dialog
@@ -73,8 +73,8 @@ export function Admin() {
   }
 
   const deleteGames = (label: string, filter: (m: Match) => boolean, n: number) => ask({
-    title: translate('admin.supprimerRencontresTitre'),
-    message: translate('admin.supprimerRencontresTexte', { count: translate('compte.rencontre', { count: n }), label: label }),
+    title: translate('admin.deleteGamesTitle'),
+    message: translate('admin.deleteGamesText', { count: translate('count.game', { count: n }), label: label }),
     run: () => deleteMatchesWhere(filter),
   })
 
@@ -91,72 +91,72 @@ export function Admin() {
   return (
     <div className="p-6">
       <p className="mb-6 rounded-2xl px-4 py-3 text-sm" style={{ background: C.accentBg, color: C.accent }}>
-        {translate(remoteEnabled() ? 'admin.avertissementPartage' : 'admin.avertissement')}
+        {translate(remoteEnabled() ? 'admin.warningShared' : 'admin.warning')}
       </p>
 
       <div className="space-y-6">
         <SyncToken />
 
-        <Block title={translate('admin.parChampionnat')} help={translate('admin.aideChampionnat')}>
+        <Block title={translate('admin.byLeague')} help={translate('admin.leagueHelp')}>
           {leagues(matches).map((league) => {
             const n = matches.filter(ofLeague(league)).length
             return (
-              <Row key={league} label={leagueName(league)} count={translate('compte.rencontre', { count: n })} action={translate('commun.supprimer')}
-                aria={translate('admin.supprimerRencontresDe', { what: leagueName(league) })} disabled={n === 0}
+              <Row key={league} label={leagueName(league)} count={translate('count.game', { count: n })} action={translate('common.delete')}
+                aria={translate('admin.deleteGamesOf', { what: leagueName(league) })} disabled={n === 0}
                 onClick={() => deleteGames(`« ${leagueName(league)} »`, ofLeague(league), n)} />
             )
           })}
-          {matches.length === 0 && <EmptyRow>{translate('admin.aucuneRencontre')}</EmptyRow>}
+          {matches.length === 0 && <EmptyRow>{translate('admin.noGame')}</EmptyRow>}
         </Block>
 
-        <Block title={translate('admin.parAnnee')} help={translate('admin.aideAnnee')}>
+        <Block title={translate('admin.byYear')} help={translate('admin.yearHelp')}>
           {years(matches).map((year) => {
             const n = matches.filter(ofYear(year)).length
             return (
-              <Row key={year} label={translate('admin.annee', { year })} count={translate('compte.rencontre', { count: n })} action={translate('commun.supprimer')}
-                aria={translate('admin.supprimerRencontresAnnee', { year })} disabled={n === 0}
-                onClick={() => deleteGames(translate('admin.anneeCivile', { year }), ofYear(year), n)} />
+              <Row key={year} label={translate('admin.year', { year })} count={translate('count.game', { count: n })} action={translate('common.delete')}
+                aria={translate('admin.deleteGamesOfYear', { year })} disabled={n === 0}
+                onClick={() => deleteGames(translate('admin.calendarYear', { year }), ofYear(year), n)} />
             )
           })}
-          {years(matches).length === 0 && <EmptyRow>{translate('admin.aucuneRencontreDatee')}</EmptyRow>}
+          {years(matches).length === 0 && <EmptyRow>{translate('admin.noDatedGame')}</EmptyRow>}
         </Block>
 
-        <Block title={translate('admin.statsEquipe')} help={translate('admin.aideStats')}>
+        <Block title={translate('admin.teamStats')} help={translate('admin.statsHelp')}>
           {clubsOfGames(matches).map((id) => {
             const n = matches.filter(hasEvents(id)).length
             return (
-              <Row key={id} label={teamName(id)} count={translate('admin.aVider', { count: translate('compte.feuille', { count: n }) })} action={translate('admin.vider')}
-                aria={translate('admin.viderFeuillesDe', { name: teamName(id) })} disabled={n === 0}
+              <Row key={id} label={teamName(id)} count={translate('admin.toEmpty', { count: translate('count.sheet', { count: n }) })} action={translate('admin.empty')}
+                aria={translate('admin.emptySheetsOf', { name: teamName(id) })} disabled={n === 0}
                 onClick={() => ask({
-                  title: translate('admin.viderTitre'),
-                  message: translate('admin.viderTexte', { count: translate('compte.rencontre', { count: n }), name: teamName(id) }),
+                  title: translate('admin.emptyTitle'),
+                  message: translate('admin.emptyText', { count: translate('count.game', { count: n }), name: teamName(id) }),
                   run: () => clearClubStats(id),
                 })} />
             )
           })}
-          {matches.length === 0 && <EmptyRow>{translate('admin.aucuneRencontre')}</EmptyRow>}
+          {matches.length === 0 && <EmptyRow>{translate('admin.noGame')}</EmptyRow>}
         </Block>
 
-        <Block title={translate('admin.leReste')}>
-          <Row label={translate('admin.resultatsLibelle')} count={translate('compte.resultat', { count: results.length })} action={translate('commun.supprimer')}
-            aria={translate('admin.supprimerResultats')} disabled={results.length === 0}
+        <Block title={translate('admin.theRest')}>
+          <Row label={translate('admin.resultsLabel')} count={translate('count.result', { count: results.length })} action={translate('common.delete')}
+            aria={translate('admin.deleteResults')} disabled={results.length === 0}
             onClick={() => ask({
-              title: translate('admin.supprimerResultatsTitre'),
-              message: translate('admin.supprimerResultatsTexte', { count: translate('compte.resultat', { count: results.length }) }),
+              title: translate('admin.deleteResultsTitle'),
+              message: translate('admin.deleteResultsText', { count: translate('count.result', { count: results.length }) }),
               run: deleteAllResults,
             })} />
-          <Row label={translate('admin.entrainementsDe', { name: club?.name ?? translate('admin.ceClub') })} count={translate('compte.seance', { count: sessions.length })} action={translate('commun.supprimer')}
-            aria={translate('admin.supprimerEntrainements')} disabled={sessions.length === 0}
+          <Row label={translate('admin.trainingsOf', { name: club?.name ?? translate('admin.thisClub') })} count={translate('count.session', { count: sessions.length })} action={translate('common.delete')}
+            aria={translate('admin.deleteTrainings')} disabled={sessions.length === 0}
             onClick={() => ask({
-              title: translate('admin.supprimerEntrainementsTitre'),
-              message: translate('admin.supprimerEntrainementsTexte', { count: translate('compte.seance', { count: sessions.length }), name: club?.name ?? translate('admin.ceClub') }),
+              title: translate('admin.deleteTrainingsTitle'),
+              message: translate('admin.deleteTrainingsText', { count: translate('count.session', { count: sessions.length }), name: club?.name ?? translate('admin.thisClub') }),
               run: () => deleteTrainingsOfClub(clubId),
             })} />
-          <Row label={translate('admin.schemasDe', { name: club?.name ?? translate('admin.ceClub') })} count={translate('compte.schema', { count: plays.length })} action={translate('commun.supprimer')}
-            aria={translate('admin.supprimerSchemas')} disabled={plays.length === 0}
+          <Row label={translate('admin.playsOf', { name: club?.name ?? translate('admin.thisClub') })} count={translate('count.play', { count: plays.length })} action={translate('common.delete')}
+            aria={translate('admin.deletePlays')} disabled={plays.length === 0}
             onClick={() => ask({
-              title: translate('admin.supprimerSchemasTitre'),
-              message: translate('admin.supprimerSchemasTexte', { count: translate('compte.schema', { count: plays.length }), name: club?.name ?? translate('admin.ceClub') }),
+              title: translate('admin.deletePlaysTitle'),
+              message: translate('admin.deletePlaysText', { count: translate('count.play', { count: plays.length }), name: club?.name ?? translate('admin.thisClub') }),
               run: () => deletePlaysOfClub(clubId),
             })} />
         </Block>
@@ -164,17 +164,17 @@ export function Admin() {
         {/* The reset set apart, and behind copying out the club's name: a single click
             is not equal to an action that empties the whole device. */}
         <section className="rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('admin.toutEffacer')}</p>
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('admin.eraseEverything')}</p>
           <p className="mb-3 text-[13px]" style={{ color: C.muted }}>
-            {translate('admin.remiseAZero')}
+            {translate('admin.resetHint')}
           </p>
           <Row
-            label={translate('admin.toutesLesDonnees')}
-            count={`${translate('compte.equipe', { count: teams.length })} · ${translate('compte.rencontre', { count: matches.length })} · ${translate('compte.resultat', { count: results.length })} · ${translate('compte.seance', { count: trainings.length })}`}
-            action={translate('admin.toutEffacer')} aria={translate('admin.toutEffacer')} disabled={teams.length === 0 && matches.length === 0}
+            label={translate('admin.allTheData')}
+            count={`${translate('count.team', { count: teams.length })} · ${translate('count.game', { count: matches.length })} · ${translate('count.result', { count: results.length })} · ${translate('count.session', { count: trainings.length })}`}
+            action={translate('admin.eraseEverything')} aria={translate('admin.eraseEverything')} disabled={teams.length === 0 && matches.length === 0}
             onClick={() => ask({
-              title: translate('admin.toutEffacerTitre'),
-              message: translate('admin.toutEffacerTexte', { teams: translate('compte.equipe', { count: teams.length }), games: translate('compte.rencontre', { count: matches.length }), results: translate('compte.resultat', { count: results.length }), sessions: translate('compte.seance', { count: trainings.length }) }),
+              title: translate('admin.eraseEverythingTitle'),
+              message: translate('admin.eraseEverythingText', { teams: translate('count.team', { count: teams.length }), games: translate('count.game', { count: matches.length }), results: translate('count.result', { count: results.length }), sessions: translate('count.session', { count: trainings.length }) }),
               // The club's name, copied out exactly. The fallback never fires inside
               // the shell (the club is resolved): it is there so that no path lets the
               // reset be confirmed with a single click.
@@ -194,7 +194,7 @@ export function Admin() {
         open={!!pending} danger
         title={pending?.title ?? ''} message={pending?.message}
         expectedInput={pending?.expectedInput}
-        confirmLabel={translate('admin.supprimerDefinitivement')}
+        confirmLabel={translate('admin.deleteForGood')}
         onConfirm={confirm} onClose={() => setPending(null)}
       />
     </div>
@@ -231,26 +231,26 @@ function SyncToken() {
     setTrying(false)
   }
 
-  const says = trying ? 'admin.jetonEssai'
-    : state === 'ok' ? 'admin.jetonOk'
-    : state === 'token' ? 'admin.jetonRefuse'
-    : state === 'network' ? 'admin.jetonReseau'
-    : 'admin.jetonInconnu'
+  const says = trying ? 'admin.tokenTrying'
+    : state === 'ok' ? 'admin.tokenOk'
+    : state === 'token' ? 'admin.tokenRefused'
+    : state === 'network' ? 'admin.tokenNetwork'
+    : 'admin.tokenUnknown'
   const wrong = !trying && (state === 'token' || state === 'network')
 
   return (
-    <Block title={translate('admin.synchronisation')} help={translate('admin.aideSynchronisation')}>
+    <Block title={translate('admin.sync')} help={translate('admin.syncHelp')}>
       <div className="flex flex-wrap items-center gap-2 py-1">
         <input
           type="password" value={value} onChange={(e) => setValue(e.target.value)}
-          aria-label={translate('admin.jeton')} placeholder={translate('admin.jeton')}
+          aria-label={translate('admin.token')} placeholder={translate('admin.token')}
           className="min-w-[12rem] flex-1 rounded-xl px-4 py-3 text-sm outline-none transition focus:border-[var(--c-accent)]"
           style={{ background: C.panel, border: bd, color: C.text }}
         />
         <button onClick={verify} disabled={trying}
           className="rounded-xl px-5 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40"
           style={{ background: C.brand }}>
-          {translate('admin.verifierJeton')}
+          {translate('admin.checkToken')}
         </button>
       </div>
       <p aria-live="polite" className="pb-1 text-[13px] font-semibold"

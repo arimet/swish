@@ -172,7 +172,7 @@ export function ShotPicker({ onPick, confirmation, shots }: {
           below (free throw, assist, block…) above the fold, at 1440×900 as much as at
           375×812. */}
       <div className="mx-auto w-full max-w-[240px]">
-        <Court label={translate('tir.terrainSaisie')} onClick={pickFromEvent}>
+        <Court label={translate('shot.entryCourt')} onClick={pickFromEvent}>
           {shots?.map((s, i) => (
             <circle
               key={i}
@@ -253,7 +253,7 @@ export function ShotChart({ shots, minAttempts = 3 }: { shots: Shot[]; minAttemp
   const translate = useT()
   const sum = zoneSummary(shots)
   return (
-    <Court label={translate('bord.carteDesTirs')}>
+    <Court label={translate('dashboard.shotChart')}>
       <ClippedZones>
         {ZONES.map((z) => {
           const { made, attempts } = sum[z]
