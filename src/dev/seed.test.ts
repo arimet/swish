@@ -34,16 +34,16 @@ describe('demo data', () => {
   it('produces rotations, hence credible court time', async () => {
     const joue = (await listMatches()).find((m) => m.status === 'finished')!
     const steps = [...playingTimes(joue).values()].filter((t) => t > 0)
-    // Sans SUBSTITUTION, seuls les cinq titulaires auraient du temps de jeu.
+    // Without SUBSTITUTION, only the five starters would have court time.
     expect(steps.length).toBeGreaterThan(5)
   })
 
   it('puts Avenir de Vignot on top, on an equal number of games played', async () => {
-    // Le classement FFBB compte des points absolus (V=2, D=1) : être premier exige
-    // donc d'avoir joué autant que les autres. Le seed publiait les résultats des
-    // cinq journées alors que nous n'en avons que trois de jouées, ce qui rendait la
-    // première place arithmétiquement inatteignable — d'où le nombre de rencontres
-    // vérifié ici, et pas seulement le rang.
+    // FFBB standings count absolute points (W=2, L=1): being top therefore requires
+    // having played as many games as the others. The seed published the results of all
+    // five matchdays while we only have three played, which made first place
+    // arithmetically unreachable — hence the game count checked here, and not only the
+    // rank.
     const [matches, results, teams] = await Promise.all([listMatches(), listResults(), listTeams()])
     const byId = Object.fromEntries(teams.map((t) => [t.id, t]))
     const lines = standings(matches, results, byId)[0].lines
@@ -51,8 +51,8 @@ describe('demo data', () => {
     expect(lines[0].v).toBe(3)
     expect(lines[0].d).toBe(0)
     expect(new Set(lines.map((l) => l.j))).toEqual(new Set([3]))
-    // Et premier sans partage : une égalité de points départagée au différentiel
-    // tiendrait au hasard des scores, pas à une intention.
+    // And top outright: a tie on points broken by the differential would rest on the
+    // luck of the scores, not on an intention.
     expect(lines[0].pts).toBeGreaterThan(lines[1].pts)
   })
 
@@ -68,11 +68,11 @@ describe('demo data', () => {
 
   it('distributes the baskets plausibly: BUZZI in front, a credible match sheet', async () => {
     // Trois tentatives ratées avant celle-ci, toutes invisibles sans mesure.
-    // La liste pondérée groupée par joueur : `k % longueur` ne sortait jamais du
-    // premier bloc, un seul joueur prenait tous les paniers (202 points pour un
-    // remplaçant). Entrelacée : on ne dépassait pas les deux premiers tours, donc les
-    // poids ne changeaient plus rien. Et le compteur d'allocation remis à zéro à
-    // chacun des huit segments d'une rencontre : le plus faible poids n'était jamais
+    // The weighted list grouped by player: `k % length` never left the first block,
+    // and one player took every basket (202 points for a substitute). Interleaved: we
+    // never got past the first two rounds, so the weights changed nothing. And the
+    // allocation counter reset on each of a game's eight segments: the lowest weight was
+    // never
     // servi, un titulaire finissait à zéro.
     const matches = await listMatches()
     const players = await listPlayers(matches[0].meta.clubId)
@@ -88,36 +88,35 @@ describe('demo data', () => {
     const numero = (id: string) => players.find((p) => p.id === id)!.number
     const classe = [...parJoueur.entries()].sort((a, b) => b[1] - a[1])
 
-    // Le meilleur marqueur est celui que le coach a désigné.
+    // The top scorer is the one the coach named.
     expect(numero(classe[0][0])).toBe(11)
-    // Il domine sans écraser : un quart des points de l'équipe est déjà beaucoup.
+    // He dominates without crushing: a quarter of the team's points is already a lot.
     expect(classe[0][1] / total).toBeLessThan(0.25)
-    // Et l'écart du premier au dernier marqueur reste celui d'une feuille de match,
-    // pas celui d'une aberration : un rapport de dix voulait dire que les poids
+    // And the gap from first to last scorer stays that of a match sheet, not that of
+    // an aberration: a ratio of ten meant the weights
     // étaient trop écartés.
     const marqueurs = classe.filter(([, pts]) => pts > 0)
     expect(classe[0][1] / marqueurs[marqueurs.length - 1][1]).toBeLessThan(7)
-    // Le banc marque : une allocation qui ne descend pas jusqu'à lui est cassée.
+    // The bench scores: an allocation that does not reach it is broken.
     expect(marqueurs.length).toBeGreaterThanOrEqual(9)
-    // Les cinq majeurs restent devant dans l'ensemble — un sixième homme productif
-    // peut dépasser le cinquième titulaire, c'est le cas dans une vraie équipe.
+    // The starting five stay ahead overall — a productive sixth man may pass the fifth
+    // starter, as happens in a real team.
     const cinq = new Set([2, 11, 13, 15, 17])
     expect(classe.slice(0, 5).filter(([id]) => cinq.has(numero(id))).length).toBeGreaterThanOrEqual(4)
   })
 
   /**
-   * La feuille de match au complet, et pas seulement sa colonne de points.
+   * The whole match sheet, and not only its points column.
    *
-   * Trois colonnes étaient vides sur **toutes** les rencontres — 3PT, CT, F — et rien
-   * ne le disait. Les positions à trois points existaient dans le seed mais étaient
-   * inatteignables (`k % longueur` sur une liste de neuf, avec cinq paniers par
-   * segment) ; les contres n'allaient qu'au quatrième joueur du cinq, parce que la
-   * statistique était choisie par l'indice du joueur ; et aucune faute n'était jamais
-   * saisie, si bien que le compteur d'équipe restait à zéro d'un bout à l'autre.
+   * Three columns were empty in **every** game — 3PT, BLK, PF — and nothing said so.
+   * The three-point spots existed in the seed but were unreachable (`k % length` over
+   * a list of nine, with five baskets per segment); blocks only went to the fourth
+   * player of the five, because the statistic was chosen by the player's index; and no
+   * foul was ever recorded, so the team counter stayed at zero throughout.
    *
-   * Ce test mesure les cinq catégories. Il n'a pas d'exigence de réalisme fine — les
-   * poids sont inventés et se corrigent depuis l'application — mais il refuse le zéro,
-   * qui est la seule valeur dont on est sûr qu'elle est fausse.
+   * This test measures the five categories. It has no fine realism requirement — the
+   * weights are invented and can be corrected from the application — but it refuses
+   * zero, which is the one value we know to be wrong.
    */
   it('fills the whole match sheet: threes, assists, rebounds, blocks, fouls', async () => {
     const matches = await listMatches()
@@ -130,38 +129,36 @@ describe('demo data', () => {
       const stats = playerStats(m)
       const somme = (lire: (s: (typeof stats)[number]) => number) => stats.reduce((t, s) => t + lire(s), 0)
 
-      // Un tir primé se déduit de sa position, jamais déclaré : que la colonne soit
-      // non nulle prouve donc aussi que les positions du seed tombent bien derrière
-      // la ligne, ce qu'aucune assertion n'avait à répéter à la main.
+      // A three is derived from its spot, never declared: a non-zero column therefore
+      // also proves that the seed's spots really do fall behind the line, which no
+      // assertion had to repeat by hand.
       expect(somme((s) => s.threes)).toBeGreaterThan(3)
       expect(somme((s) => s.assists)).toBeGreaterThan(10)
       expect(somme((s) => s.defRebounds)).toBeGreaterThan(somme((s) => s.offRebounds))
       expect(somme((s) => s.blocks)).toBeGreaterThan(0)
       expect(somme((s) => s.fouls)).toBeGreaterThan(10)
 
-      // Personne ne sort pour cinq fautes : un joueur exclu quitte le terrain, alors
-      // que les rotations du seed le comptent encore présent.
+      // Nobody fouls out: an excluded player leaves the court, while the seed's
+      // rotations still count them present.
       expect(stats.every((s) => s.fouls < 5)).toBe(true)
 
-      // Les rôles doivent se lire dans les chiffres, sinon les poids par catégorie ne
-      // servent à rien : le meilleur passeur est un meneur, le meilleur rebondeur un
-      // intérieur. C'est ce qui manquait quand la statistique suivait l'indice du
-      // joueur dans le cinq.
+      // The roles must read in the figures, otherwise the per-category weights serve
+      // no purpose: the best passer is a guard, the best rebounder a big. That is what
+      // was missing when the statistic followed the player's index in the five.
       const best = (lire: (s: (typeof stats)[number]) => number) =>
         numero([...stats].sort((a, b) => lire(b) - lire(a))[0].playerId)
       expect([2, 5]).toContain(best((s) => s.assists))
       expect([15, 17, 20, 8]).toContain(best((s) => s.defRebounds))
     }
 
-    // Le total composé retombe **exactement** sur les scores annoncés. Le seed
-    // compose maintenant chaque segment avec des tirs de trois valeurs différentes ;
-    // une décomposition fausse se lirait comme un bug du tableau d'affichage, pas
-    // comme un bug du seed.
+    // The composed total lands **exactly** on the scores announced. The seed now
+    // composes each segment from shots of three different values; a wrong decomposition
+    // would read as a scoreboard bug, not as a seed bug.
     const totaux = joues.map((m) => playerStats(m).reduce((t, s) => t + s.points, 0)).sort((a, b) => a - b)
     expect(totaux).toEqual([72, 78, 81])
 
-    // Une période au moins atteint le bonus (cinq fautes d'équipe en FFBB, et non
-    // quatre comme en NBA) : la démonstration doit pouvoir montrer la pastille.
+    // At least one period reaches the bonus (five team fouls under FFBB rules, not
+    // four as in the NBA): the demo must be able to show the pill.
     const parPeriode = new Map<number, number>()
     for (const e of joues[0].events)
       if (e.type === 'FOUL' && e.team === 'A') parPeriode.set(e.period, (parPeriode.get(e.period) ?? 0) + 1)
@@ -192,7 +189,7 @@ describe('demo data', () => {
     const matches = await listMatches()
     const clubId = matches[0].meta.clubId
     expect(trainings.length).toBeGreaterThan(0)
-    // Sans clubId, un entraînement fuiterait dans le calendrier de n'importe quel autre club.
+    // Without a clubId, a training would leak into any other club's calendar.
     expect(trainings.every((t) => t.clubId === clubId)).toBe(true)
   })
 
@@ -207,16 +204,16 @@ describe('demo data', () => {
   })
 
   it('the next fixture right after a seed is the game called up, not a training', async () => {
-    // Les entraînements de la dernière journée sont posés après la rencontre (pas
-    // avant, comme les autres journées) : sans quoi, plus proches dans le temps que
-    // la rencontre convoquée, ils masqueraient le bloc « convoqués » pendant plusieurs
-    // jours après un seed — précisément quand on regarde la démonstration.
+    // The last matchday's trainings are placed after the game (not before, as on the
+    // other matchdays): otherwise, being closer in time than the game called up, they
+    // would hide the "called up" block for days after a seed — precisely when the demo
+    // is being looked at.
     const matches = await listMatches()
     const trainings = await listTrainings()
     const aVenir = matches.find((m) => m.status === 'setup')!
-    // Comme le tableau de bord (`Dashboard.tsx`) : la rencontre en direct occupe déjà
-    // le bandeau, `nextFixture` ne l'écarte pas lui-même (ce n'est pas son rôle, elle
-    // n'est pas « terminée ») — c'est l'appelant qui la retire avant de l'appeler.
+    // As on the dashboard (`Dashboard.tsx`): the live game already occupies the
+    // banner, and `nextFixture` does not exclude it itself (that is not its job, the
+    // game is not "finished") — the caller removes it before calling.
     const fixture = nextFixture(matches.filter((m) => m.status !== 'live'), trainings, new Date())
     console.log('nextFixture(seedé) =', JSON.stringify(fixture && { kind: fixture.kind, id: fixture.id, date: fixture.date }))
     expect(fixture?.kind).toBe('match')
@@ -229,10 +226,10 @@ describe('demo data', () => {
     const schemas = await listPlays(matches[0].meta.clubId)
     expect(schemas).toHaveLength(3)
     expect(schemas.filter((s) => s.court === 'full')).toHaveLength(1)
-    // Un ballon au sol est un Point ; porté, c'est un pion désigné.
+    // A ball on the floor is a Point; carried, it names a marker.
     expect(schemas.filter((s) => 'x' in s.steps[0].ball)).toHaveLength(1)
-    // Chaque temps garde son effectif complet — la défense n'apparaît que là où
-    // le schéma la demande.
+    // Every step keeps its full complement — the defence only appears where the play
+    // asks for it.
     for (const s of schemas) for (const t of s.steps) expect(t.markers).toHaveLength(s.defense ? 10 : 5)
   })
 
@@ -240,13 +237,13 @@ describe('demo data', () => {
     const matches = await listMatches()
     const clubId = matches[0].meta.clubId
     const schemas = await listPlays(clubId)
-    // Deux dossiers distincts : sans quoi la barre de la bibliothèque n'aurait
-    // qu'un onglet et ne montrerait pas ce qu'elle sait faire.
+    // Two distinct folders: otherwise the library's bar would have a single tab and
+    // would not show what it can do.
     expect(folders(schemas)).toEqual(['Attaque placée', 'Remises en jeu'])
     expect(schemas.every((s) => !!s.folder)).toBe(true)
 
-    // Le pick and roll va jusqu'au panier : le 5 arrive au bout de sa course et
-    // reçoit le ballon, au lieu d'une finition qui n'existait qu'en flèches.
+    // The pick and roll runs all the way to the basket: the 5 reaches the end of their
+    // cut and receives the ball, instead of a finish that existed only as arrows.
     const pnr = schemas.find((s) => s.name.includes('Pick and roll'))!
     expect(pnr.steps).toHaveLength(4)
     const fin = pnr.steps[3]
@@ -254,11 +251,11 @@ describe('demo data', () => {
     const cinqAvant = pnr.steps[2].markers.find((p) => p.side === 'offense' && p.position === 5)!
     const cinqApres = fin.markers.find((p) => p.side === 'offense' && p.position === 5)!
     expect(cinqApres.at.y).toBeLessThan(cinqAvant.at.y)
-    // Près du panier (y = 0 à la ligne de fond), et non à mi-chemin.
+    // Near the basket (y = 0 at the baseline), and not halfway.
     expect(cinqApres.at.y).toBeLessThan(0.25)
 
-    // La prochaine séance à venir porte deux schémas, tous deux existants — un
-    // identifiant orphelin ferait mentir le compte du calendrier.
+    // The next upcoming session carries two plays, both of which exist — an orphan id
+    // would make the calendar's count lie.
     const aujourdHui = new Date()
     const jour = `${aujourdHui.getFullYear()}-${String(aujourdHui.getMonth() + 1).padStart(2, '0')}-${String(aujourdHui.getDate()).padStart(2, '0')}`
     const prochaine = (await listTrainings()).filter((t) => t.date >= jour).sort((a, b) => a.date.localeCompare(b.date))[0]
@@ -270,7 +267,7 @@ describe('demo data', () => {
   it('clears trainings and call-ups before re-seeding, so as to leave no orphans', async () => {
     await saveTraining({ id: 'orphelin', clubId: 'zzz', date: '2000-01-01' })
     await saveConvocation({ matchId: 'inexistant', playerIds: ['x'] })
-    localStorage.removeItem('seed-version') // force le re-seed au prochain appel
+    localStorage.removeItem('seed-version') // forces a re-seed on the next call
     await seedDevData()
     expect((await listTrainings()).some((t) => t.id === 'orphelin')).toBe(false)
     expect(await getConvocation('inexistant')).toBeUndefined()
@@ -279,10 +276,10 @@ describe('demo data', () => {
 
 describe('the seed\'s version guard', () => {
   it('the fingerprint changes as soon as a datum changes', () => {
-    // Le vrai défaut n'était pas dans les données mais dans la garde : la version
-    // était un numéro à incrémenter de mémoire, et on a oublié de le faire en
-    // corrigeant la répartition des paniers. Les navigateurs déjà à jour sur
-    // l'ancienne version n'ont donc rien régénéré, et le bug corrigé restait visible.
+    // The real defect was not in the data but in the guard: the version was a number
+    // to bump from memory, and we forgot to when fixing the distribution of baskets.
+    // Browsers already up to date on the old version therefore regenerated nothing, and
+    // the fixed bug stayed visible.
     const base = [[[2, 'CAUTENET', 'Louis']], { 11: 6 }]
     const autreJoueur = [[[2, 'CAUTENET', 'Louise']], { 11: 6 }]
     const autrePoids = [[[2, 'CAUTENET', 'Louis']], { 11: 7 }]
@@ -292,8 +289,8 @@ describe('the seed\'s version guard', () => {
   })
 
   it('the fingerprint does not depend on today\'s date', () => {
-    // Les dates du seed sont ancrées sur aujourd'hui. Les inclure ferait tout
-    // régénérer chaque nuit, effaçant ce qu'un développeur a saisi la veille.
+    // The seed's dates are anchored on today. Including them would regenerate
+    // everything each night, erasing what a developer entered the day before.
     expect(DATA_FINGERPRINT).toBe(DATA_FINGERPRINT)
     expect(DATA_FINGERPRINT).not.toMatch(new RegExp(String(new Date().getFullYear())))
   })
@@ -301,12 +298,12 @@ describe('the seed\'s version guard', () => {
   it('a re-seed follows the version, and replays nothing at an equal version', async () => {
     const version = localStorage.getItem('seed-version')
     expect(version).toContain(DATA_FINGERPRINT)
-    // À version identique, un second appel ne touche pas la base : on n'écrase pas
-    // ce qu'un développeur vient de saisir à la main.
+    // At an identical version, a second call does not touch the store: we do not
+    // overwrite what a developer has just entered by hand.
     await savePlayer({ id: 'ajout-main', teamId: (await listMatches())[0].meta.clubId, number: 99, lastName: 'TEST', firstName: 'Manuel' })
     await seedDevData()
     expect((await listPlayers((await listMatches())[0].meta.clubId)).some((p) => p.id === 'ajout-main')).toBe(true)
-    // Version changée : tout est régénéré, donc l'ajout manuel disparaît.
+    // Version changed: everything is regenerated, so the manual addition disappears.
     localStorage.setItem('seed-version', 'autre-chose')
     await seedDevData()
     expect((await listPlayers((await listMatches())[0].meta.clubId)).some((p) => p.id === 'ajout-main')).toBe(false)

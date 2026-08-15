@@ -2,40 +2,39 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Le contrôle de lisibilité de la palette.
+ * The palette's legibility check.
  *
- * `themes.css` annonçait ses rapports en commentaire, ce qui ne vérifie rien : la
- * retouche suivante laisse la phrase intacte et casse la mesure. C'est arrivé
- * plusieurs fois. Les chiffres ont donc quitté les commentaires pour venir ici :
- * ce test relit les jetons dans le fichier et refait le calcul, pour les deux
- * thèmes, sur chaque paire qui porte réellement du texte.
+ * `themes.css` used to announce its ratios in comments, which checks nothing: the
+ * next touch-up leaves the sentence intact and breaks the measurement. That happened
+ * several times. The figures therefore left the comments and came here: this test
+ * reads the tokens back from the file and redoes the computation, for both themes, on
+ * every pair that actually carries text.
  *
- * Le seuil est celui de WCAG AA pour du texte courant, 4,5:1. Les rapports
- * mesurés sont bien au-dessus : la marge est là pour qu'un ajustement d'un ou
- * deux pour cent ne fasse pas tomber la suite.
+ * The threshold is WCAG AA for body text, 4.5:1. The measured ratios are well above
+ * it: the margin is there so that an adjustment of one or two per cent does not bring
+ * the suite down.
  */
 
-/* Le fichier est lu depuis la racine du projet, et non via `import.meta.url` :
-   l'environnement de test est jsdom, où `import.meta.url` est une URL http que
-   `readFileSync` refuse. Un `import … ?raw` ne marche pas non plus — Vitest
-   remplace les imports CSS par une chaîne vide. Vitest exécute depuis le
-   répertoire de `vite.config.ts`, donc ce chemin relatif y est stable. */
+/* The file is read from the project root, and not through `import.meta.url`: the
+   test environment is jsdom, where `import.meta.url` is an http URL that
+   `readFileSync` refuses. An `import … ?raw` does not work either — Vitest replaces
+   CSS imports with an empty string. Vitest runs from `vite.config.ts`'s directory, so
+   this relative path is stable there. */
 const CHEMIN = 'src/ui/theme/themes.css'
 const CSS = readFileSync(CHEMIN, 'utf8')
 
-/** Les jetons du bloc dont le sélecteur contient `marque`, à plat.
+/** The tokens of the block whose selector contains `marque`, flattened.
  *
- *  `themes.css` n'a ni imbrication ni règle `@media`, donc une paire
- *  « sélecteur { corps } » se repère à la parenthèse. Une vraie analyse CSS
- *  serait une dépendance de plus pour lire des lignes `--nom: valeur`. Le
- *  sélecteur est cherché par fragment, et non comparé au caractère près : le
- *  test ne doit pas casser parce qu'une virgule a changé de ligne. */
+ *  `themes.css` has neither nesting nor `@media` rules, so a "selector { body }" pair
+ *  is found by the brace. A real CSS parser would be one more dependency for reading
+ *  `--name: value` lines. The selector is matched by fragment, and not compared
+ *  character by character: the test must not break because a comma moved line. */
 function tokens(marque: string): Record<string, string> {
   const blocs = [...CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-  // **Tous** les blocs du thème, fusionnés, et non le premier trouvé : un thème
-  // s'écrit maintenant en deux blocs — le chrome de l'application, puis le
-  // terrain. Ne lire que le premier laissait les jetons du parquet hors du test,
-  // c'est-à-dire non vérifiés tout en ayant l'air de l'être.
+  // **Every** block of the theme, merged, and not the first found: a theme is now
+  // written in two blocks — the application chrome, then the court. Reading only the
+  // first left the floor's tokens out of the test, that is unchecked while looking
+  // checked.
   const correspondants = blocs.filter(([, selecteur]) => selecteur.includes(marque))
   if (correspondants.length === 0) throw new Error(`bloc introuvable dans themes.css : ${marque}`)
   const out: Record<string, string> = {}
@@ -45,10 +44,10 @@ function tokens(marque: string): Record<string, string> {
   return out
 }
 
-/** Luminance relative WCAG d'un `#rrggbb`. */
+/** WCAG relative luminance of a `#rrggbb`. */
 function luminance(hex: string): number {
   const m = /^#([0-9a-f]{6})$/i.exec(hex)
-  if (!m) throw new Error(`couleur non hexadécimale, hors de portée de ce test : ${hex}`)
+  if (!m) throw new Error(`non-hex colour, out of this test's reach: ${hex}`)
   const canaux = [0, 2, 4].map((i) => {
     const c = parseInt(m[1].slice(i, i + 2), 16) / 255
     return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
@@ -63,44 +62,44 @@ function contrast(a: string, b: string): number {
 
 const AA = 4.5
 
-/** Encre → les fonds sur lesquels elle tombe réellement dans l'application. */
-const PAIRES: [encre: string, fonds: string[]][] = [
+/** Ink → the backgrounds it actually lands on in the application. */
+const INK_PAIRS: [ink: string, grounds: string[]][] = [
   ['--c-text', ['--c-card', '--c-card2', '--c-panel', '--c-frame']],
   ['--c-muted', ['--c-card', '--c-card2', '--c-panel', '--c-frame']],
   ['--c-faint', ['--c-card', '--c-card2', '--c-panel', '--c-frame']],
-  // L'orange en deux rôles, et chacun mesuré dans son propre sens — c'est toute la
-  // raison d'être de la séparation. `accent` est une **encre** : on la mesure sur
-  // les fonds où elle écrit. `brand` est un **fond** : on la mesure sous l'encre
-  // qu'elle porte. Confondre les deux forçait un seul jeton à passer les deux
-  // épreuves, ce qui le poussait au bout le plus sombre de la teinte.
-  // `--c-accent-bg` est le fond des pastilles (« il y a 2 jours », le numéro de
-  // maillot, la marque « vous ») : l'encre-accent y écrit, donc la paire compte
-  // autant que les autres teintes sémantiques et leur fond.
+  // The accent in two roles, each measured in its own direction — that is the whole
+  // point of the separation. `accent` is an **ink**: it is measured on the backgrounds
+  // it writes on. `brand` is a **background**: it is measured under the ink it carries.
+  // Conflating the two forced a single token to pass both tests, which pushed it to the
+  // darkest end of the hue.
+  // `--c-accent-bg` is the pills' background ("2 days ago", the jersey number, the
+  // "you" mark): the accent ink writes there, so the pair counts as much as the other
+  // semantic hues and their backgrounds.
   ['--c-accent', ['--c-card', '--c-card2', '--c-panel', '--c-accent-bg', '--c-on-accent']],
   ['--c-brand', ['--c-on-brand']],
   ['--c-green', ['--c-card', '--c-card2', '--c-green-bg']],
   ['--c-danger', ['--c-card', '--c-card2', '--c-danger-bg']],
   ['--c-amber', ['--c-card', '--c-card2', '--c-amber-bg']],
   ['--c-info', ['--c-card', '--c-card2', '--c-info-bg']],
-  // Les remplissages vifs et l'encre que chacun porte. C'est ce couple qui rend la
-  // palette vive : une couleur qui n'a pas à se lire comme petit texte sur du blanc
-  // n'a plus besoin d'être assombrie, et c'est l'assombrissement qui rendait
+  // The vivid fills and the ink each one carries. It is this pairing that makes the
+  // palette vivid: a colour that does not have to read as small text on white no longer
+  // needs darkening, and it was the darkening that made
   // l'ensemble terne.
   ['--c-on-green', ['--c-green-fill']],
   ['--c-on-danger', ['--c-danger-fill']],
   ['--c-on-gold', ['--c-gold-fill']],
   ['--c-on-info', ['--c-info-fill']],
-  // Le numéro écrit sur le disque d'attaque du tableau tactique. Il tirait sur
-  // `--t-ink`, l'encre des trajets, jusqu'à ce que le parquet clair fasse virer
-  // celle-ci au sombre : le numéro s'est retrouvé en noir sur rouge, à 2,4:1.
+  // The number written on the playbook's attack disc. It used to draw on `--t-ink`,
+  // the paths' ink, until the light hardwood turned that dark: the number ended up
+  // black on red, at 2.4:1.
   ['--t-on-attack', ['--t-attack']],
 ]
 
-/** Le terrain : les repères sur le parquet, et sur la raquette qui le rehausse.
- *  La ligne de terrain est de la géométrie de contexte et non un composant — elle
- *  a son propre seuil, plus bas, sinon il faudrait la foncer jusqu'à ce qu'elle
- *  dispute l'attention aux repères qu'elle est censée situer. */
-const TERRAIN: [repere: string, seuil: number][] = [
+/** The court: the markers on the hardwood, and on the key that raises it. A court
+ *  line is contextual geometry rather than a component — it has its own, lower
+ *  threshold, otherwise it would have to be darkened until it competed for attention
+ *  with the markers it is meant to situate. */
+const COURT_PAIRS: [marker: string, threshold: number][] = [
   ['--t-ink', AA],
   ['--t-attack', AA],
   ['--t-def', AA],
@@ -114,86 +113,86 @@ describe.each([
 ])('%s', (_nom, marque) => {
   const t = tokens(marque)
 
-  it.each(PAIRES)('%s se lit sur ses fonds', (encre, fonds) => {
-    for (const fond of fonds) {
-      // Les fonds voilés (`rgba(…)`) dépendent de ce qu'il y a dessous : la
-      // mesure n'a pas de sens sans composition, et le thème sombre les emploie
-      // pour toutes ses pastilles. On les saute plutôt que d'inventer un fond.
-      if (!t[fond]?.startsWith('#')) continue
-      expect(contrast(t[encre], t[fond]), `${encre} sur ${fond}`).toBeGreaterThanOrEqual(AA)
+  it.each(INK_PAIRS)('%s reads on its backgrounds', (ink, grounds) => {
+    for (const ground of grounds) {
+      // Veiled backgrounds (`rgba(…)`) depend on what is beneath them: the
+      // measurement is meaningless without compositing, and the dark theme uses them
+      // for all its pills. We skip them rather than invent a background.
+      if (!t[ground]?.startsWith('#')) continue
+      expect(contrast(t[ink], t[ground]), `${ink} sur ${ground}`).toBeGreaterThanOrEqual(AA)
     }
   })
 
-  /* Ici vivaient six assertions sur une famille `--sb-*` propre au bandeau de la
+  /* Six assertions used to live here, on an `--sb-*` family belonging to the scorer's
    * table de marque, mesurée contre deux constantes `#232326` / `#1c1c20` écrites à
-   * la main dans ce fichier.
+   * by hand in this file.
    *
-   * Elles ont disparu avec la famille, et il faut noter *pourquoi* elles n'ont pas
-   * de remplaçantes plutôt que de croire à une perte de couverture : le bandeau est
-   * devenu une carte de l'application (`--c-card`, encre `--c-text`, commandes
-   * `--c-card2`, chrono `--c-green-fill` / `--c-danger-fill`). Toutes ces paires
-   * sont dans `PAIRES` ci-dessus, mesurées pour les deux thèmes.
+   * They went with the family, and it is worth noting *why* they have no replacements
+   * rather than reading a loss of coverage into it: the banner became a card of the
+   * application (`--c-card`, ink `--c-text`, controls `--c-card2`, clock
+   * `--c-green-fill` / `--c-danger-fill`). All those pairs are in `PAIRES` above,
+   * measured for both themes.
    *
-   * Deux défauts de ces assertions valent d'être retenus. Elles mesuraient un fond
-   * **littéral** qui n'était déjà plus celui du bandeau — `--scoreboard` valait un
-   * `oklch()`, jamais `#232326` — donc elles vérifiaient une lisibilité sur une
-   * surface imaginaire. Et il fallait une assertion de conformité **en plus**, parce
-   * qu'une valeur en dur peut avoir un contraste irréprochable tout en étant de la
-   * mauvaise couleur : c'est arrivé, un orange du monde précédent était resté là. Un
-   * `var(--c-accent)` ne peut pas dériver, et n'a donc plus besoin d'être surveillé.
+   * Two defects of those assertions are worth remembering. They measured a **literal**
+   * background that was already no longer the banner's — `--scoreboard` was an
+   * `oklch()`, never `#232326` — so they checked legibility on an imaginary surface.
+   * And a conformity assertion was needed **on top**, because a hard-coded value can
+   * have impeccable contrast while being the wrong colour: that happened, an orange
+   * from the previous world had stayed there. A `var(--c-accent)` cannot drift, and so
+   * no longer needs watching.
    */
 
-  // Le terrain suit maintenant le thème : chaque repère doit se lire sur le parquet
-  // **et** sur la raquette, qui est un plan plus soutenu. Vérifier l'un sans l'autre
-  // laisserait passer un repère qui disparaît précisément dans la zone où l'essentiel
-  // du jeu se dessine.
-  it.each(TERRAIN)('%s se lit sur le parquet et sur la raquette', (repere, seuil) => {
-    // `--t-paint` compte autant que le bois : la raquette est peinte, et les
-    // postes bas y stationnent. Ne vérifier que le parquet a laissé passer un
-    // disque d'attaque rouge sur une raquette bleu roi, à 1,54:1.
-    for (const fond of ['--t-court', '--t-court-hi', '--t-paint']) {
-      expect(contrast(t[repere], t[fond]), `${repere} sur ${fond}`).toBeGreaterThanOrEqual(seuil)
+  // The court now follows the theme: every marker must read on the hardwood **and**
+  // on the key, which is a stronger plane. Checking one without the other would let
+  // through a marker that disappears precisely in the area where most of the play is
+  // drawn.
+  it.each(COURT_PAIRS)('%s reads on the hardwood and on the key', (marker, threshold) => {
+    // `--t-paint` counts as much as the wood: the key is painted, and the low posts
+    // stand there. Checking only the hardwood let through a red attack disc on a royal
+    // blue key, at 1.54:1.
+    for (const ground of ['--t-court', '--t-court-hi', '--t-paint']) {
+      expect(contrast(t[marker], t[ground]), `${marker} sur ${ground}`).toBeGreaterThanOrEqual(threshold)
     }
   })
 
-  // Trois niveaux de gris qui se confondraient ne seraient qu'un seul niveau
-  // avec trois noms — c'est ce qui rendait la hiérarchie illisible avant.
+  // Three levels of grey that blurred together would be one level with three names —
+  // which is what made the hierarchy unreadable before.
   it('the three text levels stay distinct', () => {
     expect(contrast(t['--c-text'], t['--c-muted'])).toBeGreaterThan(1.6)
     expect(contrast(t['--c-muted'], t['--c-faint'])).toBeGreaterThan(1.05)
   })
 
-  // Les plans **de l'application** s'échelonnent : le puits creusé dans une carte,
-  // le fond de l'application, puis la carte elle-même. Un ordre inversé ferait
+  // The **application's** planes step: the well hollowed into a card, the
+  // application's background, then the card itself. A reversed order would make
   // mentir la profondeur.
   //
-  // C'est un test d'ordre, et pas d'écart, à dessein. Vers le noir, les rapports
-  // de contraste s'écrasent : deux presque-noirs qu'un œil sépare sans peine ne
-  // mesurent que 1,1:1, et exiger 1,25 forcerait tout le thème sombre à s'éclaircir
-  // en gris. Ce qui dessine réellement le bord d'une carte là-bas, c'est le filet
-  // de `--c-border` et l'ombre portée — d'où la vérification qui suit.
+  // This is a test of order, not of gap, by design. Towards black, contrast ratios
+  // collapse: two near-blacks an eye separates without effort measure only 1.1:1, and
+  // demanding 1.25 would force the whole dark theme to lighten into grey. What actually
+  // draws a card's edge there is `--c-border`'s hairline and the drop shadow — hence
+  // the check that follows.
   it('the application\'s planes step from the well up to the card', () => {
-    const ordre = ['--c-panel', '--c-frame', '--c-card']
-    const clarites = ordre.map((n) => luminance(t[n]))
-    const monotone = (signe: number) => clarites.every((v, i) => i === 0 || signe * (v - clarites[i - 1]) > 0)
-    expect(monotone(1) || monotone(-1), `plans dans l’ordre ${ordre.join(' → ')} : ${clarites.map((v) => v.toFixed(4)).join(', ')}`).toBe(true)
+    const order = ['--c-panel', '--c-frame', '--c-card']
+    const lightnesses = order.map((n) => luminance(t[n]))
+    const monotone = (signe: number) => lightnesses.every((v, i) => i === 0 || signe * (v - lightnesses[i - 1]) > 0)
+    expect(monotone(1) || monotone(-1), `planes in the order ${order.join(' → ')}: ${lightnesses.map((v) => v.toFixed(4)).join(', ')}`).toBe(true)
   })
 
   /**
-   * La gouttière, qui n'appartient pas à cette pile : c'est le bureau sur lequel
-   * l'application est posée, visible seulement au-delà de `lg`.
+   * The gutter, which does not belong to that stack: it is the desk the application
+   * is laid on, visible only above `lg`.
    *
-   * Elle était dans le test d'ordre juste au-dessus, tenue pour le plan le plus bas
-   * dans les deux thèmes. C'était l'exigence de trop, et elle demandait l'impossible
-   * en sombre : sous un cadre à 0,007 de clarté, il ne reste que du noir, et une
-   * gouttière à 0,002 comme à 0,004 se lit exactement pareil — noir. Le thème sombre
-   * n'avait donc pas de gouttière, seulement un bord d'écran.
+   * It used to be in the ordering test just above, held to be the lowest plane in both
+   * themes. That was the requirement too many, and it demanded the impossible on dark:
+   * under a frame at 0.007 lightness there is only black left, and a gutter at 0.002
+   * reads exactly like one at 0.004 — black. The dark theme therefore had no gutter,
+   * only a screen edge.
    *
-   * Les deux vraies exigences, elles, ne dépendent pas du thème : elle doit se
-   * **voir**, et elle ne doit jamais **dominer** la carte — c'est ce second point qui
-   * interdit le vrai défaut d'avant, une gouttière gris pâle (#b9bcc4) dans laquelle
-   * l'application flottait. Le sens de l'écart, lui, suit la place disponible : sous
-   * le papier en clair, au-dessus du cadre en sombre.
+   * The two real requirements do not depend on the theme: it must be **visible**, and
+   * it must never **dominate** the card — that second point is what forbids the real
+   * defect of before, a pale grey gutter (#b9bcc4) in which the application floated.
+   * The direction of the gap follows the room available: under the paper on light,
+   * above the frame on dark.
    */
   it('the gutter is visible without dominating the card', () => {
     const [page, frame, card] = ['--c-page', '--c-frame', '--c-card'].map((n) => luminance(t[n]))
@@ -202,7 +201,7 @@ describe.each([
   })
 
   it('the border detaches the card from its background', () => {
-    expect(contrast(t['--c-border'], t['--c-card']), 'bordure sur carte').toBeGreaterThan(1.08)
-    expect(contrast(t['--c-card'], t['--c-card2']), 'carte contre carte2').toBeGreaterThan(1.08)
+    expect(contrast(t['--c-border'], t['--c-card']), 'border on card').toBeGreaterThan(1.08)
+    expect(contrast(t['--c-card'], t['--c-card2']), 'card against card2').toBeGreaterThan(1.08)
   })
 })
