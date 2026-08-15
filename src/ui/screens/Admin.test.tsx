@@ -7,7 +7,7 @@ import { Admin } from './Admin'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
-import { nouveauSchema } from '../../domain/plays'
+import { newPlay } from '../../domain/plays'
 import {
   getConvocation, listMatches, listPlays, listResults, listTrainings, saveConvocation,
   saveMatch, savePlay, saveResult, saveTeam, saveTraining,
@@ -35,7 +35,7 @@ beforeEach(async () => {
   await saveConvocation({ matchId: 'm3', playerIds: ['p1'] })
   await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'ta', homeScore: 70, awayScore: 60 })
   await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
-  await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'PnR haut' })
+  await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'PnR haut' })
   localStorage.setItem('swish-club-id', 'ta')
 })
 

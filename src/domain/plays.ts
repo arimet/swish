@@ -5,66 +5,66 @@
  * ligne de fond (0) à la ligne médiane (1) ; sur `complet`, la médiane est à
  * 0,5 et la moitié avant est y ≤ 0,5.
  */
-export type Terrain = 'demi' | 'complet'
-export type Camp = 'attaque' | 'defense'
-export type Poste = 1 | 2 | 3 | 4 | 5
-export type Trait = 'course' | 'ecran' | 'passe' | 'dribble'
+export type Court = 'half' | 'full'
+export type Side = 'offense' | 'defense'
+export type Position = 1 | 2 | 3 | 4 | 5
+export type Stroke = 'cut' | 'screen' | 'pass' | 'dribble'
 
 export interface Point { x: number; y: number }
 
-export interface Pion { camp: Camp; poste: Poste; at: Point }
+export interface Marker { side: Side; position: Position; at: Point }
 
 /** Points échantillonnés du geste, lissés au rendu. Le dernier porte la pointe
  *  (ou la barre en T pour un écran). */
-export interface Fleche { depuis: { camp: Camp; poste: Poste }; points: Point[]; trait: Trait }
+export interface Arrow { from: { side: Side; position: Position }; points: Point[]; stroke: Stroke }
 
-export interface Temps {
-  pions: Pion[]                                   // 5 ou 10 selon `defense`
-  ballon: { camp: Camp; poste: Poste } | Point    // porté par un pion, ou posé au sol
-  fleches: Fleche[]
+export interface Step {
+  markers: Marker[]                                   // 5 ou 10 selon `defense`
+  ball: { side: Side; position: Position } | Point    // porté par un pion, ou posé au sol
+  arrows: Arrow[]
 }
 
-export interface ObjetPose { sorte: 'plot' | 'ballon' | 'echelle'; at: Point }
+export interface Prop { kind: 'cone' | 'ball' | 'ladder'; at: Point }
 
-export interface Schema {
+export interface Play {
   id: string
   clubId: string
   nom: string
   note?: string
-  terrain: Terrain
+  court: Court
   defense: boolean
-  objets: ObjetPose[]                             // communs à tous les temps
-  temps: Temps[]                                  // au moins un
+  props: Prop[]                             // communs à tous les temps
+  temps: Step[]                                  // au moins un
   /** Étiquette de rangement. Absent = « Sans dossier ». Un seul niveau : la liste
    *  des dossiers se déduit des schémas, il n'y a ni table ni entité. */
-  dossier?: string
+  folder?: string
   /** Date ISO du dernier enregistrement, écrite par la persistance. Sert à ranger
    *  la bibliothèque du plus récent au plus ancien. Absente sur les schémas
    *  enregistrés avant qu'on l'horodate. */
-  majLe?: string
+  updatedAt?: string
 }
 
 /** Les dossiers déclarés par ces schémas : valeurs distinctes non vides, triées à
  *  la française (« Écran » avant « Remise »). Un dossier vidé de ses schémas
  *  disparaît de lui-même, puisque rien ne le stocke ailleurs. */
-export function dossiers(schemas: Schema[]): string[] {
-  const noms = new Set(schemas.map((s) => s.dossier?.trim()).filter((d): d is string => !!d))
+export function folders(schemas: Play[]): string[] {
+  const noms = new Set(schemas.map((s) => s.folder?.trim()).filter((d): d is string => !!d))
   return [...noms].sort((a, b) => a.localeCompare(b, 'fr'))
 }
 
 /** Position du panier, normalisée, par terrain (1,575 m de la ligne de fond). */
-export const PANIER: Record<Terrain, Point[]> = {
-  demi: [{ x: 0.5, y: 1.575 / 14 }],
-  complet: [{ x: 0.5, y: 1.575 / 28 }, { x: 0.5, y: 1 - 1.575 / 28 }],
+export const BASKET: Record<Court, Point[]> = {
+  half: [{ x: 0.5, y: 1.575 / 14 }],
+  full: [{ x: 0.5, y: 1.575 / 28 }, { x: 0.5, y: 1 - 1.575 / 28 }],
 }
 
 // 1-2-2 sur demi-terrain : meneur en tête de raquette, deux ailiers, deux postes bas.
-const MISE_EN_PLACE: Record<Poste, Point> = {
+const SETUP: Record<Position, Point> = {
   1: { x: 0.5, y: 0.62 }, 2: { x: 0.22, y: 0.48 }, 3: { x: 0.78, y: 0.48 },
   4: { x: 0.3, y: 0.2 }, 5: { x: 0.7, y: 0.2 },
 }
 
-const POSTES: Poste[] = [1, 2, 3, 4, 5]
+const POSITIONS: Position[] = [1, 2, 3, 4, 5]
 
 /**
  * Un schéma vierge : le 1-2-2 d'attaque, une défense en miroir si demandée
@@ -72,28 +72,28 @@ const POSTES: Poste[] = [1, 2, 3, 4, 5]
  * meneur. Sur terrain complet, la mise en place occupe la moitié avant.
  * L'`id` est laissé à la persistance.
  */
-export const NOM_DEFAUT = 'sch.nouveauNom'
+export const DEFAULT_PLAY_NAME = 'sch.nouveauNom'
 
-export function nouveauSchema(clubId: string, terrain: Terrain, defense: boolean): Omit<Schema, 'id'> {
-  const panier = PANIER[terrain][0]
-  const attaque: Pion[] = POSTES.map((poste) => {
-    const base = MISE_EN_PLACE[poste]
-    return { camp: 'attaque', poste, at: { x: base.x, y: terrain === 'complet' ? base.y / 2 : base.y } }
+export function newPlay(clubId: string, court: Court, defense: boolean): Omit<Play, 'id'> {
+  const panier = BASKET[court][0]
+  const offense: Marker[] = POSITIONS.map((position) => {
+    const base = SETUP[position]
+    return { side: 'offense', position, at: { x: base.x, y: court === 'full' ? base.y / 2 : base.y } }
   })
-  const pions = defense
-    ? [...attaque, ...attaque.map((a): Pion => ({
-        camp: 'defense',
-        poste: a.poste,
+  const markers = defense
+    ? [...offense, ...offense.map((a): Marker => ({
+        side: 'defense',
+        position: a.position,
         at: { x: (a.at.x + panier.x) / 2, y: (a.at.y + panier.y) / 2 },
       }))]
-    : attaque
+    : offense
   return {
     clubId,
-    nom: NOM_DEFAUT,
-    terrain,
+    nom: DEFAULT_PLAY_NAME,
+    court,
     defense,
-    objets: [],
-    temps: [{ pions, ballon: { camp: 'attaque', poste: 1 }, fleches: [] }],
+    props: [],
+    temps: [{ markers, ball: { side: 'offense', position: 1 }, arrows: [] }],
   }
 }
 
@@ -102,13 +102,13 @@ export function nouveauSchema(clubId: string, terrain: Terrain, defense: boolean
  * fait glisser les pions là où ses flèches les envoyaient — il ne replace pas
  * cinq pions à chaque temps.
  */
-export function tempsSuivant(t: Temps): Temps {
-  return { pions: structuredClone(t.pions), ballon: structuredClone(t.ballon), fleches: [] }
+export function nextStep(t: Step): Step {
+  return { markers: structuredClone(t.markers), ball: structuredClone(t.ball), arrows: [] }
 }
 
 /** Distance de `p` au segment [a, b], au point le plus proche. Exportée parce que
  *  la gomme de l'éditeur cherche la flèche sous le doigt avec la même mesure. */
-export function distanceAuSegment(p: Point, a: Point, b: Point): number {
+export function distanceToSegment(p: Point, a: Point, b: Point): number {
   const dx = b.x - a.x
   const dy = b.y - a.y
   const l2 = dx * dx + dy * dy
@@ -122,34 +122,34 @@ export function distanceAuSegment(p: Point, a: Point, b: Point): number {
  * (Ramer-Douglas-Peucker) : un tracé en L garde son coude. Le seuil est en
  * unités normalisées ; moins de trois points, le tracé est rendu tel quel.
  */
-export function reduireTrace(points: Point[], epsilon = 0.01): Point[] {
+export function simplifyPath(points: Point[], epsilon = 0.01): Point[] {
   if (points.length < 3) return points
-  const debut = points[0]
+  const start = points[0]
   const fin = points[points.length - 1]
   let distMax = 0
   let iMax = 0
   for (let i = 1; i < points.length - 1; i++) {
-    const dist = distanceAuSegment(points[i], debut, fin)
+    const dist = distanceToSegment(points[i], start, fin)
     if (dist > distMax) { distMax = dist; iMax = i }
   }
-  if (distMax <= epsilon) return [debut, fin]
+  if (distMax <= epsilon) return [start, fin]
   return [
-    ...reduireTrace(points.slice(0, iMax + 1), epsilon).slice(0, -1),
-    ...reduireTrace(points.slice(iMax), epsilon),
+    ...simplifyPath(points.slice(0, iMax + 1), epsilon).slice(0, -1),
+    ...simplifyPath(points.slice(iMax), epsilon),
   ]
 }
 
 /** Copie du schéma sur le terrain donné, tous les y passés par `f`. */
-function remapY(s: Schema, terrain: Terrain, f: (y: number) => number): Schema {
+function remapY(s: Play, court: Court, f: (y: number) => number): Play {
   const pt = (p: Point): Point => ({ x: p.x, y: f(p.y) })
   return {
     ...s,
-    terrain,
-    objets: s.objets.map((o) => ({ ...o, at: pt(o.at) })),
+    court,
+    props: s.props.map((o) => ({ ...o, at: pt(o.at) })),
     temps: s.temps.map((t) => ({
-      pions: t.pions.map((p) => ({ ...p, at: pt(p.at) })),
-      ballon: 'x' in t.ballon ? pt(t.ballon) : { ...t.ballon },
-      fleches: t.fleches.map((fl) => ({ ...fl, points: fl.points.map(pt) })),
+      markers: t.markers.map((p) => ({ ...p, at: pt(p.at) })),
+      ball: 'x' in t.ball ? pt(t.ball) : { ...t.ball },
+      arrows: t.arrows.map((fl) => ({ ...fl, points: fl.points.map(pt) })),
     })),
   }
 }
@@ -158,14 +158,14 @@ function remapY(s: Schema, terrain: Terrain, f: (y: number) => number): Schema {
  *  le numéro de poste s'il y en a un. Le domaine nomme, l'interface rédige. */
 export interface Occupant { cle: string; n?: number }
 
-function occupantMoitieArriere(s: Schema): Occupant | null {
+function backcourtOccupant(s: Play): Occupant | null {
   for (const t of s.temps) {
-    for (const p of t.pions) if (p.at.y > 0.5) return { cle: 'sch.occPoste', n: p.poste }
-    for (const fl of t.fleches) if (fl.points.some((p) => p.y > 0.5)) return { cle: 'sch.occFleche', n: fl.depuis.poste }
+    for (const p of t.markers) if (p.at.y > 0.5) return { cle: 'sch.occPoste', n: p.position }
+    for (const fl of t.arrows) if (fl.points.some((p) => p.y > 0.5)) return { cle: 'sch.occFleche', n: fl.from.position }
   }
-  const noms: Record<ObjetPose['sorte'], string> = { plot: 'sch.occPlot', ballon: 'sch.occBallonPose', echelle: 'sch.occEchelle' }
-  for (const o of s.objets) if (o.at.y > 0.5) return { cle: noms[o.sorte] }
-  for (const t of s.temps) if ('x' in t.ballon && t.ballon.y > 0.5) return { cle: 'sch.occBallon' }
+  const noms: Record<Prop['kind'], string> = { cone: 'sch.occPlot', ball: 'sch.occBallonPose', ladder: 'sch.occEchelle' }
+  for (const o of s.props) if (o.at.y > 0.5) return { cle: noms[o.kind] }
+  for (const t of s.temps) if ('x' in t.ball && t.ball.y > 0.5) return { cle: 'sch.occBallon' }
   return null
 }
 
@@ -175,10 +175,10 @@ function occupantMoitieArriere(s: Schema): Occupant | null {
  * ou le ballon posé occupe la moitié arrière — remapper en silence perdrait la
  * moitié du dessin.
  */
-export function versTerrain(s: Schema, terrain: Terrain): { ok: Schema } | { refus: Occupant } {
-  if (s.terrain === terrain) return { ok: s }
-  if (terrain === 'complet') return { ok: remapY(s, terrain, (y) => y / 2) }
-  const occupant = occupantMoitieArriere(s)
+export function toCourt(s: Play, court: Court): { ok: Play } | { refus: Occupant } {
+  if (s.court === court) return { ok: s }
+  if (court === 'full') return { ok: remapY(s, court, (y) => y / 2) }
+  const occupant = backcourtOccupant(s)
   if (occupant) return { refus: occupant }
-  return { ok: remapY(s, terrain, (y) => y * 2) }
+  return { ok: remapY(s, court, (y) => y * 2) }
 }

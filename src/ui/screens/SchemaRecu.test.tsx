@@ -9,18 +9,18 @@ import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { listPlays, savePlay, saveTeam } from '../../persistence/repositories'
 import { encoder } from '../../domain/partage'
-import { nouveauSchema, tempsSuivant, type Schema } from '../../domain/plays'
+import { newPlay, nextStep, type Play } from '../../domain/plays'
 
 /** Deux temps : le meneur descend de 0,62 à 0,20. Le même schéma que le lecteur
  *  de 8B, pour que le défilement se prouve sur un pion qui bouge vraiment. */
-const deuxTemps = (): Schema => {
-  const s: Schema = { id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'Corner pour le 4', note: 'Sortie de balle' }
+const deuxTemps = (): Play => {
+  const s: Play = { id: 's1', ...newPlay('ta', 'half', false), nom: 'Corner pour le 4', note: 'Sortie de balle' }
   const t0 = {
     ...s.temps[0],
-    fleches: [{ depuis: { camp: 'attaque' as const, poste: 1 as const }, trait: 'course' as const, points: [{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.2 }] }],
+    arrows: [{ from: { side: 'offense' as const, position: 1 as const }, stroke: 'cut' as const, points: [{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.2 }] }],
   }
-  const t1 = tempsSuivant(t0)
-  t1.pions = t1.pions.map((p) => (p.poste === 1 ? { ...p, at: { x: 0.5, y: 0.2 } } : p))
+  const t1 = nextStep(t0)
+  t1.markers = t1.markers.map((p) => (p.position === 1 ? { ...p, at: { x: 0.5, y: 0.2 } } : p))
   return { ...s, temps: [t0, t1] }
 }
 
@@ -31,7 +31,7 @@ const ARRIVEE = 0.2 * 1400
 /** L'ordonnée du meneur telle que le tableau la dessine : la seule preuve que le
  *  défilement montre bien un autre temps, plutôt qu'un compteur d'écran. */
 function ordonneeDuMeneur(): number {
-  const groupe = [...document.querySelectorAll('g[data-pion="attaque"]')]
+  const groupe = [...document.querySelectorAll('g[data-marker="offense"]')]
     .find((n) => n.querySelector('text')?.textContent === '1')
   return Number(groupe!.querySelector('circle')!.getAttribute('cy'))
 }

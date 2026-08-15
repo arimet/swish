@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { pool, prelude, refuse } from './_db.js'
+import { pool, preamble, unauthorized } from './_db.js'
 
 /**
  * Hydratation du miroir local depuis la source de vérité.
@@ -18,8 +18,8 @@ import { pool, prelude, refuse } from './_db.js'
  * hydratation.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (prelude(req, res, 'GET')) return
-  if (refuse(req, res)) return
+  if (preamble(req, res, 'GET')) return
+  if (unauthorized(req, res)) return
 
   const brut = Number(req.query.since)
   const since = Number.isFinite(brut) && brut > 0 ? brut : 0
@@ -35,12 +35,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let rev = since
   const docs: { kind: string; id: string; doc: unknown }[] = []
-  const vivants: string[] = []
+  const alive: string[] = []
   for (const r of rows) {
-    vivants.push(`${r.kind}:${r.id}`)
+    alive.push(`${r.kind}:${r.id}`)
     rev = Math.max(rev, Number(r.rev))
     if (r.doc !== null) docs.push({ kind: r.kind, id: r.id, doc: r.doc })
   }
 
-  return res.status(200).json({ rev, docs, vivants })
+  return res.status(200).json({ rev, docs, alive })
 }

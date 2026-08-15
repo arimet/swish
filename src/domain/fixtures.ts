@@ -12,7 +12,7 @@ export type Fixture =
  * (ex. 0h-2h en France), elle renvoie encore la veille. On dérive donc le jour
  * des composantes locales, pas de la représentation UTC.
  */
-export const jourISO = (d: Date) =>
+export const isoDay = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 /** Les âges en toutes lettres, dans la langue de l'application et non dans celle du
@@ -20,7 +20,7 @@ export const jourISO = (d: Date) =>
  *  comme le calendrier écrit ses mois lui-même. `numeric: 'always'` plutôt que `'auto'` :
  *  « il y a 2 jours » se compare d'un coup d'œil à « il y a 3 semaines », là où
  *  « avant-hier » demande de convertir. */
-const relatif = (langue: string) => new Intl.RelativeTimeFormat(langue, { numeric: 'always' })
+const relatif = (lang: string) => new Intl.RelativeTimeFormat(lang, { numeric: 'always' })
 
 /**
  * L'âge d'une date, en toutes lettres : « il y a 2 jours » n'a pas le même poids
@@ -32,7 +32,7 @@ const relatif = (langue: string) => new Intl.RelativeTimeFormat(langue, { numeri
  * aussi le cas d'une date à venir — horloge de l'appareil reculée depuis l'écriture —
  * ramenée là, car « dans deux heures » n'a aucun sens sous un texte déjà écrit.
  */
-export function depuis(iso: string, langue = 'fr', maintenant = new Date()): string | null {
+export function since(iso: string, lang = 'fr', maintenant = new Date()): string | null {
   const sec = Math.max(0, Math.round((maintenant.getTime() - new Date(iso).getTime()) / 1000))
   const [n, unité]: [number, Intl.RelativeTimeFormatUnit] =
     sec < 3600 ? [Math.floor(sec / 60), 'minute']
@@ -40,7 +40,7 @@ export function depuis(iso: string, langue = 'fr', maintenant = new Date()): str
     : sec < 7 * 86400 ? [Math.floor(sec / 86400), 'day']
     : sec < 30 * 86400 ? [Math.floor(sec / (7 * 86400)), 'week']
     : [Math.floor(sec / (30 * 86400)), 'month']
-  return n < 1 ? null : relatif(langue).format(-n, unité)
+  return n < 1 ? null : relatif(lang).format(-n, unité)
 }
 
 /**
@@ -52,7 +52,7 @@ export function depuis(iso: string, langue = 'fr', maintenant = new Date()): str
  * de la semaine suivante.
  */
 export function nextFixture(matches: Match[], trainings: Training[], today: Date): Fixture | null {
-  const jour = jourISO(today)
+  const jour = isoDay(today)
   const echeances: Fixture[] = []
   // Les entraînements sont ajoutés avant les rencontres : le tri ci-dessous est stable,
   // donc si l'ordre d'insertion décidait des égalités de date, il faudrait qu'il coïncide

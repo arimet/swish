@@ -6,18 +6,18 @@ import { deleteMessage, getConvocation, getMessage, listMatches, listPlayers, li
 import { refresh } from '../../persistence/remote'
 import { teamMatches, teamRecord, teamScorers } from '../../domain/teamRecord'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
-import { depuis, nextFixture, type Fixture } from '../../domain/fixtures'
+import { since, nextFixture, type Fixture } from '../../domain/fixtures'
 import { liveState } from '../../rules/ffbb'
 import { ShotChart } from '../components/ShotCourt'
 import { C, Panel, TeamBadge, Vous, bd, displayClock, fmtDate } from '../olive/kit'
-import type { Convocation, Match, MessageEquipe, Player, Team, Training } from '../../domain/types'
-import type { Schema } from '../../domain/plays'
+import type { Convocation, Match, TeamMessage, Player, Team, Training } from '../../domain/types'
+import type { Play } from '../../domain/plays'
 import { Check } from 'lucide-react'
-import { useLangue, useT } from '../../i18n'
+import { useLang, useT } from '../../i18n'
 import { remoteEnabled } from '../../persistence/remote'
 
 export function Dashboard() {
-  const trad = useT()
+  const translate = useT()
   const { clubId, club } = useClub()
   const { can, playerId } = useAuth()
   // Le tableau de bord se lit en entier ; seuls les raccourcis qui mènent à une
@@ -27,7 +27,7 @@ export function Dashboard() {
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [players, setPlayers] = useState<Player[]>([])
   const [trainings, setTrainings] = useState<Training[]>([])
-  const [schemas, setSchemas] = useState<Schema[]>([])
+  const [schemas, setSchemas] = useState<Play[]>([])
   const [convocation, setConvocation] = useState<Convocation | null>(null)
   const [openPlayer, setOpenPlayer] = useState<string | null>(null)
 
@@ -120,12 +120,12 @@ export function Dashboard() {
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-extrabold tracking-tight">{club.name}</h1>
             <p className="text-sm" style={{ color: C.muted }}>
-              {rec.played ? trad('bord.rencontresJouees', { count: rec.played }) : trad('bord.aucuneRencontreJouee')}
+              {rec.played ? translate('bord.rencontresJouees', { count: rec.played }) : translate('bord.aucuneRencontreJouee')}
             </p>
           </div>
           {moi && (
             <Link to={`/players/${moi.id}`} className="ml-auto shrink-0 rounded-xl px-3 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>
-              {trad('bord.maFiche')}
+              {translate('bord.maFiche')}
             </Link>
           )}
         </div>
@@ -146,15 +146,15 @@ export function Dashboard() {
         {aJoue ? (
           <>
             <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <Stat label={trad('bord.bilan')} value={`${rec.wins}V – ${rec.losses}D`} hint={trad('commun.rencontre', { count: rec.played })} accent={rec.wins >= rec.losses ? C.green : C.accent} />
-              <Stat label={trad('bord.pointsMarques')} value={String(rec.avgFor)} hint={trad('bord.parMatch')} />
-              <Stat label={trad('bord.pointsEncaisses')} value={String(rec.avgAgainst)} hint={trad('bord.parMatch')} />
-              <Stat label={trad('bord.differentiel')} value={diff > 0 ? `+${diff}` : String(diff)} hint={trad('bord.surLaSaison')} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
+              <Stat label={translate('bord.bilan')} value={`${rec.wins}V – ${rec.losses}D`} hint={translate('commun.rencontre', { count: rec.played })} accent={rec.wins >= rec.losses ? C.green : C.accent} />
+              <Stat label={translate('bord.pointsMarques')} value={String(rec.avgFor)} hint={translate('bord.parMatch')} />
+              <Stat label={translate('bord.pointsEncaisses')} value={String(rec.avgAgainst)} hint={translate('bord.parMatch')} />
+              <Stat label={translate('bord.differentiel')} value={diff > 0 ? `+${diff}` : String(diff)} hint={translate('bord.surLaSaison')} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
             </div>
 
             {lines.length > 0 && (
               <div className="mt-3 flex items-center gap-2">
-                <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.forme')}</span>
+                <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.forme')}</span>
                 {lines.slice(0, 5).map((l) => (
                   <span key={l.match.id} className="grid h-6 w-6 place-items-center rounded-md text-[12px] font-black"
                     style={{ background: l.result === 'V' ? C.greenBg : C.dangerBg, color: l.result === 'V' ? C.green : C.danger }}>
@@ -165,13 +165,13 @@ export function Dashboard() {
             )}
           </>
         ) : enMiseEnPlace ? (
-          <PourCommencer effectif={players.length} autresEquipes={autresEquipes} clubId={clubId} gere={gere} />
+          <PourCommencer roster={players.length} autresEquipes={autresEquipes} clubId={clubId} gere={gere} />
         ) : null}
 
         <div className={`${aJoue ? 'mt-6' : 'mt-5'} grid gap-5 lg:grid-cols-[1fr_420px] [&>*]:min-w-0`}>
-          {aJoue && <Panel title={trad('bord.meilleursMarqueurs')}>
+          {aJoue && <Panel title={translate('bord.meilleursMarqueurs')}>
             {scorers.length === 0 ? (
-              <Empty>{trad('bord.pasDePoints')}</Empty>
+              <Empty>{translate('bord.pasDePoints')}</Empty>
             ) : (
               <ul className="space-y-1.5">
                 {scorers.map(([pid, pts], i) => {
@@ -189,7 +189,7 @@ export function Dashboard() {
                         {/* Titre explicite : ce pourcentage ne porte que sur les tirs
                             localisés, alors que les points juste à côté comptent tout
                             (lancers francs compris) — cf. PlayerDetail. */}
-                        <span className="text-[12px] font-semibold" style={{ color: C.muted }} title={trad('bord.reussiteTirs')}>{pct === null ? '—' : `${pct} %`}</span>
+                        <span className="text-[12px] font-semibold" style={{ color: C.muted }} title={translate('bord.reussiteTirs')}>{pct === null ? '—' : `${pct} %`}</span>
                         <span className="w-14 text-right text-sm font-black tabular-nums">{pts} pts</span>
                       </Link>
                     </li>
@@ -201,14 +201,14 @@ export function Dashboard() {
 
           {/* La carte de tirs ne s'affiche que s'il y a des tirs : vide, c'est un
               terrain dessiné pour rien, et elle ne dit pas quoi faire. */}
-          {aJoue && <Panel title={openPlayer ? trad('bord.hotZoneJoueur', { nom: byId[openPlayer]?.lastName ?? trad('bord.joueur') }) : trad('bord.hotZoneEquipe')}>
+          {aJoue && <Panel title={openPlayer ? translate('bord.hotZoneJoueur', { nom: byId[openPlayer]?.lastName ?? translate('bord.joueur') }) : translate('bord.hotZoneEquipe')}>
             <div className="mb-2 flex flex-wrap gap-1.5">
-              <Chip active={!openPlayer} onClick={() => setOpenPlayer(null)}>{trad('bord.equipe')}</Chip>
+              <Chip active={!openPlayer} onClick={() => setOpenPlayer(null)}>{translate('bord.equipe')}</Chip>
               {players.map((p) => (
                 <Chip key={p.id} active={openPlayer === p.id} onClick={() => setOpenPlayer(p.id)}>{p.number}</Chip>
               ))}
             </div>
-            {shownShots.length === 0 ? <Empty>{trad('bord.aucunTir')}</Empty> : <ShotChart shots={shownShots} minAttempts={openPlayer ? 1 : 3} />}
+            {shownShots.length === 0 ? <Empty>{translate('bord.aucunTir')}</Empty> : <ShotChart shots={shownShots} minAttempts={openPlayer ? 1 : 3} />}
           </Panel>}
         </div>
       </div>
@@ -233,13 +233,13 @@ const OUBLI_MS = 14 * 24 * 3600_000
  * la garde reste derrière eux.
  */
 function MessageDuCoach({ clubId }: { clubId: string }) {
-  const trad = useT()
-  const { langue } = useLangue()
+  const translate = useT()
+  const { lang } = useLang()
   const { can, guard } = useAuth()
   const gere = can('manage')
-  const [message, setMessage] = useState<MessageEquipe | null>(null)
+  const [message, setMessage] = useState<TeamMessage | null>(null)
   const [saisieOuverte, setSaisieOuverte] = useState(false)
-  const [texte, setTexte] = useState('')
+  const [text, setTexte] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -249,13 +249,13 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
 
   // Un blanc n'est pas un message : il n'occupe pas le tableau de bord, et rien
   // ne se publie tant que le champ ne porte que des espaces.
-  const affiché = message && message.texte.trim() ? message : null
+  const affiché = message && message.text.trim() ? message : null
 
-  const ouvrir = () => guard('manage', () => { setTexte(affiché?.texte ?? ''); setSaisieOuverte(true) })
+  const ouvrir = () => guard('manage', () => { setTexte(affiché?.text ?? ''); setSaisieOuverte(true) })
   const publier = () => guard('manage', async () => {
-    const écrit = { clubId, texte: texte.trim(), écritLe: new Date().toISOString() }
-    await saveMessage(écrit)
-    setMessage(écrit)
+    const written = { clubId, text: text.trim(), writtenAt: new Date().toISOString() }
+    await saveMessage(written)
+    setMessage(written)
     setSaisieOuverte(false)
   })
   const effacer = () => guard('manage', async () => {
@@ -270,18 +270,18 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
     return (
       <section className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
         <div className="mb-3 flex items-center gap-3">
-          <label htmlFor="message-equipe" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{trad('bord.messageEquipe')}</label>
-          <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{trad('commun.fermer2')}</button>
+          <label htmlFor="message-equipe" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('bord.messageEquipe')}</label>
+          <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
         </div>
-        <textarea id="message-equipe" rows={3} value={texte} onChange={(e) => setTexte(e.target.value)}
-          placeholder={trad('bord.messagePlaceholder')}
+        <textarea id="message-equipe" rows={3} value={text} onChange={(e) => setTexte(e.target.value)}
+          placeholder={translate('bord.messagePlaceholder')}
           className="w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
-        <button onClick={publier} disabled={!texte.trim()} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
-          {trad('bord.publierMessage')}
+        <button onClick={publier} disabled={!text.trim()} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
+          {translate('bord.publierMessage')}
         </button>
         {/* Comme les convocations, les entraînements et les schémas : même
             formulation, pour ne pas laisser croire à deux limites différentes. */}
-        {!remoteEnabled() && <p className="mt-3 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('bord.messageLocal')}</p>}
+        {!remoteEnabled() && <p className="mt-3 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('bord.messageLocal')}</p>}
       </section>
     )
   }
@@ -292,29 +292,29 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
     if (!gere) return null
     return (
       <button onClick={ouvrir} className="mb-5 rounded-xl px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>
-        {trad('bord.ajouterMessage')}
+        {translate('bord.ajouterMessage')}
       </button>
     )
   }
 
-  const oublié = Date.now() - Date.parse(affiché.écritLe) > OUBLI_MS
+  const oublié = Date.now() - Date.parse(affiché.writtenAt) > OUBLI_MS
   return (
-    <section data-testid="message-equipe" className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${oublié ? C.amberBd : C.accentBd}` }}>
+    <section data-testid="team-message" className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${oublié ? C.amberBd : C.accentBd}` }}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.messageEquipe')}</span>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.messageEquipe')}</span>
         <span className="rounded-md px-2 py-0.5 text-[12px] font-black"
           style={oublié ? { background: C.amberBg, color: C.amber } : { background: C.accentBg, color: C.accent }}>
-          {depuis(affiché.écritLe, langue) ?? trad('commun.aLInstant')}
+          {since(affiché.writtenAt, lang) ?? translate('commun.aLInstant')}
         </span>
         {gere && (
           <>
-            <button onClick={ouvrir} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>{trad('commun.modifierMaj')}</button>
-            <button onClick={effacer} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.accent }}>{trad('commun.effacer')}</button>
+            <button onClick={ouvrir} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>{translate('commun.modifierMaj')}</button>
+            <button onClick={effacer} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.accent }}>{translate('commun.effacer')}</button>
           </>
         )}
       </div>
       {/* `whitespace-pre-wrap` : deux consignes sur deux lignes restent sur deux lignes. */}
-      <p className="whitespace-pre-wrap text-[15px] font-semibold">{affiché.texte}</p>
+      <p className="whitespace-pre-wrap text-[15px] font-semibold">{affiché.text}</p>
     </section>
   )
 }
@@ -322,8 +322,8 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
 // `live` et `next` viennent tous les deux de `mine`, déjà filtré sur
 // `meta.clubId === clubId` : notre club est donc toujours le côté A.
 function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next?: Match; teams: Record<string, Team>; gere: boolean; tientLaMarque: boolean }) {
-  const trad = useT()
-  const opponent = (m: Match) => teams[m.meta.opponentId]?.name ?? trad('bord.adversaire')
+  const translate = useT()
+  const opponent = (m: Match) => teams[m.meta.opponentId]?.name ?? translate('bord.adversaire')
   if (live) {
     const ls = liveState(live)
     const dc = displayClock(live)
@@ -331,15 +331,15 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
     const opp = ls.score.b
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
-        <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.greenFill, color: C.onGreen }}>{trad('bord.enDirect')}</span>
+        <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.greenFill, color: C.onGreen }}>{translate('bord.enDirect')}</span>
         <span className="nums text-3xl font-black tabular-nums">{mine} – {opp}</span>
-        <span className="text-sm font-bold" style={{ color: C.muted }}>{trad('bord.contre', { equipe: opponent(live) })}</span>
+        <span className="text-sm font-bold" style={{ color: C.muted }}>{translate('bord.contre', { equipe: opponent(live) })}</span>
         <span className="nums text-sm font-bold" style={{ color: C.faint }}>{dc.label} · {dc.clock}</span>
         {/* Le score en direct se lit par tout le monde ; ouvrir la table de marque
             est le geste de celui qui la tient, et lui seul y est invité. */}
         {tientLaMarque && (
           <Link to={`/match/${live.id}/live`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-            {trad('bord.ouvrirTable')}
+            {translate('bord.ouvrirTable')}
           </Link>
         )}
       </div>
@@ -349,18 +349,18 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
     const f = fmtDate(next.meta.date)
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.prochaineRencontre')}</span>
-        <span className="text-sm font-bold">{trad('bord.contre', { equipe: opponent(next) })}</span>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.prochaineRencontre')}</span>
+        <span className="text-sm font-bold">{translate('bord.contre', { equipe: opponent(next) })}</span>
         <span className="text-sm" style={{ color: C.muted }}>{[f.long, next.meta.time, next.meta.venue].filter(Boolean).join(' · ')}</span>
-        <Link to={`/match/${next.id}`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>{trad('bord.voirFiche')}</Link>
+        <Link to={`/match/${next.id}`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>{translate('bord.voirFiche')}</Link>
       </div>
     )
   }
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-      <span className="text-sm" style={{ color: C.muted }}>{trad('bord.aucuneRencontrePrevue')}</span>
+      <span className="text-sm" style={{ color: C.muted }}>{translate('bord.aucuneRencontrePrevue')}</span>
       {/* Planifier écrit : le raccourci ne s'affiche qu'à qui gère le club. */}
-      {gere && <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('bord.planifierRencontre')}</Link>}
+      {gere && <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('bord.planifierRencontre')}</Link>}
     </div>
   )
 }
@@ -368,14 +368,14 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
 /** Bloc « prochaine échéance » : rencontre ou entraînement, convocation comprise.
  *  `fixture` exclut déjà le match en direct (voir le calcul dans `Dashboard`) : ce
  *  composant n'a donc jamais à s'en soucier, il affiche simplement ce qu'on lui donne. */
-function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fixture: Fixture | null; teams: Record<string, Team>; players: Player[]; convocation: Convocation | null; schemas: Schema[]; gere: boolean }) {
-  const trad = useT()
+function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fixture: Fixture | null; teams: Record<string, Team>; players: Player[]; convocation: Convocation | null; schemas: Play[]; gere: boolean }) {
+  const translate = useT()
   if (!fixture) {
     return (
       <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.prochaineEcheance')}</span>
-        <span className="text-sm" style={{ color: C.muted }}>{trad('bord.rienDePlanifie')}</span>
-        {gere && <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('bord.planifier')}</Link>}
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.prochaineEcheance')}</span>
+        <span className="text-sm" style={{ color: C.muted }}>{translate('bord.rienDePlanifie')}</span>
+        {gere && <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('bord.planifier')}</Link>}
       </div>
     )
   }
@@ -388,15 +388,15 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
     const prévus = schemas.filter((s) => t.playIds?.includes(s.id))
     return (
       <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.prochaineEcheance')}</span>
-        <p className="mt-1 text-sm font-bold">{trad('bord.entrainement')}</p>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.prochaineEcheance')}</span>
+        <p className="mt-1 text-sm font-bold">{translate('bord.entrainement')}</p>
         <p className="text-sm" style={{ color: C.muted }}>{[f.long, t.time, t.place].filter(Boolean).join(' · ') || '—'}</p>
         <p className="mt-1 text-sm" style={{ color: C.muted }}>Thème : {t.theme ?? '—'}</p>
         {prévus.length > 0 && (
           <div className="mt-3 border-t pt-3" style={{ borderColor: C.border }}>
             {/* Le chemin le plus court entre « c'est mardi » et « voilà ce qu'on
                 travaille » : chaque schéma prévu ouvre directement son lecteur. */}
-            <p className="text-sm font-bold">{trad('bord.auProgramme')}</p>
+            <p className="text-sm font-bold">{translate('bord.auProgramme')}</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {prévus.map((s) => (
                 <Link key={s.id} to={`/schemas/${s.id}/lecteur`} className="rounded-lg px-2.5 py-1 text-[12px] font-bold"
@@ -421,8 +421,8 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
 
   return (
     <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-      <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.prochaineEcheance')}</span>
-      <p className="mt-1 text-sm font-bold">{trad('bord.contre', { equipe: opponent })}</p>
+      <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.prochaineEcheance')}</span>
+      <p className="mt-1 text-sm font-bold">{translate('bord.contre', { equipe: opponent })}</p>
       <p className="text-sm" style={{ color: C.muted }}>{[f.long, m.meta.time, m.meta.venue].filter(Boolean).join(' · ') || '—'}</p>
       {/* La convocation vit sur la fiche de la rencontre, à sa place — mais c'est
           ici qu'on la regarde. Le lien y mène directement, à l'ancre : sans lui,
@@ -435,10 +435,10 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
             convoqué » sur trois lignes à côté du bouton, la ligne se casse en deux. */}
         <div className="min-w-[180px] flex-1">
           {convoqués.length === 0 ? (
-            <p className="text-sm font-bold" style={{ color: C.amber }}>{trad('bord.personneConvoquee')}</p>
+            <p className="text-sm font-bold" style={{ color: C.amber }}>{translate('bord.personneConvoquee')}</p>
           ) : (
             <>
-              <p className="text-sm font-bold">{trad('compte.convoque', { count: convoqués.length })}</p>
+              <p className="text-sm font-bold">{translate('compte.convoque', { count: convoqués.length })}</p>
               {rdv && <p className="mt-0.5 text-sm" style={{ color: C.muted }}>Rendez-vous {rdv}</p>}
               <p className="mt-1 text-sm" style={{ color: C.muted }}>{convoqués.map((p) => `${p.lastName} ${p.firstName}`).join(', ')}</p>
             </>
@@ -449,7 +449,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
         {gere && (
           <Link to={`/match/${m.id}#convocation`} className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
             style={convoqués.length === 0 ? { background: C.brand, color: C.onBrand } : { border: bd, color: C.text }}>
-            {convoqués.length === 0 ? trad('bord.convoquerEquipe') : trad('bord.modifierConvocation')}
+            {convoqués.length === 0 ? translate('bord.convoquerEquipe') : translate('bord.modifierConvocation')}
           </Link>
         )}
       </div>
@@ -482,42 +482,42 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
  * cinq joueurs ne sont pas une exigence de l'application — `StartingFiveGate` sait
  * démarrer avec moins — mais on ne met pas cinq joueurs sur le terrain avec quatre.
  */
-function PourCommencer({ effectif, autresEquipes, clubId, gere }: { effectif: number; autresEquipes: number; clubId: string; gere: boolean }) {
-  const trad = useT()
+function PourCommencer({ roster, autresEquipes, clubId, gere }: { roster: number; autresEquipes: number; clubId: string; gere: boolean }) {
+  const translate = useT()
   const etapes = [
     {
-      fait: effectif >= 5,
-      titre: effectif === 0 ? trad('commencer.effectifVide') : trad('commencer.effectif', { n: trad('commun.joueur', { count: effectif }) }),
-      detail: effectif >= 5 ? trad('commencer.effectifPret') : trad('commencer.effectifIncomplet'),
+      fait: roster >= 5,
+      titre: roster === 0 ? translate('commencer.effectifVide') : translate('commencer.effectif', { n: translate('commun.joueur', { count: roster }) }),
+      detail: roster >= 5 ? translate('commencer.effectifPret') : translate('commencer.effectifIncomplet'),
       lien: `/teams/${clubId}`,
-      action: trad('commencer.completer'),
+      action: translate('commencer.completer'),
     },
     {
       fait: autresEquipes > 0,
-      titre: trad('commencer.adversaireTitre'),
-      detail: trad('commencer.adversaireDetail'),
+      titre: translate('commencer.adversaireTitre'),
+      detail: translate('commencer.adversaireDetail'),
       lien: '/teams/new',
-      action: trad('commencer.nouvelleEquipe'),
+      action: translate('commencer.nouvelleEquipe'),
     },
     {
       fait: false,
-      titre: trad('commencer.rencontreTitre'),
-      detail: trad('commencer.rencontreDetail'),
+      titre: translate('commencer.rencontreTitre'),
+      detail: translate('commencer.rencontreDetail'),
       lien: '/match/new',
-      action: trad('commencer.nouvelleRencontre'),
+      action: translate('commencer.nouvelleRencontre'),
     },
   ]
-  const courante = etapes.findIndex((e) => !e.fait)
+  const current = etapes.findIndex((e) => !e.fait)
 
   return (
     <section className="mt-5 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
       <h2 className="text-base font-extrabold tracking-tight">
-        {effectif >= 5 ? trad('commencer.titrePret') : trad('commencer.titre')}
+        {roster >= 5 ? translate('commencer.titrePret') : translate('commencer.titre')}
       </h2>
       <p className="mt-1 text-[13px]" style={{ color: C.muted }}>
         {gere
-          ? trad('commencer.sousTitreGere')
-          : trad('commencer.sousTitreVisiteur')}
+          ? translate('commencer.sousTitreGere')
+          : translate('commencer.sousTitreVisiteur')}
       </p>
 
       <ol className="mt-4 space-y-2">
@@ -535,7 +535,7 @@ function PourCommencer({ effectif, autresEquipes, clubId, gere }: { effectif: nu
               <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full text-[12px] font-black sm:mt-0"
                 style={e.fait
                   ? { background: C.greenFill, color: C.onGreen }
-                  : i === courante ? { background: C.brand, color: C.onBrand } : { background: C.neutralBg, color: C.faint }}>
+                  : i === current ? { background: C.brand, color: C.onBrand } : { background: C.neutralBg, color: C.faint }}>
                 {e.fait ? <Check className="h-4 w-4" strokeWidth={3} /> : i + 1}
               </span>
               <span className="min-w-0">
@@ -545,7 +545,7 @@ function PourCommencer({ effectif, autresEquipes, clubId, gere }: { effectif: nu
             </span>
             {/* L'action ne s'affiche que sur l'étape courante : trois boutons à la fois
                 laisseraient choisir un ordre qui ne marche pas. */}
-            {gere && i === courante && (
+            {gere && i === current && (
               <Link to={e.lien} className="shrink-0 rounded-xl px-3.5 py-2.5 text-center text-[13px] font-bold text-[var(--c-on-brand)] sm:ml-auto" style={{ background: C.brand }}>
                 {e.action} →
               </Link>

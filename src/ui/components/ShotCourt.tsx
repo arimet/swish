@@ -148,7 +148,7 @@ export function ShotPicker({ onPick, confirmation, shots }: {
   confirmation?: { spot: ShotSpot; label: string; made: boolean } | null
   shots?: Shot[]
 }) {
-  const trad = useT()
+  const translate = useT()
   const locked = !!confirmation
   const commit = (spot: ShotSpot) => {
     if (locked) return
@@ -208,7 +208,7 @@ export function ShotPicker({ onPick, confirmation, shots }: {
             className="rounded-lg px-2 py-1 text-[12px] font-semibold transition hover:brightness-125 disabled:opacity-40"
             style={{ background: C.card2, color: C.muted, border: `1px solid ${C.border}` }}
           >
-            {trad(ZONE_LABELS[z])}
+            {translate(ZONE_LABELS[z])}
           </button>
         ))}
       </div>
@@ -249,10 +249,10 @@ function Confirmation({ spot, made }: { spot: ShotSpot; made: boolean }) {
  * afficher « 100 % » sur un seul tir donnerait une lecture fausse.
  */
 export function ShotChart({ shots, minAttempts = 3 }: { shots: Shot[]; minAttempts?: number }) {
-  const trad = useT()
+  const translate = useT()
   const sum = zoneSummary(shots)
   return (
-    <Court label={trad('bord.carteDesTirs')}>
+    <Court label={translate('bord.carteDesTirs')}>
       <ZonesDecoupees>
         {ZONES.map((z) => {
           const { made, attempts } = sum[z]

@@ -23,7 +23,7 @@ const toHeight = (s: string): number | undefined => {
 }
 
 export function TeamDetail() {
-  const trad = useT()
+  const translate = useT()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { can, guard } = useAuth()
@@ -61,7 +61,7 @@ export function TeamDetail() {
 
   if (!id) return null
   if (team === undefined) return <div className="p-6"><div className="h-24 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
-  if (team === null) return <div className="p-6"><p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>{trad('equipe.introuvable')} <Link to="/teams" className="font-bold" style={{ color: C.accent }}>{trad('equipe.retour')}</Link></p></div>
+  if (team === null) return <div className="p-6"><p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>{translate('equipe.introuvable')} <Link to="/teams" className="font-bold" style={{ color: C.accent }}>{translate('equipe.retour')}</Link></p></div>
 
   const saveCoach = () => {
     if (coach === (team.coach ?? '')) return
@@ -113,24 +113,24 @@ export function TeamDetail() {
 
   return (
     <div className="p-6">
-      <Link to="/teams" className="inline-block rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{trad('equipe.retourEquipes')}</Link>
+      <Link to="/teams" className="inline-block rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('equipe.retourEquipes')}</Link>
       <div className="mb-6 mt-4 flex items-center gap-3">
         <TeamBadge id={id} name={team.name} size="h-12 w-12 text-base" />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{team.name}</h1>
-          <p className="text-sm" style={{ color: C.muted }}>{trad('commun.joueur', { count: players.length })}{team.coach ? ` · Coach ${team.coach}` : ''}</p>
+          <p className="text-sm" style={{ color: C.muted }}>{translate('commun.joueur', { count: players.length })}{team.coach ? ` · Coach ${team.coach}` : ''}</p>
         </div>
         {/* Comme sur le résumé et la fiche de rencontre : le droit est vérifié à l'ouverture
             du dialogue, pas redérivé ensuite. Assumé — se verrouiller entre l'ouverture et la
             confirmation n'arrive qu'en rendant l'appareil en pleine action. */}
-        {gere && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}>{trad('commun.supprimer')}</button>}
+        {gere && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}>{translate('commun.supprimer')}</button>}
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
-        title={trad('equipe.supprimerTitre')} message={trad('equipe.supprimerTexte', { nom: team.name })} confirmLabel={trad('commun.supprimer')} danger />
+        title={translate('equipe.supprimerTitre')} message={translate('equipe.supprimerTexte', { nom: team.name })} confirmLabel={translate('commun.supprimer')} danger />
       <ConfirmDialog open={!!aRetirer} onClose={() => setARetirer(null)} onConfirm={removePlayer}
-        title={aRetirer ? trad('equipe.retirerTitre', { nom: `${aRetirer.lastName} ${aRetirer.firstName}` }) : ''}
-        message={trad('equipe.retirerTexte')}
-        confirmLabel={trad('commun.retirer')} danger />
+        title={aRetirer ? translate('equipe.retirerTitre', { nom: `${aRetirer.lastName} ${aRetirer.firstName}` }) : ''}
+        message={translate('equipe.retirerTexte')}
+        confirmLabel={translate('commun.retirer')} danger />
 
       {/* Les chiffres de saison ne s'affichent qu'à partir d'une rencontre jouée. Sinon
           c'était quatre tuiles à « 0 » et « — », et deux panneaux annonçant l'absence
@@ -139,17 +139,17 @@ export function TeamDetail() {
           le premier qu'il voit après avoir fondé son club. Ce qui reste, l'effectif,
           est justement ce qu'il vient d'accomplir. */}
       {rec.played > 0 && <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label={trad('equipe.rencontres')} value={String(rec.played)} hint={upcoming.length ? trad('equipe.aVenir', { n: upcoming.length }) : trad('equipe.jouees')} />
-        <StatCard label={trad('bord.bilan')} value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? trad('equipe.pourcentVictoires', { n: Math.round((rec.wins / rec.played) * 100) }) : '—'} accent={rec.wins >= rec.losses ? C.green : C.accent} />
-        <StatCard label={trad('bord.pointsMarques')} value={rec.played ? String(rec.avgFor) : '—'} hint={rec.played ? trad('equipe.auTotal', { n: rec.pointsFor }) : trad('bord.parMatch')} />
-        <StatCard label={trad('bord.differentiel')} value={diff > 0 ? `+${diff}` : String(diff)} hint={trad('equipe.encaissesParMatch', { n: rec.avgAgainst })} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
+        <StatCard label={translate('equipe.rencontres')} value={String(rec.played)} hint={upcoming.length ? translate('equipe.aVenir', { n: upcoming.length }) : translate('equipe.jouees')} />
+        <StatCard label={translate('bord.bilan')} value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? translate('equipe.pourcentVictoires', { n: Math.round((rec.wins / rec.played) * 100) }) : '—'} accent={rec.wins >= rec.losses ? C.green : C.accent} />
+        <StatCard label={translate('bord.pointsMarques')} value={rec.played ? String(rec.avgFor) : '—'} hint={rec.played ? translate('equipe.auTotal', { n: rec.pointsFor }) : translate('bord.parMatch')} />
+        <StatCard label={translate('bord.differentiel')} value={diff > 0 ? `+${diff}` : String(diff)} hint={translate('equipe.encaissesParMatch', { n: rec.avgAgainst })} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
       </div>}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px] [&>*]:min-w-0">
         <div className="space-y-6">
-          {lines.length > 0 && <Panel title={trad('equipe.derniersMatchs')}>
+          {lines.length > 0 && <Panel title={translate('equipe.derniersMatchs')}>
             {lines.length === 0 ? (
-              <Empty>{trad('equipe.aucuneRencontre')}</Empty>
+              <Empty>{translate('equipe.aucuneRencontre')}</Empty>
             ) : (
               <ul className="space-y-1.5">
                 {lines.slice(0, 8).map((l) => {
@@ -173,9 +173,9 @@ export function TeamDetail() {
             )}
           </Panel>}
 
-          {scorers.length > 0 && <Panel title={trad('bord.meilleursMarqueurs')}>
+          {scorers.length > 0 && <Panel title={translate('bord.meilleursMarqueurs')}>
             {scorers.length === 0 ? (
-              <Empty>{trad('bord.pasDePoints')}</Empty>
+              <Empty>{translate('bord.pasDePoints')}</Empty>
             ) : (
               <ul className="space-y-1.5">
                 {/* Chaque ligne mène à la fiche du joueur, comme au tableau de bord :
@@ -206,14 +206,14 @@ export function TeamDetail() {
         </div>
 
         <div className="space-y-6">
-          <Panel title={trad('equipe.effectif')}>
+          <Panel title={translate('equipe.effectif')}>
             {/* Le champ de l'entraîneur écrit : sans le droit il ne s'affiche pas.
                 Le nom reste lisible en tête de fiche, à côté du nombre de joueurs. */}
             {gere && (
               <>
-                <label htmlFor="coach" className="mb-1.5 block text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('equipe.entraineur')}</label>
+                <label htmlFor="coach" className="mb-1.5 block text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('equipe.entraineur')}</label>
                 <input id="coach" value={coach} onChange={(e) => setCoach(e.target.value)} onBlur={saveCoach} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                  placeholder={trad('equipe.entraineurPlaceholder')} style={{ ...field, width: '100%' }} className="mb-4" />
+                  placeholder={translate('equipe.entraineurPlaceholder')} style={{ ...field, width: '100%' }} className="mb-4" />
               </>
             )}
             <ul className="mb-4 space-y-1.5">
@@ -236,9 +236,9 @@ export function TeamDetail() {
                         sort du libellé visible, qui chevauchait le nom sur un téléphone. */}
                     {gere && (
                       <>
-                        <button aria-label={trad(editingId === p.id ? 'equipe.fermerJoueur' : 'equipe.modifierJoueur', { nom: p.lastName })}
+                        <button aria-label={translate(editingId === p.id ? 'equipe.fermerJoueur' : 'equipe.modifierJoueur', { nom: p.lastName })}
                           onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold" style={{ color: C.muted }}>
-                          {trad(editingId === p.id ? 'commun.fermer' : 'commun.modifier')}
+                          {translate(editingId === p.id ? 'commun.fermer' : 'commun.modifier')}
                         </button>
                         {/* Le retrait reste hors de la zone dépliée : c'est une action destructrice,
                             elle ne doit pas se retrouver mêlée aux champs d'édition.
@@ -246,57 +246,57 @@ export function TeamDetail() {
                             gris, et faisait vingt-quatre pixels de haut. Une destruction ne se
                             signale pas avec la couleur des boutons ordinaires, et ne se vise pas au
                             minimum tolérable. */}
-                        <button onClick={() => setARetirer(p)} aria-label={trad('equipe.retirerJoueur', { nom: `${p.lastName} ${p.firstName}` })}
-                          className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold transition hover:bg-[var(--c-danger-bg)]" style={{ color: C.danger }}>{trad('equipe.retirer')}</button>
+                        <button onClick={() => setARetirer(p)} aria-label={translate('equipe.retirerJoueur', { nom: `${p.lastName} ${p.firstName}` })}
+                          className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold transition hover:bg-[var(--c-danger-bg)]" style={{ color: C.danger }}>{translate('equipe.retirer')}</button>
                       </>
                     )}
                   </div>
                   {editingId === p.id && (
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <div>
-                        <label htmlFor={`edit-birth-${p.id}`} className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{trad('equipe.naissance')}</label>
+                        <label htmlFor={`edit-birth-${p.id}`} className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('equipe.naissance')}</label>
                         <input id={`edit-birth-${p.id}`} type="date" value={editBirth} onChange={(e) => setEditBirth(e.target.value)} style={{ ...field, width: '100%' }} />
                       </div>
                       <div>
-                        <label htmlFor={`edit-height-${p.id}`} className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{trad('equipe.tailleJoueur')}</label>
+                        <label htmlFor={`edit-height-${p.id}`} className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('equipe.tailleJoueur')}</label>
                         <input id={`edit-height-${p.id}`} type="number" inputMode="numeric" value={editHeight} onChange={(e) => setEditHeight(e.target.value)} style={{ ...field, width: '100%' }} />
                       </div>
-                      <button onClick={() => saveEdit(p)} className="col-span-2 rounded-xl py-2 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('commun.enregistrer')}</button>
+                      <button onClick={() => saveEdit(p)} className="col-span-2 rounded-xl py-2 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('commun.enregistrer')}</button>
                     </div>
                   )}
                 </li>
               ))}
-              {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>{gere ? trad('equipe.aucunJoueurAjoutez') : trad('equipe.aucunJoueurEffectif')}</li>}
+              {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>{gere ? translate('equipe.aucunJoueurAjoutez') : translate('equipe.aucunJoueurEffectif')}</li>}
             </ul>
             {/* Recruter est administratif : le bouton ne s'affiche pas sans le
                 droit. Ouvrir le formulaire est déjà une écriture, la garde reste
                 donc ici et pas seulement à l'enregistrement. */}
             {!gere ? null : !ajoutOuvert ? (
               <button onClick={() => guard('manage', () => setAjoutOuvert(true))} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-                {trad('equipe.ajouterJoueur')}
+                {translate('equipe.ajouterJoueur')}
               </button>
             ) : (
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('equipe.nouveauJoueur')}</p>
-                <button onClick={() => setAjoutOuvert(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{trad('commun.fermer2')}</button>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('equipe.nouveauJoueur')}</p>
+                <button onClick={() => setAjoutOuvert(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
               </div>
               <div className="grid grid-cols-[56px_1fr] gap-2">
-                <input placeholder={trad('equipe.numero')} value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center' }} />
-                <input placeholder={trad('equipe.nom')} value={ln} onChange={(e) => setLn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={field} />
+                <input placeholder={translate('equipe.numero')} value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center' }} />
+                <input placeholder={translate('equipe.nom')} value={ln} onChange={(e) => setLn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={field} />
               </div>
-              <input placeholder={trad('equipe.prenom')} value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={{ ...field, width: '100%' }} />
+              <input placeholder={translate('equipe.prenom')} value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={{ ...field, width: '100%' }} />
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label htmlFor="add-birth" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{trad('equipe.dateNaissance')}</label>
+                  <label htmlFor="add-birth" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('equipe.dateNaissance')}</label>
                   <input id="add-birth" type="date" value={birth} onChange={(e) => setBirth(e.target.value)} style={{ ...field, width: '100%' }} />
                 </div>
                 <div>
-                  <label htmlFor="add-height" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{trad('equipe.taille')}</label>
+                  <label htmlFor="add-height" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('equipe.taille')}</label>
                   <input id="add-height" type="number" inputMode="numeric" value={height} onChange={(e) => setHeight(e.target.value)} style={{ ...field, width: '100%' }} />
                 </div>
               </div>
-              <button onClick={addPlayer} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('equipe.ajouterLeJoueur')}</button>
+              <button onClick={addPlayer} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('equipe.ajouterLeJoueur')}</button>
             </div>
             )}
           </Panel>

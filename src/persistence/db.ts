@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie'
-import type { Team, Player, Match, ReportedResult, Convocation, Training, MessageEquipe } from '../domain/types'
-import type { Schema } from '../domain/plays'
+import type { Team, Player, Match, ReportedResult, Convocation, Training, TeamMessage } from '../domain/types'
+import type { Play } from '../domain/plays'
 
 /** File d'attente de synchronisation (offline-first) : mutations à pousser vers le serveur. */
 export interface OutboxItem {
@@ -27,8 +27,8 @@ export class ScoreSheetDB extends Dexie {
   results!: Table<ReportedResult, string>
   convocations!: Table<Convocation, string>
   trainings!: Table<Training, string>
-  plays!: Table<Schema, string>
-  messages!: Table<MessageEquipe, string>
+  plays!: Table<Play, string>
+  messages!: Table<TeamMessage, string>
   constructor() {
     super('score-sheet')
     this.version(1).stores({

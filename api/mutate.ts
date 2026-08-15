@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type { PoolClient } from 'pg'
-import { pool, prelude, refuse } from './_db.js'
-import { fusionnerMatchs } from '../src/domain/fusion.js'
+import { pool, preamble, unauthorized } from './_db.js'
+import { mergeMatches } from '../src/domain/fusion.js'
 import type { Match } from '../src/domain/types.js'
 
 /**
@@ -18,7 +18,7 @@ import type { Match } from '../src/domain/types.js'
  * l'étalement des champs le fait gagner. Les évènements, eux, s'unissent quel
  * qu'il soit.
  */
-async function ecrireMatch(client: PoolClient, id: string, entrant: Match, quand: Date) {
+async function writeMatch(client: PoolClient, id: string, incoming: Match, when: Date) {
   // `for update` verrouille la ligne le temps de la transaction : sans lui, deux
   // envois simultanés liraient le même état et le second écraserait la fusion du
   // premier — précisément le scénario que cette fonction existe pour empêcher.
@@ -29,21 +29,21 @@ async function ecrireMatch(client: PoolClient, id: string, entrant: Match, quand
     await client.query(
       `insert into documents (kind, id, doc, modified_at, rev)
        values ('match', $1, $2, $3, nextval('documents_rev'))`,
-      [id, entrant, quand])
+      [id, incoming, when])
     return
   }
 
-  const stocke = rows[0].doc
-  const gagnantEstEntrant = quand > rows[0].modified_at
-  const fusionne = gagnantEstEntrant
-    ? fusionnerMatchs(stocke, entrant)
-    : fusionnerMatchs(entrant, stocke)
+  const stored = rows[0].doc
+  const incomingWins = when > rows[0].modified_at
+  const merged = incomingWins
+    ? mergeMatches(stored, incoming)
+    : mergeMatches(incoming, stored)
 
   await client.query(
     `update documents
         set doc = $2, modified_at = greatest(modified_at, $3), rev = nextval('documents_rev')
       where kind = 'match' and id = $1`,
-    [id, fusionne, quand])
+    [id, merged, when])
 }
 
 /** Les genres que la base accepte. Une opération d'un genre inconnu est ignorée
@@ -78,8 +78,8 @@ interface Op {
  * décalage courant se compte en secondes, le retard qu'on corrige en heures.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (prelude(req, res, 'POST')) return
-  if (refuse(req, res)) return
+  if (preamble(req, res, 'POST')) return
+  if (unauthorized(req, res)) return
 
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
   const ops: Op[] = body?.ops
@@ -92,11 +92,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await client.query('begin')
     for (const o of ops) {
       if (!o?.id || !o.kind || !GENRES.has(o.kind)) continue
-      const quand = o.modifiedAt ? new Date(o.modifiedAt) : null
-      if (!quand || Number.isNaN(quand.getTime())) continue
+      const when = o.modifiedAt ? new Date(o.modifiedAt) : null
+      if (!when || Number.isNaN(when.getTime())) continue
 
       if (o.op === 'put' && o.doc !== undefined && o.kind === 'match') {
-        await ecrireMatch(client, o.id, o.doc as Match, quand)
+        await writeMatch(client, o.id, o.doc as Match, when)
       } else if (o.op === 'put' && o.doc !== undefined) {
         await client.query(
           `insert into documents (kind, id, doc, modified_at, rev)
@@ -106,14 +106,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                   modified_at = excluded.modified_at,
                   rev = nextval('documents_rev')
             where excluded.modified_at > documents.modified_at`,
-          [o.kind, o.id, o.doc, quand],
+          [o.kind, o.id, o.doc, when],
         )
       } else if (o.op === 'del') {
         // La suppression s'arbitre comme le reste : une suppression décidée à 14 h
         // n'emporte pas une modification faite à 15 h sur un autre appareil.
         await client.query(
           'delete from documents where kind = $1 and id = $2 and modified_at < $3',
-          [o.kind, o.id, quand],
+          [o.kind, o.id, when],
         )
       }
     }

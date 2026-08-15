@@ -21,7 +21,7 @@ export function StartingFiveGate({
   canStart: boolean
   onExit?: () => void
 }) {
-  const trad = useT()
+  const translate = useT()
   return (
     /* La table de marque vit hors de la coquille : cet écran porte donc lui-même
        son fond et sa hauteur, sinon il flotterait sur le gris de la page. */
@@ -30,15 +30,15 @@ export function StartingFiveGate({
         <div className="mb-8 text-center">
           {onExit && (
             <button onClick={onExit} className="float-left text-sm font-semibold text-muted-foreground hover:text-foreground">
-              {trad('cinq.quitter')}
+              {translate('cinq.quitter')}
             </button>
           )}
-          <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{trad('cinq.titre')}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{trad('cinq.consigne')}</p>
+          <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{translate('cinq.titre')}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{translate('cinq.consigne')}</p>
         </div>
 
         <div className="mx-auto grid max-w-md gap-5">
-          <StartingFivePanel title={trad('cinq.monEquipe')} color={TEAM_A} players={rosterA} required={requiredA}
+          <StartingFivePanel title={translate('cinq.monEquipe')} color={TEAM_A} players={rosterA} required={requiredA}
             chosen={selected} onToggle={onToggle} />
         </div>
 
@@ -48,7 +48,7 @@ export function StartingFiveGate({
             onClick={onStart}
             className="rounded-2xl bg-primary px-8 py-4 text-base font-bold text-primary-foreground shadow-xl shadow-primary/25 transition enabled:hover:brightness-110 enabled:active:scale-95 disabled:opacity-40"
           >
-            {trad('cinq.demarrer')}
+            {translate('cinq.demarrer')}
           </button>
         </div>
       </div>
@@ -60,7 +60,7 @@ function StartingFivePanel({ title, color, players, required, chosen, onToggle }
   title: string; color: string; players: Player[]; required: number; chosen: string[]
   onToggle: (id: string) => void
 }) {
-  const trad = useT()
+  const translate = useT()
   return (
     <div className="rounded-3xl border border-border/60 bg-card p-4" style={{ boxShadow: `inset 0 3px 0 0 ${color}` }}>
       <div className="mb-3 flex items-center justify-between">
@@ -99,7 +99,7 @@ function StartingFivePanel({ title, color, players, required, chosen, onToggle }
           )
         })}
         {players.length === 0 && (
-          <p className="col-span-2 py-4 text-center text-sm text-muted-foreground">{trad('cinq.equipeVide')}</p>
+          <p className="col-span-2 py-4 text-center text-sm text-muted-foreground">{translate('cinq.equipeVide')}</p>
         )}
       </div>
     </div>

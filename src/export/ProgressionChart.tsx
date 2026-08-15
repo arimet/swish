@@ -6,7 +6,7 @@ const clock = (s: number) => `${Math.floor(s / 60)}'`
 export function ProgressionChart({ points, width = 720, height = 300, colorA = 'currentColor', colorB = 'currentColor' }: {
   points: ProgressionPoint[]; width?: number; height?: number; colorA?: string; colorB?: string
 }) {
-  const trad = useT()
+  const translate = useT()
   const padL = 42, padR = 16, padT = 14, padB = 30
   const maxT = Math.max(1, ...points.map((p) => p.t))
   const maxY = Math.max(4, ...points.map((p) => Math.max(p.a, p.b)))
@@ -23,7 +23,7 @@ export function ProgressionChart({ points, width = 720, height = 300, colorA = '
   const xTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(maxT * f))
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label={trad('resume.progressionAria')}>
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label={translate('resume.progressionAria')}>
       {/* Grille + échelle Y */}
       {yTicks.map((v) => (
         <g key={`y${v}`}>

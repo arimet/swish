@@ -19,7 +19,7 @@ import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { instantane, transitions } from '../../domain/anim'
 import { LIMITE_LIEN, encoder } from '../../domain/partage'
-import type { Schema, Temps } from '../../domain/plays'
+import type { Play, Step } from '../../domain/plays'
 import { C, bd } from '../olive/kit'
 import { useT } from '../../i18n'
 import { PlayBoard } from './PlayBoard'
@@ -27,10 +27,10 @@ import { D, W } from './ShotCourt'
 import { Link2 } from 'lucide-react'
 
 /** Profondeur du viewBox : le terrain complet, c'est le demi et son miroir. */
-const profondeur = (s: Schema) => (s.terrain === 'complet' ? D * 2 : D)
+const profondeur = (s: Play) => (s.court === 'full' ? D * 2 : D)
 
 /** Le nom du fichier, débarrassé de ce qu'un système de fichiers n'aime pas. */
-const nomFichier = (s: Schema, ext: string) =>
+const nomFichier = (s: Play, ext: string) =>
   `${(s.nom || 'schéma').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'schema'}.${ext}`
 
 /** Le moteur de rendu hors écran n'arrive qu'au premier partage : deux cents
@@ -48,7 +48,7 @@ const rendu = async () => (await import('react-dom/server')).renderToStaticMarku
  * qui n'a que son `viewBox`, et les guillemets typographiques des identifiants
  * de React sont écartés : ce SVG-là est relu par un analyseur XML strict.
  */
-async function svgAutonome(schema: Schema, temps: Temps, largeur: number, hauteur: number): Promise<string> {
+async function svgAutonome(schema: Play, temps: Step, largeur: number, hauteur: number): Promise<string> {
   const enMarkup = await rendu()
   return enMarkup(<PlayBoard schema={schema} tempsIndex={0} temps={temps} apercu />)
     .replace('<svg', `<svg xmlns="http://www.w3.org/2000/svg" width="${largeur}" height="${hauteur}"`)
@@ -85,7 +85,7 @@ const enBlob = (c: HTMLCanvasElement, type: string, q?: number) =>
 
 /** Le temps rendu à deux fois son viewBox — 3000 × 2800 pour un demi-terrain,
  *  soit une image qui tient sur le mur d'un vestiaire. */
-async function fabriquerPng(schema: Schema, temps: Temps): Promise<Blob> {
+async function fabriquerPng(schema: Play, temps: Step): Promise<Blob> {
   const h = profondeur(schema)
   const canvas = await rasteriser(await svgAutonome(schema, temps, W * 2, h * 2), W * 2, h * 2)
   return enBlob(canvas, 'image/png')
@@ -134,12 +134,12 @@ function assemblerPdf(pages: { jpeg: Uint8Array; l: number; h: number; titre: st
     taille += b.length
   }
   const offsets: number[] = []
-  const objet = (num: number, corps: string, flux?: Uint8Array) => {
+  const objet = (num: number, corps: string, stream?: Uint8Array) => {
     offsets[num] = taille
     ecrire(`${num} 0 obj\n${corps}\n`)
-    if (flux) {
+    if (stream) {
       ecrire('stream\n')
-      ecrire(flux)
+      ecrire(stream)
       ecrire('\nendstream\n')
     }
     ecrire('endobj\n')
@@ -165,13 +165,13 @@ function assemblerPdf(pages: { jpeg: Uint8Array; l: number; h: number; titre: st
     const h = p.h * k
     const x = (A4.l - l) / 2
     const y = marge + (dispo.h - h) / 2
-    const flux = octetsDe(
+    const stream = octetsDe(
       `BT /F1 15 Tf ${marge} ${A4.h - marge - 6} Td ${litteral(p.titre)} Tj ET\n` +
       `BT /F1 9 Tf ${marge} ${A4.h - marge - 24} Td ${litteral(p.sous)} Tj ET\n` +
       `q ${l.toFixed(2)} 0 0 ${h.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm /Im0 Do Q\n`,
     )
     objet(n, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${A4.l} ${A4.h}] /Resources << /Font << /F1 3 0 R >> /XObject << /Im0 ${n + 2} 0 R >> >> /Contents ${n + 1} 0 R >>`)
-    objet(n + 1, `<< /Length ${flux.length} >>`, flux)
+    objet(n + 1, `<< /Length ${stream.length} >>`, stream)
     objet(n + 2, `<< /Type /XObject /Subtype /Image /Width ${p.l} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.jpeg.length} >>`, p.jpeg)
   })
 
@@ -188,7 +188,7 @@ function assemblerPdf(pages: { jpeg: Uint8Array; l: number; h: number; titre: st
 }
 
 /** Une page par temps, le nom et la note en tête. */
-async function fabriquerPdf(schema: Schema): Promise<Blob> {
+async function fabriquerPdf(schema: Play): Promise<Blob> {
   const h = profondeur(schema)
   // 1200 de large : de quoi imprimer proprement sans peser des mégaoctets.
   const l = 1200
@@ -200,7 +200,7 @@ async function fabriquerPdf(schema: Schema): Promise<Blob> {
     pages.push({
       jpeg, l, h: hi,
       titre: `${schema.nom} — temps ${i + 1} / ${schema.temps.length}`,
-      sous: schema.note?.slice(0, 110) || (schema.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'),
+      sous: schema.note?.slice(0, 110) || (schema.court === 'half' ? 'Demi-terrain' : 'Terrain complet'),
     })
   }
   return assemblerPdf(pages)
@@ -295,7 +295,7 @@ const sousBlocs = (octets: number[]) => {
 
 /** Les instants à photographier : chaque transition en `PAR_TRANSITION` images,
  *  puis le dernier temps, qu'on tient un instant pour qu'il se lise. */
-function instants(s: Schema) {
+function instants(s: Play) {
   const n = transitions(s)
   const liste: { temps: number; part: number }[] = []
   for (let t = 0; t < n; t++) for (let i = 0; i < PAR_TRANSITION; i++) liste.push({ temps: t, part: i / PAR_TRANSITION })
@@ -303,7 +303,7 @@ function instants(s: Schema) {
   return liste
 }
 
-async function fabriquerGif(schema: Schema, avance?: (fait: number, total: number) => void): Promise<Blob> {
+async function fabriquerGif(schema: Play, avance?: (fait: number, total: number) => void): Promise<Blob> {
   const h = profondeur(schema)
   const k = COTE_GIF / Math.max(W, h)
   const l = Math.round(W * k)
@@ -346,21 +346,21 @@ async function fabriquerGif(schema: Schema, avance?: (fait: number, total: numbe
  * fichiers, ou utilisateur qui annule — ne doit pas laisser l'écran les mains
  * vides : on retombe sur le téléchargement.
  */
-export async function livrer(fichier: File): Promise<void> {
+export async function livrer(file: File): Promise<void> {
   const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean }
-  if (nav.share && (!nav.canShare || nav.canShare({ files: [fichier] }))) {
+  if (nav.share && (!nav.canShare || nav.canShare({ files: [file] }))) {
     try {
-      await nav.share({ files: [fichier], title: fichier.name })
+      await nav.share({ files: [file], title: file.name })
       return
     } catch (e) {
       // Annulation volontaire : on ne télécharge pas dans le dos de l'utilisateur.
       if ((e as Error)?.name === 'AbortError') return
     }
   }
-  const url = URL.createObjectURL(fichier)
+  const url = URL.createObjectURL(file)
   const a = document.createElement('a')
   a.href = url
-  a.download = fichier.name
+  a.download = file.name
   a.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
@@ -368,7 +368,7 @@ export async function livrer(fichier: File): Promise<void> {
 // ──────────────────────────────── L'écran ────────────────────────────────
 
 export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
-  schema: Schema
+  schema: Play
   /** Le temps affiché : c'est celui-là que l'image reprend. */
   tempsIndex?: number
   open: boolean
@@ -376,7 +376,7 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
 }) {
   // `undefined` : le codage est en cours. `null` : le schéma ne tient pas dans
   // une URL, et on le dit au lieu de produire un lien qui se tronquerait.
-  const trad = useT()
+  const translate = useT()
   const [lien, setLien] = useState<string | null | undefined>(undefined)
   const [etat, setEtat] = useState('')
   const [occupe, setOccupe] = useState(false)
@@ -395,13 +395,13 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
    *  remet — et si l'appareil ne sait pas dessiner, on le dit franchement. */
   const sortie = (libelle: string, faire: () => Promise<Blob>, ext: string, type: string) => async () => {
     setOccupe(true)
-    setEtat(trad('partage.enPreparation', { quoi: libelle }))
+    setEtat(translate('partage.enPreparation', { quoi: libelle }))
     try {
       const blob = await faire()
       await livrer(new File([blob], nomFichier(schema, ext), { type }))
-      setEtat(trad('partage.pret', { quoi: libelle, ko: Math.round(blob.size / 1024) }))
+      setEtat(translate('partage.pret', { quoi: libelle, ko: Math.round(blob.size / 1024) }))
     } catch {
-      setEtat(trad('partage.echecFichier', { quoi: libelle }))
+      setEtat(translate('partage.echecFichier', { quoi: libelle }))
     } finally {
       setOccupe(false)
     }
@@ -411,9 +411,9 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
     if (!lien) return
     try {
       await navigator.clipboard?.writeText(lien)
-      setEtat(trad('partage.lienCopie'))
+      setEtat(translate('partage.lienCopie'))
     } catch {
-      setEtat(trad('partage.pressePapiersRefuse'))
+      setEtat(translate('partage.pressePapiersRefuse'))
     }
     if (navigator.share) {
       try { await navigator.share({ title: schema.nom, url: lien }) } catch { /* partage annulé */ }
@@ -424,10 +424,10 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-extrabold">{trad('partage.titre', { nom: schema.nom })}</DialogTitle>
+          <DialogTitle className="text-lg font-extrabold">{translate('partage.titre', { nom: schema.nom })}</DialogTitle>
         </DialogHeader>
 
-        {lien === undefined && <p className="text-[13px]" style={{ color: C.muted }}>{trad('partage.preparation')}</p>}
+        {lien === undefined && <p className="text-[13px]" style={{ color: C.muted }}>{translate('partage.preparation')}</p>}
 
         {lien === null && (
           <p className="rounded-xl p-3 text-[13px]" style={{ background: C.amberBg, color: C.amber }}>
@@ -439,10 +439,10 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
         {lien && (
           <>
             <p className="text-[13px] leading-relaxed" style={{ color: C.muted }}>
-              {trad('partage.explication')}
+              {translate('partage.explication')}
             </p>
             <input
-              readOnly value={lien} aria-label={trad('partage.lienCombinaison')}
+              readOnly value={lien} aria-label={translate('partage.lienCombinaison')}
               onFocus={(e) => e.currentTarget.select()}
               className="w-full truncate rounded-xl bg-[var(--c-card2)] px-3 py-2 text-[12px] outline-none"
               style={{ border: bd, color: C.muted }}
@@ -453,7 +453,7 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
               style={{ background: C.brand }}
             >
               <Link2 className="h-4 w-4 shrink-0" strokeWidth={2} />
-              {trad('partage.copierLien')}
+              {translate('partage.copierLien')}
             </button>
           </>
         )}
@@ -462,15 +462,15 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
             plus : un filet et un titre disent qu'on change de moyen, et chaque
             bouton annonce ce qu'il produit — un temps, tous les temps, l'animation. */}
         <div className="flex items-center gap-3 pt-1">
-          <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>{trad('partage.ouEnvoyerFichier')}</span>
+          <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>{translate('partage.ouEnvoyerFichier')}</span>
           <span className="h-px flex-1" style={{ background: C.border }} />
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <Sortie label={trad('partage.imagePng')} quoi={trad('partage.ceTemps')} disabled={occupe} onClick={sortie(trad('partage.lImage'), () => fabriquerPng(schema, schema.temps[tempsIndex] ?? schema.temps[0]), 'png', 'image/png')} />
-          <Sortie label={trad('partage.pdf')} quoi={trad('partage.tousLesTemps')} disabled={occupe} onClick={sortie(trad('partage.lePdf'), () => fabriquerPdf(schema), 'pdf', 'application/pdf')} />
+          <Sortie label={translate('partage.imagePng')} quoi={translate('partage.ceTemps')} disabled={occupe} onClick={sortie(translate('partage.lImage'), () => fabriquerPng(schema, schema.temps[tempsIndex] ?? schema.temps[0]), 'png', 'image/png')} />
+          <Sortie label={translate('partage.pdf')} quoi={translate('partage.tousLesTemps')} disabled={occupe} onClick={sortie(translate('partage.lePdf'), () => fabriquerPdf(schema), 'pdf', 'application/pdf')} />
           <Sortie
-            label={trad('partage.gif')} quoi={trad('partage.animation')} disabled={occupe}
-            onClick={sortie(trad('partage.leGif'), () => fabriquerGif(schema, (fait, total) => setEtat(trad('partage.gifProgression', { fait, total }))), 'gif', 'image/gif')}
+            label={translate('partage.gif')} quoi={translate('partage.animation')} disabled={occupe}
+            onClick={sortie(translate('partage.leGif'), () => fabriquerGif(schema, (fait, total) => setEtat(translate('partage.gifProgression', { fait, total }))), 'gif', 'image/gif')}
           />
         </div>
 

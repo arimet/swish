@@ -7,11 +7,11 @@ import { SchemaView } from './SchemaView'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
-import { nouveauSchema, tempsSuivant, type Schema } from '../../domain/plays'
+import { newPlay, nextStep, type Play } from '../../domain/plays'
 
-const deuxTemps = (): Schema => {
-  const s: Schema = { id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'Corner pour le 4' }
-  return { ...s, temps: [s.temps[0], tempsSuivant(s.temps[0])] }
+const deuxTemps = (): Play => {
+  const s: Play = { id: 's1', ...newPlay('ta', 'half', false), nom: 'Corner pour le 4' }
+  return { ...s, temps: [s.temps[0], nextStep(s.temps[0])] }
 }
 
 beforeEach(async () => {

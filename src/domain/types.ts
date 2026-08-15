@@ -74,7 +74,7 @@ export interface Match {
    * Optionnel, et pas seulement par prudence : Dexie range des objets entiers et
    * n'indexe pas ce champ, donc aucune version de base locale à ajouter.
    */
-  retires?: string[]
+  retracted?: string[]
 }
 
 /**
@@ -113,13 +113,13 @@ export interface Convocation {
  * destinataires : **un seul message à la fois par club**, et en écrire un
  * nouveau remplace le précédent. La clé est donc le club, pas le message.
  */
-export interface MessageEquipe {
+export interface TeamMessage {
   clubId: string
   /** Le texte, tel qu'il a été écrit. Vide = pas de message (rien à afficher). */
-  texte: string
+  text: string
   /** Date ISO complète de l'écriture : l'âge s'affiche en relatif (`depuis`),
    *  car « il y a deux jours » ne pèse pas comme « il y a trois semaines ». */
-  écritLe: string
+  writtenAt: string
 }
 
 /** Séance d'entraînement. Existe seule, sans rencontre associée. */

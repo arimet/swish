@@ -8,10 +8,10 @@ import { AuthProvider, PLAYER_ID_KEY, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { getMessage, saveConvocation, saveMatch, saveMessage, savePlay, savePlayer, saveTeam, saveTraining } from '../../persistence/repositories'
-import { nouveauSchema, type Schema } from '../../domain/plays'
+import { newPlay, type Play } from '../../domain/plays'
 import type { GameEvent, Match } from '../../domain/types'
 
-const schema = (id: string, nom: string): Schema => ({ id, ...nouveauSchema('ta', 'demi', false), nom })
+const schema = (id: string, nom: string): Play => ({ id, ...newPlay('ta', 'half', false), nom })
 
 const TOP3 = { x: 0.5, y: 0.65 }
 
@@ -276,7 +276,7 @@ describe('Dashboard — le message à l’équipe', () => {
 
   it('affiche le message écrit, avec son âge', async () => {
     const avantHier = new Date(Date.now() - 2 * 86400_000).toISOString()
-    await saveMessage({ clubId: 'ta', texte: 'Pas d’entraînement mardi, gymnase fermé.', écritLe: avantHier })
+    await saveMessage({ clubId: 'ta', text: 'Pas d’entraînement mardi, gymnase fermé.', writtenAt: avantHier })
     renderDash()
 
     expect(await screen.findByText(/gymnase fermé/)).toBeInTheDocument()
@@ -286,23 +286,23 @@ describe('Dashboard — le message à l’équipe', () => {
   it('n’occupe pas le tableau de bord quand il n’y a pas de message', async () => {
     renderDash()
     await screen.findByText('VIGNOT')
-    expect(screen.queryByTestId('message-equipe')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('team-message')).not.toBeInTheDocument()
   })
 
   it('n’occupe pas le tableau de bord pour un message vide : un blanc n’est pas un message', async () => {
-    await saveMessage({ clubId: 'ta', texte: '   ', écritLe: new Date().toISOString() })
+    await saveMessage({ clubId: 'ta', text: '   ', writtenAt: new Date().toISOString() })
     renderDash()
     await screen.findByText('VIGNOT')
     // On laisse la lecture du message se poser avant de conclure à l'absence :
     // sans cette attente, le test passerait aussi bien sans la garde qu'avec,
     // faute d'avoir laissé le message blanc arriver jusqu'au rendu.
     await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
-    expect(screen.queryByTestId('message-equipe')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('team-message')).not.toBeInTheDocument()
   })
 
   it('un visiteur le lit sans qu’aucun code lui soit demandé', async () => {
     // C'est un message pour l'équipe, joueurs compris : lire est libre.
-    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: new Date().toISOString() })
+    await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: new Date().toISOString() })
     renderDash()
 
     expect(await screen.findByText('Maillot blanc samedi.')).toBeInTheDocument()
@@ -323,13 +323,13 @@ describe('Dashboard — le message à l’équipe', () => {
     // base puis le re-rendu sont asynchrones. On attend la base d'abord — sous la
     // charge de la suite complète, la seconde par défaut ne lui suffit pas
     // toujours — puis l'écran, qui ne peut que suivre.
-    await waitFor(async () => expect((await getMessage('ta'))?.texte).toBe('Gymnase fermé mardi.'), { timeout: 5000 })
+    await waitFor(async () => expect((await getMessage('ta'))?.text).toBe('Gymnase fermé mardi.'), { timeout: 5000 })
     expect(await screen.findByText('Gymnase fermé mardi.', {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
   it('en écrire un second remplace le premier', async () => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
-    await saveMessage({ clubId: 'ta', texte: 'Ancien message.', écritLe: new Date(Date.now() - 3 * 86400_000).toISOString() })
+    await saveMessage({ clubId: 'ta', text: 'Ancien message.', writtenAt: new Date(Date.now() - 3 * 86400_000).toISOString() })
     renderDash()
 
     // On attend que l'ancien message soit affiché avant d'ouvrir la saisie : le
@@ -351,7 +351,7 @@ describe('Dashboard — le message à l’équipe', () => {
     // l'écran seul : elle échouait une fois sur sept sous la charge de la suite
     // complète, sans que la cause soit établie. Attendre les deux plutôt que de
     // supposer l'ordre vérifie la même chose sans dépendre du minutage.
-    await waitFor(async () => expect((await getMessage('ta'))?.texte).toBe('Nouveau message.'))
+    await waitFor(async () => expect((await getMessage('ta'))?.text).toBe('Nouveau message.'))
     await waitFor(() => expect(screen.getByText('Nouveau message.')).toBeInTheDocument())
     expect(screen.queryByText('Ancien message.')).not.toBeInTheDocument()
     // Un seul message à la fois : ce n'est pas un fil, il n'y a rien à empiler.
@@ -360,12 +360,12 @@ describe('Dashboard — le message à l’équipe', () => {
 
   it('l’effacer fait disparaître l’encart', async () => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
-    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: new Date().toISOString() })
+    await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: new Date().toISOString() })
     renderDash()
 
     await userEvent.click(await screen.findByRole('button', { name: /effacer/i }))
 
-    await waitFor(() => expect(screen.queryByTestId('message-equipe')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByTestId('team-message')).not.toBeInTheDocument())
     expect(await getMessage('ta')).toBeUndefined()
   })
 
@@ -384,7 +384,7 @@ describe('Dashboard — le message à l’équipe', () => {
 
   it('effacer est administratif : la table de marque ne voit pas le bouton, et le message reste', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
-    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: new Date().toISOString() })
+    await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: new Date().toISOString() })
     renderDash()
 
     // Elle lit le message — c'en est un pour toute l'équipe — mais ni « Modifier »

@@ -6,18 +6,18 @@ import { SchemaPlayer } from './SchemaPlayer'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
-import { nouveauSchema, tempsSuivant, type Schema } from '../../domain/plays'
+import { newPlay, nextStep, type Play } from '../../domain/plays'
 
 /** Deux temps : le meneur descend de 0,62 à 0,20 ; personne d'autre ne bouge.
  *  Sa course est tracée droite, pour que le trajet reste la corde. */
-const deuxTemps = (): Schema => {
-  const s: Schema = { id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'Corner pour le 4' }
+const deuxTemps = (): Play => {
+  const s: Play = { id: 's1', ...newPlay('ta', 'half', false), nom: 'Corner pour le 4' }
   const t0 = {
     ...s.temps[0],
-    fleches: [{ depuis: { camp: 'attaque' as const, poste: 1 as const }, trait: 'course' as const, points: [{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.2 }] }],
+    arrows: [{ from: { side: 'offense' as const, position: 1 as const }, stroke: 'cut' as const, points: [{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.2 }] }],
   }
-  const t1 = tempsSuivant(t0)
-  t1.pions = t1.pions.map((p) => (p.poste === 1 ? { ...p, at: { x: 0.5, y: 0.2 } } : p))
+  const t1 = nextStep(t0)
+  t1.markers = t1.markers.map((p) => (p.position === 1 ? { ...p, at: { x: 0.5, y: 0.2 } } : p))
   return { ...s, temps: [t0, t1] }
 }
 
@@ -73,7 +73,7 @@ const bouton = (nom: string | RegExp) => screen.getByRole('button', { name: nom 
  * lecture déplace vraiment quelque chose, plutôt qu'un compteur d'écran.
  */
 function ordonneeDuMeneur(): number {
-  const groupe = [...document.querySelectorAll('g[data-pion="attaque"]')]
+  const groupe = [...document.querySelectorAll('g[data-marker="offense"]')]
     .find((n) => n.querySelector('text')?.textContent === '1')
   return Number(groupe!.querySelector('circle')!.getAttribute('cy'))
 }
@@ -121,8 +121,8 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     // le ferait sauter au temps 3, et le coach ne verrait jamais l'étape qu'il
     // s'était arrêté pour commenter.
     const s = deuxTemps()
-    const t2 = tempsSuivant(s.temps[1])
-    t2.pions = t2.pions.map((p) => (p.poste === 1 ? { ...p, at: { x: 0.5, y: 0.05 } } : p))
+    const t2 = nextStep(s.temps[1])
+    t2.markers = t2.markers.map((p) => (p.position === 1 ? { ...p, at: { x: 0.5, y: 0.05 } } : p))
     await db.plays.clear()
     await savePlay({ ...s, temps: [...s.temps, t2] })
 
@@ -190,7 +190,7 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
 
   it('les traits du carnet s’effacent pendant la lecture et reviennent à l’arrêt', async () => {
     await ouvrir()
-    const traits = () => document.querySelectorAll('g[data-trait]').length
+    const traits = () => document.querySelectorAll('g[data-stroke]').length
     // Arrêté sur un temps, on relit le dessin du coach.
     expect(traits()).toBe(1)
     fireEvent.click(bouton('Lecture'))
@@ -227,7 +227,7 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
  */
 describe('SchemaPlayer — afficher les déplacements', () => {
   /** Les trajets tracés sur le terrain, par leur trait. */
-  const trajets = () => [...document.querySelectorAll('g[data-trait]')].map((n) => n.getAttribute('data-trait'))
+  const trajets = () => [...document.querySelectorAll('g[data-stroke]')].map((n) => n.getAttribute('data-stroke'))
 
   it('la bascule existe et part éteinte', async () => {
     await ouvrir()
@@ -247,7 +247,7 @@ describe('SchemaPlayer — afficher les déplacements', () => {
     fireEvent.click(bouton('Trajets'))
     fireEvent.click(bouton('Lecture'))
     avancer(750)
-    expect(trajets()).toContain('course')
+    expect(trajets()).toContain('cut')
   })
 
   it('le trajet reste affiché tant que la transition dure', async () => {
@@ -257,7 +257,7 @@ describe('SchemaPlayer — afficher les déplacements', () => {
     fireEvent.click(bouton('Lecture'))
     for (const t of [100, 400, 700, 1000, 1300]) {
       avancer(t === 100 ? 100 : 300)
-      expect(trajets(), `à ${t} ms`).toContain('course')
+      expect(trajets(), `à ${t} ms`).toContain('cut')
     }
   })
 
@@ -267,7 +267,7 @@ describe('SchemaPlayer — afficher les déplacements', () => {
     fireEvent.click(bouton('Trajets'))
     fireEvent.click(bouton('Lecture'))
     avancer(750)
-    expect(trajets()).toContain('course')
+    expect(trajets()).toContain('cut')
     expect(ordonneeDuMeneur()).toBeLessThan(DEPART)
     expect(ordonneeDuMeneur()).toBeGreaterThan(ARRIVEE)
   })
@@ -277,7 +277,7 @@ describe('SchemaPlayer — afficher les déplacements', () => {
     fireEvent.click(bouton('Trajets'))
     fireEvent.click(bouton('Lecture'))
     avancer(400)
-    expect(trajets()).toContain('course')
+    expect(trajets()).toContain('cut')
     fireEvent.click(bouton('Trajets'))
     expect(trajets()).toEqual([])
   })
@@ -286,8 +286,8 @@ describe('SchemaPlayer — afficher les déplacements', () => {
     // Arrêté sur un temps entier, on relit les flèches dessinées — la bascule ne
     // change rien là, elle ne parle que de ce qui se joue.
     await ouvrir()
-    expect(trajets()).toContain('course')
+    expect(trajets()).toContain('cut')
     fireEvent.click(bouton('Trajets'))
-    expect(trajets()).toContain('course')
+    expect(trajets()).toContain('cut')
   })
 })

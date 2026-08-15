@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fusionnerMatchs, plusAvance } from './fusion'
+import { mergeMatches, furthest } from './fusion'
 import { undoLast, removeLastEvent } from './reducer'
 import type { GameEvent, Match } from './types'
 
@@ -19,7 +19,7 @@ describe('fusionnerMatchs', () => {
     const marqueur = match([panier('a', 10), panier('b', 20)])
     const coach = match([panier('a', 10), panier('c', 15)])
 
-    expect(journal(fusionnerMatchs(marqueur, coach))).toEqual(['a', 'c', 'b'])
+    expect(journal(mergeMatches(marqueur, coach))).toEqual(['a', 'c', 'b'])
   })
 
   it('donne le même journal quel que soit l’ordre d’arrivée', () => {
@@ -28,15 +28,15 @@ describe('fusionnerMatchs', () => {
     const a = match([panier('a', 10), panier('b', 20)])
     const b = match([panier('c', 15), panier('d', 5)])
 
-    expect(journal(fusionnerMatchs(a, b))).toEqual(journal(fusionnerMatchs(b, a)))
+    expect(journal(mergeMatches(a, b))).toEqual(journal(mergeMatches(b, a)))
   })
 
   it('départage deux évènements de même heure sur l’identifiant, pas sur l’arrivée', () => {
     const a = match([panier('zzz', 10)])
     const b = match([panier('aaa', 10)])
 
-    expect(journal(fusionnerMatchs(a, b))).toEqual(['aaa', 'zzz'])
-    expect(journal(fusionnerMatchs(b, a))).toEqual(['aaa', 'zzz'])
+    expect(journal(mergeMatches(a, b))).toEqual(['aaa', 'zzz'])
+    expect(journal(mergeMatches(b, a))).toEqual(['aaa', 'zzz'])
   })
 
   it('une annulation gagne sur la copie de l’autre appareil', () => {
@@ -45,40 +45,40 @@ describe('fusionnerMatchs', () => {
     const coach = undoLast(match([panier('a', 10), panier('b', 20)]))
     const marqueur = match([panier('a', 10), panier('b', 20)])
 
-    expect(journal(fusionnerMatchs(marqueur, coach))).toEqual(['a'])
-    expect(journal(fusionnerMatchs(coach, marqueur))).toEqual(['a'])
+    expect(journal(mergeMatches(marqueur, coach))).toEqual(['a'])
+    expect(journal(mergeMatches(coach, marqueur))).toEqual(['a'])
   })
 
   it('un évènement annulé ne revient pas au vidage suivant', () => {
     // Deuxième tour : le marqueur repousse encore son journal périmé, contre un
     // état serveur qui porte déjà la rature.
-    const serveur = fusionnerMatchs(match([panier('a', 10), panier('b', 20)]),
+    const serveur = mergeMatches(match([panier('a', 10), panier('b', 20)]),
                                     undoLast(match([panier('a', 10), panier('b', 20)])))
     const marqueurEnRetard = match([panier('a', 10), panier('b', 20)])
 
-    expect(journal(fusionnerMatchs(serveur, marqueurEnRetard))).toEqual(['a'])
+    expect(journal(mergeMatches(serveur, marqueurEnRetard))).toEqual(['a'])
   })
 
   it('cumule les ratures des deux côtés', () => {
     const coach = undoLast(match([panier('a', 10), panier('b', 20)]))
     const marqueur = removeLastEvent(match([panier('a', 10), panier('c', 30)]), (e) => e.id === 'c')
 
-    const f = fusionnerMatchs(coach, marqueur)
+    const f = mergeMatches(coach, marqueur)
     expect(journal(f)).toEqual(['a'])
-    expect(f.retires?.sort()).toEqual(['b', 'c'])
+    expect(f.retracted?.sort()).toEqual(['b', 'c'])
   })
 
   it('les champs qui se remplacent viennent du second — celui qui a gagné l’arbitrage', () => {
     const ancien = match([], { meta: { clubId: 'ta', opponentId: 'tb', venue: 'ANCIEN' } })
     const recent = match([], { meta: { clubId: 'ta', opponentId: 'tb', venue: 'RÉCENT' } })
 
-    expect(fusionnerMatchs(ancien, recent).meta.venue).toBe('RÉCENT')
+    expect(mergeMatches(ancien, recent).meta.venue).toBe('RÉCENT')
   })
 
   it('ne pose pas de champ `retires` quand il n’y a rien à rayer', () => {
     // Le document reste tel qu'il était avant ce chantier tant que personne
     // n'annule : rien n'oblige les bases existantes à gagner un champ vide.
-    expect(fusionnerMatchs(match([panier('a', 10)]), match([panier('a', 10)])))
+    expect(mergeMatches(match([panier('a', 10)]), match([panier('a', 10)])))
       .not.toHaveProperty('retires')
   })
 })
@@ -90,13 +90,13 @@ describe('le statut ne recule jamais', () => {
     const serveur = match([], { status: 'finished' })
     const enRetard = match([], { status: 'live' })
 
-    expect(fusionnerMatchs(serveur, enRetard).status).toBe('finished')
+    expect(mergeMatches(serveur, enRetard).status).toBe('finished')
   })
 
   it('mais elle avance quand c’est le sens de la marche', () => {
-    expect(fusionnerMatchs(match([], { status: 'live' }), match([], { status: 'finished' })).status).toBe('finished')
-    expect(plusAvance('setup', 'live')).toBe('live')
-    expect(plusAvance('finished', 'setup')).toBe('finished')
+    expect(mergeMatches(match([], { status: 'live' }), match([], { status: 'finished' })).status).toBe('finished')
+    expect(furthest('setup', 'live')).toBe('live')
+    expect(furthest('finished', 'setup')).toBe('finished')
   })
 })
 
@@ -104,17 +104,17 @@ describe('le réducteur note ses ratures', () => {
   it('`undoLast` sort l’évènement du journal et garde son identifiant', () => {
     const m = undoLast(match([panier('a', 10), panier('b', 20)]))
     expect(journal(m)).toEqual(['a'])
-    expect(m.retires).toEqual(['b'])
+    expect(m.retracted).toEqual(['b'])
   })
 
   it('`removeLastEvent` fait de même sur celui qu’il retire', () => {
     const m = removeLastEvent(match([panier('a', 10), panier('b', 20)]), (e) => e.id === 'a')
     expect(journal(m)).toEqual(['b'])
-    expect(m.retires).toEqual(['a'])
+    expect(m.retracted).toEqual(['a'])
   })
 
   it('n’invente pas de rature quand il n’y a rien à retirer', () => {
-    expect(undoLast(match([])).retires).toBeUndefined()
-    expect(removeLastEvent(match([panier('a', 10)]), () => false).retires).toBeUndefined()
+    expect(undoLast(match([])).retracted).toBeUndefined()
+    expect(removeLastEvent(match([panier('a', 10)]), () => false).retracted).toBeUndefined()
   })
 })

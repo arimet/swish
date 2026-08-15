@@ -10,9 +10,9 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { annees, aVider, championnats, clubsDesRencontres, deLAnnee, duChampionnat } from '../../domain/menage'
+import { years, hasEvents, leagues, clubsDesRencontres, ofYear, ofLeague } from '../../domain/menage'
 import type { Match, ReportedResult, Training } from '../../domain/types'
-import type { Schema } from '../../domain/plays'
+import type { Play } from '../../domain/plays'
 import {
   clearClubStats, deleteAllResults, deleteMatchesWhere, deletePlaysOfClub, deleteTrainingsOfClub,
   listMatches, listPlays, listResults, listTrainings, wipeAll,
@@ -21,8 +21,8 @@ import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { C, bd, useChampLabel } from '../olive/kit'
-import { etatSync, hydrate, jeton, remoteEnabled, setJeton, type Etat } from '../../persistence/remote'
+import { C, bd, useLeagueLabel } from '../olive/kit'
+import { syncState, hydrate, token, remoteEnabled, setToken, type State } from '../../persistence/remote'
 
 /** Une opération de ménage prête à être confirmée : ce qu'elle annonce, et ce
  *  qu'elle fait. Rien n'est exécuté avant la confirmation. */
@@ -39,14 +39,14 @@ interface Operation {
    endroit, et « feuille/feuilles » n'a pas de correspondance mécanique en anglais. */
 
 export function Admin() {
-  const trad = useT()
+  const translate = useT()
   const { clubId, club, teams, clear } = useClub()
   const { can, guard } = useAuth()
   const navigate = useNavigate()
   const [matches, setMatches] = useState<Match[]>([])
   const [results, setResults] = useState<ReportedResult[]>([])
   const [trainings, setTrainings] = useState<Training[]>([])
-  const [plays, setPlays] = useState<Schema[]>([])
+  const [plays, setPlays] = useState<Play[]>([])
   // L'opération dont on a demandé la confirmation. Le droit est vérifié à
   // l'ouverture du dialogue, comme sur la fiche d'équipe et la bibliothèque.
   const [demande, setDemande] = useState<Operation | null>(null)
@@ -60,9 +60,9 @@ export function Admin() {
   /* « Match amical » est la valeur stockée pour une rencontre sans championnat, et
      elle sert de clef de regroupement ici : on la traduit au moment de l'écrire, pas
      avant, sinon les deux langues découperaient deux groupes différents. */
-  const nomChamp = useChampLabel()
-  const nomEquipe = useCallback((id: string) => teams.find((t) => t.id === id)?.name ?? trad('commun.equipe'), [teams, trad])
-  const séances = useMemo(() => trainings.filter((t) => t.clubId === clubId), [trainings, clubId])
+  const leagueName = useLeagueLabel()
+  const teamName = useCallback((id: string) => teams.find((t) => t.id === id)?.name ?? translate('commun.equipe'), [teams, translate])
+  const sessions = useMemo(() => trainings.filter((t) => t.clubId === clubId), [trainings, clubId])
 
   // Garder d'abord, muter ensuite : la table de marque ne voit pas s'ouvrir un
   // dialogue de confirmation qu'elle n'aurait pas le droit de valider.
@@ -74,8 +74,8 @@ export function Admin() {
   }
 
   const supprimerRencontres = (libellé: string, filtre: (m: Match) => boolean, n: number) => demander({
-    titre: trad('admin.supprimerRencontresTitre'),
-    message: trad('admin.supprimerRencontresTexte', { compte: trad('compte.rencontre', { count: n }), libelle: libellé }),
+    titre: translate('admin.supprimerRencontresTitre'),
+    message: translate('admin.supprimerRencontresTexte', { count: translate('compte.rencontre', { count: n }), libelle: libellé }),
     executer: () => deleteMatchesWhere(filtre),
   })
 
@@ -92,72 +92,72 @@ export function Admin() {
   return (
     <div className="p-6">
       <p className="mb-6 rounded-2xl px-4 py-3 text-sm" style={{ background: C.accentBg, color: C.accent }}>
-        {trad(remoteEnabled() ? 'admin.avertissementPartage' : 'admin.avertissement')}
+        {translate(remoteEnabled() ? 'admin.avertissementPartage' : 'admin.avertissement')}
       </p>
 
       <div className="space-y-6">
         <Synchronisation />
 
-        <Bloc titre={trad('admin.parChampionnat')} aide={trad('admin.aideChampionnat')}>
-          {championnats(matches).map((champ) => {
-            const n = matches.filter(duChampionnat(champ)).length
+        <Bloc titre={translate('admin.parChampionnat')} aide={translate('admin.aideChampionnat')}>
+          {leagues(matches).map((champ) => {
+            const n = matches.filter(ofLeague(champ)).length
             return (
-              <Ligne key={champ} libelle={nomChamp(champ)} compte={trad('compte.rencontre', { count: n })} action={trad('commun.supprimer')}
-                aria={trad('admin.supprimerRencontresDe', { quoi: nomChamp(champ) })} desactive={n === 0}
-                onClick={() => supprimerRencontres(`« ${nomChamp(champ)} »`, duChampionnat(champ), n)} />
+              <Row key={champ} libelle={leagueName(champ)} count={translate('compte.rencontre', { count: n })} action={translate('commun.supprimer')}
+                aria={translate('admin.supprimerRencontresDe', { quoi: leagueName(champ) })} desactive={n === 0}
+                onClick={() => supprimerRencontres(`« ${leagueName(champ)} »`, ofLeague(champ), n)} />
             )
           })}
-          {matches.length === 0 && <Vide>{trad('admin.aucuneRencontre')}</Vide>}
+          {matches.length === 0 && <Vide>{translate('admin.aucuneRencontre')}</Vide>}
         </Bloc>
 
-        <Bloc titre={trad('admin.parAnnee')} aide={trad('admin.aideAnnee')}>
-          {annees(matches).map((an) => {
-            const n = matches.filter(deLAnnee(an)).length
+        <Bloc titre={translate('admin.parAnnee')} aide={translate('admin.aideAnnee')}>
+          {years(matches).map((an) => {
+            const n = matches.filter(ofYear(an)).length
             return (
-              <Ligne key={an} libelle={trad('admin.annee', { an })} compte={trad('compte.rencontre', { count: n })} action={trad('commun.supprimer')}
-                aria={trad('admin.supprimerRencontresAnnee', { an })} desactive={n === 0}
-                onClick={() => supprimerRencontres(trad('admin.anneeCivile', { an }), deLAnnee(an), n)} />
+              <Row key={an} libelle={translate('admin.annee', { an })} count={translate('compte.rencontre', { count: n })} action={translate('commun.supprimer')}
+                aria={translate('admin.supprimerRencontresAnnee', { an })} desactive={n === 0}
+                onClick={() => supprimerRencontres(translate('admin.anneeCivile', { an }), ofYear(an), n)} />
             )
           })}
-          {annees(matches).length === 0 && <Vide>{trad('admin.aucuneRencontreDatee')}</Vide>}
+          {years(matches).length === 0 && <Vide>{translate('admin.aucuneRencontreDatee')}</Vide>}
         </Bloc>
 
-        <Bloc titre={trad('admin.statsEquipe')} aide={trad('admin.aideStats')}>
+        <Bloc titre={translate('admin.statsEquipe')} aide={translate('admin.aideStats')}>
           {clubsDesRencontres(matches).map((id) => {
-            const n = matches.filter(aVider(id)).length
+            const n = matches.filter(hasEvents(id)).length
             return (
-              <Ligne key={id} libelle={nomEquipe(id)} compte={trad('admin.aVider', { compte: trad('compte.feuille', { count: n }) })} action={trad('admin.vider')}
-                aria={trad('admin.viderFeuillesDe', { nom: nomEquipe(id) })} desactive={n === 0}
+              <Row key={id} libelle={teamName(id)} count={translate('admin.aVider', { count: translate('compte.feuille', { count: n }) })} action={translate('admin.vider')}
+                aria={translate('admin.viderFeuillesDe', { nom: teamName(id) })} desactive={n === 0}
                 onClick={() => demander({
-                  titre: trad('admin.viderTitre'),
-                  message: trad('admin.viderTexte', { compte: trad('compte.rencontre', { count: n }), nom: nomEquipe(id) }),
+                  titre: translate('admin.viderTitre'),
+                  message: translate('admin.viderTexte', { count: translate('compte.rencontre', { count: n }), nom: teamName(id) }),
                   executer: () => clearClubStats(id),
                 })} />
             )
           })}
-          {matches.length === 0 && <Vide>{trad('admin.aucuneRencontre')}</Vide>}
+          {matches.length === 0 && <Vide>{translate('admin.aucuneRencontre')}</Vide>}
         </Bloc>
 
-        <Bloc titre={trad('admin.leReste')}>
-          <Ligne libelle={trad('admin.resultatsLibelle')} compte={trad('compte.resultat', { count: results.length })} action={trad('commun.supprimer')}
-            aria={trad('admin.supprimerResultats')} desactive={results.length === 0}
+        <Bloc titre={translate('admin.leReste')}>
+          <Row libelle={translate('admin.resultatsLibelle')} count={translate('compte.resultat', { count: results.length })} action={translate('commun.supprimer')}
+            aria={translate('admin.supprimerResultats')} desactive={results.length === 0}
             onClick={() => demander({
-              titre: trad('admin.supprimerResultatsTitre'),
-              message: trad('admin.supprimerResultatsTexte', { compte: trad('compte.resultat', { count: results.length }) }),
+              titre: translate('admin.supprimerResultatsTitre'),
+              message: translate('admin.supprimerResultatsTexte', { count: translate('compte.resultat', { count: results.length }) }),
               executer: deleteAllResults,
             })} />
-          <Ligne libelle={trad('admin.entrainementsDe', { nom: club?.name ?? trad('admin.ceClub') })} compte={trad('compte.seance', { count: séances.length })} action={trad('commun.supprimer')}
-            aria={trad('admin.supprimerEntrainements')} desactive={séances.length === 0}
+          <Row libelle={translate('admin.entrainementsDe', { nom: club?.name ?? translate('admin.ceClub') })} count={translate('compte.seance', { count: sessions.length })} action={translate('commun.supprimer')}
+            aria={translate('admin.supprimerEntrainements')} desactive={sessions.length === 0}
             onClick={() => demander({
-              titre: trad('admin.supprimerEntrainementsTitre'),
-              message: trad('admin.supprimerEntrainementsTexte', { compte: trad('compte.seance', { count: séances.length }), nom: club?.name ?? trad('admin.ceClub') }),
+              titre: translate('admin.supprimerEntrainementsTitre'),
+              message: translate('admin.supprimerEntrainementsTexte', { count: translate('compte.seance', { count: sessions.length }), nom: club?.name ?? translate('admin.ceClub') }),
               executer: () => deleteTrainingsOfClub(clubId),
             })} />
-          <Ligne libelle={trad('admin.schemasDe', { nom: club?.name ?? trad('admin.ceClub') })} compte={trad('compte.schema', { count: plays.length })} action={trad('commun.supprimer')}
-            aria={trad('admin.supprimerSchemas')} desactive={plays.length === 0}
+          <Row libelle={translate('admin.schemasDe', { nom: club?.name ?? translate('admin.ceClub') })} count={translate('compte.schema', { count: plays.length })} action={translate('commun.supprimer')}
+            aria={translate('admin.supprimerSchemas')} desactive={plays.length === 0}
             onClick={() => demander({
-              titre: trad('admin.supprimerSchemasTitre'),
-              message: trad('admin.supprimerSchemasTexte', { compte: trad('compte.schema', { count: plays.length }), nom: club?.name ?? trad('admin.ceClub') }),
+              titre: translate('admin.supprimerSchemasTitre'),
+              message: translate('admin.supprimerSchemasTexte', { count: translate('compte.schema', { count: plays.length }), nom: club?.name ?? translate('admin.ceClub') }),
               executer: () => deletePlaysOfClub(clubId),
             })} />
         </Bloc>
@@ -165,17 +165,17 @@ export function Admin() {
         {/* La remise à zéro à part, et derrière la recopie du nom du club : un clic
             unique n'est pas à la hauteur d'une action qui vide tout l'appareil. */}
         <section className="rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{trad('admin.toutEffacer')}</p>
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('admin.toutEffacer')}</p>
           <p className="mb-3 text-[13px]" style={{ color: C.muted }}>
-            {trad('admin.remiseAZero')}
+            {translate('admin.remiseAZero')}
           </p>
-          <Ligne
-            libelle={trad('admin.toutesLesDonnees')}
-            compte={`${trad('compte.equipe', { count: teams.length })} · ${trad('compte.rencontre', { count: matches.length })} · ${trad('compte.resultat', { count: results.length })} · ${trad('compte.seance', { count: trainings.length })}`}
-            action={trad('admin.toutEffacer')} aria={trad('admin.toutEffacer')} desactive={teams.length === 0 && matches.length === 0}
+          <Row
+            libelle={translate('admin.toutesLesDonnees')}
+            count={`${translate('compte.equipe', { count: teams.length })} · ${translate('compte.rencontre', { count: matches.length })} · ${translate('compte.resultat', { count: results.length })} · ${translate('compte.seance', { count: trainings.length })}`}
+            action={translate('admin.toutEffacer')} aria={translate('admin.toutEffacer')} desactive={teams.length === 0 && matches.length === 0}
             onClick={() => demander({
-              titre: trad('admin.toutEffacerTitre'),
-              message: trad('admin.toutEffacerTexte', { equipes: trad('compte.equipe', { count: teams.length }), rencontres: trad('compte.rencontre', { count: matches.length }), resultats: trad('compte.resultat', { count: results.length }), seances: trad('compte.seance', { count: trainings.length }) }),
+              titre: translate('admin.toutEffacerTitre'),
+              message: translate('admin.toutEffacerTexte', { teams: translate('compte.equipe', { count: teams.length }), rencontres: translate('compte.rencontre', { count: matches.length }), resultats: translate('compte.resultat', { count: results.length }), seances: translate('compte.seance', { count: trainings.length }) }),
               // Le nom du club, recopié à l'identique. Le repli n'arrive pas dans la
               // coquille (le club est résolu) : il est là pour qu'aucun chemin ne laisse
               // la remise à zéro se confirmer d'un seul clic.
@@ -195,7 +195,7 @@ export function Admin() {
         open={!!demande} danger
         title={demande?.titre ?? ''} message={demande?.message}
         saisieAttendue={demande?.saisieAttendue}
-        confirmLabel={trad('admin.supprimerDefinitivement')}
+        confirmLabel={translate('admin.supprimerDefinitivement')}
         onConfirm={confirmer} onClose={() => setDemande(null)}
       />
     </div>
@@ -214,9 +214,9 @@ export function Admin() {
  * à régler, et une porte qu'on ne peut pas ouvrir n'a pas à se montrer.
  */
 function Synchronisation() {
-  const trad = useT()
-  const [valeur, setValeur] = useState(jeton)
-  const [etat, setEtat] = useState<Etat>(etatSync)
+  const translate = useT()
+  const [valeur, setValeur] = useState(token)
+  const [etat, setEtat] = useState<State>(syncState)
   const [essai, setEssai] = useState(false)
 
   if (!remoteEnabled()) return null
@@ -225,38 +225,38 @@ function Synchronisation() {
   // sur un jeton que le serveur refusera : c'est le genre de réglage qu'on pose
   // une fois et qu'on ne revient jamais vérifier.
   const verifier = async () => {
-    setJeton(valeur.trim())
+    setToken(valeur.trim())
     setEssai(true)
     await hydrate()
-    setEtat(etatSync())
+    setEtat(syncState())
     setEssai(false)
   }
 
   const dit = essai ? 'admin.jetonEssai'
     : etat === 'ok' ? 'admin.jetonOk'
-    : etat === 'jeton' ? 'admin.jetonRefuse'
-    : etat === 'reseau' ? 'admin.jetonReseau'
+    : etat === 'token' ? 'admin.jetonRefuse'
+    : etat === 'network' ? 'admin.jetonReseau'
     : 'admin.jetonInconnu'
-  const mauvais = !essai && (etat === 'jeton' || etat === 'reseau')
+  const mauvais = !essai && (etat === 'token' || etat === 'network')
 
   return (
-    <Bloc titre={trad('admin.synchronisation')} aide={trad('admin.aideSynchronisation')}>
+    <Bloc titre={translate('admin.synchronisation')} aide={translate('admin.aideSynchronisation')}>
       <div className="flex flex-wrap items-center gap-2 py-1">
         <input
           type="password" value={valeur} onChange={(e) => setValeur(e.target.value)}
-          aria-label={trad('admin.jeton')} placeholder={trad('admin.jeton')}
+          aria-label={translate('admin.jeton')} placeholder={translate('admin.jeton')}
           className="min-w-[12rem] flex-1 rounded-xl px-4 py-3 text-sm outline-none transition focus:border-[var(--c-accent)]"
           style={{ background: C.panel, border: bd, color: C.text }}
         />
         <button onClick={verifier} disabled={essai}
           className="rounded-xl px-5 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40"
           style={{ background: C.brand }}>
-          {trad('admin.verifierJeton')}
+          {translate('admin.verifierJeton')}
         </button>
       </div>
       <p aria-live="polite" className="pb-1 text-[13px] font-semibold"
         style={{ color: mauvais ? C.danger : etat === 'ok' ? C.green : C.muted }}>
-        {trad(dit)}
+        {translate(dit)}
       </p>
     </Bloc>
   )
@@ -275,13 +275,13 @@ function Bloc({ titre, aide, children }: { titre: string; aide?: string; childre
 /** Une opération : ce qu'elle vise, ce qu'elle détruit (compté), et son bouton.
  *  Le compte est toujours affiché, y compris à zéro — c'est lui qui explique
  *  pourquoi le bouton est éteint. */
-function Ligne({ libelle, compte, action, aria, desactive, onClick }: {
-  libelle: string; compte: string; action: string; aria: string; desactive: boolean; onClick: () => void
+function Row({ libelle, count, action, aria, desactive, onClick }: {
+  libelle: string; count: string; action: string; aria: string; desactive: boolean; onClick: () => void
 }) {
   return (
     <li className="flex flex-wrap items-center gap-3 rounded-xl px-3 py-2.5" style={{ background: C.panel }}>
       <span className="min-w-0 flex-1 truncate text-sm font-bold">{libelle}</span>
-      <span className="shrink-0 text-[12px] font-semibold tabular-nums" style={{ color: C.muted }}>{compte}</span>
+      <span className="shrink-0 text-[12px] font-semibold tabular-nums" style={{ color: C.muted }}>{count}</span>
       <button
         onClick={onClick} disabled={desactive} aria-label={aria}
         className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40"

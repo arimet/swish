@@ -20,18 +20,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExportSchema, livrer } from './ExportSchema'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { decoder } from '../../domain/partage'
-import { nouveauSchema, tempsSuivant, type Fleche, type Schema } from '../../domain/plays'
+import { newPlay, nextStep, type Arrow, type Play } from '../../domain/plays'
 import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
 import { SchemaView } from '../screens/SchemaView'
 
-const deuxTemps = (): Schema => {
-  const s: Schema = { id: 's1', ...nouveauSchema('ta', 'demi', true), nom: 'Pick and roll haut', note: 'Écran au meneur' }
+const deuxTemps = (): Play => {
+  const s: Play = { id: 's1', ...newPlay('ta', 'half', true), nom: 'Pick and roll haut', note: 'Écran au meneur' }
   const t0 = {
     ...s.temps[0],
-    fleches: [{ depuis: { camp: 'attaque' as const, poste: 5 as const }, trait: 'ecran' as const, points: [{ x: 0.7, y: 0.2 }, { x: 0.55, y: 0.5 }] }],
+    arrows: [{ from: { side: 'offense' as const, position: 5 as const }, stroke: 'screen' as const, points: [{ x: 0.7, y: 0.2 }, { x: 0.55, y: 0.5 }] }],
   }
-  return { ...s, temps: [t0, tempsSuivant(t0)] }
+  return { ...s, temps: [t0, nextStep(t0)] }
 }
 
 /**
@@ -39,17 +39,17 @@ const deuxTemps = (): Schema => {
  * un tracé régulier se compresserait presque à néant, et le test ne dirait plus
  * rien de la limite.
  */
-const troisMilleGestes = (): Schema => {
+const troisMilleGestes = (): Play => {
   const s = deuxTemps()
-  const fleches: Fleche[] = Array.from({ length: 24 }, () => ({
-    depuis: { camp: 'attaque' as const, poste: 1 as const },
-    trait: 'course' as const,
+  const arrows: Arrow[] = Array.from({ length: 24 }, () => ({
+    from: { side: 'offense' as const, position: 1 as const },
+    stroke: 'cut' as const,
     points: Array.from({ length: 150 }, () => ({ x: Math.random(), y: Math.random() })),
   }))
-  return { ...s, temps: [{ ...s.temps[0], fleches }, s.temps[1]] }
+  return { ...s, temps: [{ ...s.temps[0], arrows }, s.temps[1]] }
 }
 
-const ouvrir = (schema: Schema) =>
+const ouvrir = (schema: Play) =>
   render(<ExportSchema schema={schema} tempsIndex={0} open onClose={() => {}} />)
 
 /** Le lien tel que le dialogue le donne à copier. */
@@ -132,7 +132,7 @@ describe('ExportSchema — le partage d’une combinaison', () => {
     // La fabrication du PNG, du PDF et du GIF ne peut pas être exercée en jsdom
     // (pas de canvas) ; leur **remise**, si — et c'est elle qui décide entre le
     // geste du téléphone et celui du bureau.
-    const fichier = new File(['x'], 'pick-and-roll.png', { type: 'image/png' })
+    const file = new File(['x'], 'pick-and-roll.png', { type: 'image/png' })
     vi.stubGlobal('URL', Object.create(URL, {
       createObjectURL: { value: vi.fn(() => 'blob:faux') },
       revokeObjectURL: { value: vi.fn() },
@@ -141,12 +141,12 @@ describe('ExportSchema — le partage d’une combinaison', () => {
 
     const share = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', Object.create(navigator, { share: { value: share } }))
-    await livrer(fichier)
-    expect(share).toHaveBeenCalledWith({ files: [fichier], title: 'pick-and-roll.png' })
+    await livrer(file)
+    expect(share).toHaveBeenCalledWith({ files: [file], title: 'pick-and-roll.png' })
     expect(clic).not.toHaveBeenCalled()
 
     vi.stubGlobal('navigator', Object.create(navigator, { share: { value: undefined } }))
-    await livrer(fichier)
+    await livrer(file)
     expect(clic).toHaveBeenCalledTimes(1)
   })
 

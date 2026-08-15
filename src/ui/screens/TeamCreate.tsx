@@ -13,9 +13,9 @@ const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel
 const Label = ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) => <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{children}</label>
 
 export function TeamCreate() {
-  const trad = useT()
+  const translate = useT()
   const navigate = useNavigate()
-  const { guard, fonder } = useAuth()
+  const { guard, found } = useAuth()
   const { clubId, teams, setClub } = useClub()
   const [name, setName] = useState(''); const [coach, setCoach] = useState('')
   const [roster, setRoster] = useState<Draft[]>([])
@@ -31,7 +31,7 @@ export function TeamCreate() {
      `app/auth.tsx` pour la justification, et le bouton plus bas pour ce que ça change.
      La condition est bien « aucune équipe » et non « aucun club suivi » : celui qui a
      simplement effacé son choix de club n'est pas un fondateur. */
-  const fondation = teams.length === 0
+  const founding = teams.length === 0
 
   const create = async () => {
     if (!name.trim()) return
@@ -45,35 +45,35 @@ export function TeamCreate() {
     // Sans cela, le bénévole qui vient de saisir son effectif restait « Visiteur » :
     // plus un seul bouton de création sur cinq écrans, et rien ne lui disait que
     // « Accès » dans la barre latérale était le passage.
-    if (fondation) fonder()
+    if (founding) found()
     navigate(`/teams/${teamId}`)
   }
 
   return (
     <div className="p-6">
-      <Link to="/teams" className="-mx-2 inline-block px-2 py-1.5 text-sm font-semibold" style={{ color: C.muted }}>{trad('equipe.retourEquipes')}</Link>
+      <Link to="/teams" className="-mx-2 inline-block px-2 py-1.5 text-sm font-semibold" style={{ color: C.muted }}>{translate('equipe.retourEquipes')}</Link>
       {/* Un vrai titre, et non plus le sous-titre qui en tenait lieu : cet écran
           vit hors de la coquille, son en-tête ne le nomme donc pas à sa place. */}
-      <h1 className="mb-6 mt-2 text-2xl font-extrabold tracking-tight">{trad('creation.titre')}</h1>
+      <h1 className="mb-6 mt-2 text-2xl font-extrabold tracking-tight">{translate('creation.titre')}</h1>
 
       <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
         <div className="space-y-5 self-start rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-          <div><Label htmlFor="team-name">{trad('creation.nomEquipe')}</Label>
-            <input id="team-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={trad('creation.nomPlaceholder')} style={{ ...field, width: '100%' }} /></div>
-          <div><Label htmlFor="team-coach">{trad('equipe.entraineur')}</Label>
-            <input id="team-coach" value={coach} onChange={(e) => setCoach(e.target.value)} placeholder={trad('creation.entraineurPlaceholder')} style={{ ...field, width: '100%' }} /></div>
-          <p className="text-[12px]" style={{ color: C.muted }}>{trad('creation.joueurAjoute', { count: roster.length })}</p>
+          <div><Label htmlFor="team-name">{translate('creation.nomEquipe')}</Label>
+            <input id="team-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder={translate('creation.nomPlaceholder')} style={{ ...field, width: '100%' }} /></div>
+          <div><Label htmlFor="team-coach">{translate('equipe.entraineur')}</Label>
+            <input id="team-coach" value={coach} onChange={(e) => setCoach(e.target.value)} placeholder={translate('creation.entraineurPlaceholder')} style={{ ...field, width: '100%' }} /></div>
+          <p className="text-[12px]" style={{ color: C.muted }}>{translate('creation.joueurAjoute', { count: roster.length })}</p>
         </div>
 
         <div className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-          <Label>{trad('creation.joueurs')}</Label>
+          <Label>{translate('creation.joueurs')}</Label>
           {roster.length > 0 && (
             <ul className="mb-3 grid gap-1.5 sm:grid-cols-2">
               {roster.map((p, i) => (
                 <li key={i} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: C.panel }}>
                   <NumBadge n={p.number} size="h-7 w-7 rounded-lg text-xs" />
                   <span className="font-semibold">{p.lastName}</span><span style={{ color: C.muted }}>{p.firstName}</span>
-                  <button onClick={() => setRoster((r) => r.filter((_, j) => j !== i))} className="ml-auto text-xs font-semibold" style={{ color: C.accent }}>{trad('equipe.retirer')}</button>
+                  <button onClick={() => setRoster((r) => r.filter((_, j) => j !== i))} className="ml-auto text-xs font-semibold" style={{ color: C.accent }}>{translate('equipe.retirer')}</button>
                 </li>
               ))}
             </ul>
@@ -83,15 +83,15 @@ export function TeamCreate() {
               frappe, donc au moment précis où l'on vérifie qu'on remplit la bonne
               case, et un lecteur d'écran n'annonçait qu'« champ de saisie ». */}
           <div className="grid grid-cols-[68px_1fr_1fr_44px] items-end gap-2">
-            <div><Label htmlFor="roster-num">{trad('equipe.numero')}</Label>
+            <div><Label htmlFor="roster-num">{translate('equipe.numero')}</Label>
               <input id="roster-num" value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center', width: '100%' }} /></div>
-            <div><Label htmlFor="roster-last">{trad('equipe.nom')}</Label>
+            <div><Label htmlFor="roster-last">{translate('equipe.nom')}</Label>
               <input id="roster-last" value={ln} onChange={(e) => setLn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addToRoster()} style={{ ...field, width: '100%' }} /></div>
-            <div><Label htmlFor="roster-first">{trad('equipe.prenom')}</Label>
+            <div><Label htmlFor="roster-first">{translate('equipe.prenom')}</Label>
               <input id="roster-first" value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addToRoster()} style={{ ...field, width: '100%' }} /></div>
-            <button onClick={addToRoster} aria-label={trad('creation.ajouterJoueur')} className="grid h-11 w-11 place-items-center rounded-xl text-xl font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>+</button>
+            <button onClick={addToRoster} aria-label={translate('creation.ajouterJoueur')} className="grid h-11 w-11 place-items-center rounded-xl text-xl font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>+</button>
           </div>
-          {roster.length === 0 && <p className="mt-3 text-sm" style={{ color: C.muted }}>{trad('creation.consigne')}</p>}
+          {roster.length === 0 && <p className="mt-3 text-sm" style={{ color: C.muted }}>{translate('creation.consigne')}</p>}
         </div>
       </div>
 
@@ -107,9 +107,9 @@ export function TeamCreate() {
           donnée à protéger, et le code administrateur défend des données et non un
           accès. Dès la deuxième équipe, la garde reprend son travail. */}
       <div className="mt-6 flex justify-end gap-3">
-        <Link to="/teams" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{trad('commun.annuler')}</Link>
-        <button onClick={() => (fondation ? create() : guard('manage', create))} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
-          {fondation ? trad('creation.creerMonEquipe') : trad('creation.creerEquipe')}
+        <Link to="/teams" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('commun.annuler')}</Link>
+        <button onClick={() => (founding ? create() : guard('manage', create))} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
+          {founding ? translate('creation.creerMonEquipe') : translate('creation.creerEquipe')}
         </button>
       </div>
     </div>

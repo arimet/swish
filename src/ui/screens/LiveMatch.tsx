@@ -11,7 +11,7 @@ import { SubstitutionDialog } from '../components/SubstitutionDialog'
 import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
-import { EtatSynchro } from '../components/EtatSynchro'
+import { SyncState } from '../components/EtatSynchro'
 import { useAuth } from '../../app/auth'
 import { useMatch } from '../../app/useMatch'
 import { liveState } from '../../rules/ffbb'
@@ -36,13 +36,13 @@ const OPP_POINTS: { k: ScoreKind; n: number }[] = [{ k: 'lf', n: 1 }, { k: '2int
  * l'adversaire se résume à un score saisi globalement.
  */
 export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: () => void }) {
-  const trad = useT()
+  const translate = useT()
   const navigate = useNavigate()
   const { can, guard } = useAuth()
   const { match, dispatch, dispatchMany, undo, removeLast, finish, error } = useMatch(matchId)
   const [askFinish, setAskFinish] = useState(false)
   const [players, setPlayers] = useState<Record<string, Player>>({})
-  const [teamNames, setTeamNames] = useState<{ A: string; B: string }>({ A: trad('nav.monEquipe'), B: trad('match.adversaire') })
+  const [teamNames, setTeamNames] = useState<{ A: string; B: string }>({ A: translate('nav.monEquipe'), B: translate('match.adversaire') })
   const [seconds, setSeconds] = useState(600)
   const [pick, setPick] = useState<{ id: string; name: string } | null>(null)
   const [starters, setStarters] = useState<string[]>([])
@@ -58,9 +58,9 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     Promise.all([listPlayers(match.meta.clubId), listTeams()]).then(([a, teams]) => {
       setPlayers(Object.fromEntries(a.map((p) => [p.id, p])))
       const byId = Object.fromEntries(teams.map((t) => [t.id, t.name]))
-      setTeamNames({ A: byId[match.meta.clubId] ?? trad('nav.monEquipe'), B: byId[match.meta.opponentId] ?? trad('match.adversaire') })
+      setTeamNames({ A: byId[match.meta.clubId] ?? translate('nav.monEquipe'), B: byId[match.meta.opponentId] ?? translate('match.adversaire') })
     })
-  }, [match?.meta.clubId, match?.meta.opponentId, trad])
+  }, [match?.meta.clubId, match?.meta.opponentId, translate])
 
   useEffect(() => {
     if (!match || !ls || seededMatchId.current === match.id) return
@@ -81,7 +81,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
      chemins d'écriture pour une même donnée, et deux façons de se contredire. */
 
   if (!match || !ls)
-    return <div className="grid min-h-dvh place-items-center text-muted-foreground">{trad('commun.chargement')}</div>
+    return <div className="grid min-h-dvh place-items-center text-muted-foreground">{translate('commun.chargement')}</div>
 
   if (!can('score'))
     return <AccessGate ability="score" matchId={matchId} onUnlock={() => guard('score', () => {})} onExit={() => navigate('/')} />
@@ -178,8 +178,8 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
             {/* La table de marque vit hors de la coquille : sans cette copie, le seul
                 écran où l'on saisit pendant deux heures serait le seul à ne rien dire
                 d'un partage interrompu. */}
-            <EtatSynchro compact />
-            <Link to={`/match/${match.id}`} aria-label={trad('live.quitter')} title={trad('live.quitter')}
+            <SyncState compact />
+            <Link to={`/match/${match.id}`} aria-label={translate('live.quitter')} title={translate('live.quitter')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><X className="h-5 w-5" strokeWidth={2.5} /></Link>
             <PeriodStrip current={ls.period} />
           </div>
@@ -187,15 +187,15 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
               sur une ligne de téléphone. Elles passent à la ligne — elles ne sortent
               plus de l'écran, comme « Terminer » le faisait, hors d'atteinte. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <Link to={`/match/${match.id}/watch`} target="_blank" aria-label={trad('live.suivi')} title={trad('live.suivi')}
+            <Link to={`/match/${match.id}/watch`} target="_blank" aria-label={translate('live.suivi')} title={translate('live.suivi')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><Eye className="h-[18px] w-[18px]" strokeWidth={2} /></Link>
-            <SbButton onClick={undo} title={trad('live.annulerTitre')}>{trad('live.annuler')}</SbButton>
-            <SbButton onClick={nextPeriod} title={trad('live.periodeTitre')}>{trad('live.periode')}</SbButton>
+            <SbButton onClick={undo} title={translate('live.annulerTitre')}>{translate('live.annuler')}</SbButton>
+            <SbButton onClick={nextPeriod} title={translate('live.periodeTitre')}>{translate('live.periode')}</SbButton>
             {/* Un écart avant l'irréversible. « Terminer » fige le score ; il était
                 à huit pixels de « Période suivante », soit la largeur d'un pouce
                 mal posé. */}
             <span className="w-3 shrink-0" aria-hidden />
-            <SbButton onClick={() => setAskFinish(true)} danger>{trad('live.terminer')}</SbButton>
+            <SbButton onClick={() => setAskFinish(true)} danger>{translate('live.terminer')}</SbButton>
           </div>
         </div>
 
@@ -211,12 +211,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
             centrale de la grille : à cinq boutons larges d'un doigt, cette colonne
             devenait plus large que l'écran et poussait les deux scores hors du
             cadre. Le score passe avant le réglage. */}
-        <div className="mx-auto mt-2.5 flex max-w-4xl flex-wrap items-center justify-center gap-1" title={trad('live.corrigerChrono')}>
+        <div className="mx-auto mt-2.5 flex max-w-4xl flex-wrap items-center justify-center gap-1" title={translate('live.corrigerChrono')}>
           <ClockAdjust onClick={() => setSeconds((s) => clampClock(s - 10))}>−10s</ClockAdjust>
           <ClockAdjust ecart onClick={() => setSeconds((s) => clampClock(s - 1))}>−1s</ClockAdjust>
           <ClockAdjust onClick={() => setSeconds((s) => clampClock(s + 1))}>+1s</ClockAdjust>
           <ClockAdjust ecart onClick={() => setSeconds((s) => clampClock(s + 10))}>+10s</ClockAdjust>
-          <ClockAdjust ecart onClick={() => setEditClock(true)}><Pencil className="mr-1 inline h-3.5 w-3.5 align-[-2px]" strokeWidth={2} />{trad('live.editer')}</ClockAdjust>
+          <ClockAdjust ecart onClick={() => setEditClock(true)}><Pencil className="mr-1 inline h-3.5 w-3.5 align-[-2px]" strokeWidth={2} />{translate('live.editer')}</ClockAdjust>
         </div>
       </header>
 
@@ -230,12 +230,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         <span className="min-w-0 truncate text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {OPP_POINTS.map(({ k, n }) => (
-            <button key={k} onClick={() => oppScore(k)} aria-label={trad('live.ajouterPoints', { count: n, equipe: teamNames.B })}
+            <button key={k} onClick={() => oppScore(k)} aria-label={translate('live.ajouterPoints', { count: n, equipe: teamNames.B })}
               className="nums h-11 min-w-11 rounded-lg bg-[var(--c-card2)] px-3 text-sm font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90">
               +{n}
             </button>
           ))}
-          <button onClick={removeOppScore} aria-label={trad('live.retirerPanier', { equipe: teamNames.B })}
+          <button onClick={removeOppScore} aria-label={translate('live.retirerPanier', { equipe: teamNames.B })}
             className="h-11 w-11 rounded-lg bg-[var(--c-card2)] text-sm font-bold text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90">
             <RotateCcw className="mx-auto h-4 w-4" strokeWidth={2.5} />
           </button>
@@ -280,7 +280,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
           faisait sortir vers une fiche annonçant un match terminé qui ne l'était pas.
           En cas d'échec, on reste, et le bandeau d'erreur au-dessus l'explique. */}
       <ConfirmDialog open={askFinish} onClose={() => setAskFinish(false)} onConfirm={async () => { if (await finish()) onFinish() }}
-        title={trad('live.terminerTitre')} message={trad('live.terminerTexte')} confirmLabel={trad('live.terminer')} danger />
+        title={translate('live.terminerTitre')} message={translate('live.terminerTexte')} confirmLabel={translate('live.terminer')} danger />
       <SubstitutionDialog open={sub} onClose={() => setSub(false)}
         onCourtPlayers={onCourt()} benchPlayers={bench()}
         onSubmit={(playerOutId, playerInId) => dispatch({ type: 'SUBSTITUTION', team: 'A', playerOutId, playerInId, period: ls.period, gameClock: seconds })} />

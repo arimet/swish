@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
 import { db } from './db'
-import { nouveauSchema } from '../domain/plays'
+import { newPlay } from '../domain/plays'
 
 /**
  * Ce que les écritures mettent dans la file.
@@ -46,11 +46,11 @@ describe('les cinq genres rejoignent la file', () => {
     const r = await depot()
     await r.saveResult({ id: 'r1', championshipLabel: 'Poule A', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
-    await r.savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
+    await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
     // Les deux clefs qui ne sont pas un `id` : la convocation est rangée sous sa
     // rencontre, le message sous son club.
     await r.saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
-    await r.saveMessage({ clubId: 'ta', texte: 'Maillot blanc.', écritLe: '2026-08-10T18:00:00.000Z' })
+    await r.saveMessage({ clubId: 'ta', text: 'Maillot blanc.', writtenAt: '2026-08-10T18:00:00.000Z' })
 
     expect(await file()).toEqual([
       'result:put:r1', 'training:put:tr1', 'play:put:s1',
@@ -63,9 +63,9 @@ describe('les cinq genres rejoignent la file', () => {
     // enverrait une version sans horodatage, et la bibliothèque paraîtrait
     // mélangée sur les autres appareils — qui n'ont que l'ordre de la base.
     const r = await depot()
-    await r.savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
+    await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
     const [op] = await db.outbox.toArray()
-    expect((op.doc as { majLe?: string }).majLe).toBeTruthy()
+    expect((op.doc as { updatedAt?: string }).updatedAt).toBeTruthy()
   })
 })
 
@@ -76,8 +76,8 @@ describe('les cascades de suppression', () => {
     await r.savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'L' })
     await r.saveResult({ id: 'r1', championshipLabel: 'P', homeId: 'ta', awayId: 'tb', homeScore: 1, awayScore: 2 })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
-    await r.savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
-    await r.saveMessage({ clubId: 'ta', texte: 'x', écritLe: '2026-08-10T18:00:00.000Z' })
+    await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
+    await r.saveMessage({ clubId: 'ta', text: 'x', writtenAt: '2026-08-10T18:00:00.000Z' })
     await vider()
 
     await r.deleteTeam('ta')
@@ -114,7 +114,7 @@ describe('les cascades de suppression', () => {
 
   it('retirer un schéma envoie aussi les séances qui le citaient', async () => {
     const r = await depot()
-    await r.savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
+    await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05', playIds: ['s1'] })
     await vider()
 
@@ -127,7 +127,7 @@ describe('les cascades de suppression', () => {
 
   it('cocher un schéma sur une séance envoie la séance', async () => {
     const r = await depot()
-    await r.savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
+    await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
     await vider()
 
@@ -153,7 +153,7 @@ describe('le ménage groupé', () => {
     const r = await depot()
     await r.saveResult({ id: 'r1', championshipLabel: 'P', homeId: 'tb', awayId: 'tc', homeScore: 1, awayScore: 2 })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
-    await r.savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
+    await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
     await vider()
 
     await r.deleteAllResults()

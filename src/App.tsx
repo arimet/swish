@@ -69,8 +69,8 @@ function SpectatorRoute() {
 /** Le repli d'attente, en un seul endroit : la garde club et le découpage des
  *  routes l'utilisent tous les deux. */
 function Chargement() {
-  const trad = useT()
-  return <div className="grid min-h-dvh place-items-center text-muted-foreground" role="status" aria-live="polite">{trad('commun.chargement')}</div>
+  const translate = useT()
+  return <div className="grid min-h-dvh place-items-center text-muted-foreground" role="status" aria-live="polite">{translate('commun.chargement')}</div>
 }
 
 function ClubGate() {

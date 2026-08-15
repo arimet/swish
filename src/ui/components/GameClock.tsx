@@ -9,7 +9,7 @@ export function fmt(seconds: number): string {
 export function GameClock({ running, seconds, onToggle }: {
   running: boolean; seconds: number; onToggle: () => void
 }) {
-  const trad = useT()
+  const translate = useT()
   const low = seconds <= 60 && running
   return (
     <div className="flex flex-col items-center gap-2">
@@ -41,8 +41,8 @@ export function GameClock({ running, seconds, onToggle }: {
         } hover:brightness-110`}
       >
         {running
-          ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{trad('chrono.arreter')}</>
-          : <><Play className="h-4 w-4 shrink-0" strokeWidth={2.5} />{trad('chrono.demarrer')}</>}
+          ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('chrono.arreter')}</>
+          : <><Play className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('chrono.demarrer')}</>}
       </button>
     </div>
   )

@@ -8,10 +8,10 @@ import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { listPlays, savePlay, saveTeam } from '../../persistence/repositories'
-import { nouveauSchema, type Schema } from '../../domain/plays'
+import { newPlay, type Play } from '../../domain/plays'
 
-const schema = (id: string, nom: string, extra: Partial<Schema> = {}): Schema =>
-  ({ id, ...nouveauSchema('ta', 'demi', false), nom, ...extra })
+const schema = (id: string, nom: string, extra: Partial<Play> = {}): Play =>
+  ({ id, ...newPlay('ta', 'half', false), nom, ...extra })
 
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
@@ -127,8 +127,8 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
 
 describe('SchemaList — le rangement de la bibliothèque', () => {
   it('déduit la barre de dossiers des schémas, « Sans dossier » en dernier', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut', { dossier: 'Attaque placée' }))
-    await savePlay(schema('s2', 'Remise ligne de fond', { dossier: 'Remises en jeu' }))
+    await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
+    await savePlay(schema('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
     await savePlay(schema('s3', 'Brouillon'))
     renderList()
 
@@ -138,7 +138,7 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
   })
 
   it('n’offre « Sans dossier » que s’il reste des schémas non rangés', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut', { dossier: 'Attaque placée' }))
+    await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     renderList()
 
     const barre = await screen.findByRole('group', { name: 'Dossiers' })
@@ -146,8 +146,8 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
   })
 
   it('choisir un dossier ne laisse que ses schémas dans la grille', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut', { dossier: 'Attaque placée' }))
-    await savePlay(schema('s2', 'Remise ligne de fond', { dossier: 'Remises en jeu' }))
+    await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
+    await savePlay(schema('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
     await savePlay(schema('s3', 'Brouillon'))
     renderList()
 
@@ -189,8 +189,8 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
   it('range du plus récemment modifié au plus ancien, les schémas jamais horodatés en dernier', async () => {
     // Écriture directe : `savePlay` horodate à l'instant, on ne pourrait pas
     // fabriquer trois dates distinctes ni un schéma d'avant l'horodatage.
-    await db.plays.put(schema('s1', 'Ancien', { majLe: '2026-01-01T10:00:00.000Z' }))
-    await db.plays.put(schema('s2', 'Récent', { majLe: '2026-06-01T10:00:00.000Z' }))
+    await db.plays.put(schema('s1', 'Ancien', { updatedAt: '2026-01-01T10:00:00.000Z' }))
+    await db.plays.put(schema('s2', 'Récent', { updatedAt: '2026-06-01T10:00:00.000Z' }))
     await db.plays.put(schema('s3', 'Jamais horodaté'))
     renderList()
 
@@ -207,14 +207,14 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
     await userEvent.type(screen.getByRole('combobox', { name: 'Dossier' }), 'Attaque placée')
     await userEvent.click(screen.getByRole('button', { name: 'Ranger' }))
 
-    await waitFor(async () => expect((await listPlays('ta'))[0].dossier).toBe('Attaque placée'))
+    await waitFor(async () => expect((await listPlays('ta'))[0].folder).toBe('Attaque placée'))
     expect(within(await screen.findByRole('group', { name: 'Dossiers' })).getByRole('button', { name: 'Attaque placée' }))
       .toBeInTheDocument()
   })
 
   it('changer le dossier est administratif : la table de marque le lit sans pouvoir le changer', async () => {
     sessionStorage.setItem(ROLE_KEY, 'marque')
-    await savePlay(schema('s1', 'Pick and roll haut', { dossier: 'Attaque placée' }))
+    await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     renderList()
     const carte = (await screen.findAllByRole('article'))[0]
 
@@ -224,13 +224,13 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
     expect(screen.queryByRole('button', { name: 'Dossier de « Pick and roll haut »' })).not.toBeInTheDocument()
     // Ni saisie ouverte, ni écriture en base.
     expect(screen.queryByRole('combobox', { name: 'Dossier' })).not.toBeInTheDocument()
-    expect((await listPlays('ta'))[0].dossier).toBe('Attaque placée')
+    expect((await listPlays('ta'))[0].folder).toBe('Attaque placée')
   })
 
   it('un visiteur cherche et filtre sans qu’aucun code lui soit demandé', async () => {
     sessionStorage.removeItem(ROLE_KEY)
-    await savePlay(schema('s1', 'Pick and roll haut', { dossier: 'Attaque placée' }))
-    await savePlay(schema('s2', 'Remise ligne de fond', { dossier: 'Remises en jeu' }))
+    await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
+    await savePlay(schema('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
     renderList()
 
     const barre = await screen.findByRole('group', { name: 'Dossiers' })

@@ -1,4 +1,4 @@
-import { LANGUES, useLangue, useT } from './index'
+import { LANGS, useLang, useT } from './index'
 
 /**
  * Le sélecteur de langue, jumeau du sélecteur de thème et posé à côté de lui.
@@ -15,17 +15,17 @@ import { LANGUES, useLangue, useT } from './index'
  * pays et non une langue — et ni le français ni l'anglais n'en ont qu'un.
  */
 export function LangSwitcher() {
-  const { langue, setLangue } = useLangue()
-  const trad = useT()
-  const suivante = LANGUES[(LANGUES.findIndex((l) => l.code === langue) + 1) % LANGUES.length]
+  const { lang, setLang } = useLang()
+  const translate = useT()
+  const suivante = LANGS[(LANGS.findIndex((l) => l.code === lang) + 1) % LANGS.length]
   return (
     <button
-      onClick={() => setLangue(suivante.code)}
-      aria-label={`${trad('langue.changer')} — ${suivante.nom}`}
+      onClick={() => setLang(suivante.code)}
+      aria-label={`${translate('lang.changer')} — ${suivante.nom}`}
       title={suivante.nom}
       className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-[12px] font-black uppercase tracking-tight text-foreground transition hover:bg-muted active:scale-95"
     >
-      {langue}
+      {lang}
     </button>
   )
 }

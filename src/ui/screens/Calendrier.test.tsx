@@ -8,7 +8,7 @@ import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { listTrainings, saveMatch, savePlay, saveTeam, saveTraining } from '../../persistence/repositories'
-import { nouveauSchema, type Schema } from '../../domain/plays'
+import { newPlay, type Play } from '../../domain/plays'
 import type { Match } from '../../domain/types'
 
 const mk = (id: string, clubId: string, opponentId: string, date = '2026-01-10'): Match => ({
@@ -16,7 +16,7 @@ const mk = (id: string, clubId: string, opponentId: string, date = '2026-01-10')
   roster: [], events: [], status: 'setup',
 })
 
-const schema = (id: string, nom: string): Schema => ({ id, ...nouveauSchema('ta', 'demi', false), nom })
+const schema = (id: string, nom: string): Play => ({ id, ...newPlay('ta', 'half', false), nom })
 
 /** Une date relative au jour d'exécution : le passé et le futur du calendrier se
  *  jugent sur l'horloge, une date en dur finirait par basculer d'un côté. */
@@ -81,9 +81,9 @@ describe('Calendrier', () => {
     const rencontre = await screen.findByText(/METZ/)
     const groupe = rencontre.closest('section')
     expect(groupe).not.toBeNull()
-    const texte = groupe!.textContent ?? ''
-    expect(texte.indexOf('METZ')).toBeGreaterThanOrEqual(0)
-    expect(texte.indexOf('Départage')).toBeGreaterThan(texte.indexOf('METZ'))
+    const text = groupe!.textContent ?? ''
+    expect(text.indexOf('METZ')).toBeGreaterThanOrEqual(0)
+    expect(text.indexOf('Départage')).toBeGreaterThan(text.indexOf('METZ'))
   })
 
   it('estompe le passé, marque le jour même, et laisse le futur en pleine lumière', async () => {
