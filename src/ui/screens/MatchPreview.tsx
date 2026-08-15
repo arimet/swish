@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getMatch, listTeams, deleteMatch, listPlayers, getConvocation, saveConvocation } from '../../persistence/repositories'
 import type { Match, Team, Player } from '../../domain/types'
-import { C, bd, PageTitle, SectionTitle, TeamBadge, fmtDate, champLabel } from '../olive/kit'
+import { C, bd, PageTitle, SectionTitle, TeamBadge, fmtDate , useChampLabel } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -14,6 +14,7 @@ const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
  * avec démarrage et suppression. Redirige live/terminé vers leur écran dédié. */
 export function MatchPreview({ matchId }: { matchId: string }) {
   const trad = useT()
+  const champ = useChampLabel()
   const navigate = useNavigate()
   const { hash } = useLocation()
   const { can, guard } = useAuth()
@@ -103,9 +104,9 @@ export function MatchPreview({ matchId }: { matchId: string }) {
   })
 
   const statusPill =
-    match.status === 'live' ? { label: 'En cours', bg: C.greenBg, fg: C.green }
-    : match.status === 'finished' ? { label: 'Terminée', bg: C.neutralBg, fg: C.muted }
-    : { label: 'À venir', bg: C.amberBg, fg: C.amber }
+    match.status === 'live' ? { label: trad('commun.enCours'), bg: C.greenBg, fg: C.green }
+    : match.status === 'finished' ? { label: trad('commun.terminee'), bg: C.neutralBg, fg: C.muted }
+    : { label: trad('commun.aVenir'), bg: C.amberBg, fg: C.amber }
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -117,7 +118,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
             fiche, entre l'état et le numéro. */}
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <span className="rounded-md px-2 py-1 text-[12px] font-black uppercase" style={{ background: statusPill.bg, color: statusPill.fg }}>{statusPill.label}</span>
-          <span className="min-w-0 truncate text-[12px] font-bold" style={{ color: C.muted }}>{champLabel(match.meta)}</span>
+          <span className="min-w-0 truncate text-[12px] font-bold" style={{ color: C.muted }}>{champ(match.meta)}</span>
           {match.meta.matchNumber && <span className="ml-auto text-[12px] font-bold" style={{ color: C.faint }}>{trad('apercu.rencontreNumero', { n: match.meta.matchNumber })}</span>}
         </div>
 
@@ -142,7 +143,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
           {/* Affiché en permanence, pas seulement après enregistrement : douze convoqués
               pour un match où l'on n'en inscrit que dix doit se voir sans compter les cases. */}
           <span className="rounded-md px-2 py-1 text-[12px] font-black" style={{ background: C.accentBg, color: C.accent }}>
-            {convoqués.size} convoqué{convoqués.size > 1 ? 's' : ''}
+            {trad('compte.convoque', { count: convoqués.size })}
           </span>
         </div>
 
@@ -218,7 +219,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
             // est le sien, et n'apparaît pas au visiteur qui consulte la fiche.
             tientLaMarque && (
               <button onClick={start} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-                {match.status === 'live' ? 'Reprendre la rencontre →' : '▶ Démarrer la rencontre'}
+                {match.status === 'live' ? 'Reprendre la rencontre →' : trad('apercu.demarrerRencontre')}
               </button>
             )
           )}
@@ -232,13 +233,14 @@ export function MatchPreview({ matchId }: { matchId: string }) {
 }
 
 function TeamCol({ id, name, role, coach, count }: { id: string; name: string; role: string; coach?: string; count?: number }) {
+  const trad = useT()
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <TeamBadge id={id} name={name} size="h-14 w-14 text-sm" />
       <span className="line-clamp-2 text-base font-extrabold">{name}</span>
       <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{role}</span>
       {coach && <span className="text-[12px]" style={{ color: C.faint }}>Coach · {coach}</span>}
-      {count !== undefined && <span className="text-[12px]" style={{ color: C.faint }}>{count} joueur{count > 1 ? 's' : ''}</span>}
+      {count !== undefined && <span className="text-[12px]" style={{ color: C.faint }}>{trad('commun.joueur', { count })}</span>}
     </div>
   )
 }

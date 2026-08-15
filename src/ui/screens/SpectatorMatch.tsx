@@ -8,7 +8,7 @@ import { periodLength } from '../../domain/ids'
 import { shotsOf } from '../../domain/shotchart'
 import { ShotChart } from '../components/ShotCourt'
 import { fmt } from '../components/GameClock'
-import { C, TeamBadge, champLabel } from '../olive/kit'
+import { C, TeamBadge , useChampLabel } from '../olive/kit'
 import { useT } from '../../i18n'
 import type { Match, Player, TeamSide } from '../../domain/types'
 
@@ -16,6 +16,7 @@ import type { Match, Player, TeamSide } from '../../domain/types'
  * Rafraîchit l'état depuis la base locale ; conçue pour être projetée. */
 export function SpectatorMatch({ matchId }: { matchId: string }) {
   const trad = useT()
+  const champ = useChampLabel()
   const [match, setMatch] = useState<Match | null | undefined>(undefined)
   const [players, setPlayers] = useState<Record<string, Player>>({})
   const [names, setNames] = useState<Record<TeamSide, string>>({ A: 'Locaux', B: 'Visiteurs' })
@@ -62,11 +63,11 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
       for (const p of roster) map[p.id] = p
       setPlayers(map)
       setNames({
-        A: teams.find((t) => t.id === match.meta.clubId)?.name ?? 'Locaux',
-        B: teams.find((t) => t.id === match.meta.opponentId)?.name ?? 'Visiteurs',
+        A: teams.find((t) => t.id === match.meta.clubId)?.name ?? trad('match.locaux'),
+        B: teams.find((t) => t.id === match.meta.opponentId)?.name ?? trad('match.visiteurs'),
       })
     })
-  }, [match?.meta.clubId, match?.meta.opponentId])
+  }, [match?.meta.clubId, match?.meta.opponentId, trad])
 
   if (match === undefined) return <Screen><p style={{ color: C.muted }}>{trad('commun.chargement')}</p></Screen>
   if (match === null) return <Screen><p style={{ color: C.muted }}>{trad('apercu.introuvable')}</p></Screen>
@@ -98,7 +99,7 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
           </span>
         </div>
 
-        <p className="text-center text-[12px] font-bold" style={{ color: C.muted }}>{champLabel(match.meta)}</p>
+        <p className="text-center text-[12px] font-bold" style={{ color: C.muted }}>{champ(match.meta)}</p>
 
         {/* SCOREBOARD (blocs équipe : lisible sur mobile) */}
         <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-6">

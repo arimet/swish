@@ -65,11 +65,11 @@ describe('nextFixture', () => {
 
 describe('depuis', () => {
   const t0 = new Date('2026-08-13T12:00:00')
-  const ilYA = (ms: number) => depuis(new Date(t0.getTime() - ms).toISOString(), t0)
+  const ilYA = (ms: number) => depuis(new Date(t0.getTime() - ms).toISOString(), 'fr', t0)
   const MIN = 60_000, HEURE = 60 * MIN, JOUR = 24 * HEURE
 
-  it('dit « à l’instant » pour ce qui vient d’être écrit', () => {
-    expect(ilYA(30_000)).toBe('à l’instant')
+  it('ne formate rien en deçà d’une minute — l’interface écrit « à l’instant »', () => {
+    expect(ilYA(30_000)).toBeNull()
   })
 
   it('compte en minutes, puis en heures', () => {
@@ -91,6 +91,6 @@ describe('depuis', () => {
   it('ne renvoie jamais un âge négatif pour une date à venir', () => {
     // Horloge de l'appareil reculée depuis l'écriture : « dans 2 heures » n'aurait
     // aucun sens sous un message déjà écrit.
-    expect(ilYA(-2 * HEURE)).toBe('à l’instant')
+    expect(ilYA(-2 * HEURE)).toBeNull()
   })
 })

@@ -9,7 +9,7 @@ import { jourISO, nextFixture } from '../../domain/fixtures'
 import { C, bd, Ic, ICON, MatchCard, PageTitle, fmtDate } from '../olive/kit'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useClub } from '../../app/club'
-import { useT } from '../../i18n'
+import { langueCourante, useT } from '../../i18n'
 import { useAuth } from '../../app/auth'
 import { X } from 'lucide-react'
 
@@ -20,10 +20,9 @@ import { X } from 'lucide-react'
 const ENTR_COLOR = C.info
 const ENTR_BG = C.infoBg
 
-// Les mois en toutes lettres, comme le kit tient déjà ses jours et ses mois
-// abrégés : la locale du navigateur n'est pas celle de l'application, et un
-// calendrier français doit dire « août » sur une machine en anglais.
-const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+// Le mois en toutes lettres, dans la langue de l'application et non dans celle du
+// navigateur : un calendrier français doit dire « août » sur une machine en anglais.
+const moisLong = (d: Date) => new Intl.DateTimeFormat(langueCourante(), { month: 'long' }).format(d)
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
@@ -194,8 +193,8 @@ export function Calendrier() {
             const nbRencontres = items.filter((i) => i.kind === 'match').length
             const nbEntrainements = items.filter((i) => i.kind === 'training').length
             const résumé = [
-              nbRencontres ? `${nbRencontres} rencontre${nbRencontres > 1 ? 's' : ''}` : '',
-              nbEntrainements ? `${nbEntrainements} entraînement${nbEntrainements > 1 ? 's' : ''}` : '',
+              nbRencontres ? trad('compte.rencontre', { count: nbRencontres }) : '',
+              nbEntrainements ? trad('compte.entrainement', { count: nbEntrainements }) : '',
             ].filter(Boolean).join(' · ')
             // Le passé est estompé plutôt que masqué : on veut pouvoir remonter la
             // saison, mais rien de joué ne doit disputer l'œil à ce qui reste à jouer.
@@ -227,7 +226,7 @@ export function Calendrier() {
                     <div className="min-w-0">
                       {vedette && (
                         <p className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.accent }}>
-                          {estAujourdhui ? 'Aujourd’hui' : 'Prochaine échéance'}
+                          {estAujourdhui ? trad('commun.aujourdhui') : trad('bord.prochaineEcheance')}
                         </p>
                       )}
                       <p className="truncate text-sm font-extrabold">{résumé}</p>
@@ -294,8 +293,9 @@ function CarteRencontre({ m, teams, gere }: { m: Match; teams: Record<string, Te
  *  qu'une suite de quantièmes, et l'on ne sait plus si le 3 suit le 30 de justesse
  *  ou de cinq semaines. */
 function BarreDeMois({ iso }: { iso: string }) {
+  const trad = useT()
   const d = new Date(iso + 'T00:00:00')
-  const label = Number.isNaN(d.getTime()) ? 'Sans date' : `${MOIS[d.getMonth()]} ${d.getFullYear()}`
+  const label = Number.isNaN(d.getTime()) ? trad('commun.sansDate') : `${moisLong(d)} ${d.getFullYear()}`
   return (
     <div className="flex items-center gap-3 xl:col-span-2">
       <h2 className="text-[12px] font-black uppercase tracking-[0.18em]" style={{ color: C.muted }}>{label}</h2>
@@ -336,7 +336,7 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
           <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: ENTR_BG, color: ENTR_COLOR }}>{trad('cal.entrainement')}</span>
           {t.time && <span className="ml-auto text-[12px] font-bold" style={{ color: C.muted }}>{t.time}</span>}
         </div>
-        <p className="mt-2 truncate text-sm font-bold">{t.theme || 'Séance libre'}</p>
+        <p className="mt-2 truncate text-sm font-bold">{t.theme || trad('cal.seanceLibre')}</p>
 
         {/* `<details>` plutôt qu'un état local : le navigateur sait déjà déplier, et
             vingt schémas dépliés d'office noieraient le calendrier. */}

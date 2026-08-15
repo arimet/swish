@@ -19,7 +19,7 @@ import { playingTimes } from '../../domain/playingtime'
 import { teamTotals } from '../../domain/totals'
 import { matchRatios, scoreProgression } from '../../domain/progression'
 import { fmt } from '../components/GameClock'
-import { C, bd, TeamBadge, fmtDate, champLabel } from '../olive/kit'
+import { C, bd, TeamBadge, fmtDate , useChampLabel } from '../olive/kit'
 import type { GameEvent, Match, Player, ScoreKind, ShotSpot, StatKind, TeamSide } from '../../domain/types'
 import { Check, Download, Eye, Pencil } from 'lucide-react'
 
@@ -28,6 +28,7 @@ type EventInput = DistributiveOmit<GameEvent, 'id' | 'wallClock'>
 
 export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: () => void }) {
   const trad = useT()
+  const champ = useChampLabel()
   const { can, guard } = useAuth()
   const [match, setMatch] = useState<Match | null | undefined>(undefined)
   const [players, setPlayers] = useState<Record<string, Player>>({})
@@ -48,13 +49,13 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       for (const p of roster) map[p.id] = p
       setPlayers(map)
       setTeamNames({
-        A: teams.find((t) => t.id === m.meta.clubId)?.name ?? 'Notre équipe',
-        B: teams.find((t) => t.id === m.meta.opponentId)?.name ?? 'Adversaire',
+        A: teams.find((t) => t.id === m.meta.clubId)?.name ?? trad('commun.notreEquipe'),
+        B: teams.find((t) => t.id === m.meta.opponentId)?.name ?? trad('match.adversaire'),
       })
       setMatch(m)
     })
     return () => { cancelled = true }
-  }, [matchId])
+  }, [matchId, trad])
 
   if (match === undefined) return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
   if (match === null) return <div className="p-6"><p className="py-16 text-center text-sm" style={{ color: C.muted }}>{trad('apercu.introuvable')}</p></div>
@@ -161,7 +162,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       {/* SCOREBOARD FINAL */}
       <div className="overflow-hidden rounded-3xl" style={{ background: C.frame, border: bd }}>
         <div className="flex items-center justify-between px-6 pt-5">
-          <span className="truncate text-[12px] font-bold" style={{ color: C.muted }}>{champLabel(meta)}</span>
+          <span className="truncate text-[12px] font-bold" style={{ color: C.muted }}>{champ(meta)}</span>
           <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.neutralBg, color: C.muted }}>{trad('resume.final')}</span>
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-6 py-5 sm:gap-8">
@@ -173,7 +174,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
           {meta.matchNumber && <span>{trad('apercu.rencontreNumero', { n: meta.matchNumber })}</span>}
           {f.long && <span className="capitalize">{f.long}</span>}
           {meta.venue && <span>{meta.venue}</span>}
-          {(meta.referee1 || meta.referee2) && <span>Arbitres · {[meta.referee1, meta.referee2].filter(Boolean).join(', ')}</span>}
+          {(meta.referee1 || meta.referee2) && <span>{trad('impression.arbitres')} · {[meta.referee1, meta.referee2].filter(Boolean).join(', ')}</span>}
         </div>
       </div>
 

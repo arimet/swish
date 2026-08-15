@@ -2,9 +2,10 @@
 
 <!-- impeccable:product-schema 1 -->
 
-> Written in English at the owner's request. Note that the product itself is
-> French-only — every label, message and export is in French, and so is `DESIGN.md`.
-> That is a commitment, not drift: the users are a French club. See Brand Commitments.
+> Written in English at the owner's request, like the README. The product itself is
+> **French-first**: French is the default and the reference, with English available from
+> the header of every screen so other clubs can fork it. `DESIGN.md` stays in French.
+> That is a commitment, not drift — see Brand Commitments.
 
 ## Platform
 

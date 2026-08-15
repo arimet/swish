@@ -61,7 +61,7 @@ export function SchemaList() {
   // acquis, sinon un visiteur laisserait des schémas vides derrière ses refus.
   const creer = () => guard('manage', async () => {
     if (!clubId) return
-    const s: Schema = { id: newId(), ...nouveauSchema(clubId, 'demi', false) }
+    const s: Schema = { id: newId(), ...nouveauSchema(clubId, 'demi', false), nom: trad('sch.nouveauNom') }
     await savePlay(s)
     navigate(`/schemas/${s.id}/edit`)
   })
@@ -197,9 +197,9 @@ export function SchemaList() {
                     <h3 className="mt-2.5 truncate text-[15px] font-extrabold tracking-tight">{s.nom}</h3>
                     <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold" style={{ color: C.muted }}>
                       <span className="rounded-md px-1.5 py-0.5" style={{ background: C.card2 }}>
-                        {s.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'}
+                        {trad(s.terrain === 'demi' ? 'sch.demiTerrain' : 'sch.terrainComplet')}
                       </span>
-                      <span>{s.temps.length} temps</span>
+                      <span>{trad('sch.compteTemps', { count: s.temps.length })}</span>
                       {s.defense && <span>{trad('sch.defense')}</span>}
                     </p>
                     {s.note && <p className="mt-1 truncate text-[12px]" style={{ color: C.faint }}>{s.note}</p>}
@@ -211,7 +211,7 @@ export function SchemaList() {
                   <div className="mt-2 text-[12px] font-bold">
                     {!gere ? (
                       <span className="inline-block rounded-md px-1.5 py-0.5" style={{ background: C.card2, color: s.dossier ? C.accent : C.faint }}>
-                        {s.dossier || 'Sans dossier'}
+                        {s.dossier || trad('sch.sansDossier')}
                       </span>
                     ) : enRangement?.id === s.id ? (
                       <form
@@ -228,10 +228,10 @@ export function SchemaList() {
                       </form>
                     ) : (
                       <button
-                        onClick={() => ouvrirRangement(s)} aria-label={`Dossier de « ${s.nom} »`}
+                        onClick={() => ouvrirRangement(s)} aria-label={trad('sch.dossierDe', { nom: s.nom })}
                         className="rounded-md px-2 py-1.5" style={{ background: C.card2, color: s.dossier ? C.accent : C.faint }}
                       >
-                        {s.dossier || 'Sans dossier'}
+                        {s.dossier || trad('sch.sansDossier')}
                       </button>
                     )}
                   </div>

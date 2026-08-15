@@ -52,9 +52,9 @@ export function SchemaView() {
               d'un coup d'œil le schéma qu'on vient d'ouvrir. */}
           <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold" style={{ color: C.muted }}>
             <span className="rounded-md px-1.5 py-0.5" style={{ background: C.card2 }}>
-              {schema.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'}
+              {trad(schema.terrain === 'demi' ? 'sch.demiTerrain' : 'sch.terrainComplet')}
             </span>
-            <span>{schema.temps.length} temps</span>
+            <span>{trad('sch.compteTemps', { count: schema.temps.length })}</span>
             {schema.defense && <span>{trad('sch.defense')}</span>}
           </p>
         </div>
@@ -92,7 +92,7 @@ export function SchemaView() {
           >
             ◀
           </button>
-          <span className="flex-1 text-center text-sm font-extrabold">Temps {index + 1} / {schema.temps.length}</span>
+          <span className="flex-1 text-center text-sm font-extrabold">{trad('sch.temps', { n: index + 1, total: schema.temps.length })}</span>
           <button
             onClick={() => aller(1)} aria-label={trad('lecteur.suivant')} disabled={index === dernier}
             className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-sm font-black disabled:opacity-30" style={{ background: C.card, border: bd, color: C.text }}

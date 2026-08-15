@@ -13,7 +13,7 @@ import { C, Panel, TeamBadge, Vous, bd, displayClock, fmtDate } from '../olive/k
 import type { Convocation, Match, MessageEquipe, Player, Team, Training } from '../../domain/types'
 import type { Schema } from '../../domain/plays'
 import { Check } from 'lucide-react'
-import { useT } from '../../i18n'
+import { useLangue, useT } from '../../i18n'
 
 export function Dashboard() {
   const trad = useT()
@@ -233,6 +233,7 @@ const OUBLI_MS = 14 * 24 * 3600_000
  */
 function MessageDuCoach({ clubId }: { clubId: string }) {
   const trad = useT()
+  const { langue } = useLangue()
   const { can, guard } = useAuth()
   const gere = can('manage')
   const [message, setMessage] = useState<MessageEquipe | null>(null)
@@ -302,7 +303,7 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
         <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.messageEquipe')}</span>
         <span className="rounded-md px-2 py-0.5 text-[12px] font-black"
           style={oublié ? { background: C.amberBg, color: C.amber } : { background: C.accentBg, color: C.accent }}>
-          {depuis(affiché.écritLe)}
+          {depuis(affiché.écritLe, langue) ?? trad('commun.aLInstant')}
         </span>
         {gere && (
           <>
@@ -331,7 +332,7 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
         <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.greenFill, color: C.onGreen }}>{trad('bord.enDirect')}</span>
         <span className="nums text-3xl font-black tabular-nums">{mine} – {opp}</span>
-        <span className="text-sm font-bold" style={{ color: C.muted }}>contre {opponent(live)}</span>
+        <span className="text-sm font-bold" style={{ color: C.muted }}>{trad('bord.contre', { equipe: opponent(live) })}</span>
         <span className="nums text-sm font-bold" style={{ color: C.faint }}>{dc.label} · {dc.clock}</span>
         {/* Le score en direct se lit par tout le monde ; ouvrir la table de marque
             est le geste de celui qui la tient, et lui seul y est invité. */}
@@ -348,7 +349,7 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.prochaineRencontre')}</span>
-        <span className="text-sm font-bold">contre {opponent(next)}</span>
+        <span className="text-sm font-bold">{trad('bord.contre', { equipe: opponent(next) })}</span>
         <span className="text-sm" style={{ color: C.muted }}>{[f.long, next.meta.time, next.meta.venue].filter(Boolean).join(' · ')}</span>
         <Link to={`/match/${next.id}`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>{trad('bord.voirFiche')}</Link>
       </div>
@@ -371,7 +372,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
   if (!fixture) {
     return (
       <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.prochaineEcheance')}</span>
         <span className="text-sm" style={{ color: C.muted }}>{trad('bord.rienDePlanifie')}</span>
         {gere && <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('bord.planifier')}</Link>}
       </div>
@@ -386,7 +387,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
     const prévus = schemas.filter((s) => t.playIds?.includes(s.id))
     return (
       <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.prochaineEcheance')}</span>
         <p className="mt-1 text-sm font-bold">{trad('bord.entrainement')}</p>
         <p className="text-sm" style={{ color: C.muted }}>{[f.long, t.time, t.place].filter(Boolean).join(' · ') || '—'}</p>
         <p className="mt-1 text-sm" style={{ color: C.muted }}>Thème : {t.theme ?? '—'}</p>
@@ -419,8 +420,8 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
 
   return (
     <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-      <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
-      <p className="mt-1 text-sm font-bold">contre {opponent}</p>
+      <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('bord.prochaineEcheance')}</span>
+      <p className="mt-1 text-sm font-bold">{trad('bord.contre', { equipe: opponent })}</p>
       <p className="text-sm" style={{ color: C.muted }}>{[f.long, m.meta.time, m.meta.venue].filter(Boolean).join(' · ') || '—'}</p>
       {/* La convocation vit sur la fiche de la rencontre, à sa place — mais c'est
           ici qu'on la regarde. Le lien y mène directement, à l'ancre : sans lui,
@@ -436,7 +437,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
             <p className="text-sm font-bold" style={{ color: C.amber }}>{trad('bord.personneConvoquee')}</p>
           ) : (
             <>
-              <p className="text-sm font-bold">{convoqués.length} convoqué{convoqués.length > 1 ? 's' : ''}</p>
+              <p className="text-sm font-bold">{trad('compte.convoque', { count: convoqués.length })}</p>
               {rdv && <p className="mt-0.5 text-sm" style={{ color: C.muted }}>Rendez-vous {rdv}</p>}
               <p className="mt-1 text-sm" style={{ color: C.muted }}>{convoqués.map((p) => `${p.lastName} ${p.firstName}`).join(', ')}</p>
             </>

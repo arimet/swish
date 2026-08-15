@@ -47,6 +47,23 @@ export function langueInitiale(): Langue {
 }
 
 /**
+ * La langue courante, lisible hors de React.
+ *
+ * Les formateurs de date (`fmtDate` du kit, la barre de mois du calendrier) sont des
+ * fonctions ordinaires appelées dans huit fichiers, souvent depuis des sous-composants
+ * qui n'ont pas de crochet. Leur faire remonter la langue en paramètre demanderait
+ * d'ajouter `useLangue()` à une dizaine d'endroits pour une valeur qui est, elle,
+ * franchement globale — c'est la même pour tout l'écran, toujours.
+ *
+ * Le champ est écrit **avant** le `setState` du sélecteur : au moment où React refait
+ * le rendu, il porte déjà la nouvelle langue, et ce rendu traverse tout l'arbre puisque
+ * le fournisseur est à la racine. Aucun écran ne peut donc afficher une date dans la
+ * langue précédente.
+ */
+let courante: Langue = 'fr'
+export const langueCourante = (): Langue => courante
+
+/**
  * Remplace les paramètres `{nom}` d'un modèle.
  *
  * Le pluriel passe par deux clefs suffixées `_un` / `_autre` plutôt que par une
@@ -71,7 +88,11 @@ export function traducteur(langue: Langue): Traduire {
   return (clef, params) => {
     const compte = params?.count
     if (typeof compte === 'number') {
-      const suffixe = compte === 1 ? '_un' : '_autre'
+      // Zéro n'accorde pas pareil dans les deux langues : le français le met au
+      // singulier (« 0 joueur »), l'anglais au pluriel (« 0 players »). C'est la seule
+      // divergence entre leurs règles, et elle se voit — un effectif vide et une
+      // rencontre sans convoqué s'affichent tous les deux à zéro.
+      const suffixe = compte === 1 || (langue === 'fr' && compte === 0) ? '_un' : '_autre'
       const modele = catalogue[clef + suffixe] ?? fr[clef + suffixe]
       if (modele) return rendre(modele, params)
     }
@@ -95,7 +116,7 @@ interface Ctx {
 const Ctx = createContext<Ctx>({ langue: 'fr', setLangue: () => {}, t: traducteur('fr') })
 
 export function LangProvider({ children }: { children: ReactNode }) {
-  const [langue, setLangueEtat] = useState<Langue>(langueInitiale)
+  const [langue, setLangueEtat] = useState<Langue>(() => (courante = langueInitiale()))
 
   // L'attribut `lang` du document suit le choix. Ce n'est pas décoratif : il décide de
   // la césure, des guillemets, de la voix d'un lecteur d'écran et de la traduction
@@ -110,6 +131,7 @@ export function LangProvider({ children }: { children: ReactNode }) {
 
   const setLangue = useCallback((l: Langue) => {
     localStorage.setItem(LANG_KEY, l)
+    courante = l
     setLangueEtat(l)
   }, [])
 

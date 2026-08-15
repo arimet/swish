@@ -277,7 +277,7 @@ export function SchemaEdit() {
 
   const changerTerrain = (terrain: Terrain) => guard('manage', () => {
     const r = versTerrain(vivant, terrain)
-    if ('refus' in r) { setRefus(r.refus); return }
+    if ('refus' in r) { setRefus(trad('sch.refusDemi', { occupant: trad(r.refus.cle, { n: r.refus.n ?? 0 }) })); return }
     setRefus('')
     // Le changement de terrain remappe toutes les coordonnées : les étapes empilées
     // sont dans l'ancienne échelle et les restaurer replacerait les pions n'importe
@@ -442,13 +442,13 @@ export function SchemaEdit() {
               entière se cale sur la largeur du terrain, dont elle montre les états. */}
           <div className="mt-4 flex select-none items-center gap-2" style={{ maxWidth: largeurBande }}>
             <p className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>
-              Temps {index + 1} <span style={{ opacity: 0.6 }}>/ {vivant.temps.length}</span>
+              {trad('sch.temps', { n: index + 1, total: vivant.temps.length })}
             </p>
             <div className="ml-auto flex items-center gap-1.5">
-              <CommandeTemps libelle="Reculer le temps" onClick={() => bougerTemps(-1)} disabled={index === 0}>◀</CommandeTemps>
-              <CommandeTemps libelle="Avancer le temps" onClick={() => bougerTemps(1)} disabled={index === vivant.temps.length - 1}>▶</CommandeTemps>
+              <CommandeTemps libelle={trad('edit.reculerTemps')} onClick={() => bougerTemps(-1)} disabled={index === 0}>◀</CommandeTemps>
+              <CommandeTemps libelle={trad('edit.avancerTemps')} onClick={() => bougerTemps(1)} disabled={index === vivant.temps.length - 1}>▶</CommandeTemps>
               {/* Un schéma a toujours au moins un temps : le dernier ne se supprime pas. */}
-              <CommandeTemps libelle="Supprimer le temps" onClick={supprimerTemps} disabled={vivant.temps.length === 1} danger><X className="h-4 w-4" strokeWidth={2.5} /></CommandeTemps>
+              <CommandeTemps libelle={trad('edit.supprimerTemps')} onClick={supprimerTemps} disabled={vivant.temps.length === 1} danger><X className="h-4 w-4" strokeWidth={2.5} /></CommandeTemps>
             </div>
           </div>
 
@@ -456,7 +456,7 @@ export function SchemaEdit() {
           <div className="mt-2 flex select-none items-stretch gap-2 overflow-x-auto pb-1" style={{ maxWidth: largeurBande }}>
             {vivant.temps.map((_, i) => (
               <button
-                key={i} aria-label={`Temps ${i + 1}`} aria-pressed={i === index} onClick={() => setTempsIndex(i)}
+                key={i} aria-label={trad('edit.tempsN', { n: i + 1 })} aria-pressed={i === index} onClick={() => setTempsIndex(i)}
                 className="w-20 shrink-0 rounded-xl p-1"
                 style={{ background: C.card, border: i === index ? `2px solid ${C.accent}` : bd }}
               >
@@ -470,7 +470,7 @@ export function SchemaEdit() {
               style={{ background: C.card, border: `1px dashed ${C.border}`, color: C.muted }}
             >
               <span className="text-lg leading-none" style={{ color: C.accent }}>+</span>
-              Temps
+              {trad('edit.temps')}
             </button>
           </div>
         </div>
@@ -485,7 +485,7 @@ export function SchemaEdit() {
                   className="min-w-0 flex-1 rounded-xl py-2 text-xs font-bold"
                   style={vivant.terrain === t ? { background: C.brand, color: C.onBrand } : { background: C.panel, border: bd, color: C.text }}
                 >
-                  {t === 'demi' ? 'Demi-terrain' : 'Terrain complet'}
+                  {trad(t === 'demi' ? 'sch.demiTerrain' : 'sch.terrainComplet')}
                 </button>
               ))}
             </div>
@@ -496,7 +496,7 @@ export function SchemaEdit() {
                 visuel du texte sur le reste de la carte. */}
             <label className="-mx-2 mt-3 flex items-center gap-2 rounded-lg px-2 py-2.5 text-sm font-semibold">
               <input type="checkbox" checked={vivant.defense} onChange={(e) => changerDefense(e.target.checked)} />
-              Défense
+              {trad('edit.defense')}
             </label>
           </section>
 

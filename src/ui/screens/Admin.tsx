@@ -21,7 +21,7 @@ import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { C, bd } from '../olive/kit'
+import { C, bd, useChampLabel } from '../olive/kit'
 
 /** Une opération de ménage prête à être confirmée : ce qu'elle annonce, et ce
  *  qu'elle fait. Rien n'est exécuté avant la confirmation. */
@@ -56,7 +56,11 @@ export function Admin() {
   }, [clubId])
   useEffect(() => { recharger() }, [recharger])
 
-  const nomEquipe = useCallback((id: string) => teams.find((t) => t.id === id)?.name ?? 'Équipe', [teams])
+  /* « Match amical » est la valeur stockée pour une rencontre sans championnat, et
+     elle sert de clef de regroupement ici : on la traduit au moment de l'écrire, pas
+     avant, sinon les deux langues découperaient deux groupes différents. */
+  const nomChamp = useChampLabel()
+  const nomEquipe = useCallback((id: string) => teams.find((t) => t.id === id)?.name ?? trad('commun.equipe'), [teams, trad])
   const séances = useMemo(() => trainings.filter((t) => t.clubId === clubId), [trainings, clubId])
 
   // Garder d'abord, muter ensuite : la table de marque ne voit pas s'ouvrir un
@@ -95,24 +99,21 @@ export function Admin() {
           {championnats(matches).map((champ) => {
             const n = matches.filter(duChampionnat(champ)).length
             return (
-              <Ligne key={champ} libelle={champ} compte={trad('compte.rencontre', { count: n })} action={trad('commun.supprimer')}
-                aria={trad('admin.supprimerRencontresDe', { quoi: champ })} desactive={n === 0}
-                onClick={() => supprimerRencontres(`« ${champ} »`, duChampionnat(champ), n)} />
+              <Ligne key={champ} libelle={nomChamp(champ)} compte={trad('compte.rencontre', { count: n })} action={trad('commun.supprimer')}
+                aria={trad('admin.supprimerRencontresDe', { quoi: nomChamp(champ) })} desactive={n === 0}
+                onClick={() => supprimerRencontres(`« ${nomChamp(champ)} »`, duChampionnat(champ), n)} />
             )
           })}
           {matches.length === 0 && <Vide>{trad('admin.aucuneRencontre')}</Vide>}
         </Bloc>
 
-        <Bloc
-          titre="Rencontres d’une année civile"
-          aide={trad('admin.aideAnnee')}
-        >
+        <Bloc titre={trad('admin.parAnnee')} aide={trad('admin.aideAnnee')}>
           {annees(matches).map((an) => {
             const n = matches.filter(deLAnnee(an)).length
             return (
               <Ligne key={an} libelle={trad('admin.annee', { an })} compte={trad('compte.rencontre', { count: n })} action={trad('commun.supprimer')}
                 aria={trad('admin.supprimerRencontresAnnee', { an })} desactive={n === 0}
-                onClick={() => supprimerRencontres(`l’année civile ${an}`, deLAnnee(an), n)} />
+                onClick={() => supprimerRencontres(trad('admin.anneeCivile', { an }), deLAnnee(an), n)} />
             )
           })}
           {annees(matches).length === 0 && <Vide>{trad('admin.aucuneRencontreDatee')}</Vide>}

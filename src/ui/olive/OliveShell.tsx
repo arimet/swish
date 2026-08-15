@@ -25,10 +25,18 @@ const NAV_REST = [
   { icon: ICON.users, label: 'nav.equipes', to: '/teams', end: false },
   { icon: ICON.matches, label: 'nav.schemas', to: '/schemas', end: false },
 ]
+/* La barre basse tient quatre entrées, et les schémas en font partie : le lecteur de
+   combinaisons est fait pour le temps-mort, donc pour un téléphone — c'était le seul
+   écran de l'application qu'on ne pouvait pas atteindre depuis un téléphone.
+   « Mon équipe » y remplace « Équipes » quand le club est réglé : dans une application
+   d'une seule équipe, c'est la fiche qu'on ouvre, et la liste reste à un lien de là. */
 const NAV_MOBILE = [
-  { icon: ICON.trophy, label: 'nav.tableauDeBord', to: '/', end: true },
+  /* « Accueil » et non « Tableau de bord » : le libellé long passait sur deux lignes
+     dans une case de 94 px et faisait dépasser son entrée d'une demi-ligne sous les
+     trois autres. La barre latérale, elle, a la place et garde le nom complet. */
+  { icon: ICON.trophy, label: 'nav.accueil', to: '/', end: true },
   { icon: ICON.cal, label: 'nav.calendrier', to: '/calendrier', end: false },
-  { icon: ICON.users, label: 'nav.equipes', to: '/teams', end: false },
+  { icon: ICON.matches, label: 'nav.schemas', to: '/schemas', end: false },
 ]
 // « Mon équipe » cible `/teams/<clubId>` : sans club réglé, ce serait un lien
 // vers `/teams/undefined` — l'entrée n'est ajoutée qu'une fois le club connu.
@@ -216,8 +224,8 @@ function MobileNav() {
   const trad = useT()
   const { clubId } = useClub()
   const items = clubId
-    ? [...NAV_MOBILE, { icon: ICON.users, label: 'Mon équipe', to: `/teams/${clubId}`, end: true }]
-    : NAV_MOBILE
+    ? [...NAV_MOBILE, { icon: ICON.users, label: 'nav.monEquipe', to: `/teams/${clubId}`, end: true }]
+    : [...NAV_MOBILE, { icon: ICON.users, label: 'nav.equipes', to: '/teams', end: false }]
   return (
     <nav className="flex shrink-0 items-stretch justify-around gap-1 border-t px-1 pb-[env(safe-area-inset-bottom)] pt-1 lg:hidden" style={{ borderColor: C.border, background: C.panel }}>
       {items.map((n) => (

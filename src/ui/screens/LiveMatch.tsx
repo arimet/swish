@@ -42,7 +42,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   const { match, dispatch, dispatchMany, undo, removeLast, finish, error } = useMatch(matchId)
   const [askFinish, setAskFinish] = useState(false)
   const [players, setPlayers] = useState<Record<string, Player>>({})
-  const [teamNames, setTeamNames] = useState<{ A: string; B: string }>({ A: 'Mon équipe', B: 'Adversaire' })
+  const [teamNames, setTeamNames] = useState<{ A: string; B: string }>({ A: trad('nav.monEquipe'), B: trad('match.adversaire') })
   const [seconds, setSeconds] = useState(600)
   const [pick, setPick] = useState<{ id: string; name: string } | null>(null)
   const [starters, setStarters] = useState<string[]>([])
@@ -58,9 +58,9 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     Promise.all([listPlayers(match.meta.clubId), listTeams()]).then(([a, teams]) => {
       setPlayers(Object.fromEntries(a.map((p) => [p.id, p])))
       const byId = Object.fromEntries(teams.map((t) => [t.id, t.name]))
-      setTeamNames({ A: byId[match.meta.clubId] ?? 'Mon équipe', B: byId[match.meta.opponentId] ?? 'Adversaire' })
+      setTeamNames({ A: byId[match.meta.clubId] ?? trad('nav.monEquipe'), B: byId[match.meta.opponentId] ?? trad('match.adversaire') })
     })
-  }, [match?.meta.clubId, match?.meta.opponentId])
+  }, [match?.meta.clubId, match?.meta.opponentId, trad])
 
   useEffect(() => {
     if (!match || !ls || seededMatchId.current === match.id) return

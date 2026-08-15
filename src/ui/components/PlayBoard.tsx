@@ -7,6 +7,7 @@
 import type { ReactNode } from 'react'
 import type { Fleche, ObjetPose, Pion, Point, Schema, Temps } from '../../domain/plays'
 import { T } from '../olive/kit'
+import { useT } from '../../i18n'
 import { cadre, clamp01, CourtLines, D, RAYON, W } from './ShotCourt'
 
 /** Profondeur du viewBox : le terrain complet, c'est le demi et son miroir. */
@@ -197,6 +198,7 @@ function PionDessine({ pion, h }: { pion: Pion; h: number }) {
 /** Le ballon : sur le pion porteur (décalé pour ne pas masquer son numéro), ou
  *  au sol. Ambre et non rose : posé sur un attaquant rose, il disparaîtrait. */
 function Ballon({ t, h }: { t: Temps; h: number }) {
+  const trad = useT()
   const b = t.ballon
   let at: Point | null = null
   if ('x' in b) at = enUnites(b, h)
@@ -208,7 +210,7 @@ function Ballon({ t, h }: { t: Temps; h: number }) {
     }
   }
   if (!at) return null
-  return <circle aria-label="ballon" cx={at.x} cy={at.y} r={28} fill={T.ball} stroke={T.court} strokeWidth={6} />
+  return <circle aria-label={trad('sch.ballon')} cx={at.x} cy={at.y} r={28} fill={T.ball} stroke={T.court} strokeWidth={6} />
 }
 
 /** Plot, ballon posé, échelle de rythme : le matériel de l'exercice, commun à
@@ -250,6 +252,7 @@ export function PlayBoard({ schema, tempsIndex, temps, onPointerDown, onPointerM
    *  coordonnées de pointeur ne doit pas l'utiliser. */
   remplit?: boolean
 }) {
+  const trad = useT()
   const h = profondeur(schema)
   const t = temps ?? schema.temps[tempsIndex] ?? schema.temps[0]
   const interactif = !apercu && !!(onPointerDown || onPointerMove || onPointerUp)
@@ -257,7 +260,7 @@ export function PlayBoard({ schema, tempsIndex, temps, onPointerDown, onPointerM
     <svg
       viewBox={`0 0 ${W} ${h}`}
       role={interactif ? 'application' : 'img'}
-      aria-label={`tableau tactique — ${schema.nom}`}
+      aria-label={trad('sch.tableauTactique', { nom: schema.nom })}
       onPointerDown={apercu ? undefined : onPointerDown}
       onPointerMove={apercu ? undefined : onPointerMove}
       onPointerUp={apercu ? undefined : onPointerUp}

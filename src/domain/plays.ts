@@ -72,6 +72,8 @@ const POSTES: Poste[] = [1, 2, 3, 4, 5]
  * meneur. Sur terrain complet, la mise en place occupe la moitié avant.
  * L'`id` est laissé à la persistance.
  */
+export const NOM_DEFAUT = 'sch.nouveauNom'
+
 export function nouveauSchema(clubId: string, terrain: Terrain, defense: boolean): Omit<Schema, 'id'> {
   const panier = PANIER[terrain][0]
   const attaque: Pion[] = POSTES.map((poste) => {
@@ -87,7 +89,7 @@ export function nouveauSchema(clubId: string, terrain: Terrain, defense: boolean
     : attaque
   return {
     clubId,
-    nom: 'Nouveau schéma',
+    nom: NOM_DEFAUT,
     terrain,
     defense,
     objets: [],
@@ -152,15 +154,18 @@ function remapY(s: Schema, terrain: Terrain, f: (y: number) => number): Schema {
   }
 }
 
-/** Le premier occupant de la moitié arrière (y > 0,5), nommé pour le refus. */
-function occupantMoitieArriere(s: Schema): string | null {
+/** Ce qui occupe la moitié arrière (y > 0,5), désigné par une clef de traduction et
+ *  le numéro de poste s'il y en a un. Le domaine nomme, l'interface rédige. */
+export interface Occupant { cle: string; n?: number }
+
+function occupantMoitieArriere(s: Schema): Occupant | null {
   for (const t of s.temps) {
-    for (const p of t.pions) if (p.at.y > 0.5) return `le poste ${p.poste}`
-    for (const fl of t.fleches) if (fl.points.some((p) => p.y > 0.5)) return `une flèche du poste ${fl.depuis.poste}`
+    for (const p of t.pions) if (p.at.y > 0.5) return { cle: 'sch.occPoste', n: p.poste }
+    for (const fl of t.fleches) if (fl.points.some((p) => p.y > 0.5)) return { cle: 'sch.occFleche', n: fl.depuis.poste }
   }
-  const noms: Record<ObjetPose['sorte'], string> = { plot: 'un plot', ballon: 'un ballon', echelle: 'une échelle' }
-  for (const o of s.objets) if (o.at.y > 0.5) return noms[o.sorte]
-  for (const t of s.temps) if ('x' in t.ballon && t.ballon.y > 0.5) return 'le ballon'
+  const noms: Record<ObjetPose['sorte'], string> = { plot: 'sch.occPlot', ballon: 'sch.occBallonPose', echelle: 'sch.occEchelle' }
+  for (const o of s.objets) if (o.at.y > 0.5) return { cle: noms[o.sorte] }
+  for (const t of s.temps) if ('x' in t.ballon && t.ballon.y > 0.5) return { cle: 'sch.occBallon' }
   return null
 }
 
@@ -170,10 +175,10 @@ function occupantMoitieArriere(s: Schema): string | null {
  * ou le ballon posé occupe la moitié arrière — remapper en silence perdrait la
  * moitié du dessin.
  */
-export function versTerrain(s: Schema, terrain: Terrain): { ok: Schema } | { refus: string } {
+export function versTerrain(s: Schema, terrain: Terrain): { ok: Schema } | { refus: Occupant } {
   if (s.terrain === terrain) return { ok: s }
   if (terrain === 'complet') return { ok: remapY(s, terrain, (y) => y / 2) }
   const occupant = occupantMoitieArriere(s)
-  if (occupant) return { refus: `Impossible de passer en demi-terrain : ${occupant} occupe la moitié arrière.` }
+  if (occupant) return { refus: occupant }
   return { ok: remapY(s, terrain, (y) => y * 2) }
 }

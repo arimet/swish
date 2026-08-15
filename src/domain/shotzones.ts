@@ -22,14 +22,17 @@ export const ZONES: ShotZone[] = [
   'paint', 'mid_left', 'mid_center', 'mid_right', 'corner3_left', 'top3', 'corner3_right',
 ]
 
+/** Les **clefs** de traduction des zones, pas leur texte : la géométrie est du code
+ *  pur, appelée hors de React, qui ne connaît pas la langue courante. L'appelant
+ *  traduit — c'est la même règle que pour les messages de règle du domaine. */
 export const ZONE_LABELS: Record<ShotZone, string> = {
-  paint: 'Raquette',
-  mid_left: 'Mi-distance gauche',
-  mid_center: 'Mi-distance axe',
-  mid_right: 'Mi-distance droite',
-  corner3_left: 'Corner gauche',
-  top3: 'Aile / axe à 3 pts',
-  corner3_right: 'Corner droit',
+  paint: 'zone.raquette',
+  mid_left: 'zone.midGauche',
+  mid_center: 'zone.midAxe',
+  mid_right: 'zone.midDroite',
+  corner3_left: 'zone.cornerGauche',
+  top3: 'zone.aile3',
+  corner3_right: 'zone.cornerDroit',
 }
 
 /**
