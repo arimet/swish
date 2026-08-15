@@ -15,11 +15,11 @@ const schema = (id: string, name: string): Play => ({ id, ...newPlay('ta', 'half
 
 const TOP3 = { x: 0.5, y: 0.65 }
 
-// Les dates codées en dur ('2026-01-10' etc.) servent aux tests qui ne regardent
+// The hard-coded dates ('2026-01-10' and friends) serve the tests that do not look
 // jamais « aujourd'hui » (bilan, hot zone) : `nextFixture` compare bien à la date
-// réelle du moment où le test tourne, donc les échéances qu'on veut voir retenues
-// doivent être calculées par rapport à elle, pas à une date fixe qui finirait par
-// être dans le passé.
+// real clock at the moment the test runs, so the fixtures we want kept must be
+// computed relative to it, not to a fixed date that would eventually fall into the
+// past.
 const dansNJours = (n: number) => {
   const d = new Date()
   d.setDate(d.getDate() + n)
@@ -45,8 +45,8 @@ const renderDash = () =>
 
 beforeEach(async () => {
   localStorage.clear()
-  // Le rôle vit dans la session de l'onglet : sans ce nettoyage, un test qui
-  // déverrouille l'administration laisserait les suivants déjà déverrouillés.
+  // The role lives in the tab's session: without this cleanup, a test that unlocks
+  // administration would leave the following ones already unlocked.
   sessionStorage.clear()
   await db.matches.clear(); await db.players.clear(); await db.teams.clear()
   await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear()
@@ -65,8 +65,8 @@ describe('Dashboard', () => {
   })
 
   it('puts the live game at the top', async () => {
-    // Le raccourci vers la table de marque est réservé à qui la tient : ce test se
-    // place de son côté, le cas du visiteur est vérifié juste en dessous.
+    // The shortcut to the scorer's table is reserved for whoever keeps it: this test
+    // stands on their side, the visitor's case is checked just below.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live' })
     renderDash()
@@ -76,8 +76,8 @@ describe('Dashboard', () => {
   it('a visitor reads the live score without being offered the scorer\'s table', async () => {
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live' })
     renderDash()
-    // Le bandeau du direct reste entier — l'état, l'adversaire, le score : c'est
-    // exactement ce qu'un joueur ou un parent vient regarder.
+    // The live banner stays whole — the state, the opposition, the score: exactly
+    // what a player or a parent comes to look at.
     expect(await screen.findByText(/en direct/i)).toBeInTheDocument()
     expect(screen.getByText(/contre VERDUN/i)).toBeInTheDocument()
     // Six paniers à deux points contre quatre : le bandeau affiche bien 12 – 8.
@@ -93,9 +93,9 @@ describe('Dashboard', () => {
 
   it('does not announce in the banner a game planned and never played, when the fixture block already excludes it', async () => {
     // Statut resté à `setup` mais date passée : une rencontre planifiée puis jamais
-    // jouée. Le bandeau doit appliquer la même règle que `nextFixture` (qui écarte le
-    // passé), sans quoi il annoncerait « Prochaine rencontre » à côté d'un bloc
-    // « Rien de planifié pour l'instant » contradictoire.
+    // played. The banner must apply the same rule as `nextFixture` (which excludes
+    // the past), otherwise it would announce "Next game" next to a contradictory
+    // "Nothing planned yet" block.
     await saveMatch({ ...finished('m3', 0, 0), id: 'm3', status: 'setup', meta: { championshipLabel: 'Poule A', date: '2020-01-10', clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
@@ -115,7 +115,7 @@ describe('Dashboard', () => {
   })
 
   it('announces no game played for a club that is no game\'s clubId', async () => {
-    // 'tb' n'apparaît qu'en `opponentId` de m1 : ce n'est jamais « notre » rencontre.
+    // 'tb' only appears as m1's `opponentId`: it is never "our" game.
     await saveMatch(finished('m1', 10, 4))
     localStorage.setItem('swish-club-id', 'tb')
     renderDash()
@@ -134,48 +134,49 @@ describe('Dashboard', () => {
   })
 
   it('invites planning when no fixture is scheduled', async () => {
-    // Une rencontre jouée, et c'est la prémisse qui manquait : « aucune échéance
-    // prévue » décrit un club **en saison** qui n'a rien devant lui. Un club sans
-    // aucune rencontre est un autre état — la mise en route — et c'est le test suivant.
+    // One game played, and that is the premise that was missing: "no fixture
+    // scheduled" describes a club **in season** with nothing ahead of it. A club with
+    // no game at all is another state — getting started — and that is the next test.
     await saveMatch(finished('m1', 10, 4))
     renderDash()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
   })
 
   /**
-   * L'arrivée du fondateur, juste après avoir saisi son effectif.
+   * The founder's arrival, right after entering their roster.
    *
-   * Ce que cet écran affichait : quatre tuiles de statistiques à « — », une frise de
-   * forme à « — », deux panneaux annonçant l'absence de marqueur et de tir, et deux
-   * invitations à planifier une rencontre — dont aucune ne dit qu'il faut d'abord un
-   * adversaire enregistré, si bien que les deux menaient à un écran de cul-de-sac.
-   * Six blocs pour dire six fois que rien n'a commencé, et pas un chemin praticable.
+   * What this screen used to show: four statistic tiles reading "—", a form strip
+   * reading "—", two panels announcing the absence of scorers and shots, and two
+   * invitations to plan a game — neither of which says that an opposition has to be
+   * recorded first, so that both led to a dead-end screen. Six blocks to say six times
+   * that nothing has begun, and not one usable path.
    */
   it('a club with no game at all gets the getting-started block, not the empty figures', async () => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
     renderDash()
 
     expect(await screen.findByText(/pour commencer|votre effectif est prêt/i)).toBeInTheDocument()
-    // L'étape courante est l'effectif : un seul joueur au fixture, on n'aligne pas un
-    // cinq avec ça. C'est bien l'état des données qui décide, et non un compteur
-    // mémorisé — l'adversaire « VERDUN » existe déjà, son étape est donc acquise.
+    // The current step is the roster: a single player in the fixture, and you do not
+    // field a five with that. It really is the state of the data that decides, not a
+    // remembered counter — the opposition "VERDUN" already exists, so its step is
+    // done.
     expect(await screen.findByRole('link', { name: /compléter l.effectif/i })).toBeInTheDocument()
-    // Une seule action à la fois : proposer les trois laisserait choisir un ordre qui
-    // ne marche pas — planifier une rencontre avant d'avoir un adversaire mène au
-    // cul-de-sac de `/match/new`.
+    // One action at a time: offering all three would let someone pick an order that
+    // does not work — planning a game before having an opposition leads to the dead end
+    // of `/match/new`.
     expect(screen.queryByRole('link', { name: /nouvelle rencontre/i })).not.toBeInTheDocument()
-    // Et rien des chiffres de saison, ni les deux invitations redondantes.
+    // And nothing of the season's figures, nor the two redundant invitations.
     expect(screen.queryByText(/rien de planifié/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/points encaissés/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/pas encore de points marqués/i)).not.toBeInTheDocument()
   })
 
   it('does not announce the same game twice when it is already live', async () => {
-    // Le match en direct a la date du jour (donc « à venir » pour `nextFixture` s'il
-    // n'était pas explicitement exclu) : sans l'exclusion, ce test ne discriminerait
-    // rien, `nextFixture` ignorant de toute façon une date passée comme '2026-01-10'.
-    // Aucune autre échéance que la rencontre en direct : le bloc doit inviter à
-    // planifier plutôt que répéter l'adversaire déjà affiché dans le bandeau.
+    // The live game carries today's date (hence "upcoming" for `nextFixture` if it
+    // were not explicitly excluded): without the exclusion this test would discriminate
+    // nothing, since `nextFixture` ignores a past date like '2026-01-10' anyway.
+    // No fixture other than the live game: the block must invite planning rather than
+    // repeat the opposition already shown in the banner.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(0), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
@@ -184,9 +185,9 @@ describe('Dashboard', () => {
   })
 
   it('excludes every live game from the next fixture, not only the first', async () => {
-    // Rien n'empêche une seconde rencontre `live` sans que la première soit terminée
-    // (démarrée par erreur) : les deux doivent rester exclues des échéances à venir,
-    // sans quoi la seconde serait annoncée comme « prochaine échéance » alors qu'elle
+    // Nothing prevents a second `live` game while the first is unfinished (started by
+    // mistake): both must stay out of the upcoming fixtures, otherwise the second would
+    // be announced as the "next fixture" although it
     // a déjà commencé.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(0), clubId: 'ta', opponentId: 'tb' } })
@@ -198,13 +199,13 @@ describe('Dashboard', () => {
 })
 
 describe('Dashboard — the next session\'s plays', () => {
-  // `queryAll` et non `getAll` : sans droit d'écriture, un tableau de bord sans
-  // rencontre à venir n'a plus le moindre lien — « + Planifier » est réservé à
-  // qui gère le club — et `getAllByRole` lèverait au lieu de rendre une liste vide.
+  // `queryAll` and not `getAll`: without the write right, a dashboard with no upcoming
+  // game has no link left at all — "+ Plan" is reserved for whoever manages the club —
+  // and `getAllByRole` would throw instead of returning an empty list.
   const lecteurs = () => screen.queryAllByRole('link').filter((l) => l.getAttribute('href')?.endsWith('/lecteur'))
 
   it('leads to the viewer of every play scheduled for the next session', async () => {
-    // Le chemin le plus court entre « c'est mardi » et « voilà ce qu'on travaille ».
+    // The shortest path between "it is Tuesday" and "here is what we are working on".
     await savePlay(schema('s1', 'Pick and roll haut'))
     await savePlay(schema('s2', 'Corner pour le 4'))
     await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes', playIds: ['s1', 's2'] })
@@ -221,7 +222,7 @@ describe('Dashboard — the next session\'s plays', () => {
     renderDash()
 
     expect(await screen.findByRole('link', { name: /pick and roll haut/i })).toBeInTheDocument()
-    // Un identifiant orphelin ne doit ni casser l'écran, ni ouvrir un lecteur vide.
+    // An orphan id must neither break the screen nor open an empty viewer.
     expect(lecteurs()).toHaveLength(1)
   })
 
@@ -245,7 +246,7 @@ describe('the player\'s identity', () => {
     const marqueurs = (await screen.findByText('Meilleurs marqueurs')).closest('section')!
     const ligne = within(marqueurs).getByText('MARTIN Lucas').closest('a')!
     expect(within(ligne).getByText('vous')).toBeInTheDocument()
-    // Le coéquipier figure dans la même liste sans hériter de la marque.
+    // The team-mate appears in the same list without inheriting the mark.
     const autre = within(marqueurs).getByText('DURAND Théo').closest('a')!
     expect(within(autre).queryByText('vous')).not.toBeInTheDocument()
 
@@ -253,7 +254,7 @@ describe('the player\'s identity', () => {
   })
 
   it('ignores an id matching no player in the roster', async () => {
-    // Joueur retiré de l'effectif, identifiant survivant dans le localStorage :
+    // A player removed from the roster, their id surviving in localStorage:
     // ni mise en évidence fantôme, ni raccourci vers une fiche inexistante.
     localStorage.setItem(PLAYER_ID_KEY, 'parti')
     await saveMatch(finished('m1', 10, 4))
@@ -266,9 +267,9 @@ describe('the player\'s identity', () => {
   })
 })
 
-// ── Le message d'équipe ─────────────────────────────────────────────────────
-// Le seul canal du coach vers son équipe : un texte court, un seul à la fois,
-// lu par tout le monde en ouvrant l'application, écrit et effacé par le seul
+// ── The team message ────────────────────────────────────────────────────────
+// The coach's only channel to their team: a short text, one at a time, read by
+// everyone on opening the application, written and erased by the
 // administrateur.
 
 describe('Dashboard — the message to the team', () => {
@@ -293,15 +294,15 @@ describe('Dashboard — the message to the team', () => {
     await saveMessage({ clubId: 'ta', text: '   ', writtenAt: new Date().toISOString() })
     renderDash()
     await screen.findByText('VIGNOT')
-    // On laisse la lecture du message se poser avant de conclure à l'absence :
-    // sans cette attente, le test passerait aussi bien sans la garde qu'avec,
-    // faute d'avoir laissé le message blanc arriver jusqu'au rendu.
+    // We let the message read settle before concluding it is absent: without this
+    // wait, the test would pass just as well without the guard as with it, never having
+    // let the blank message reach the render.
     await act(async () => { await new Promise((r) => setTimeout(r, 50)) })
     expect(screen.queryByTestId('team-message')).not.toBeInTheDocument()
   })
 
   it('a visitor reads it without being asked for any code', async () => {
-    // C'est un message pour l'équipe, joueurs compris : lire est libre.
+    // It is a message for the team, players included: reading is ungated.
     await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: new Date().toISOString() })
     renderDash()
 
@@ -319,10 +320,10 @@ describe('Dashboard — the message to the team', () => {
     await userEvent.type(await screen.findByLabelText(/message à l’équipe/i), 'Gymnase fermé mardi.')
     await userEvent.click(screen.getByRole('button', { name: /publier/i }))
 
-    // `guard()` déclenche l'action sans l'attendre : après le clic, l'écriture en
-    // base puis le re-rendu sont asynchrones. On attend la base d'abord — sous la
-    // charge de la suite complète, la seconde par défaut ne lui suffit pas
-    // toujours — puis l'écran, qui ne peut que suivre.
+    // `guard()` fires the action without awaiting it: after the click, the write to
+    // the store and then the re-render are asynchronous. We wait for the store first —
+    // under the full suite's load, the default second is not always enough for it —
+    // then the screen, which can only follow.
     await waitFor(async () => expect((await getMessage('ta'))?.text).toBe('Gymnase fermé mardi.'), { timeout: 5000 })
     expect(await screen.findByText('Gymnase fermé mardi.', {}, { timeout: 5000 })).toBeInTheDocument()
   })
@@ -332,29 +333,29 @@ describe('Dashboard — the message to the team', () => {
     await saveMessage({ clubId: 'ta', text: 'Ancien message.', writtenAt: new Date(Date.now() - 3 * 86400_000).toISOString() })
     renderDash()
 
-    // On attend que l'ancien message soit affiché avant d'ouvrir la saisie : le
-    // chargement est asynchrone, et ouvrir avant qu'il aboutisse laissait sa
-    // résolution écraser le texte fraîchement publié — d'où l'instabilité.
+    // We wait for the old message to be displayed before opening the form: the load
+    // is asynchronous, and opening before it resolves let its resolution overwrite the
+    // freshly published text — hence the flakiness.
     await screen.findByText('Ancien message.')
     await userEvent.click(await screen.findByRole('button', { name: /modifier/i }))
     const champ = await screen.findByLabelText(/message à l’équipe/i)
-    // Un seul événement plutôt que seize frappes : c'est exactement ce que le champ
-    // contrôlé écoute, et la frappe caractère par caractère rendait ce test instable
-    // sous la charge de la suite complète — il échouait une fois sur trois.
+    // One event rather than sixteen keystrokes: it is exactly what the controlled
+    // field listens for, and typing character by character made this test flaky under
+    // the full suite's load — it failed one time in three.
     fireEvent.change(champ, { target: { value: 'Nouveau message.' } })
-    // « Publier » reste éteint tant que le texte est vide : cliquer avant que React
-    // ait validé la saisie ne faisait rien, et le test échouait sans rien prouver.
+    // "Publish" stays dark while the text is empty: clicking before React had
+    // committed the input did nothing, and the test failed without proving anything.
     await waitFor(() => expect(champ).toHaveValue('Nouveau message.'))
     await userEvent.click(screen.getByRole('button', { name: /publier/i }))
 
-    // La base d'abord — c'est elle qui fait foi —, puis l'écran. Assertion sur
-    // l'écran seul : elle échouait une fois sur sept sous la charge de la suite
-    // complète, sans que la cause soit établie. Attendre les deux plutôt que de
-    // supposer l'ordre vérifie la même chose sans dépendre du minutage.
+    // The store first — it is authoritative — then the screen. An assertion on the
+    // screen alone failed one time in seven under the full suite's load, with no cause
+    // established. Waiting for both rather than assuming the order checks the same
+    // thing without depending on timing.
     await waitFor(async () => expect((await getMessage('ta'))?.text).toBe('Nouveau message.'))
     await waitFor(() => expect(screen.getByText('Nouveau message.')).toBeInTheDocument())
     expect(screen.queryByText('Ancien message.')).not.toBeInTheDocument()
-    // Un seul message à la fois : ce n'est pas un fil, il n'y a rien à empiler.
+    // One message at a time: this is not a thread, there is nothing to stack.
     expect(await db.messages.count()).toBe(1)
   })
 
@@ -374,11 +375,11 @@ describe('Dashboard — the message to the team', () => {
     renderDash()
     await screen.findByText('VIGNOT')
 
-    // Le bouton n'existe pas pour elle : plus de demande de code au clic sur une
-    // action qu'elle n'a pas le droit de mener.
+    // The button does not exist for it: no more code prompt on clicking an action it
+    // has no right to carry out.
     expect(screen.queryByRole('button', { name: /message à l’équipe/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/message à l’équipe/i)).not.toBeInTheDocument()
-    // Ce qui compte reste vrai : rien n'est écrit en base.
+    // What matters stays true: nothing is written to the store.
     expect(await getMessage('ta')).toBeUndefined()
   })
 
@@ -387,8 +388,8 @@ describe('Dashboard — the message to the team', () => {
     await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: new Date().toISOString() })
     renderDash()
 
-    // Elle lit le message — c'en est un pour toute l'équipe — mais ni « Modifier »
-    // ni « Effacer » ne lui sont proposés.
+    // It reads the message — it is one for the whole team — but neither "Edit" nor
+    // "Erase" is offered to it.
     expect(await screen.findByText('Maillot blanc samedi.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /effacer/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /modifier/i })).not.toBeInTheDocument()
@@ -407,8 +408,8 @@ describe('Dashboard — reaching the call-up', () => {
   const rencontreAVenir = async () =>
     saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: dansNJours(5), clubId: 'ta', opponentId: 'tb' } })
 
-  // Convoquer écrit : le raccourci est celui du coach, ces tests se placent donc
-  // de son côté. L'affichage des convoqués, lui, est vérifié sans droit plus bas.
+  // Calling up writes: the shortcut is the coach's, so these tests stand on their
+  // side. Showing who is called up is checked without the right further down.
   beforeEach(() => sessionStorage.setItem(ROLE_KEY, 'admin'))
 
   it('leads to the next game\'s call-up from the "next fixture" block', async () => {
@@ -425,15 +426,15 @@ describe('Dashboard — reaching the call-up', () => {
     sessionStorage.removeItem(ROLE_KEY)
     renderDash()
 
-    // Ce qu'un joueur vient chercher — suis-je convoqué, à quelle heure — reste là.
+    // What a player comes for — am I called up, at what time — stays there.
     expect(await screen.findByText(/1 convoqué/i)).toBeInTheDocument()
     expect(screen.getByText(/rendez-vous 18:00/i)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /convocation|convoquer/i })).not.toBeInTheDocument()
   })
 
   it('says plainly that nobody is called up, and offers to call up', async () => {
-    // C'est justement le moment où l'on veut agir : « convocation à préparer » ne
-    // se distinguait pas assez d'un simple libellé, et ne menait nulle part.
+    // This is precisely the moment when action is wanted: "call-up to prepare" did not
+    // stand out enough from a plain label, and led nowhere.
     await rencontreAVenir()
     renderDash()
 
@@ -442,8 +443,8 @@ describe('Dashboard — reaching the call-up', () => {
   })
 
   it('treats a saved call-up with no player as nobody being called up', async () => {
-    // Une convocation vidée de ses joueurs (ou dont l'effectif a été supprimé) est
-    // un enregistrement sans convoqué : l'écran doit le dire, pas afficher « 0 ».
+    // A call-up emptied of its players (or whose roster has been deleted) is a record
+    // with nobody called up: the screen must say so, not show "0".
     await rencontreAVenir()
     await saveConvocation({ matchId: 'm4', playerIds: [] })
     renderDash()
