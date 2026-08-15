@@ -1,8 +1,8 @@
 /**
- * Le lecteur du temps-mort : la combinaison se joue, hors de la coquille, sur le
- * téléphone que cinq joueurs regardent à bout de bras. Tout est taillé pour ce
- * moment-là — le terrain occupe l'écran, on avance d'un temps en touchant une
- * moitié d'écran, et la sortie reste visible. La lecture n'est jamais protégée.
+ * The time-out viewer: the play runs, outside the shell, on the phone five players
+ * are looking at from arm's length. Everything is cut for that moment — the court
+ * fills the screen, you advance a step by touching half of it, and the way out stays
+ * visible. Reading is never gated.
  */
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -15,35 +15,33 @@ import { C, bd } from '../olive/kit'
 import { useT } from '../../i18n'
 import { Pause, Play as PlayIcon, X } from 'lucide-react'
 
-/** Une transition dure une seconde et demie, le double au ralenti. Ce n'est pas
- *  réglable : 1,5 s laisse lire un mouvement sans qu'on s'impatiente. */
-const DUREE = 1500
+/** A transition lasts a second and a half, twice that in slow motion. It is not
+ *  adjustable: 1.5 s lets a movement be read without testing anyone's patience. */
+const STEP_MS = 1500
 
-/** Le pas de la boucle. Trente images par seconde suffisent à un pion qui
- *  glisse, et un minuteur se pilote depuis un test — ce que
- *  `requestAnimationFrame` ne fait pas. */
-const PAS = 50
+/** The loop's tick. Twenty frames a second are enough for a sliding marker, and a
+ *  timer can be driven from a test — which `requestAnimationFrame` cannot. */
+const TICK_MS = 50
 
-/** Le système demande-t-il moins de mouvement ? On le lit au démarrage de la
- *  lecture ; ce n'est pas un confort, c'est la seule façon correcte de traiter
- *  quelqu'un que le mouvement dérange. */
+/** Is the system asking for less motion? Read when playback starts; this is not a
+ *  comfort, it is the only correct way to treat someone motion disturbs. */
 const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 export function SchemaPlayer() {
   const translate = useT()
   const { id } = useParams<{ id: string }>()
   const [schema, setSchema] = useState<Play | null | undefined>(undefined)
-  // L'avancement, en temps décimaux : 1,5 est à mi-chemin du deuxième au
-  // troisième temps. Un seul nombre pour la barre, les zones et l'animation.
+  // Progress, in fractional steps: 1.5 is halfway from the second step to the
+  // third. One number for the slider, the half-screens and the animation.
   const [pos, setPos] = useState(0)
-  const [enLecture, setEnLecture] = useState(false)
-  const [boucle, setBoucle] = useState(false)
-  const [ralenti, setRalenti] = useState(false)
-  // Les trajets pendant la lecture. Éteint par défaut : sans eux, l'animation
-  // nue, qui est ce que le lecteur a toujours montré. Rien n'est mémorisé d'une
-  // ouverture à l'autre, comme la boucle et le ralenti — un réglage sur trois qui
-  // se souviendrait serait le plus déroutant des trois.
-  const [trajets, setTrajets] = useState(false)
+  const [playing, setPlaying] = useState(false)
+  const [looping, setLooping] = useState(false)
+  const [slow, setSlow] = useState(false)
+  // The paths during playback. Off by default: without them, the bare animation,
+  // which is what the viewer has always shown. Nothing is remembered from one
+  // opening to the next, like looping and slow motion — one setting out of three
+  // that remembered would be the most confusing of the three.
+  const [paths, setPaths] = useState(false)
   const [sharing, setSharing] = useState(false)
 
   useEffect(() => { if (id) getPlay(id).then((s) => setSchema(s ?? null)) }, [id])
@@ -51,89 +49,89 @@ export function SchemaPlayer() {
   const last = schema ? transitions(schema) : 0
 
   useEffect(() => {
-    if (!enLecture) return
-    const duree = ralenti ? DUREE * 2 : DUREE
-    const saute = reducedMotion()
-    const pas = saute ? duree : PAS
+    if (!playing) return
+    const duration = slow ? STEP_MS * 2 : STEP_MS
+    const jump = reducedMotion()
+    const tick = jump ? duration : TICK_MS
     const iv = window.setInterval(() => setPos((p) => {
-      const suivant = saute ? Math.floor(p) + 1 : p + pas / duree
-      if (suivant < last) return suivant
-      // On se pose exactement sur le dernier temps avant de reboucler : sinon on
-      // ne le voit jamais.
+      const next = jump ? Math.floor(p) + 1 : p + tick / duration
+      if (next < last) return next
+      // We land exactly on the last step before looping: otherwise it is never
+      // seen.
       if (p < last) return last
-      return boucle ? 0 : last
-    }), pas)
+      return looping ? 0 : last
+    }), tick)
     return () => clearInterval(iv)
-  }, [enLecture, ralenti, boucle, last])
+  }, [playing, slow, looping, last])
 
-  // Arrivé au bout sans boucle, la lecture s'arrête d'elle-même.
-  useEffect(() => { if (enLecture && !boucle && pos >= last) setEnLecture(false) }, [enLecture, boucle, pos, last])
+  // At the end without looping, playback stops on its own.
+  useEffect(() => { if (playing && !looping && pos >= last) setPlaying(false) }, [playing, looping, pos, last])
 
-  // Onglet en arrière-plan : on coupe. Une animation qui continue vide la
-  // batterie et se retrouve à un endroit imprévu au retour.
+  // Tab in the background: we cut. An animation that keeps running drains the
+  // battery and ends up somewhere unexpected on return.
   useEffect(() => {
-    const hide = () => { if (document.hidden) setEnLecture(false) }
+    const hide = () => { if (document.hidden) setPlaying(false) }
     document.addEventListener('visibilitychange', hide)
     return () => document.removeEventListener('visibilitychange', hide)
   }, [])
 
   if (!id) return null
-  if (schema === undefined) return <Ecran><p style={{ color: C.muted }}>{translate('commun.chargement')}</p></Ecran>
+  if (schema === undefined) return <Screen><p style={{ color: C.muted }}>{translate('commun.chargement')}</p></Screen>
   if (schema === null) return (
-    <Ecran>
+    <Screen>
       <p style={{ color: C.muted }}>
         {translate('sch.introuvable')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{translate('equipe.retour')}</Link>
       </p>
-    </Ecran>
+    </Screen>
   )
 
-  const courant = Math.round(pos)
+  const current = Math.round(pos)
   /**
-   * Le temps voisin **dans le sens du geste**, pas le voisin de l'arrondi. Depuis
-   * une position fractionnaire — pause en pleine transition, barre lâchée hors
-   * d'un cran — `Math.round` a déjà « pré-avancé » d'un demi-pas, et ajouter 1
-   * sauterait un temps entier. Un coach qui met en pause pour commenter puis tape
-   * « suivant » ne doit pas voir la combinaison enjamber une étape.
+   * The neighbouring step **in the direction of the gesture**, not the neighbour of
+   * the rounding. From a fractional position — paused mid-transition, slider released
+   * off a notch — `Math.round` has already "pre-advanced" by half a step, and adding
+   * 1 would skip a whole step. A coach who pauses to comment and then taps "next"
+   * must not watch the play stride over a stage.
    */
-  const aller = (delta: number) => {
-    setEnLecture(false)
-    const vise = delta > 0 ? Math.floor(pos) + 1 : Math.ceil(pos) - 1
-    setPos(Math.min(last, Math.max(0, vise)))
+  const go = (delta: number) => {
+    setPlaying(false)
+    const target = delta > 0 ? Math.floor(pos) + 1 : Math.ceil(pos) - 1
+    setPos(Math.min(last, Math.max(0, target)))
   }
-  const jouer = () => {
-    // Relancer depuis le bout, c'est rejouer : sinon le bouton ne ferait rien.
+  const play = () => {
+    // Restarting from the end means replaying: otherwise the button would do
+    // nothing.
     if (pos >= last) setPos(0)
-    setEnLecture(true)
+    setPlaying(true)
   }
 
-  // Arrêté sur un temps entier, on remontre le temps tel qu'il est dessiné,
-  // flèches comprises : l'animation les remplace le temps qu'elle joue, mais à
-  // la pause c'est le carnet qu'on relit — et le dernier temps ne dit son
-  // intention que par ses traits, puisqu'aucun temps ne le suit.
-  // Arrêté **entre** deux temps, en revanche, on ne les remontre pas : elles
-  // partent des positions dessinées, pas de celles où les pions se trouvent à cet
-  // instant, et le décalage se lirait comme une erreur. Un arrêt à mi-geste montre
-  // où les joueurs en sont ; c'est déjà ce qu'on est venu voir.
-  // Arrêté **entre** deux temps, on ne remontrait pas non plus les flèches, faute
-  // de pouvoir les ancrer. La bascule lève cette réserve : le path qu'elle trace
-  // est recalé sur les positions réelles, donc il se lit à mi-geste aussi.
-  const steps = !enLecture && Number.isInteger(pos)
+  // Stopped on a whole step, we show the step as drawn, arrows included: the
+  // animation replaces them while it runs, but at a pause it is the notebook you are
+  // re-reading — and the last step states its intent only through its strokes, since
+  // no step follows it.
+  // Stopped **between** two steps, the drawn arrows are not shown: they start from
+  // the drawn positions, not from where the markers are at that instant, and the
+  // offset would read as an error. A stop mid-gesture shows where the players are;
+  // that is already what you came to see.
+  // The paths toggle lifts that reservation: the path it draws is refitted onto the
+  // real positions, so it reads mid-gesture too.
+  const step = !playing && Number.isInteger(pos)
     ? schema.steps[pos]
-    : snapshot(schema, { steps: Math.floor(pos), part: pos - Math.floor(pos) }, trajets)
-  // Le lecteur prend la place disponible, mais pas plus que `TERRAIN_MAX` : sur un
-  // téléphone tenu à bout de bras chaque centimètre compte, sur un écran de bureau
-  // un terrain de mille pixels ne se lit pas mieux, il se lit moins bien. Le SVG se
-  // cale lui-même dans sa boîte (`preserveAspectRatio`), sans distorsion, et rien
-  // ici ne convertit de coordonnées — on lit, on ne dessine pas.
-  const large = courtWidth(schema.court)
+    : snapshot(schema, { step: Math.floor(pos), part: pos - Math.floor(pos) }, paths)
+  // The viewer takes the room available, but no more than `courtWidth` allows: on a
+  // phone held at arm's length every centimetre counts, on a desktop screen a
+  // thousand-pixel court does not read better, it reads worse. The SVG fits itself in
+  // its box (`preserveAspectRatio`), without distortion, and nothing here converts
+  // coordinates — we read, we do not draw.
+  const boardWidth = courtWidth(schema.court)
 
   return (
-    <Ecran>
+    <Screen>
       <div className="flex min-h-dvh flex-col gap-2 p-3">
-        {/* L'en-tête ne dispute pas la place au terrain : la sortie est un carré à
-            gauche, là où le pouce la cherche, le nom prend tout le reste, et
-            « Partager » reste en contour — le seul bouton plein du lecteur est
-            « Lecture », en bas. */}
+        {/* The header does not contend with the court for room: the way out is a
+            square on the left, where the thumb looks for it, the name takes all the
+            rest, and "Share" stays outlined — the viewer's only filled button is
+            "Play", at the bottom. */}
         <div className="flex shrink-0 items-center gap-2">
           <Link
             to={`/schemas/${id}`} aria-label={translate('sch.quitterLecteur')} title={translate('sch.quitterLecteur')}
@@ -142,101 +140,100 @@ export function SchemaPlayer() {
             <X className="h-4 w-4" strokeWidth={2.5} />
           </Link>
           <h1 className="min-w-0 flex-1 truncate text-sm font-extrabold tracking-tight">{schema.name}</h1>
-          {/* La lecture s'arrête pendant le partage : on ne fabrique pas une image
-              du temps qu'on est en train de quitter. */}
+          {/* Playback stops during a share: we do not build an image of the step we
+              are in the middle of leaving. */}
           <button
-            onClick={() => { setEnLecture(false); setSharing(true) }}
+            onClick={() => { setPlaying(false); setSharing(true) }}
             className="h-10 shrink-0 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}
           >
             {translate('sch.partager')}
           </button>
         </div>
-        <ExportSchema schema={schema} stepIndex={courant} open={sharing} onClose={() => setSharing(false)} />
+        <ExportSchema schema={schema} stepIndex={current} open={sharing} onClose={() => setSharing(false)} />
 
-        {/* Le terrain, et par-dessus les deux moitiés d'écran : au temps-mort on
-            ne vise pas un bouton de quarante pixels. Elles s'arrêtent au-dessus
-            des commandes, qui restent atteignables. */}
+        {/* The court, and over it the two half-screens: during a time-out nobody aims
+            at a forty-pixel button. They stop above the controls, which stay
+            reachable. */}
         <div className="relative flex min-h-0 flex-1 items-center justify-center">
-          <div className="h-full w-full select-none" style={{ maxWidth: large }}>
-            <PlayBoard schema={schema} stepIndex={0} step={steps} remplit />
+          <div className="h-full w-full select-none" style={{ maxWidth: boardWidth }}>
+            <PlayBoard schema={schema} stepIndex={0} step={step} remplit />
           </div>
-          <Zone cote="left" label={translate('lecteur.precedent')} fleche="‹" onClick={() => aller(-1)} disabled={courant === 0} />
-          <Zone cote="right" label={translate('lecteur.suivant')} fleche="›" onClick={() => aller(1)} disabled={courant === last} />
+          <HalfScreen side="left" label={translate('lecteur.precedent')} chevron="‹" onClick={() => go(-1)} disabled={current === 0} />
+          <HalfScreen side="right" label={translate('lecteur.suivant')} chevron="›" onClick={() => go(1)} disabled={current === last} />
         </div>
 
-        <div className="mx-auto flex w-full shrink-0 flex-col gap-2" style={{ maxWidth: large }}>
+        <div className="mx-auto flex w-full shrink-0 flex-col gap-2" style={{ maxWidth: boardWidth }}>
           <div className="flex items-center gap-3">
-            <span className="w-24 shrink-0 text-sm font-extrabold">{translate('sch.temps', { n: courant + 1, total: schema.steps.length })}</span>
+            <span className="w-24 shrink-0 text-sm font-extrabold">{translate('sch.temps', { n: current + 1, total: schema.steps.length })}</span>
             <input
               type="range" aria-label={translate('sch.avancement')} min={0} max={last || 1} step={0.01} value={pos}
               disabled={last === 0}
-              onChange={(e) => { setEnLecture(false); setPos(Number(e.target.value)) }}
+              onChange={(e) => { setPlaying(false); setPos(Number(e.target.value)) }}
               className="piste min-w-0 flex-1 cursor-pointer appearance-none disabled:opacity-40"
             />
           </div>
-          {/* Deux rangées, et non plus une. À trois réglages, la rangée unique
-              débordait de sept pixels et c'est « Lecture » qui payait : en `flex-1`
-              il se laissait comprimer jusqu'à quatre-vingt-sept pixels, son libellé
-              rogné, alors que c'est la seule commande qu'on vise en plein
-              temps-mort. L'action prend donc toute la largeur, les réglages se
-              partagent la suivante à parts égales — et un quatrième réglage, un
-              jour, ne cassera rien. */}
+          {/* Two rows, no longer one. At three settings the single row overflowed by
+              seven pixels and it was "Play" that paid: at `flex-1` it let itself be
+              squeezed to eighty-seven pixels, its label clipped, although it is the
+              one control anyone aims at in the middle of a time-out. The action
+              therefore takes the full width, the settings share the next row equally —
+              and a fourth setting, some day, will break nothing. */}
           <button
-            onClick={() => (enLecture ? setEnLecture(false) : jouer())} disabled={last === 0}
-            aria-label={translate(enLecture ? 'sch.pause' : 'sch.lecture')}
+            onClick={() => (playing ? setPlaying(false) : play())} disabled={last === 0}
+            aria-label={translate(playing ? 'sch.pause' : 'sch.lecture')}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-[var(--c-on-brand)] disabled:opacity-40"
             style={{ background: C.brand }}
           >
-            {enLecture
+            {playing
               ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('sch.pause')}</>
               : <><PlayIcon className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('sch.lecture')}</>}
           </button>
           <div className="grid grid-cols-3 gap-2">
-            <Bascule label={translate('sch.trajets')} actif={trajets} onClick={() => setTrajets((t) => !t)} />
-            <Bascule label={translate('sch.boucle')} actif={boucle} onClick={() => setBoucle((b) => !b)} />
-            <Bascule label={translate('sch.ralenti')} actif={ralenti} onClick={() => setRalenti((r) => !r)} />
+            <Toggle label={translate('sch.trajets')} active={paths} onClick={() => setPaths((t) => !t)} />
+            <Toggle label={translate('sch.boucle')} active={looping} onClick={() => setLooping((b) => !b)} />
+            <Toggle label={translate('sch.ralenti')} active={slow} onClick={() => setSlow((r) => !r)} />
           </div>
         </div>
       </div>
-    </Ecran>
+    </Screen>
   )
 }
 
-/** Le fond du lecteur : le cadre de l'application, plein écran. Le terrain, lui,
- *  reste sombre — c'est le tableau du coach, pas une carte de plus. */
-function Ecran({ children }: { children: React.ReactNode }) {
+/** The viewer's background: the application's frame, full screen. The court keeps
+ *  its own surface — it is the coach's board, not one more card. */
+function Screen({ children }: { children: React.ReactNode }) {
   return <div className="min-h-dvh" style={{ background: C.frame, color: C.text }}>{children}</div>
 }
 
-/** Une moitié d'écran qui avance ou recule d'un temps. Éteinte à l'extrémité :
- *  le défilement se borne, il ne boucle pas.
+/** Half a screen that steps forward or back. Dark at the extremity: stepping is
+ *  clamped, it does not wrap.
  *
- *  Le chevron est de l'encre voilée : à 35 % il ne donnait plus que 2,4:1 sur le
- *  fond clair, sous le seuil même pour un glyphe de cette taille. 45 % le
- *  remonte à 3,3:1 sans le rendre bavard. */
-function Zone({ cote, label, fleche, onClick, disabled }: {
-  cote: 'left' | 'right'; label: string; fleche: string; onClick: () => void; disabled: boolean
+ *  The chevron is veiled ink: at 35% it gave only 2.4:1 on the light background,
+ *  under the threshold even for a glyph this size. 45% brings it to 3.3:1 without
+ *  making it loud. */
+function HalfScreen({ side, label, chevron, onClick, disabled }: {
+  side: 'left' | 'right'; label: string; chevron: string; onClick: () => void; disabled: boolean
 }) {
   return (
     <button
       aria-label={label} onClick={onClick} disabled={disabled}
-      className={`absolute inset-y-0 ${cote === 'left' ? 'left-0' : 'right-0'} w-1/2 px-2 text-4xl font-black disabled:opacity-0`}
-      style={{ color: C.text, opacity: 0.45, textAlign: cote }}
+      className={`absolute inset-y-0 ${side === 'left' ? 'left-0' : 'right-0'} w-1/2 px-2 text-4xl font-black disabled:opacity-0`}
+      style={{ color: C.text, opacity: 0.45, textAlign: side }}
     >
-      {fleche}
+      {chevron}
     </button>
   )
 }
 
-/** Trajets, boucle et ralenti : les trois réglages qu'un coach utilise réellement.
- *  Plus de `shrink-0` : dans une grille à colonnes égales, chacune tient déjà sa
- *  largeur, et l'interdiction de rétrécir n'y servait qu'à déborder. */
-function Bascule({ label, actif, onClick }: { label: string; actif: boolean; onClick: () => void }) {
+/** Paths, loop and slow motion: the three settings a coach actually uses.
+ *  No more `shrink-0`: in an equal-column grid each one already holds its width, and
+ *  forbidding shrinkage only served to overflow. */
+function Toggle({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
-      onClick={onClick} aria-pressed={actif}
+      onClick={onClick} aria-pressed={active}
       className="rounded-2xl px-2 py-4 text-sm font-bold"
-      style={{ border: bd, background: actif ? C.accentBg : C.card, color: actif ? C.accent : C.muted }}
+      style={{ border: bd, background: active ? C.accentBg : C.card, color: active ? C.accent : C.muted }}
     >
       {label}
     </button>

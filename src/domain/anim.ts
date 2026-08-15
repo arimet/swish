@@ -10,7 +10,7 @@ import type { Side, Arrow, Marker, Point, Position, Play, Step, Stroke } from '.
 
 /** Progress through the play: `steps` is the index of the starting step, `part` the
  *  fraction travelled towards the next one (0 to 1). */
-export interface Instant { steps: number; part: number }
+export interface Instant { step: number; part: number }
 
 /** How many transitions can be animated — a three-step play has two. */
 export const transitions = (s: Play) => Math.max(0, s.steps.length - 1)
@@ -94,7 +94,7 @@ function sameBall(a: Step['ball'], b: Step['ball']): boolean {
  * movement it claims to describe would be worse than no line at all.
  */
 export function snapshot(s: Play, at: Instant, withPaths = false): Step {
-  const n = Math.max(0, Math.min(Math.floor(at.steps), transitions(s)))
+  const n = Math.max(0, Math.min(Math.floor(at.step), transitions(s)))
   const from = s.steps[n]
   const vers = s.steps[n + 1]
   if (!vers) return { markers: structuredClone(from.markers), ball: structuredClone(from.ball), arrows: [] }

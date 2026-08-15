@@ -3,18 +3,18 @@ import { useClub } from '../../app/club'
 import { C, bd, Ic, ICON, TeamBadge } from '../olive/kit'
 import { useT } from '../../i18n'
 
-/** Premier lancement : choisir le club suivi. Affiché à la place du shell tant
- *  qu'aucun club valide n'est réglé — ce n'est pas une route dont on s'échappe.
+/** First launch: pick the club to follow. Shown in place of the shell as long as
+ *  no valid club is set — it is not a route you escape from.
  *
- *  Posé sur le **cadre** et non sur la page : la page est la gouttière derrière
- *  le cadre arrondi, le plan le plus foncé du thème clair, et personne n'y écrit
- *  jamais. Cet écran, lui, est du contenu — le texte secondaire y tombait à
- *  4,2:1, il tient 5,3:1 sur le cadre. */
+ *  Laid on the **frame** and not on the page: the page is the gutter behind the
+ *  rounded frame, the light theme's darkest plane, and nobody ever writes there.
+ *  This screen is content — its secondary text fell to 4.2:1 there, it holds 5.3:1
+ *  on the frame. */
 export function Welcome() {
   const translate = useT()
   const { teams, ready, setClub } = useClub()
-  // Tant que la liste des équipes n'est pas arrivée, on ne sait pas si le club
-  // est vide : éviter d'afficher un instant « aucune équipe » à tort.
+  // Until the team list has arrived we do not know whether the club is empty:
+  // avoid flashing "no team" for a moment when it is not true.
   if (!ready) return <div className="grid min-h-dvh place-items-center" style={{ background: C.frame, color: C.muted }}>{translate('commun.chargement')}</div>
   return (
     <div className="grid min-h-dvh place-items-center p-6" style={{ background: C.frame, color: C.text }}>

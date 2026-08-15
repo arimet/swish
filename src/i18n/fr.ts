@@ -538,6 +538,9 @@ export const fr: Record<string, string> = {
   'equipe.modifierJoueur': 'modifier {name}',
   'equipe.retirerJoueur': 'Retirer {name}',
   'apercu.demarrerRencontre': '▶ Démarrer la rencontre',
+  'apercu.reprendreRencontre': 'Reprendre la rencontre →',
+  'apercu.rendezVous': 'Rendez-vous {detail}',
+  'apercu.coach': 'Coach · {name}',
   'match.numeroPlaceholder': 'ex. 78',
   'sch.demiTerrain': 'Demi-terrain',
   'sch.terrainComplet': 'Terrain complet',
@@ -617,6 +620,13 @@ export const fr: Record<string, string> = {
   'sync.refuseDetail': 'Le serveur refuse cet appareil. Votre saisie est enregistrée ici et rien n’est perdu, mais elle n’atteint plus les autres appareils : vérifiez le jeton dans l’administration.',
 
   // ── Langue et thème ───────────────────────────────────────────────────────
+  'imprime.avantageMax': 'Avantage max',
+  'imprime.serieMax': 'Série max',
+  'imprime.pointsDuBanc': 'Points du banc',
+  'imprime.egalites': 'Égalités',
+  'imprime.dureeAvantage': 'Durée avantage',
+  'imprime.scoreGlobal': '{name} — {score} points. Score saisi globalement — l’adversaire n’a pas d’effectif à détailler.',
+
   'tir.terrainSaisie': 'Demi-terrain — toucher le point de tir',
 
   'partage.tropLong': 'Cette combinaison est trop chargée pour tenir dans un lien. Envoyez plutôt l’image ou le PDF — un lien tronqué en route serait pire que pas de lien.',

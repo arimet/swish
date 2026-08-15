@@ -12,20 +12,22 @@ import { C, TeamBadge , useLeagueLabel } from '../olive/kit'
 import { useT } from '../../i18n'
 import type { Match, Player, TeamSide } from '../../domain/types'
 
-/** Page de suivi en direct pour les spectateurs (lecture seule, plein écran).
- * Rafraîchit l'état depuis la base locale ; conçue pour être projetée. */
+/** The live view for spectators (read-only, full screen). Refreshes its state from
+ * the server or, failing that, the local store; designed to be projected. */
 export function SpectatorMatch({ matchId }: { matchId: string }) {
   const translate = useT()
   const champ = useLeagueLabel()
   const [match, setMatch] = useState<Match | null | undefined>(undefined)
   const [players, setPlayers] = useState<Record<string, Player>>({})
-  const [names, setNames] = useState<Record<TeamSide, string>>({ A: 'Locaux', B: 'Visiteurs' })
+  // Placeholders until the real names arrive: the effects below replace them within
+  // the first frames, but a projected screen must never show an empty label.
+  const [names, setNames] = useState<Record<TeamSide, string>>(() => ({ A: translate('match.locaux'), B: translate('match.visiteurs') }))
   const [nowMs, setNowMs] = useState(() => Date.now())
-  // Une seule carte de tirs ouverte sur tout l'écran : il est souvent projeté en
-  // salle, deux cartes simultanées le rendraient illisible de loin.
+  // One shot chart open across the whole screen: it is often projected in the hall,
+  // and two charts at once would make it unreadable from a distance.
   const [openShotsId, setOpenShotsId] = useState<string | null>(null)
 
-  // Mode distant (multi-appareils) : flux temps réel SSE + repli polling.
+  // Remote mode (multi-device): the real-time SSE stream, with polling as fallback.
   useEffect(() => {
     if (!syncEnabled()) return
     const apply = (b: SyncBundle) => {
@@ -39,7 +41,7 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
     return subscribeBundle(matchId, apply)
   }, [matchId])
 
-  // Mode local (même appareil) : lecture de la base locale.
+  // Local mode (same device): read from the local store.
   useEffect(() => {
     if (syncEnabled()) return
     let stop = false
@@ -49,7 +51,7 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
     return () => { stop = true; clearInterval(iv) }
   }, [matchId])
 
-  // Tick du chrono simulé (tant que le chrono tourne).
+  // The simulated clock's tick (for as long as the clock is running).
   useEffect(() => {
     if (!match || match.status !== 'live' || !liveState(match).clockRunning) return
     const iv = window.setInterval(() => setNowMs(Date.now()), 500)
@@ -76,8 +78,9 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
   const live = match.status === 'live'
   const finished = match.status === 'finished'
 
-  // Chrono simulé : on repart du dernier évènement (chrono + horodatage réel) et
-  // on décompte en local tant que le chrono tourne (wallClock réel requis, pas le seed).
+  // Simulated clock: we start from the last event (its clock plus its real
+  // timestamp) and count down locally while the clock runs. A real `wallClock` is
+  // required — the seed's synthetic ones would run the countdown from nonsense.
   const lastEv = match.events[match.events.length - 1]
   const anchorClock = lastEv?.gameClock ?? periodLength(ls.period)
   const anchorWall = lastEv?.wallClock ?? 0
@@ -88,9 +91,9 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
   return (
     <Screen>
       <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:py-10">
-        {/* Pas de lien retour vers "/" : cette page est une destination de
-            partage (lien projeté / envoyé à des spectateurs sans club réglé),
-            pas une porte d'entrée dans l'application derrière la garde club. */}
+        {/* No back link to "/": this page is a share destination (a link projected
+            or sent to spectators with no club set), not a way into the application
+            behind the club gate. */}
         <div className="mb-5 flex items-center justify-center">
           <span className="flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-black uppercase tracking-wide"
             style={live ? { background: C.greenFill, color: C.onGreen } : finished ? { background: C.neutralBg, color: C.muted } : { background: C.amberBg, color: C.amber }}>
@@ -101,15 +104,15 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
 
         <p className="text-center text-[12px] font-bold" style={{ color: C.muted }}>{champ(match.meta)}</p>
 
-        {/* SCOREBOARD (blocs équipe : lisible sur mobile) */}
+        {/* SCOREBOARD (team blocks: legible on a phone) */}
         <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-6">
-          {/* Nous en encre, l'adversaire en accent : les mêmes deux jetons que la
-              table de marque, pour qu'un spectateur qui passe d'un écran à l'autre
-              lise le même code. Ce sont des jetons de **thème**, et pas les anciens
-              `--sb-*` du bandeau : ceux-là valaient un blanc en dur, correct sur un
-              bandeau charbon et illisible ici, où le score est posé sur le fond clair
-              de la page. Emprunter les couleurs d'une surface pour les employer sur
-              une autre, c'est ce qui a produit un score blanc sur blanc. */}
+          {/* Us in ink, the opposition in accent: the same two tokens as the scorer's
+              table, so a spectator moving between screens reads the same code. These
+              are **theme** tokens, not the banner's old `--sb-*`: those were a
+              hard-coded white, correct on a charcoal banner and illegible here, where
+              the score sits on the page's light background. Borrowing one surface's
+              colours to use them on another is what produced a white score on
+              white. */}
           <TeamScore id={match.meta.clubId} name={names.A} score={ls.score.a} color={C.text} />
           <TeamScore id={match.meta.opponentId} name={names.B} score={ls.score.b} color={C.accent} />
         </div>
@@ -122,12 +125,13 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
           )}
         </div>
 
-        {/* BANDEAU FAUTES / TM (aucune faute/TM adverse saisissable, pas d'effectif en face) */}
+        {/* FOULS / TIMEOUTS BAR (no opposition foul or timeout can be recorded: there
+            is no roster on that side) */}
         <div className="mt-5 grid grid-cols-1 gap-3">
           <MetaRow label={names.A} fouls={ls.teamFoulsThisPeriod.A} bonus={ls.bonus.A} to={ls.timeoutsRemaining.A} />
         </div>
 
-        {/* STATS JOUEURS */}
+        {/* PLAYER STATS */}
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           <StatList name={names.A} match={match} players={players}
             openId={openShotsId} onToggle={setOpenShotsId} />
@@ -145,16 +149,15 @@ function Screen({ children }: { children: ReactNode }) {
 }
 
 /**
- * Un côté du tableau spectateur.
+ * One side of the spectator scoreboard.
  *
- * Le score portait `teamColor(id)`, une teinte tirée d'un hachage de l'identifiant
- * parmi huit hexadécimaux façon NBA. C'est le bon procédé pour distinguer six
- * écussons dans une liste — et le mauvais ici : sur un tableau d'affichage, la
- * question n'est pas « laquelle des six équipes » mais « nous ou eux », et la réponse
- * était un cramoisi et un marine étrangers à la charte. Les deux jetons qui disent
- * exactement cela existaient déjà pour la table de marque : le nôtre en blanc,
- * l'adversaire en citron. L'écusson, lui, garde sa couleur de club — c'est là que
- * l'identité a un sens.
+ * The score used to carry `teamColor(id)`, a hue drawn from a hash of the id among
+ * eight NBA-ish hex values. That is the right device for telling six crests apart in
+ * a list — and the wrong one here: on a scoreboard the question is not "which of the
+ * six teams" but "us or them", and the answer was a crimson and a navy foreign to
+ * the charter. The two tokens that say exactly that already existed for the scorer's
+ * table: ours in ink, the opposition in accent. The crest keeps its club colour —
+ * that is where identity means something.
  */
 function TeamScore({ id, name, score, color }: { id: string; name: string; score: number; color: string }) {
   return (
@@ -180,9 +183,9 @@ function MetaRow({ label, fouls, bonus, to }: { label: string; fouls: number; bo
   )
 }
 
-/** Côté spectateur, l'adversaire n'a pas d'effectif, donc pas de tableau joueur
- *  possible — on affiche à la place le score réel (saisi globalement) en gros,
- *  plutôt qu'un tableau vide sous un total à 0. */
+/** On the spectator side the opposition has no roster, so no player table is
+ *  possible — we show their real score (entered as a total) in large type instead of
+ *  an empty table under a zero. */
 function OpponentPanel({ name, score }: { name: string; score: number }) {
   const translate = useT()
   return (
