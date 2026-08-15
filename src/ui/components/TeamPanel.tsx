@@ -1,4 +1,5 @@
 import type { Player, ScoreKind } from '../../domain/types'
+import { RotateCcw } from 'lucide-react'
 
 type Stat = { points: number; fouls: number }
 
@@ -23,8 +24,11 @@ export function TeamPanel({
   onTimeout: () => void
   onUndoTimeout: () => void
 }) {
+  // `bg-card` à pleine opacité, et non `bg-card/50` : un voile à cinquante pour cent
+  // rapproche la carte de son fond de moitié, ce qui annulait précisément l'écart de
+  // clarté entre les deux plans. En thème sombre, l'écran devenait un seul charbon.
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-3xl border border-border/60 bg-card/50 p-2.5 sm:p-4" style={{ boxShadow: `inset 0 3px 0 0 ${color}` }}>
+    <section className="flex min-h-0 flex-1 flex-col rounded-3xl border border-border bg-card p-2.5 sm:p-4" style={{ boxShadow: `inset 0 3px 0 0 ${color}` }}>
       {/* « Sur le terrain », et non le nom de l'équipe : le tableau d'affichage
           juste au-dessus le donne déjà en gros, et cette répétition faisait passer
           l'entête à deux lignes sur un téléphone. Le libellé dit maintenant quelque
@@ -33,7 +37,12 @@ export function TeamPanel({
         <div className="flex min-w-0 items-center gap-2">
           <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: color }} />
           <h3 className="truncate text-xs font-extrabold uppercase tracking-wide text-muted-foreground">Sur le terrain</h3>
-          {bonus && <span className="rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-black uppercase text-white">Bonus</span>}
+          {/* `bonus-in` : la pastille arrive au montage, une seule fois. Au
+              cinquième faute d'équipe de la période (`TEAM_FOUL_BONUS`),
+              l'adversaire tire des lancers francs — ce n'est pas un compteur qui
+              avance, c'est la règle du match qui change, et la pastille
+              apparaissait sans que rien ne le signale. */}
+          {bonus && <span className="bonus-in rounded-md bg-[var(--c-danger-fill)] px-1.5 py-0.5 text-[12px] font-black uppercase text-[var(--c-on-danger)]">Bonus</span>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Chip label="Fautes" value={teamFouls} warn={teamFouls >= 4} />
@@ -45,7 +54,7 @@ export function TeamPanel({
               onClick={onTimeout}
               disabled={timeoutsRemaining <= 0}
               title="Prendre un temps-mort"
-              className="flex h-11 items-center gap-1 px-3 text-xs font-bold text-muted-foreground transition hover:bg-[var(--c-accent)] hover:text-white disabled:opacity-40"
+              className="flex h-11 items-center gap-1 px-3 text-xs font-bold text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] disabled:opacity-40"
             >
               TM<span className="nums text-foreground">{timeoutsRemaining}</span>
             </button>
@@ -54,13 +63,13 @@ export function TeamPanel({
               disabled={timeoutsUsed <= 0}
               title="Annuler le dernier temps-mort"
               aria-label={`Annuler le dernier temps-mort ${title}`}
-              className="h-11 w-11 border-l border-background/60 text-xs text-muted-foreground transition hover:bg-[var(--c-accent)] hover:text-white disabled:opacity-30"
+              className="h-11 w-11 border-l border-background/60 text-xs text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] disabled:opacity-30"
             >
-              ↺
+              <RotateCcw className="mx-auto h-4 w-4" strokeWidth={2.5} />
             </button>
           </span>
           <button onClick={onSub} title="Changement" aria-label={`Changement ${title}`}
-            className="grid h-11 w-11 place-items-center rounded-lg bg-muted text-muted-foreground transition hover:bg-[var(--c-accent)] hover:text-white">
+            className="grid h-11 w-11 place-items-center rounded-lg bg-muted text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]">
             ⇄
           </button>
         </div>
@@ -85,7 +94,7 @@ export function TeamPanel({
                   <span className="mt-0.5 flex items-center gap-1.5">
                     <span className="nums whitespace-nowrap text-xs font-black" style={{ color }}>{st.points} pts</span>
                     <span className="flex items-center gap-0.5">
-                      {[0, 1, 2, 3, 4].map((i) => <span key={i} className={`h-1.5 w-1.5 rounded-full ${i < st.fouls ? 'bg-red-500' : 'bg-muted-foreground/25'}`} />)}
+                      {[0, 1, 2, 3, 4].map((i) => <span key={i} className={`h-1.5 w-1.5 rounded-full ${i < st.fouls ? 'bg-[var(--c-danger-fill)]' : 'bg-muted-foreground/25'}`} />)}
                     </span>
                   </span>
                 </span>
@@ -107,7 +116,7 @@ function Quick({ label, onClick, foul, disabled }: { label: string; onClick: () 
       disabled={disabled}
       onClick={(e) => { e.stopPropagation(); onClick() }}
       className={`h-11 w-11 shrink-0 rounded-lg text-sm font-black transition active:scale-90 disabled:opacity-40 ${
-        foul ? 'bg-[var(--c-danger-bg)] text-[var(--c-danger)] hover:bg-red-600 hover:text-white' : 'bg-[var(--c-card2)] text-[var(--c-text)] hover:bg-[var(--c-accent)] hover:text-white'
+        foul ? 'bg-[var(--c-danger-bg)] text-[var(--c-danger)] hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)]' : 'bg-[var(--c-card2)] text-[var(--c-text)] hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]'
       }`}
     >
       {label}
@@ -117,7 +126,7 @@ function Quick({ label, onClick, foul, disabled }: { label: string; onClick: () 
 
 function Chip({ label, value, warn }: { label: string; value: number; warn?: boolean }) {
   return (
-    <span className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold ${warn ? 'bg-amber-500/15 text-amber-700' : 'bg-muted text-muted-foreground'}`}>
+    <span className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-bold ${warn ? 'bg-[var(--c-amber-bg)] text-[var(--c-amber)]' : 'bg-muted text-muted-foreground'}`}>
       {label}<span className="nums text-foreground">{value}</span>
     </span>
   )

@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getMatch, listTeams, deleteMatch, listPlayers, getConvocation, saveConvocation } from '../../persistence/repositories'
 import type { Match, Team, Player } from '../../domain/types'
-import { C, bd, PageTitle, TeamBadge, fmtDate, champLabel } from '../olive/kit'
+import { C, bd, PageTitle, SectionTitle, TeamBadge, fmtDate, champLabel } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { Eye } from 'lucide-react'
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
@@ -113,9 +114,9 @@ export function MatchPreview({ matchId }: { matchId: string }) {
             c'est une information de la rencontre. Il rejoint donc le bandeau de la
             fiche, entre l'état et le numéro. */}
         <div className="mb-5 flex flex-wrap items-center gap-3">
-          <span className="rounded-md px-2 py-1 text-[11px] font-black uppercase" style={{ background: statusPill.bg, color: statusPill.fg }}>{statusPill.label}</span>
-          <span className="min-w-0 truncate text-[11px] font-bold uppercase" style={{ color: C.muted }}>{champLabel(match.meta)}</span>
-          {match.meta.matchNumber && <span className="ml-auto text-[11px] font-bold" style={{ color: C.faint }}>Rencontre n°{match.meta.matchNumber}</span>}
+          <span className="rounded-md px-2 py-1 text-[12px] font-black uppercase" style={{ background: statusPill.bg, color: statusPill.fg }}>{statusPill.label}</span>
+          <span className="min-w-0 truncate text-[12px] font-bold" style={{ color: C.muted }}>{champLabel(match.meta)}</span>
+          {match.meta.matchNumber && <span className="ml-auto text-[12px] font-bold" style={{ color: C.faint }}>Rencontre n°{match.meta.matchNumber}</span>}
         </div>
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
@@ -135,10 +136,10 @@ export function MatchPreview({ matchId }: { matchId: string }) {
       {/* `scroll-mt-6` : l'ancre s'arrête sous le bord haut, pas collée à lui. */}
       <div id="convocation" className="mt-6 scroll-mt-6 rounded-2xl p-6" style={{ background: C.card, border: bd }}>
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Convocation</p>
+          <SectionTitle>Convocation</SectionTitle>
           {/* Affiché en permanence, pas seulement après enregistrement : douze convoqués
               pour un match où l'on n'en inscrit que dix doit se voir sans compter les cases. */}
-          <span className="rounded-md px-2 py-1 text-[11px] font-black" style={{ background: C.accentBg, color: C.accent }}>
+          <span className="rounded-md px-2 py-1 text-[12px] font-black" style={{ background: C.accentBg, color: C.accent }}>
             {convoqués.size} convoqué{convoqués.size > 1 ? 's' : ''}
           </span>
         </div>
@@ -165,13 +166,13 @@ export function MatchPreview({ matchId }: { matchId: string }) {
                 className="mt-1.5 w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
             </div>
 
-            <button onClick={enregistrerConvocation} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+            <button onClick={enregistrerConvocation} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
               Enregistrer la convocation
             </button>
 
             {/* Comme les résultats du championnat : aucune synchronisation pour la convocation,
                 même formulation que sur l'écran Championnat pour ne pas laisser croire à deux limites différentes. */}
-            <p className="mt-4 text-[11px]" style={{ color: C.faint }}>Cette convocation reste sur cet appareil : elle n’est pas synchronisée avec vos autres appareils.</p>
+            <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>Cette convocation reste sur cet appareil : elle n’est pas synchronisée avec vos autres appareils.</p>
           </>
         ) : convoqués.size === 0 ? (
           <p className="text-sm" style={{ color: C.muted }}>Personne n’est convoqué pour l’instant.</p>
@@ -207,14 +208,14 @@ export function MatchPreview({ matchId }: { matchId: string }) {
           </button>
         )}
         <div className="flex flex-wrap items-center gap-3">
-          <Link to={`/match/${match.id}/watch`} target="_blank" className="rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>👁 Suivi spectateur</Link>
+          <Link to={`/match/${match.id}/watch`} target="_blank" className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}><Eye className="h-4 w-4" strokeWidth={2} />Suivi spectateur</Link>
           {match.status === 'finished' ? (
-            <Link to={`/match/${match.id}/summary`} className="rounded-xl px-6 py-3 text-sm font-bold text-white" style={{ background: C.accent }}>Voir le résumé →</Link>
+            <Link to={`/match/${match.id}/summary`} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>Voir le résumé →</Link>
           ) : (
             // Démarrer ou reprendre est le geste de la table de marque : le bouton
             // est le sien, et n'apparaît pas au visiteur qui consulte la fiche.
             tientLaMarque && (
-              <button onClick={start} className="rounded-xl px-6 py-3 text-sm font-bold text-white" style={{ background: C.accent }}>
+              <button onClick={start} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
                 {match.status === 'live' ? 'Reprendre la rencontre →' : '▶ Démarrer la rencontre'}
               </button>
             )
@@ -233,16 +234,16 @@ function TeamCol({ id, name, role, coach, count }: { id: string; name: string; r
     <div className="flex flex-col items-center gap-2 text-center">
       <TeamBadge id={id} name={name} size="h-14 w-14 text-sm" />
       <span className="line-clamp-2 text-base font-extrabold">{name}</span>
-      <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{role}</span>
-      {coach && <span className="text-[11px]" style={{ color: C.faint }}>Coach · {coach}</span>}
-      {count !== undefined && <span className="text-[11px]" style={{ color: C.faint }}>{count} joueur{count > 1 ? 's' : ''}</span>}
+      <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{role}</span>
+      {coach && <span className="text-[12px]" style={{ color: C.faint }}>Coach · {coach}</span>}
+      {count !== undefined && <span className="text-[12px]" style={{ color: C.faint }}>{count} joueur{count > 1 ? 's' : ''}</span>}
     </div>
   )
 }
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</p>
+      <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</p>
       <p className="mt-0.5 text-sm font-bold capitalize">{value}</p>
     </div>
   )

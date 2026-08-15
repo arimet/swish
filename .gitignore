@@ -25,3 +25,8 @@ lerna-debug.log*
 
 # Superpowers planning docs (kept out of the repo)
 docs/superpowers/
+
+# Réglages locaux de l'outil de revue de design. `*.local` ci-dessus ne les
+# attrape pas : le fichier s'appelle `config.local.json`, le motif veut un nom qui
+# *finisse* par « .local ».
+.impeccable/

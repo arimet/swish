@@ -16,6 +16,7 @@ import { largeurTerrain, PlayBoard, versSvg } from '../components/PlayBoard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { D, W } from '../components/ShotCourt'
 import { C, bd, Ic } from '../olive/kit'
+import { X } from 'lucide-react'
 
 type Outil = 'deplacer' | Trait | 'ballon' | 'objet' | 'gomme'
 /** Ce qu'un glisser tient : un pion (par son camp et son poste), ou un objet posé
@@ -404,7 +405,7 @@ export function SchemaEdit() {
               {SORTES.map((s) => (
                 <button
                   key={s.cle} onClick={() => setSorteObjet(s.cle)} aria-pressed={sorteObjet === s.cle}
-                  className="rounded-lg px-3 py-1.5 text-[11px] font-bold"
+                  className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
                   style={sorteObjet === s.cle ? { background: C.amberBg, color: C.amber, border: `1px solid ${C.amber}` } : { background: C.card, border: bd, color: C.muted }}
                 >
                   {s.libelle}
@@ -438,14 +439,14 @@ export function SchemaEdit() {
               la bande, contre le numéro du temps qu'ils manipulent — et la bande
               entière se cale sur la largeur du terrain, dont elle montre les états. */}
           <div className="mt-4 flex select-none items-center gap-2" style={{ maxWidth: largeurBande }}>
-            <p className="text-[11px] font-black uppercase tracking-wider" style={{ color: C.faint }}>
+            <p className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>
               Temps {index + 1} <span style={{ opacity: 0.6 }}>/ {vivant.temps.length}</span>
             </p>
             <div className="ml-auto flex items-center gap-1.5">
               <CommandeTemps libelle="Reculer le temps" onClick={() => bougerTemps(-1)} disabled={index === 0}>◀</CommandeTemps>
               <CommandeTemps libelle="Avancer le temps" onClick={() => bougerTemps(1)} disabled={index === vivant.temps.length - 1}>▶</CommandeTemps>
               {/* Un schéma a toujours au moins un temps : le dernier ne se supprime pas. */}
-              <CommandeTemps libelle="Supprimer le temps" onClick={supprimerTemps} disabled={vivant.temps.length === 1} danger>✕</CommandeTemps>
+              <CommandeTemps libelle="Supprimer le temps" onClick={supprimerTemps} disabled={vivant.temps.length === 1} danger><X className="h-4 w-4" strokeWidth={2.5} /></CommandeTemps>
             </div>
           </div>
 
@@ -458,12 +459,12 @@ export function SchemaEdit() {
                 style={{ background: C.card, border: i === index ? `2px solid ${C.accent}` : bd }}
               >
                 <PlayBoard schema={vivant} tempsIndex={i} apercu />
-                <span className="mt-1 block text-[10px] font-bold" style={{ color: i === index ? C.accent : C.muted }}>{i + 1}</span>
+                <span className="mt-1 block text-[12px] font-bold" style={{ color: i === index ? C.accent : C.muted }}>{i + 1}</span>
               </button>
             ))}
             <button
               onClick={ajouterTemps} aria-label="Ajouter un temps"
-              className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-bold"
+              className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-[12px] font-bold"
               style={{ background: C.card, border: `1px dashed ${C.border}`, color: C.muted }}
             >
               <span className="text-lg leading-none" style={{ color: C.accent }}>+</span>
@@ -480,13 +481,13 @@ export function SchemaEdit() {
                 <button
                   key={t} onClick={() => changerTerrain(t)} aria-pressed={vivant.terrain === t}
                   className="min-w-0 flex-1 rounded-xl py-2 text-xs font-bold"
-                  style={vivant.terrain === t ? { background: C.accent, color: C.onAccent } : { background: C.panel, border: bd, color: C.text }}
+                  style={vivant.terrain === t ? { background: C.brand, color: C.onBrand } : { background: C.panel, border: bd, color: C.text }}
                 >
                   {t === 'demi' ? 'Demi-terrain' : 'Terrain complet'}
                 </button>
               ))}
             </div>
-            {refus && <p className="mt-2 text-[11px] font-semibold" style={{ color: C.pink }}>{refus}</p>}
+            {refus && <p className="mt-2 text-[12px] font-semibold" style={{ color: C.accent }}>{refus}</p>}
             <label className="mt-4 flex items-center gap-2 text-sm font-semibold">
               <input type="checkbox" checked={vivant.defense} onChange={(e) => changerDefense(e.target.checked)} style={{ accentColor: C.accent, width: 18, height: 18 }} />
               Défense
@@ -494,13 +495,13 @@ export function SchemaEdit() {
           </section>
 
           <section className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-            <label htmlFor="schema-note" className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Note</label>
+            <label htmlFor="schema-note" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Note</label>
             <input
               id="schema-note" value={note} onChange={(e) => setNote(e.target.value)}
               onBlur={enregistrerNote}
               placeholder="Consigne, variante, rappel…" style={{ ...champ, width: '100%' }}
             />
-            <p className="mt-4 text-[11px]" style={{ color: C.faint }}>Ces schémas restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
+            <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>Ces schémas restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
           </section>
         </aside>
       </div>
@@ -521,7 +522,7 @@ export function SchemaEdit() {
 function Famille({ titre, children }: { titre: string; children: ReactNode }) {
   return (
     <div role="group" aria-label={titre} className="flex shrink-0 items-center gap-1 rounded-2xl p-1" style={{ background: C.panel, border: bd }}>
-      <span className="hidden pl-1.5 pr-0.5 text-[10px] font-black uppercase tracking-wider xl:inline" style={{ color: C.faint }}>{titre}</span>
+      <span className="hidden pl-1.5 pr-0.5 text-[12px] font-black uppercase tracking-wider xl:inline" style={{ color: C.faint }}>{titre}</span>
       {children}
     </div>
   )
@@ -535,7 +536,7 @@ function OutilBouton({ libelle, actif, onClick, children }: { libelle: string; a
     <button
       onClick={onClick} aria-label={libelle} title={libelle} aria-pressed={actif}
       className="grid h-10 min-w-10 place-items-center rounded-xl px-1.5 transition"
-      style={actif ? { background: C.accent, color: C.onAccent } : { background: 'transparent', color: C.muted }}
+      style={actif ? { background: C.brand, color: C.onBrand } : { background: 'transparent', color: C.muted }}
     >
       {children}
     </button>
@@ -546,7 +547,7 @@ function OutilBouton({ libelle, actif, onClick, children }: { libelle: string; a
  *  disque ambre qu'on voit sur le terrain, le plot son triangle ambre. Un contour
  *  générique se lisait « globe » ; ici le bouton montre littéralement son effet. */
 function PoserDessine({ quoi, actif }: { quoi: Outil; actif: boolean }) {
-  const teinte = actif ? C.onAccent : C.amber
+  const teinte = actif ? C.onBrand : C.amber
   return (
     <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]">
       {quoi === 'ballon'
@@ -581,7 +582,7 @@ function CommandeTemps({ libelle, onClick, disabled, danger, children }: {
     <button
       onClick={onClick} disabled={disabled} aria-label={libelle} title={libelle}
       className="grid h-10 w-10 place-items-center rounded-xl text-xs font-black disabled:opacity-30"
-      style={danger ? { border: `1px solid ${C.accentBd}`, color: C.pink } : { background: C.card, border: bd, color: C.text }}
+      style={danger ? { border: `1px solid ${C.accentBd}`, color: C.accent } : { background: C.card, border: bd, color: C.text }}
     >
       {children}
     </button>

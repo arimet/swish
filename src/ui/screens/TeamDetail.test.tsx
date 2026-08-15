@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -7,7 +7,7 @@ import { TeamDetail } from './TeamDetail'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
-import { getTeam, listPlayers, savePlayer, saveTeam } from '../../persistence/repositories'
+import { getTeam, listPlayers, saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
@@ -123,5 +123,44 @@ describe('TeamDetail — droits', () => {
 
     expect(screen.queryByLabelText(/entraîneur/i)).not.toBeInTheDocument()
     expect((await getTeam('ta'))?.coach).toBeUndefined()
+  })
+})
+
+describe('TeamDetail — meilleurs marqueurs', () => {
+  /** Une rencontre jouée où MARTIN marque : sans points, le panneau reste vide. */
+  const matchAvecPoints = async () => {
+    await saveMatch({
+      id: 'm1',
+      meta: { championshipLabel: 'Poule A', date: '2026-01-10', clubId: 'ta', opponentId: 'tb' },
+      roster: ['p1'],
+      status: 'finished',
+      events: [
+        { id: 'e0', wallClock: 0, type: 'STARTING_FIVE', team: 'A', playerIds: ['p1'], period: 1, gameClock: 600 },
+        { id: 'e1', wallClock: 1, type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int', period: 1, gameClock: 500 },
+      ],
+    } as Parameters<typeof saveMatch>[0])
+  }
+
+  it('chaque marqueur mène à sa fiche', async () => {
+    // Le même classement est cliquable au tableau de bord ; il était inerte ici, ce
+    // qui obligeait à retrouver le nom dans l'effectif de onze juste au-dessus.
+    //
+    // La requête est **portée au panneau** et non à la page : l'effectif juste
+    // au-dessus contient déjà un lien vers la même fiche, si bien qu'un
+    // `getByRole('link')` global passait même quand la ligne du classement n'était
+    // pas un lien du tout. Un test qui ne peut pas échouer ne prouve rien.
+    await matchAvecPoints()
+    renderTeam()
+    const titre = await screen.findByRole('heading', { name: 'Meilleurs marqueurs' })
+    const panneau = titre.closest('section')!
+    // `findByRole` et non `getByRole` : le panneau rend son **titre** dès le premier
+    // passage, y compris dans son état vide, alors que ses lignes attendent une
+    // lecture asynchrone de la base. Attendre le titre n'attendait donc pas les
+    // lignes, et ce test échouait environ une fois sur huit — sur l'état vide, jamais
+    // sur un vrai défaut.
+    const lien = await within(panneau).findByRole('link', { name: /MARTIN/ })
+    expect(lien).toHaveAttribute('href', '/players/p1')
+    // Chercher le lien *dans* le panneau suffit à prouver qu'il n'est pas vide : sans
+    // point marqué, il rendrait son état vide et la requête échouerait.
   })
 })

@@ -19,8 +19,15 @@ import { shotsOf } from '../../domain/shotchart'
 import { listPlayers, listTeams } from '../../persistence/repositories'
 import { periodLength, seedSeconds } from '../../domain/ids'
 import type { Match, Player, ScoreKind, ShotSpot, StatKind, FoulType } from '../../domain/types'
+import { Eye, Pencil, RotateCcw, X } from 'lucide-react'
 
-const TEAM_A = 'var(--team-a)'
+/* L'accent de notre équipe, et c'est la marque — pas un jeton `--team-a` à part.
+   Celui-là valait un presque-noir en thème clair, ce qui donnait au panneau de
+   l'effectif un filet supérieur noir, des anneaux noirs autour des numéros et des
+   points noirs : rien qui ressemblât au reste de l'application. Une seule équipe
+   est détaillée sur cet écran, donc « notre couleur » et « la couleur du produit »
+   sont la même chose et n'ont pas à être deux jetons. */
+const TEAM_A = C.brand
 const OPP_POINTS: { k: ScoreKind; n: number }[] = [{ k: 'lf', n: 1 }, { k: '2int', n: 2 }, { k: '3', n: 3 }]
 
 /**
@@ -161,7 +168,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
        plus jamais hors de l'écran, seul l'effectif défile — et il ne défile plus
        guère, puisque la coquille ne lui prend plus ses cent pixels. */
     <div className="flex h-dvh flex-col overflow-hidden" style={{ background: C.frame, color: C.text }}>
-      <header className="shrink-0 px-4 pb-4 pt-3 text-[var(--scoreboard-fg)] sm:px-6" style={{ background: 'var(--scoreboard)' }}>
+      {/* Le bandeau est une carte, et non plus une surface qui refuse le thème : un
+          `--scoreboard` charbon en dur posait un rectangle noir en haut d'une
+          application claire. Il garde sa présence par le plan (la carte est le point
+          haut) et par le filet qui le sépare de l'écran, pas par une valeur qui
+          n'appartient qu'à lui. */}
+      <header className="shrink-0 px-4 pb-4 pt-3 sm:px-6" style={{ background: C.card, color: C.text, borderBottom: `1px solid ${C.border}` }}>
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
           {/* La sortie voyage avec la frise des périodes, pas avec les actions :
               quitter n'est pas une action de saisie, et la ligne des périodes a la
@@ -169,7 +181,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
               autant — on revient à sa fiche, et « Reprendre » ramène ici. */}
           <div className="flex items-center gap-2">
             <Link to={`/match/${match.id}`} aria-label="Quitter la table de marque" title="Quitter la table de marque"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-base font-black text-white transition hover:bg-white/20">✕</Link>
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><X className="h-5 w-5" strokeWidth={2.5} /></Link>
             <PeriodStrip current={ls.period} />
           </div>
           {/* `flex-wrap` : cinq commandes larges d'un doigt ne tiennent pas toujours
@@ -177,7 +189,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
               plus de l'écran, comme « Terminer » le faisait, hors d'atteinte. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Link to={`/match/${match.id}/watch`} target="_blank" aria-label="Ouvrir le suivi spectateur" title="Ouvrir le suivi spectateur"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 text-base text-white transition hover:bg-white/20">👁</Link>
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><Eye className="h-[18px] w-[18px]" strokeWidth={2} /></Link>
             <SbButton onClick={undo} title="Annuler la dernière action">Annuler</SbButton>
             <SbButton onClick={nextPeriod} title="Passer à la période suivante">Période →</SbButton>
             {/* Un écart avant l'irréversible. « Terminer » fige le score ; il était
@@ -189,9 +201,11 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         </div>
 
         <div className="mx-auto mt-3 grid max-w-4xl grid-cols-[1fr_auto_1fr] items-center gap-1 overflow-hidden sm:gap-6">
-          <ScoreSide align="right" color="var(--sb-team-a)" name={teamNames.A} score={ls.score.a} lead={ls.score.a > ls.score.b} />
+          {/* Nous en encre, l'adversaire en accent : « nous ou eux », et les deux
+              jetons basculent avec le thème au lieu de porter du blanc en dur. */}
+          <ScoreSide align="right" color={C.text} name={teamNames.A} score={ls.score.a} lead={ls.score.a > ls.score.b} />
           <GameClock running={ls.clockRunning} seconds={seconds} onToggle={toggleClock} />
-          <ScoreSide align="left" color="var(--sb-team-b)" name={teamNames.B} score={ls.score.b} lead={ls.score.b > ls.score.a} />
+          <ScoreSide align="left" color={C.accent} name={teamNames.B} score={ls.score.b} lead={ls.score.b > ls.score.a} />
         </div>
 
         {/* Les corrections de chrono sur leur propre ligne, et non dans la colonne
@@ -203,7 +217,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
           <ClockAdjust ecart onClick={() => setSeconds((s) => clampClock(s - 1))}>−1s</ClockAdjust>
           <ClockAdjust onClick={() => setSeconds((s) => clampClock(s + 1))}>+1s</ClockAdjust>
           <ClockAdjust ecart onClick={() => setSeconds((s) => clampClock(s + 10))}>+10s</ClockAdjust>
-          <ClockAdjust ecart onClick={() => setEditClock(true)}>✎ Éditer</ClockAdjust>
+          <ClockAdjust ecart onClick={() => setEditClock(true)}><Pencil className="mr-1 inline h-3.5 w-3.5 align-[-2px]" strokeWidth={2} />Éditer</ClockAdjust>
         </div>
       </header>
 
@@ -213,18 +227,18 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
           « score global, pas de détail joueur » expliquait à chaque match un fait
           qu'on apprend au premier, et la troisième ligne qu'elle imposait au
           téléphone se prenait sur l'effectif. */}
-      <div className="mx-auto mt-2 flex w-full max-w-4xl shrink-0 items-center gap-2 rounded-2xl border border-border/60 bg-card/50 px-3 py-2 sm:mt-4 sm:px-4">
+      <div className="mx-auto mt-2 flex w-full max-w-4xl shrink-0 items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 sm:mt-4 sm:px-4">
         <span className="min-w-0 truncate text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {OPP_POINTS.map(({ k, n }) => (
             <button key={k} onClick={() => oppScore(k)} aria-label={`Ajouter ${n} point${n > 1 ? 's' : ''} à ${teamNames.B}`}
-              className="nums h-11 min-w-11 rounded-lg bg-[var(--c-card2)] px-3 text-sm font-black text-[var(--c-text)] transition hover:bg-[var(--c-accent)] hover:text-white active:scale-90">
+              className="nums h-11 min-w-11 rounded-lg bg-[var(--c-card2)] px-3 text-sm font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90">
               +{n}
             </button>
           ))}
           <button onClick={removeOppScore} aria-label={`Retirer le dernier panier de ${teamNames.B}`}
-            className="h-11 w-11 rounded-lg bg-[var(--c-card2)] text-sm font-bold text-muted-foreground transition hover:bg-[var(--c-accent)] hover:text-white active:scale-90">
-            ↺
+            className="h-11 w-11 rounded-lg bg-[var(--c-card2)] text-sm font-bold text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90">
+            <RotateCcw className="mx-auto h-4 w-4" strokeWidth={2.5} />
           </button>
         </div>
       </div>

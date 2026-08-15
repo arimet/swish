@@ -4,7 +4,7 @@ import { newId } from '../../domain/ids'
 import { getTeam, listPlayers, listMatches, listTeams, savePlayer, deletePlayer, deleteTeam, saveTeam } from '../../persistence/repositories'
 import { teamRecord, teamMatches, teamScorers } from '../../domain/teamRecord'
 import type { Match, Player, Team } from '../../domain/types'
-import { C, bd, NumBadge, TeamBadge, fmtDate } from '../olive/kit'
+import { C, NumBadge, Panel, TeamBadge, bd, fmtDate } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { refresh as refreshRemote } from '../../persistence/remote'
@@ -106,16 +106,16 @@ export function TeamDetail() {
         {/* Comme sur le résumé et la fiche de rencontre : le droit est vérifié à l'ouverture
             du dialogue, pas redérivé ensuite. Assumé — se verrouiller entre l'ouverture et la
             confirmation n'arrive qu'en rendant l'appareil en pleine action. */}
-        {gere && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.accentBd}`, color: C.pink }}>Supprimer</button>}
+        {gere && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}>Supprimer</button>}
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
         title="Supprimer l'équipe ?" message={`« ${team.name} » et tous ses joueurs seront supprimés. Cette action est définitive.`} confirmLabel="Supprimer" danger />
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Rencontres" value={String(rec.played)} hint={upcoming.length ? `${upcoming.length} à venir` : 'jouées'} />
-        <StatCard label="Bilan" value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? `${Math.round((rec.wins / rec.played) * 100)}% de victoires` : '—'} accent={rec.wins >= rec.losses ? C.green : C.pink} />
+        <StatCard label="Bilan" value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? `${Math.round((rec.wins / rec.played) * 100)}% de victoires` : '—'} accent={rec.wins >= rec.losses ? C.green : C.accent} />
         <StatCard label="Points marqués" value={rec.played ? String(rec.avgFor) : '—'} hint={rec.played ? `${rec.pointsFor} au total` : 'par match'} />
-        <StatCard label="Différentiel" value={rec.played ? (diff > 0 ? `+${diff}` : String(diff)) : '—'} hint={rec.played ? `${rec.avgAgainst} encaissés/match` : 'pour – contre'} accent={diff > 0 ? C.green : diff < 0 ? C.pink : undefined} />
+        <StatCard label="Différentiel" value={rec.played ? (diff > 0 ? `+${diff}` : String(diff)) : '—'} hint={rec.played ? `${rec.avgAgainst} encaissés/match` : 'pour – contre'} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px] [&>*]:min-w-0">
@@ -132,11 +132,11 @@ export function TeamDetail() {
                   return (
                     <li key={l.match.id}>
                       <Link to={to} className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-[var(--c-hover)]" style={{ background: C.panel }}>
-                        {l.result && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[11px] font-black" style={{ background: l.result === 'V' ? C.greenBg : C.accentBg, color: l.result === 'V' ? C.green : C.pink }}>{l.result}</span>}
-                        {!l.result && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[10px] font-black" style={{ background: C.amberBg, color: C.amber }}>·</span>}
-                        <TeamBadge id={l.opponentId} name={opp} size="h-7 w-7 text-[9px]" />
+                        {l.result && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[12px] font-black" style={{ background: l.result === 'V' ? C.greenBg : C.dangerBg, color: l.result === 'V' ? C.green : C.danger }}>{l.result}</span>}
+                        {!l.result && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[12px] font-black" style={{ background: C.amberBg, color: C.amber }}>·</span>}
+                        <TeamBadge id={l.opponentId} name={opp} size="h-7 w-7 text-[12px]" />
                         <span className="min-w-0 flex-1 truncate text-sm font-bold">{opp}</span>
-                        <span className="shrink-0 text-[11px] font-semibold" style={{ color: C.faint }}>{f.long || '—'}</span>
+                        <span className="shrink-0 text-[12px] font-semibold" style={{ color: C.faint }}>{f.long || '—'}</span>
                         <span className="w-16 shrink-0 text-right text-sm font-black tabular-nums">{l.scored === null ? '—' : `${l.scored}–${l.conceded}`}</span>
                       </Link>
                     </li>
@@ -151,14 +151,25 @@ export function TeamDetail() {
               <Empty>Pas encore de points marqués.</Empty>
             ) : (
               <ul className="space-y-1.5">
+                {/* Chaque ligne mène à la fiche du joueur, comme au tableau de bord :
+                    c'est le même classement, et il n'y a pas de raison qu'il soit
+                    cliquable là et inerte ici. On y arrivait pourtant par l'effectif
+                    juste au-dessus, ce qui obligeait à retrouver dans une liste de onze
+                    le nom qu'on avait sous le doigt. */}
                 {scorers.map(([pid, pts], i) => {
                   const p = playerById[pid]
                   return (
-                    <li key={pid} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: C.panel }}>
-                      <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.orange : C.faint }}>{i + 1}</span>
-                      <NumBadge n={p?.number ?? '?'} />
-                      <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : 'Joueur'}</span>
-                      <span className="text-sm font-black tabular-nums" style={{ color: C.text }}>{pts} <span className="text-[11px] font-semibold" style={{ color: C.muted }}>pts</span></span>
+                    <li key={pid}>
+                      <Link
+                        to={`/players/${pid}`}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-[var(--c-hover)]"
+                        style={{ background: C.panel }}
+                      >
+                        <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.accent : C.faint }}>{i + 1}</span>
+                        <NumBadge n={p?.number ?? '?'} />
+                        <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : 'Joueur'}</span>
+                        <span className="text-sm font-black tabular-nums" style={{ color: C.text }}>{pts} <span className="text-[12px] font-semibold" style={{ color: C.muted }}>pts</span></span>
+                      </Link>
                     </li>
                   )
                 })}
@@ -204,21 +215,21 @@ export function TeamDetail() {
                         </button>
                         {/* Le retrait reste hors de la zone dépliée : c'est une action destructrice,
                             elle ne doit pas se retrouver mêlée aux champs d'édition. */}
-                        <button onClick={() => removePlayer(p.id)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.pink }}>retirer</button>
+                        <button onClick={() => removePlayer(p.id)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.accent }}>retirer</button>
                       </>
                     )}
                   </div>
                   {editingId === p.id && (
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <div>
-                        <label htmlFor={`edit-birth-${p.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Naissance</label>
+                        <label htmlFor={`edit-birth-${p.id}`} className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>Naissance</label>
                         <input id={`edit-birth-${p.id}`} type="date" value={editBirth} onChange={(e) => setEditBirth(e.target.value)} style={{ ...field, width: '100%' }} />
                       </div>
                       <div>
-                        <label htmlFor={`edit-height-${p.id}`} className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Taille du joueur</label>
+                        <label htmlFor={`edit-height-${p.id}`} className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>Taille du joueur</label>
                         <input id={`edit-height-${p.id}`} type="number" inputMode="numeric" value={editHeight} onChange={(e) => setEditHeight(e.target.value)} style={{ ...field, width: '100%' }} />
                       </div>
-                      <button onClick={() => saveEdit(p)} className="col-span-2 rounded-xl py-2 text-sm font-bold text-white" style={{ background: C.accent }}>Enregistrer</button>
+                      <button onClick={() => saveEdit(p)} className="col-span-2 rounded-xl py-2 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>Enregistrer</button>
                     </div>
                   )}
                 </li>
@@ -229,7 +240,7 @@ export function TeamDetail() {
                 droit. Ouvrir le formulaire est déjà une écriture, la garde reste
                 donc ici et pas seulement à l'enregistrement. */}
             {!gere ? null : !ajoutOuvert ? (
-              <button onClick={() => guard('manage', () => setAjoutOuvert(true))} className="w-full rounded-xl py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+              <button onClick={() => guard('manage', () => setAjoutOuvert(true))} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
                 + Ajouter un joueur
               </button>
             ) : (
@@ -245,15 +256,15 @@ export function TeamDetail() {
               <input placeholder="Prénom" value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPlayer()} style={{ ...field, width: '100%' }} />
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label htmlFor="add-birth" className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Date de naissance</label>
+                  <label htmlFor="add-birth" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>Date de naissance</label>
                   <input id="add-birth" type="date" value={birth} onChange={(e) => setBirth(e.target.value)} style={{ ...field, width: '100%' }} />
                 </div>
                 <div>
-                  <label htmlFor="add-height" className="mb-1 block text-[11px] font-bold uppercase tracking-wide" style={miniLabel}>Taille (cm)</label>
+                  <label htmlFor="add-height" className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>Taille (cm)</label>
                   <input id="add-height" type="number" inputMode="numeric" value={height} onChange={(e) => setHeight(e.target.value)} style={{ ...field, width: '100%' }} />
                 </div>
               </div>
-              <button onClick={addPlayer} className="w-full rounded-xl py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Ajouter le joueur</button>
+              <button onClick={addPlayer} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>+ Ajouter le joueur</button>
             </div>
             )}
           </Panel>
@@ -266,18 +277,10 @@ export function TeamDetail() {
 function StatCard({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: string }) {
   return (
     <div className="rounded-2xl p-4" style={{ background: C.card, border: bd }}>
-      <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</p>
+      <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</p>
       <p className="mt-1 text-2xl font-black tabular-nums" style={{ color: accent ?? C.text }}>{value}</p>
-      {hint && <p className="mt-0.5 text-[11px] font-semibold" style={{ color: C.muted }}>{hint}</p>}
+      {hint && <p className="mt-0.5 text-[12px] font-semibold" style={{ color: C.muted }}>{hint}</p>}
     </div>
-  )
-}
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-      <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{title}</p>
-      {children}
-    </section>
   )
 }
 function Empty({ children }: { children: ReactNode }) {

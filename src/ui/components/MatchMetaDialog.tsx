@@ -28,7 +28,7 @@ export function MatchMetaDialog({ open, meta, onClose, onSave }: {
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-xl bg-[var(--c-card2)] px-4 py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">Annuler</button>
-          <button onClick={() => { onSave(v); onClose() }} className="rounded-xl bg-[var(--c-accent)] px-5 py-2.5 text-sm font-bold text-white transition hover:brightness-110">Enregistrer</button>
+          <button onClick={() => { onSave(v); onClose() }} className="rounded-xl bg-[var(--c-brand)] px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">Enregistrer</button>
         </div>
       </DialogContent>
     </Dialog>
@@ -38,7 +38,7 @@ export function MatchMetaDialog({ open, meta, onClose, onSave }: {
 function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <label className={className}>
-      <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{label}</span>
+      <span className="text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{label}</span>
       {children}
     </label>
   )

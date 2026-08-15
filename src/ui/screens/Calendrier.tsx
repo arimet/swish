@@ -9,6 +9,7 @@ import { jourISO, nextFixture } from '../../domain/fixtures'
 import { C, bd, Ic, ICON, MatchCard, PageTitle, fmtDate } from '../olive/kit'
 import { useClub } from '../../app/club'
 import { useAuth } from '../../app/auth'
+import { X } from 'lucide-react'
 
 // L'entraînement se distingue de la rencontre par une couleur qui n'est prise
 // par aucun autre badge de l'écran (le vert vaut victoire/en direct, l'ambre
@@ -134,7 +135,7 @@ export function Calendrier() {
               style={{ background: ENTR_BG, color: ENTR_COLOR, border: `1px solid ${ENTR_COLOR}55` }}>
               + Nouvel entraînement
             </button>
-            <Link to="/match/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+            <Link to="/match/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
               + Nouvelle rencontre
             </Link>
           </div>
@@ -197,18 +198,25 @@ export function Calendrier() {
             return (
               <Fragment key={iso}>
                 {nouveauMois && <BarreDeMois iso={iso} />}
-                <section className={passé ? 'opacity-60 transition-opacity hover:opacity-100' : undefined}>
+                {/* Le passé s'estompe, mais pas jusqu'à devenir illisible.
+                    `opacity-60` diluait le texte du jeton d'encre jusqu'à 4,63:1
+                    sur le cadre — soit trois pour cent au-dessus du seuil AA, et
+                    3,1:1 une fois les pixels rendus comptés, l'antialiasing
+                    mangeant le reste. À 0,75 le même texte tient 8,1:1 et la
+                    journée écoulée se reconnaît toujours du premier coup d'œil.
+                    Le survol la rend entière, comme avant. */}
+                <section className={passé ? 'opacity-75 transition-opacity hover:opacity-100' : undefined}>
                   <header className="mb-3 flex items-center gap-3">
                     {/* Le cartouche de date : jour de la semaine et quantième, en gros.
                         Le mois est dans la barre au-dessus, il n'a pas à être répété. */}
                     <span className="grid h-14 w-14 shrink-0 place-content-center rounded-2xl text-center leading-none"
                       style={vedette ? { background: C.accentBg, border: `1px solid ${C.accentBd}` } : { background: C.card2, border: bd }}>
-                      <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: vedette ? C.accent : C.faint }}>{f.wd || '—'}</span>
+                      <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: vedette ? C.accent : C.faint }}>{f.wd || '—'}</span>
                       <span className="mt-1 text-xl font-black tabular-nums" style={{ color: vedette ? C.accent : C.text }}>{f.day}</span>
                     </span>
                     <div className="min-w-0">
                       {vedette && (
-                        <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: C.accent }}>
+                        <p className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.accent }}>
                           {estAujourdhui ? 'Aujourd’hui' : 'Prochaine échéance'}
                         </p>
                       )}
@@ -238,7 +246,7 @@ export function Calendrier() {
       {/* Comme les convocations et les résultats extérieurs : même formulation que sur
           les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux
           limites différentes — la décision couvrait aussi bien les entraînements. */}
-      <p className="mt-8 text-[11px]" style={{ color: C.faint }}>Ces entraînements restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
+      <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>Ces entraînements restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
     </div>
   )
 }
@@ -306,15 +314,15 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase" style={{ background: ENTR_BG, color: ENTR_COLOR }}>Entraînement</span>
-          {t.time && <span className="ml-auto text-[11px] font-bold" style={{ color: C.muted }}>{t.time}</span>}
+          <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: ENTR_BG, color: ENTR_COLOR }}>Entraînement</span>
+          {t.time && <span className="ml-auto text-[12px] font-bold" style={{ color: C.muted }}>{t.time}</span>}
         </div>
         <p className="mt-2 truncate text-sm font-bold">{t.theme || 'Séance libre'}</p>
 
         {/* `<details>` plutôt qu'un état local : le navigateur sait déjà déplier, et
             vingt schémas dépliés d'office noieraient le calendrier. */}
         <details className="mt-2">
-          <summary className="flex cursor-pointer items-center gap-2 text-[11px] font-bold" style={{ color: ENTR_COLOR }}>
+          <summary className="flex cursor-pointer items-center gap-2 text-[12px] font-bold" style={{ color: ENTR_COLOR }}>
             Schémas travaillés
             {attachés.length > 0 && (
               <span className="rounded-md px-1.5 py-0.5 font-black" style={{ background: ENTR_BG, color: ENTR_COLOR }}>
@@ -324,22 +332,22 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
           </summary>
           {!gere ? (
             attachés.length === 0 ? (
-              <p className="mt-2 text-[11px]" style={{ color: C.faint }}>Aucun schéma prévu pour cette séance.</p>
+              <p className="mt-2 text-[12px]" style={{ color: C.faint }}>Aucun schéma prévu pour cette séance.</p>
             ) : (
               <div className="mt-2 grid gap-1.5">
                 {attachés.map((s) => (
-                  <span key={s.id} className="truncate rounded-lg px-2 py-1.5 text-[11px] font-semibold" style={{ background: C.panel }}>{s.nom}</span>
+                  <span key={s.id} className="truncate rounded-lg px-2 py-1.5 text-[12px] font-semibold" style={{ background: C.panel }}>{s.nom}</span>
                 ))}
               </div>
             )
           ) : schemas.length === 0 ? (
-            <p className="mt-2 text-[11px]" style={{ color: C.faint }}>Aucun schéma dans la bibliothèque.</p>
+            <p className="mt-2 text-[12px]" style={{ color: C.faint }}>Aucun schéma dans la bibliothèque.</p>
           ) : (
             <div className="mt-2 grid gap-1.5">
               {schemas.map((s) => {
                 const id = `schema-${t.id}-${s.id}`
                 return (
-                  <label key={s.id} htmlFor={id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-semibold" style={{ background: C.panel }}>
+                  <label key={s.id} htmlFor={id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-semibold" style={{ background: C.panel }}>
                     <input id={id} type="checkbox" checked={attachés.some((a) => a.id === s.id)} onChange={() => onToggleSchema(s.id)} />
                     <span className="truncate">{s.nom}</span>
                   </label>
@@ -349,9 +357,9 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
           )}
         </details>
 
-        <div className="mt-2.5 flex items-center justify-between border-t pt-2.5 text-[11px] font-semibold" style={{ borderColor: C.border, color: C.faint }}>
+        <div className="mt-2.5 flex items-center justify-between border-t pt-2.5 text-[12px] font-semibold" style={{ borderColor: C.border, color: C.faint }}>
           <span className="truncate">{t.place || '—'}</span>
-          {gere && <button onClick={onDelete} aria-label="Supprimer cet entraînement" className="shrink-0 rounded-lg px-1.5 py-0.5 font-black" style={{ color: C.pink }}>✕</button>}
+          {gere && <button onClick={onDelete} aria-label="Supprimer cet entraînement" className="shrink-0 rounded-lg px-1.5 py-0.5 font-black" style={{ color: C.accent }}><X className="h-3.5 w-3.5" strokeWidth={2.5} /></button>}
         </div>
       </div>
     </div>

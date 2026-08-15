@@ -5,6 +5,7 @@ import { C } from '../olive/kit'
 import { kindAt, ZONE_LABELS, zoneAt } from '../../domain/shotzones'
 import type { Shot } from '../../domain/shotchart'
 import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types'
+import { TriangleAlert } from 'lucide-react'
 
 const SCORES: { k: ScoreKind; label: string; pts: number }[] = [
   { k: '2int', label: '2 pts intérieur', pts: 2 },
@@ -72,17 +73,17 @@ export function PlayerActionDialog({
       <DialogContent className="sm:max-w-md max-h-[92vh] gap-0 overflow-y-auto border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2.5 text-xl font-extrabold">
-            <span className="h-3.5 w-3.5 rounded-full ring-2 ring-white/20" style={{ background: color }} />
+            <span className="h-3.5 w-3.5 rounded-full ring-2 ring-[var(--c-border)]" style={{ background: color }} />
             {playerName}
           </DialogTitle>
         </DialogHeader>
 
         {/* TIR : réussi ou manqué, puis position sur le terrain */}
         <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
-          <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-accent)] text-white">Réussi</Toggle>
+          <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">Réussi</Toggle>
           <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">Manqué</Toggle>
         </div>
-        <p className="mt-2 text-[11px] font-semibold text-[var(--c-muted)]">
+        <p className="mt-2 text-[12px] font-semibold text-[var(--c-muted)]">
           {made ? 'Touchez l’endroit du tir : la zone donne les points.' : 'Touchez l’endroit du tir manqué.'}
         </p>
         <div className="mt-2"><ShotPicker onPick={pick} confirmation={confirmation} shots={shots} /></div>
@@ -104,8 +105,9 @@ export function PlayerActionDialog({
         </div>
 
         <button onClick={() => { onFoul('personal'); close() }}
-          className="mt-3 w-full rounded-2xl bg-[var(--c-danger-bg)] py-3.5 text-base font-bold text-[var(--c-danger)] transition hover:bg-red-600 hover:text-white active:scale-[0.98]">
-          ⚠ Faute personnelle
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--c-danger-bg)] py-3.5 text-base font-bold text-[var(--c-danger)] transition hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)] active:scale-[0.98]">
+          <TriangleAlert className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+          Faute personnelle
         </button>
 
         {/* CORRECTIONS — repliées : on ouvre cette popup pour saisir, pas pour
@@ -113,7 +115,7 @@ export function PlayerActionDialog({
             sous la ligne de flottaison et forçaient un défilement à chaque tir. */}
         {hasCorrections && (
           <details className="mt-4 border-t border-[var(--c-border)] pt-3">
-            <summary className="cursor-pointer list-none text-[11px] font-bold uppercase tracking-wide text-[var(--c-muted)] transition hover:text-[var(--c-text)]">
+            <summary className="cursor-pointer list-none text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)] transition hover:text-[var(--c-text)]">
               ▾ Corriger — retirer une action
             </summary>
             <div className="mt-2 grid grid-cols-2 gap-2">

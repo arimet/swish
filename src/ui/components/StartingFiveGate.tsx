@@ -1,7 +1,9 @@
 import type { Player } from '../../domain/types'
 import { C } from '../olive/kit'
 
-const TEAM_A = 'var(--team-a)'
+/* La marque, comme sur la table de marque : `--team-a` valait un presque-noir en
+   thème clair, d'où des anneaux et des filets noirs sur cet écran. */
+const TEAM_A = C.brand
 
 /**
  * Porte d'entrée avant tout démarrage de chrono : notre équipe doit désigner
@@ -86,8 +88,8 @@ function StartingFivePanel({ title, color, players, required, chosen, onToggle }
                 {p.number}
               </span>
               <span className="min-w-0 flex-1 truncate text-sm font-bold">{p.lastName}</span>
-              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-black"
-                style={isChosen ? { background: color, color: C.frame } : { border: `1.5px solid ${C.border}`, color: 'transparent' }}>
+              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[12px] font-black"
+                style={isChosen ? { background: color, color: C.onBrand } : { border: `1.5px solid ${C.border}`, color: 'transparent' }}>
                 ✓
               </span>
             </button>

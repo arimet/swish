@@ -46,9 +46,9 @@ export function TeamCreate() {
         <div className="space-y-5 self-start rounded-2xl p-5" style={{ background: C.card, border: bd }}>
           <div><Label htmlFor="team-name">Nom de l'équipe</Label>
             <input id="team-name" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="ex. AVENIR DE VIGNOT" style={{ ...field, width: '100%' }} /></div>
-          <div><Label>Entraîneur</Label>
-            <input value={coach} onChange={(e) => setCoach(e.target.value)} placeholder="ex. BART S." style={{ ...field, width: '100%' }} /></div>
-          <p className="text-[11px]" style={{ color: C.muted }}>{roster.length} joueur{roster.length > 1 ? 's' : ''} ajouté{roster.length > 1 ? 's' : ''}.</p>
+          <div><Label htmlFor="team-coach">Entraîneur</Label>
+            <input id="team-coach" value={coach} onChange={(e) => setCoach(e.target.value)} placeholder="ex. BART S." style={{ ...field, width: '100%' }} /></div>
+          <p className="text-[12px]" style={{ color: C.muted }}>{roster.length} joueur{roster.length > 1 ? 's' : ''} ajouté{roster.length > 1 ? 's' : ''}.</p>
         </div>
 
         <div className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
@@ -59,16 +59,23 @@ export function TeamCreate() {
                 <li key={i} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: C.panel }}>
                   <NumBadge n={p.number} size="h-7 w-7 rounded-lg text-xs" />
                   <span className="font-semibold">{p.lastName}</span><span style={{ color: C.muted }}>{p.firstName}</span>
-                  <button onClick={() => setRoster((r) => r.filter((_, j) => j !== i))} className="ml-auto text-xs font-semibold" style={{ color: C.pink }}>retirer</button>
+                  <button onClick={() => setRoster((r) => r.filter((_, j) => j !== i))} className="ml-auto text-xs font-semibold" style={{ color: C.accent }}>retirer</button>
                 </li>
               ))}
             </ul>
           )}
-          <div className="grid grid-cols-[68px_1fr_1fr_44px] items-center gap-2">
-            <input placeholder="N°" value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center' }} />
-            <input placeholder="Nom" value={ln} onChange={(e) => setLn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addToRoster()} style={field} />
-            <input placeholder="Prénom" value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addToRoster()} style={field} />
-            <button onClick={addToRoster} className="grid h-11 w-11 place-items-center rounded-xl text-xl font-bold text-white" style={{ background: C.accent }}>+</button>
+          {/* Trois étiquettes réelles, au-dessus de leurs champs. Le mot était
+              auparavant dans le `placeholder` : il disparaissait à la première
+              frappe, donc au moment précis où l'on vérifie qu'on remplit la bonne
+              case, et un lecteur d'écran n'annonçait qu'« champ de saisie ». */}
+          <div className="grid grid-cols-[68px_1fr_1fr_44px] items-end gap-2">
+            <div><Label htmlFor="roster-num">N°</Label>
+              <input id="roster-num" value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center', width: '100%' }} /></div>
+            <div><Label htmlFor="roster-last">Nom</Label>
+              <input id="roster-last" value={ln} onChange={(e) => setLn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addToRoster()} style={{ ...field, width: '100%' }} /></div>
+            <div><Label htmlFor="roster-first">Prénom</Label>
+              <input id="roster-first" value={fn} onChange={(e) => setFn(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addToRoster()} style={{ ...field, width: '100%' }} /></div>
+            <button onClick={addToRoster} aria-label="Ajouter ce joueur à l’effectif" className="grid h-11 w-11 place-items-center rounded-xl text-xl font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>+</button>
           </div>
           {roster.length === 0 && <p className="mt-3 text-sm" style={{ color: C.muted }}>Ajoutez vos joueurs un par un (numéro, nom, prénom).</p>}
         </div>
@@ -82,7 +89,7 @@ export function TeamCreate() {
           réclame le code au moment de créer. */}
       <div className="mt-6 flex justify-end gap-3">
         <Link to="/teams" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>Annuler</Link>
-        <button onClick={() => guard('manage', create)} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>Créer l'équipe →</button>
+        <button onClick={() => guard('manage', create)} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>Créer l'équipe →</button>
       </div>
     </div>
   )

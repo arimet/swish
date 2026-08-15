@@ -9,7 +9,7 @@ import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { depuis, nextFixture, type Fixture } from '../../domain/fixtures'
 import { liveState } from '../../rules/ffbb'
 import { ShotChart } from '../components/ShotCourt'
-import { C, bd, TeamBadge, Vous, displayClock, fmtDate } from '../olive/kit'
+import { C, Panel, TeamBadge, Vous, bd, displayClock, fmtDate } from '../olive/kit'
 import type { Convocation, Match, MessageEquipe, Player, Team, Training } from '../../domain/types'
 import type { Schema } from '../../domain/plays'
 
@@ -116,17 +116,17 @@ export function Dashboard() {
         <Echeance fixture={fixture} teams={teams} players={players} convocation={convocation} schemas={schemas} gere={gere} />
 
         <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat label="Bilan" value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? `${rec.played} rencontres` : 'aucune'} accent={rec.wins >= rec.losses ? C.green : C.pink} />
+          <Stat label="Bilan" value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? `${rec.played} rencontres` : 'aucune'} accent={rec.wins >= rec.losses ? C.green : C.accent} />
           <Stat label="Points marqués" value={rec.played ? String(rec.avgFor) : '—'} hint="par match" />
           <Stat label="Points encaissés" value={rec.played ? String(rec.avgAgainst) : '—'} hint="par match" />
-          <Stat label="Différentiel" value={rec.played ? (diff > 0 ? `+${diff}` : String(diff)) : '—'} hint="sur la saison" accent={diff > 0 ? C.green : diff < 0 ? C.pink : undefined} />
+          <Stat label="Différentiel" value={rec.played ? (diff > 0 ? `+${diff}` : String(diff)) : '—'} hint="sur la saison" accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
         </div>
 
         <div className="mt-3 flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Forme</span>
+          <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Forme</span>
           {lines.slice(0, 5).map((l) => (
-            <span key={l.match.id} className="grid h-6 w-6 place-items-center rounded-md text-[11px] font-black"
-              style={{ background: l.result === 'V' ? C.greenBg : C.accentBg, color: l.result === 'V' ? C.green : C.pink }}>
+            <span key={l.match.id} className="grid h-6 w-6 place-items-center rounded-md text-[12px] font-black"
+              style={{ background: l.result === 'V' ? C.greenBg : C.dangerBg, color: l.result === 'V' ? C.green : C.danger }}>
               {l.result}
             </span>
           ))}
@@ -147,14 +147,14 @@ export function Dashboard() {
                     <li key={pid}>
                       <Link to={`/players/${pid}`} className="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-[var(--c-hover)]"
                         style={estMoi ? { background: C.accentBg, border: `1px solid ${C.accentBd}` } : { background: C.panel }}>
-                        <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.orange : C.faint }}>{i + 1}</span>
+                        <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.accent : C.faint }}>{i + 1}</span>
                         <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p?.number ?? '?'}</span>
                         <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : 'Joueur'}</span>
                         {estMoi && <Vous />}
                         {/* Titre explicite : ce pourcentage ne porte que sur les tirs
                             localisés, alors que les points juste à côté comptent tout
                             (lancers francs compris) — cf. PlayerDetail. */}
-                        <span className="text-[11px] font-semibold" style={{ color: C.muted }} title="Réussite sur les tirs localisés">{pct === null ? '—' : `${pct} %`}</span>
+                        <span className="text-[12px] font-semibold" style={{ color: C.muted }} title="Réussite sur les tirs localisés">{pct === null ? '—' : `${pct} %`}</span>
                         <span className="w-14 text-right text-sm font-black tabular-nums">{pts} pts</span>
                       </Link>
                     </li>
@@ -237,12 +237,12 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
         <textarea id="message-equipe" rows={3} value={texte} onChange={(e) => setTexte(e.target.value)}
           placeholder="Pas d’entraînement mardi, gymnase fermé."
           className="w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
-        <button onClick={publier} disabled={!texte.trim()} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>
+        <button onClick={publier} disabled={!texte.trim()} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
           Publier le message
         </button>
         {/* Comme les convocations, les entraînements et les schémas : même
             formulation, pour ne pas laisser croire à deux limites différentes. */}
-        <p className="mt-3 text-[11px]" style={{ color: C.faint }}>Ce message reste sur cet appareil : il n’est pas synchronisé avec vos autres appareils.</p>
+        <p className="mt-3 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>Ce message reste sur cet appareil : il n’est pas synchronisé avec vos autres appareils.</p>
       </section>
     )
   }
@@ -262,15 +262,15 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
   return (
     <section data-testid="message-equipe" className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${oublié ? C.amberBd : C.accentBd}` }}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Message à l’équipe</span>
-        <span className="rounded-md px-2 py-0.5 text-[11px] font-black"
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Message à l’équipe</span>
+        <span className="rounded-md px-2 py-0.5 text-[12px] font-black"
           style={oublié ? { background: C.amberBg, color: C.amber } : { background: C.accentBg, color: C.accent }}>
           {depuis(affiché.écritLe)}
         </span>
         {gere && (
           <>
             <button onClick={ouvrir} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>Modifier</button>
-            <button onClick={effacer} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.pink }}>Effacer</button>
+            <button onClick={effacer} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.accent }}>Effacer</button>
           </>
         )}
       </div>
@@ -291,14 +291,14 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
     const opp = ls.score.b
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
-        <span className="rounded-md px-2 py-0.5 text-[10px] font-black uppercase" style={{ background: C.greenBg, color: C.green }}>En direct</span>
+        <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.greenFill, color: C.onGreen }}>En direct</span>
         <span className="nums text-3xl font-black tabular-nums">{mine} – {opp}</span>
         <span className="text-sm font-bold" style={{ color: C.muted }}>contre {opponent(live)}</span>
         <span className="nums text-sm font-bold" style={{ color: C.faint }}>{dc.label} · {dc.clock}</span>
         {/* Le score en direct se lit par tout le monde ; ouvrir la table de marque
             est le geste de celui qui la tient, et lui seul y est invité. */}
         {tientLaMarque && (
-          <Link to={`/match/${live.id}/live`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+          <Link to={`/match/${live.id}/live`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
             Ouvrir la table de marque →
           </Link>
         )}
@@ -309,7 +309,7 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
     const f = fmtDate(next.meta.date)
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine rencontre</span>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine rencontre</span>
         <span className="text-sm font-bold">contre {opponent(next)}</span>
         <span className="text-sm" style={{ color: C.muted }}>{[f.long, next.meta.time, next.meta.venue].filter(Boolean).join(' · ')}</span>
         <Link to={`/match/${next.id}`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>Voir la fiche →</Link>
@@ -320,7 +320,7 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
     <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
       <span className="text-sm" style={{ color: C.muted }}>Aucune rencontre prévue.</span>
       {/* Planifier écrit : le raccourci ne s'affiche qu'à qui gère le club. */}
-      {gere && <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Planifier une rencontre</Link>}
+      {gere && <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>+ Planifier une rencontre</Link>}
     </div>
   )
 }
@@ -332,9 +332,9 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
   if (!fixture) {
     return (
       <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
         <span className="text-sm" style={{ color: C.muted }}>Rien de planifié pour l’instant.</span>
-        {gere && <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>+ Planifier →</Link>}
+        {gere && <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>+ Planifier →</Link>}
       </div>
     )
   }
@@ -347,7 +347,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
     const prévus = schemas.filter((s) => t.playIds?.includes(s.id))
     return (
       <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
+        <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
         <p className="mt-1 text-sm font-bold">Entraînement</p>
         <p className="text-sm" style={{ color: C.muted }}>{[f.long, t.time, t.place].filter(Boolean).join(' · ') || '—'}</p>
         <p className="mt-1 text-sm" style={{ color: C.muted }}>Thème : {t.theme ?? '—'}</p>
@@ -380,7 +380,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
 
   return (
     <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-      <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
+      <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Prochaine échéance</span>
       <p className="mt-1 text-sm font-bold">contre {opponent}</p>
       <p className="text-sm" style={{ color: C.muted }}>{[f.long, m.meta.time, m.meta.venue].filter(Boolean).join(' · ') || '—'}</p>
       {/* La convocation vit sur la fiche de la rencontre, à sa place — mais c'est
@@ -407,7 +407,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
             juste à gauche, eux, restent lus par toute l'équipe. */}
         {gere && (
           <Link to={`/match/${m.id}#convocation`} className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
-            style={convoqués.length === 0 ? { background: C.accent, color: C.onAccent } : { border: bd, color: C.text }}>
+            style={convoqués.length === 0 ? { background: C.brand, color: C.onBrand } : { border: bd, color: C.text }}>
             {convoqués.length === 0 ? 'Convoquer l’équipe →' : 'Modifier la convocation →'}
           </Link>
         )}
@@ -419,24 +419,16 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
 function Stat({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: string }) {
   return (
     <div className="rounded-2xl p-4" style={{ background: C.card, border: bd }}>
-      <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</p>
+      <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</p>
       <p className="mt-1 text-2xl font-black tabular-nums" style={{ color: accent ?? C.text }}>{value}</p>
-      {hint && <p className="mt-0.5 text-[11px] font-semibold" style={{ color: C.muted }}>{hint}</p>}
+      {hint && <p className="mt-0.5 text-[12px] font-semibold" style={{ color: C.muted }}>{hint}</p>}
     </div>
-  )
-}
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-      <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{title}</p>
-      {children}
-    </section>
   )
 }
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button onClick={onClick} className="rounded-lg px-2.5 py-1 text-[11px] font-bold transition"
-      style={active ? { background: C.accent, color: C.onAccent } : { background: C.card2, color: C.muted, border: bd }}>
+    <button onClick={onClick} className="rounded-lg px-2.5 py-1 text-[12px] font-bold transition"
+      style={active ? { background: C.brand, color: C.onBrand } : { background: C.card2, color: C.muted, border: bd }}>
       {children}
     </button>
   )

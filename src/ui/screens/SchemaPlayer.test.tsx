@@ -218,3 +218,76 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     expect(bouton('Lecture')).toBeInTheDocument()
   })
 })
+
+/**
+ * La bascule des trajets. Ce que le coach demande au temps-mort, c'est de voir
+ * *où va* chaque joueur pendant que la combinaison se joue — pas seulement où il
+ * en est. Les tests visent le SVG et non l'état interne : un compteur qui change
+ * sans que le terrain change ne prouverait rien.
+ */
+describe('SchemaPlayer — afficher les déplacements', () => {
+  /** Les trajets tracés sur le terrain, par leur trait. */
+  const trajets = () => [...document.querySelectorAll('g[data-trait]')].map((n) => n.getAttribute('data-trait'))
+
+  it('la bascule existe et part éteinte', async () => {
+    await ouvrir()
+    expect(bouton('Trajets')).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('sans elle, la lecture ne montre aucun trajet', async () => {
+    // Le comportement d'avant, préservé : pendant l'animation, les joueurs seuls.
+    await ouvrir()
+    fireEvent.click(bouton('Lecture'))
+    avancer(750)
+    expect(trajets()).toEqual([])
+  })
+
+  it('avec elle, la lecture montre le trajet du meneur', async () => {
+    await ouvrir()
+    fireEvent.click(bouton('Trajets'))
+    fireEvent.click(bouton('Lecture'))
+    avancer(750)
+    expect(trajets()).toContain('course')
+  })
+
+  it('le trajet reste affiché tant que la transition dure', async () => {
+    // Un trajet qui clignote en cours de route serait pire que pas de trajet.
+    await ouvrir()
+    fireEvent.click(bouton('Trajets'))
+    fireEvent.click(bouton('Lecture'))
+    for (const t of [100, 400, 700, 1000, 1300]) {
+      avancer(t === 100 ? 100 : 300)
+      expect(trajets(), `à ${t} ms`).toContain('course')
+    }
+  })
+
+  it('et le meneur avance bel et bien le long de ce trajet', async () => {
+    // La ligne et le mobile sortent du même calcul ; ce test le vérifie de dehors.
+    await ouvrir()
+    fireEvent.click(bouton('Trajets'))
+    fireEvent.click(bouton('Lecture'))
+    avancer(750)
+    expect(trajets()).toContain('course')
+    expect(ordonneeDuMeneur()).toBeLessThan(DEPART)
+    expect(ordonneeDuMeneur()).toBeGreaterThan(ARRIVEE)
+  })
+
+  it('éteindre la bascule en pleine lecture retire les trajets', async () => {
+    await ouvrir()
+    fireEvent.click(bouton('Trajets'))
+    fireEvent.click(bouton('Lecture'))
+    avancer(400)
+    expect(trajets()).toContain('course')
+    fireEvent.click(bouton('Trajets'))
+    expect(trajets()).toEqual([])
+  })
+
+  it('à l’arrêt sur un temps, le carnet reste le carnet', async () => {
+    // Arrêté sur un temps entier, on relit les flèches dessinées — la bascule ne
+    // change rien là, elle ne parle que de ce qui se joue.
+    await ouvrir()
+    expect(trajets()).toContain('course')
+    fireEvent.click(bouton('Trajets'))
+    expect(trajets()).toContain('course')
+  })
+})

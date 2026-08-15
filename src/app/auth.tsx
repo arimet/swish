@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { C } from '../ui/olive/kit'
+import { Lock } from 'lucide-react'
 
 /** Ce qu'on peut écrire dans l'application. Un visiteur ne modifie rien, la
  *  table de marque saisit la rencontre, l'administrateur gère le club. */
@@ -118,7 +119,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <DialogContent className="sm:max-w-xs border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
           <DialogHeader>
             <DialogTitle className="text-lg font-extrabold">
-              🔒 Accès {pending ? NOM_ROLE[REQUIS[pending.ability]] : ''} requis
+              <Lock className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+              Accès {pending ? NOM_ROLE[REQUIS[pending.ability]] : ''} requis
             </DialogTitle>
           </DialogHeader>
           <p className="text-[13px]" style={{ color: C.muted }}>Cette action nécessite ce code d'accès.</p>
@@ -126,12 +128,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             autoFocus type="password" value={code} placeholder="Code"
             onChange={(e) => { setCode(e.target.value); setError('') }}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
-            className={`mt-2 w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${error ? 'border-red-500/60' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
+            className={`mt-2 w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${error ? 'border-[var(--c-danger)]' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
           />
           {error && <p className="text-xs font-semibold text-[var(--c-danger)]">{error}</p>}
           <div className="mt-2 flex gap-2">
             <button onClick={close} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">Annuler</button>
-            <button onClick={submit} className="flex-1 rounded-xl bg-[var(--c-accent)] py-2.5 text-sm font-bold text-white transition hover:brightness-110">Déverrouiller</button>
+            <button onClick={submit} className="flex-1 rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">Déverrouiller</button>
           </div>
         </DialogContent>
       </Dialog>

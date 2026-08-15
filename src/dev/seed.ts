@@ -1,6 +1,6 @@
 import { db } from '../persistence/db'
 import { saveTeam, savePlayer, saveMatch, saveResult, saveTraining, saveConvocation, savePlay, saveMessage } from '../persistence/repositories'
-import type { Convocation, GameEvent, Match, MessageEquipe, Period, Player, ReportedResult, ScoreKind, Training } from '../domain/types'
+import type { Convocation, GameEvent, Match, MessageEquipe, Period, Player, ReportedResult, ScoreKind, StatKind, Training } from '../domain/types'
 import { kindAt } from '../domain/shotzones'
 import { nouveauSchema, tempsSuivant } from '../domain/plays'
 import type { Camp, Fleche, Poste, Schema, Temps, Terrain, Trait } from '../domain/plays'
@@ -8,78 +8,278 @@ import { CLUB_ID_KEY } from '../app/club'
 
 /**
  * Données de démo (DEV uniquement) : l'Avenir de Vignot et ses cinq adversaires
- * de la saison. Versionné : re-seed automatique quand SEED_VERSION change.
+ * de la saison.
+ *
+ * Le seed ne se rejoue que si sa version a changé, sinon on écraserait à chaque
+ * ouverture ce qu'un développeur vient de saisir à la main. Cette version était un
+ * numéro à incrémenter **de mémoire** : on tenait donc pour acquis que quiconque
+ * touche aux données penserait à le bumper. Ça a échoué dès la deuxième fois — la
+ * répartition des paniers a été corrigée sans que la version bouge, et les
+ * navigateurs déjà à jour sur l'ancienne version n'ont rien régénéré. Le défaut se
+ * lisait comme un bug des données, alors que c'était un bug de la garde.
+ *
+ * `SEED_DATA_VERSION` reste manuel pour ce que l'empreinte ne voit pas (la logique
+ * de construction, les combinaisons), mais l'empreinte des **tables déclaratives**
+ * s'y ajoute : toucher un joueur, un poids, un score ou une rotation change la
+ * version tout seul. Voir `EMPREINTE_DONNEES`, tout en bas.
  */
-const SEED_VERSION = 'v25'
+const SEED_DATA_VERSION = 'v28'
 const CHAMP = 'Pré régionale masculine · Poule A'
 
 // [nom, entraîneur]. La première équipe est la nôtre ; les cinq suivantes sont nos adversaires.
 const TEAMS: [string, string][] = [
-  ['AVENIR DE VIGNOT', 'BART S.'], ['BCV VERDUN', 'WEISSE F.'], ['BC BAR-LE-DUC', 'DURAND M.'],
+  ['AVENIR DE VIGNOT', 'FRANZONI Jean Marc'], ['BCV VERDUN', 'WEISSE F.'], ['BC BAR-LE-DUC', 'DURAND M.'],
   ['SLUC NANCY', 'LEROY P.'], ['ÉTOILE DE METZ', 'MOREAU J.'], ['USM SAINT-DIZIER', 'SIMON A.'],
 ]
-const LAST = ['MARTIN', 'BERNARD', 'DUBOIS', 'THOMAS', 'ROBERT', 'PETIT', 'DURAND', 'LEROY', 'MOREAU', 'SIMON']
-const FIRST = ['Lucas', 'Hugo', 'Mathis', 'Nathan', 'Louis', 'Tom', 'Théo', 'Enzo', 'Léo', 'Noah']
+/**
+ * L'effectif réel, dans l'ordre des numéros de maillot. Les noms de famille sont
+ * en capitales, comme le fait `TeamCreate` à la saisie : une seule convention dans
+ * toute l'application, sinon la liste des convoqués mélange deux graphies.
+ *
+ * Ni date de naissance ni taille : ce sont des personnes réelles, et je n'invente
+ * pas de données personnelles les concernant. Les deux champs sont optionnels, et
+ * l'écran gère leur absence — c'est d'ailleurs le cas que l'ancien seed vérifiait
+ * avec son dernier joueur sans données. Ils se remplissent depuis la fiche d'équipe.
+ */
+const EFFECTIF: [numero: number, nom: string, prenom: string][] = [
+  [2, 'CAUTENET', 'Louis'],
+  [5, 'DELEPEE', 'Mateo'],
+  [6, 'SALAH', 'Ali'],
+  [7, 'MOUSTACHE-MAYEKO', 'Steeve'],
+  [8, 'SALAH', 'Abdellatif'],
+  [10, 'MICHEL', 'Felix'],
+  [11, 'BUZZI', 'Clement'],
+  [13, 'COSSU', 'Etienne'],
+  [15, 'NGBAZOUA', 'Yohan'],
+  [17, 'HOSTIN', 'Steven'],
+  [20, 'MILAS', 'Galaad'],
+]
 
 const teamId = (t: number) => `seed-t${t}`
 const playerId = (i: number) => `seed-p${i}`
-// Dates de naissance et tailles : les petits numéros sont les meneurs (plus jeunes,
-// plus petits), les grands numéros les intérieurs (plus âgés, plus grands). Le dernier
-// joueur n'a ni l'une ni l'autre : c'est le cas à vérifier à l'écran (pas de bloc vide).
-const BIRTH = [
-  '1998-03-12', '2001-11-05', '1995-07-22', '1999-01-30', '1993-09-14',
-  '1997-05-02', '2000-12-19', '1994-04-08', '1992-06-25', undefined,
-]
-const HEIGHT = [180, 183, 186, 188, 190, 192, 195, 198, 201, undefined]
-// Notre seul effectif : l'adversaire n'a jamais de joueurs saisis.
-const PLAYERS: Player[] = Array.from({ length: 10 }, (_, i) => ({
-  id: playerId(i), teamId: teamId(0), number: i + 4, lastName: LAST[i], firstName: FIRST[i],
-  birthDate: BIRTH[i], height: HEIGHT[i],
+
+/** Notre seul effectif : l'adversaire n'a jamais de joueurs saisis. */
+const PLAYERS: Player[] = EFFECTIF.map(([number, lastName, firstName], i) => ({
+  id: playerId(i), teamId: teamId(0), number, lastName, firstName,
 }))
+/** L'identifiant du joueur portant ce numéro. Le seed raisonne en numéros — c'est
+ *  ce que dit un coach — et l'index dans le tableau n'est qu'un détail de stockage. */
+const parNumero = (n: number) => playerId(EFFECTIF.findIndex(([num]) => num === n))
 const ROSTER = PLAYERS.map((p) => p.id)
 
 let seq = 0
 const ev = (e: Omit<GameEvent, 'id' | 'wallClock'> & Record<string, unknown>): GameEvent =>
   ({ ...e, id: `seed-ev-${seq}`, wallClock: seq++ } as GameEvent)
 
-/** Positions de tir plausibles : beaucoup de raquette, des corners, un peu d'axe. */
-const SPOTS: { x: number; y: number }[] = [
+/** Positions de tir plausibles, **séparées par valeur**.
+ *
+ *  Elles tenaient dans une seule liste parcourue en `k % longueur`, et les trois
+ *  dernières — celles à trois points — n'étaient jamais atteintes : un segment de
+ *  match compte cinq paniers, `k` ne dépassait donc jamais l'indice 4. La colonne
+ *  3PT de la feuille de match affichait zéro pour tout l'effectif, sur toutes les
+ *  rencontres. Le seed choisit maintenant la **valeur** du tir, puis une position
+ *  qui la porte ; `kindAt` reste seul juge du côté de la ligne, et le test du seed
+ *  vérifie que ces trois positions sont bien derrière. */
+const SPOTS_2: { x: number; y: number }[] = [
   { x: 0.50, y: 0.14 }, { x: 0.45, y: 0.18 }, { x: 0.56, y: 0.16 }, // raquette
   { x: 0.24, y: 0.24 }, { x: 0.76, y: 0.24 }, { x: 0.50, y: 0.45 }, // mi-distance
-  { x: 0.03, y: 0.10 }, { x: 0.97, y: 0.11 }, { x: 0.50, y: 0.68 }, // 3 points
+]
+const SPOTS_3: { x: number; y: number }[] = [
+  { x: 0.03, y: 0.10 }, { x: 0.97, y: 0.11 }, { x: 0.50, y: 0.68 }, // corners et axe
 ]
 
-/** Poids d'un joueur pour la répartition des paniers : les premiers numéros de
- *  l'effectif marquent plus, à ancienneté égale sur le terrain. */
-const weightFor = (id: string) => Math.max(1, 8 - ROSTER.indexOf(id))
+/** Poids d'un joueur dans la répartition des paniers, par numéro de maillot.
+ *
+ *  Ces valeurs sont **inventées**, à une exception près : BUZZI est le meilleur
+ *  marqueur parce qu'on me l'a dit. Le reste est seulement plausible et se corrige
+ *  depuis l'application.
+ *
+ *  Elles sont volontairement resserrées. Un écart plus large ne produit pas un
+ *  meilleur marqueur plus net, il produit une aberration : à poids 12 contre 1,
+ *  BUZZI prenait trente-neuf points par match et cinq joueurs terminaient à zéro.
+ *  Ce qui donne une feuille de match crédible, c'est un rapport d'environ trois
+ *  entre le premier et le dernier, pas un rapport de dix.
+ *
+ *  L'ancien calcul dérivait le poids du rang dans la liste, ce qui ne marche plus
+ *  depuis que les titulaires ne sont plus les cinq premiers de l'effectif. */
+const POIDS: Record<number, number> = {
+  11: 6,                       // BUZZI, le meilleur marqueur
+  13: 4, 2: 4,                 // ses deux relais
+  15: 3, 17: 2,                // les deux autres titulaires
+  5: 3, 20: 3, 10: 2, 7: 2, 6: 2, 8: 2, // le banc
+}
+const numeroDe = (id: string) => EFFECTIF[Number(id.replace('seed-p', ''))]?.[0] ?? 0
+const weightFor = (id: string) => POIDS[numeroDe(id)] ?? 1
+
+/**
+ * Le rôle de chaque maillot. Une seule étiquette par joueur, et non un tableau de
+ * poids par catégorie : c'est ce qu'un coach écrit, et ça suffit à répartir tout le
+ * reste de la feuille de match. Inventé, comme `POIDS`, à l'exception du cinq majeur
+ * qu'on m'a donné.
+ */
+type Role = 'meneur' | 'ailier' | 'interieur'
+const ROLES: Record<number, Role> = {
+  2: 'meneur', 5: 'meneur',
+  11: 'ailier', 13: 'ailier', 7: 'ailier', 10: 'ailier', 6: 'ailier',
+  15: 'interieur', 17: 'interieur', 20: 'interieur', 8: 'interieur',
+}
+const roleDe = (id: string): Role => ROLES[numeroDe(id)] ?? 'ailier'
+
+/**
+ * Ce que produit chaque poste, par catégorie. Les rapports comptent plus que les
+ * valeurs : un meneur distribue, un intérieur prend le rebond et contre, et les
+ * fautes suivent le contact — donc l'intérieur en prend un peu plus.
+ *
+ * Ces poids passent par le même répartiteur que les paniers, à dessein : c'est déjà
+ * lui qui garantit qu'un joueur peu servi finit par l'être, et qu'un remplaçant ne
+ * termine pas la saison à zéro rebond.
+ */
+const POIDS_STAT: Record<StatKind | 'faute', Record<Role, number>> = {
+  assist: { meneur: 5, ailier: 2, interieur: 1 },
+  reb_off: { meneur: 1, ailier: 2, interieur: 4 },
+  reb_def: { meneur: 1, ailier: 2, interieur: 4 },
+  block: { meneur: 1, ailier: 1, interieur: 5 },
+  faute: { meneur: 2, ailier: 2, interieur: 3 },
+}
+
+/** Ce qu'une période produit, en volumes d'équipe. Un match complet en donne quatre
+ *  fois autant, soit une trentaine de rebonds et quatre contres : l'ordre de grandeur
+ *  d'une feuille de match de Pré régionale. */
+const PAR_PERIODE: [StatKind, number][] = [['reb_def', 6], ['reb_off', 2], ['block', 1]]
+
+/** Les fautes d'équipe, période par période. La troisième dépasse `TEAM_FOUL_BONUS`
+ *  (cinq, en FFBB) : c'est volontaire, la démonstration doit pouvoir montrer la
+ *  pastille « Bonus » sans qu'on la provoque à la main. */
+const FAUTES_PAR_PERIODE = [3, 4, 5, 4]
+
+/** Personne ne sort pour cinq fautes. Un joueur exclu quitte le terrain, alors que
+ *  les rotations du seed le comptent encore présent — l'incohérence se lirait comme
+ *  un bug des règles. */
+const MAX_FAUTES = 4
+
+/**
+ * Un répartiteur proportionnel, par plus fort diviseur : à chaque attribution, on
+ * sert celui dont `poids / (déjà servi + 1)` est le plus grand.
+ *
+ * Il était écrit à la main dans `baskets` et il sert maintenant à six choses
+ * (paniers, passes, deux sortes de rebonds, contres, fautes) : c'est la même
+ * question à chaque fois, et les trois défauts qu'il a fallu corriger pour les
+ * paniers — liste pré-remplie parcourue en modulo, compteur remis à zéro à chaque
+ * segment — se seraient reproduits à l'identique cinq fois de plus.
+ *
+ * Le compteur est détenu par le répartiteur, donc par la rencontre : la
+ * proportionnalité se joue sur le match et non sur un segment de cinq paniers.
+ */
+interface Repartiteur {
+  prochain: (candidats: string[]) => string
+  compte: (id: string) => number
+}
+function repartiteur(poids: (id: string) => number): Repartiteur {
+  const servi = new Map<string, number>()
+  const compte = (id: string) => servi.get(id) ?? 0
+  const valeur = (id: string) => poids(id) / (compte(id) + 1)
+  return {
+    compte,
+    prochain(candidats) {
+      const gagnant = candidats.reduce((meilleur, id) => (valeur(id) > valeur(meilleur) ? id : meilleur))
+      servi.set(gagnant, compte(gagnant) + 1)
+      return gagnant
+    },
+  }
+}
+
+/** Les six répartiteurs d'une rencontre. */
+type Repartition = Record<'panier' | StatKind | 'faute', Repartiteur>
+const nouvelleRepartition = (): Repartition => ({
+  panier: repartiteur(weightFor),
+  assist: repartiteur((id) => POIDS_STAT.assist[roleDe(id)]),
+  reb_off: repartiteur((id) => POIDS_STAT.reb_off[roleDe(id)]),
+  reb_def: repartiteur((id) => POIDS_STAT.reb_def[roleDe(id)]),
+  block: repartiteur((id) => POIDS_STAT.block[roleDe(id)]),
+  faute: repartiteur((id) => POIDS_STAT.faute[roleDe(id)]),
+})
 
 /** Répartit ~`points` en paniers positionnés parmi les joueurs actuellement sur le
  *  terrain (`onCourtIds`) — jamais un joueur qui n'y est pas —, pondérés (les
  *  premiers marquent plus), avec un tir manqué toutes les trois tentatives pour
  *  alimenter les hot zones. */
-function baskets(points: number, clock: () => number, period: Period, onCourtIds: string[]): GameEvent[] {
-  const weighted = onCourtIds.flatMap((id) => Array(weightFor(id)).fill(id) as string[])
+function baskets(points: number, clock: () => number, period: Period, onCourtIds: string[], r: Repartition): GameEvent[] {
+  /**
+   * La décomposition du total en tirs réels, et elle doit retomber **juste** : le
+   * segment reçoit un nombre de points à distribuer, et un seed qui compose ce total
+   * avec des tirs de valeurs différentes sans vérifier la somme fait dire deux
+   * choses différentes au tableau d'affichage et à la feuille de match.
+   *
+   * Environ un tir à trois points pour neuf points marqués, soit six à huit par
+   * rencontre : l'ordre de grandeur d'une équipe qui n'en fait pas son système.
+   * Le reste en paniers à deux, et le point impair en lancer franc.
+   */
+  const n3 = Math.floor(points / 9)
+  const nLf = (points - 3 * n3) % 2
+  const n2 = (points - 3 * n3 - nLf) / 2
+  const tirs = n3 + n2
+
   const out: GameEvent[] = []
-  const n2 = Math.floor(points / 2)
-  for (let k = 0; k < n2; k++) {
-    const playerId = weighted[k % weighted.length]
-    const shot = SPOTS[k % SPOTS.length]
+  let i2 = 0
+  let i3 = 0
+  for (let k = 0; k < tirs; k++) {
+    // Les trois points **répartis** dans le segment plutôt que groupés en tête : un
+    // quart-temps qui commence par tous ses tirs primés ne ressemble à rien sur la
+    // carte de tirs. Le test du seuil entier est le même que celui d'un tracé de
+    // ligne — il place `n3` marques sur `tirs` positions, aussi régulièrement que
+    // des entiers le permettent.
+    const troisPoints = Math.floor(((k + 1) * n3) / tirs) > Math.floor((k * n3) / tirs)
+    const shot = troisPoints ? SPOTS_3[i3++ % SPOTS_3.length] : SPOTS_2[i2++ % SPOTS_2.length]
+    const playerId = r.panier.prochain(onCourtIds)
     out.push(ev({ type: 'SCORE', team: 'A', playerId, kind: kindAt(shot.x, shot.y), shot, period, gameClock: clock() }))
+
+    // Une passe décisive sur un panier sur deux, créditée à un coéquipier **présent
+    // sur le terrain** et jamais au marqueur lui-même. Attachée au panier plutôt que
+    // distribuée en volume : une passe décisive n'existe pas sans le panier qu'elle
+    // amène, et c'est ce lien qui rend le total plausible sans qu'on le règle.
+    const passeurs = onCourtIds.filter((id) => id !== playerId)
+    if (k % 2 === 0 && passeurs.length > 0)
+      out.push(ev({ type: 'STAT', team: 'A', playerId: r.assist.prochain(passeurs), stat: 'assist', period, gameClock: clock() }))
+
     if (k % 3 === 2) {
-      const missed = SPOTS[(k + 4) % SPOTS.length]
+      const missed = SPOTS_2[(i2 + 3) % SPOTS_2.length]
       out.push(ev({ type: 'MISS', team: 'A', playerId, kind: kindAt(missed.x, missed.y), shot: missed, period, gameClock: clock() }))
     }
   }
-  if (points % 2) out.push(ev({ type: 'SCORE', team: 'A', playerId: weighted[0], kind: 'lf' as ScoreKind, period, gameClock: clock() }))
+  // Le point impair : un lancer franc, pour le joueur que le répartiteur sert
+  // ensuite — c'est celui qui attaque le plus le cercle qu'on envoie sur la ligne.
+  if (nLf) out.push(ev({ type: 'SCORE', team: 'A', playerId: r.panier.prochain(onCourtIds), kind: 'lf' as ScoreKind, period, gameClock: clock() }))
   return out
 }
 
-/** Statistiques secondaires : une par joueur actuellement sur le terrain, à chaque
- *  période — une vingtaine sur un match complet — pour que les moyennes par match
- *  soient parlantes, sans jamais créditer un joueur resté sur le banc. */
-function extras(clock: () => number, period: Period, onCourtIds: string[]): GameEvent[] {
-  const STATS = ['assist', 'reb_off', 'reb_def', 'block'] as const
-  return onCourtIds.map((playerId, k) => ev({ type: 'STAT', team: 'A', playerId, stat: STATS[k % STATS.length], period, gameClock: clock() }))
+/**
+ * Le reste de la feuille de match, période par période : rebonds, contres et fautes,
+ * pour les seuls joueurs présents sur le terrain à cet instant.
+ *
+ * Il n'y en avait quasiment rien : une seule statistique par joueur et par période,
+ * choisie par l'**indice** du joueur dans le cinq — si bien qu'un joueur donné
+ * recevait toujours la même, que les contres n'allaient qu'au quatrième de la liste,
+ * et qu'aucune faute n'était jamais saisie. Trois colonnes de la feuille de match
+ * étaient vides sur toutes les rencontres, et le compteur de fautes d'équipe restait
+ * à zéro d'un bout à l'autre.
+ */
+function secondaires(clock: () => number, period: Period, onCourtIds: string[], r: Repartition): GameEvent[] {
+  const out: GameEvent[] = []
+  for (const [stat, combien] of PAR_PERIODE)
+    for (let k = 0; k < combien; k++)
+      out.push(ev({ type: 'STAT', team: 'A', playerId: r[stat].prochain(onCourtIds), stat, period, gameClock: clock() }))
+
+  const fautes = FAUTES_PAR_PERIODE[(period - 1) % FAUTES_PAR_PERIODE.length]
+  for (let k = 0; k < fautes; k++) {
+    // Le plafond est appliqué en **retirant** le joueur des candidats, et non en
+    // sautant l'évènement : sauter ferait perdre une faute au compteur d'équipe, qui
+    // doit atteindre le bonus à la période prévue.
+    const eligibles = onCourtIds.filter((id) => r.faute.compte(id) < MAX_FAUTES)
+    if (eligibles.length === 0) break
+    const playerId = r.faute.prochain(eligibles)
+    out.push(ev({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId }, foulType: 'personal', period, gameClock: clock() }))
+  }
+  return out
 }
 
 /** Score de l'adversaire : uniquement des paniers d'équipe, sans joueur identifié
@@ -92,9 +292,26 @@ function opponentBaskets(points: number, clock: () => number, period: Period): G
   return out
 }
 
-const STARTERS = ROSTER.slice(0, 5)
-// [titulaire sortant, remplaçant entrant], un par période (aucun en période 4).
-const SUB_SWAPS: [number, number][] = [[0, 5], [1, 6], [2, 7]]
+/** Le cinq majeur, désigné par numéros de maillot et non par rang dans la liste :
+ *  un coach dit « le 2, le 11, le 13, le 15 et le 17 ». */
+const STARTERS = [2, 11, 13, 15, 17].map(parNumero)
+/**
+ * Les rotations, par période : `[numéro sortant, numéro entrant]`.
+ *
+ * Les titulaires **reviennent**. La version précédente sortait un titulaire par
+ * période sans jamais le rappeler : à la fin du match les cinq majeurs avaient
+ * quelques minutes et leurs remplaçants tout le reste, si bien que le meneur
+ * titulaire finissait à huit points et un remplaçant à cinquante et un. Un
+ * changement double sur un même arrêt de jeu est parfaitement réglementaire, et
+ * c'est ce qui permet de faire tourner dix joueurs sur onze en gardant aux
+ * titulaires le plus de temps de jeu — ce que `playingTimes` sait mesurer.
+ */
+const SUB_SWAPS: [number, number][][] = [
+  [[2, 5]],                     // le meneur souffle
+  [[5, 2], [17, 10]],           // il revient, l'intérieur souffle
+  [[10, 17], [15, 20]],         // et ainsi de suite
+  [[20, 15], [11, 6], [13, 7]], // dernier quart : on fait tourner l'aile
+]
 
 /** Répartit un total en `parts` entiers aussi égaux que possible. */
 function splitEvenly(total: number, parts: number): number[] {
@@ -110,22 +327,26 @@ function splitEvenly(total: number, parts: number): number[] {
  *  Le remplacement est posé au milieu exact du temps de la période (et non au
  *  gré du nombre de paniers déjà écoulés) : c'est cette valeur de chrono, pas le
  *  nombre de tirs, que `playingTimes` utilise pour calculer le temps de jeu. */
-function periodEvents(p: Period, pointsA: number, pointsB: number, onCourtBefore: string[], swap: [number, number] | undefined, stopClock: number): { events: GameEvent[]; onCourtAfter: string[] } {
+function periodEvents(p: Period, pointsA: number, pointsB: number, onCourtBefore: string[], swaps: [number, number][] | undefined, stopClock: number, r: Repartition): { events: GameEvent[]; onCourtAfter: string[] } {
   let c = 600
   const clock = () => (c = Math.max(stopClock, c - 5))
   const half = Math.round(pointsA / 2)
-  const events = [...baskets(half, clock, p, onCourtBefore)]
+  const events = [...baskets(half, clock, p, onCourtBefore, r)]
   let onCourtAfter = onCourtBefore
-  if (swap) {
-    const [out, into] = swap
+  if (swaps?.length) {
+    // Tous les changements de la période au même arrêt de jeu, au milieu exact du
+    // temps : c'est cette valeur de chrono que `playingTimes` lit, pas le nombre de
+    // paniers déjà écoulés.
     c = Math.round((600 + stopClock) / 2)
-    events.push(ev({ type: 'SUBSTITUTION', team: 'A', playerOutId: playerId(out), playerInId: playerId(into), period: p, gameClock: c }))
-    onCourtAfter = onCourtBefore.map((id) => (id === playerId(out) ? playerId(into) : id))
+    for (const [out, into] of swaps) {
+      events.push(ev({ type: 'SUBSTITUTION', team: 'A', playerOutId: parNumero(out), playerInId: parNumero(into), period: p, gameClock: c }))
+      onCourtAfter = onCourtAfter.map((id) => (id === parNumero(out) ? parNumero(into) : id))
+    }
   }
   events.push(
-    ...baskets(pointsA - half, clock, p, onCourtAfter),
+    ...baskets(pointsA - half, clock, p, onCourtAfter, r),
     ...opponentBaskets(pointsB, clock, p),
-    ...extras(clock, p, onCourtAfter),
+    ...secondaires(clock, p, onCourtAfter, r),
     ev({ type: 'CLOCK_STOP', period: p, gameClock: stopClock }),
   )
   return { events, onCourtAfter }
@@ -146,14 +367,23 @@ const TODAY_ISO = `${today.getFullYear()}-${String(today.getMonth() + 1).padStar
 // une semaine.
 const JOURNEES = [-21, -14, -7, 0, 7].map((delta) => addDays(TODAY_ISO, delta))
 
-interface Fixture { opponent: number; date: string; time: string; status: 'finished' | 'live' | 'setup' }
-// Nos cinq rencontres de la saison : trois jouées, une en direct, une à venir.
+interface Fixture { opponent: number; date: string; time: string; status: 'finished' | 'live' | 'setup'; score: [number, number] }
+/**
+ * Nos cinq rencontres : trois jouées et gagnées, une en direct, une à venir.
+ *
+ * Les scores sont écrits en clair et non calculés par une formule modulo. Ils
+ * doivent produire un classement précis — l'Avenir de Vignot en tête — et une
+ * formule ne se pilote pas : elle donnait 2V-1D et un différentiel de −2.
+ *
+ * Pour la rencontre en direct, `score` est le total visé sur quatre périodes ; seules
+ * deux sont jouées, donc l'écran en montre à peu près la moitié.
+ */
 const FIXTURES: Fixture[] = [
-  { opponent: 1, date: JOURNEES[0], time: '20:30', status: 'finished' },
-  { opponent: 2, date: JOURNEES[1], time: '20:00', status: 'finished' },
-  { opponent: 3, date: JOURNEES[2], time: '18:30', status: 'finished' },
-  { opponent: 4, date: JOURNEES[3], time: '20:30', status: 'live' },
-  { opponent: 5, date: JOURNEES[4], time: '18:30', status: 'setup' },
+  { opponent: 1, date: JOURNEES[0], time: '20:30', status: 'finished', score: [78, 71] },
+  { opponent: 2, date: JOURNEES[1], time: '20:00', status: 'finished', score: [72, 64] },
+  { opponent: 3, date: JOURNEES[2], time: '18:30', status: 'finished', score: [81, 69] },
+  { opponent: 4, date: JOURNEES[3], time: '20:30', status: 'live', score: [82, 70] },
+  { opponent: 5, date: JOURNEES[4], time: '18:30', status: 'setup', score: [0, 0] },
 ]
 
 const THEMES = ['Défense sur écran', 'Tirs extérieurs', 'Transition rapide', 'Jeu sans ballon', 'Rebond et boxout']
@@ -196,8 +426,7 @@ function buildConvocation(): Convocation {
 
 function buildMatch(f: Fixture, idx: number): Match {
   seq = idx * 1000
-  const sa = 56 + ((idx * 13 + 7) % 26) // score final de l'Avenir, rencontre complète
-  const sb = 54 + ((idx * 11 + 3) % 28) // score final adverse, rencontre complète
+  const [sa, sb] = f.score
   const qA = splitEvenly(sa, 4)
   const qB = splitEvenly(sb, 4)
 
@@ -214,11 +443,14 @@ function buildMatch(f: Fixture, idx: number): Match {
       ev({ type: 'STARTING_FIVE', team: 'A', playerIds: STARTERS, period: 1, gameClock: 600 }),
       ev({ type: 'CLOCK_START', period: 1, gameClock: 600 }),
     )
+    // Les répartiteurs sont créés ici, donc détenus par la rencontre : la
+    // proportionnalité se joue sur le match, pas sur chaque segment de cinq paniers.
+    const r = nouvelleRepartition()
     let onCourt: string[] = STARTERS
     for (let p = 1; p <= lastPeriod; p++) {
       const isLast = p === lastPeriod
       const stopClock = isLast ? lastClock : 0
-      const { events: periodEvs, onCourtAfter } = periodEvents(p, qA[p - 1], qB[p - 1], onCourt, SUB_SWAPS[p - 1], stopClock)
+      const { events: periodEvs, onCourtAfter } = periodEvents(p, qA[p - 1], qB[p - 1], onCourt, SUB_SWAPS[p - 1], stopClock, r)
       events.push(...periodEvs)
       onCourt = onCourtAfter
       if (!isLast) {
@@ -252,22 +484,34 @@ function buildMatch(f: Fixture, idx: number): Match {
 // quatre autres se répartissent en deux matchs — si bien que chaque adversaire
 // affronte, sur la saison, les quatre autres en plus de nous. Les dates reprennent
 // celles de nos FIXTURES (`JOURNEES`) : même poule, mêmes journées.
-interface OutsideGame { home: number; away: number; date: string }
+interface OutsideGame { home: number; away: number; date: string; score: [number, number] }
+/**
+ * Les confrontations entre nos cinq adversaires, sur les **trois journées jouées**
+ * seulement — jamais celle du jour ni la suivante.
+ *
+ * C'est ce qui rendait le classement incohérent : le seed publiait les résultats des
+ * cinq journées, si bien que les autres équipes affichaient quatre ou cinq matchs
+ * quand nous en avions trois. Or le classement FFBB compte des points absolus
+ * (V=2, D=1) : à trois rencontres nous plafonnons à six points, tandis qu'une équipe
+ * à cinq rencontres en a au moins cinq et jusqu'à dix. Être premier était
+ * arithmétiquement impossible. Et publier les résultats de la journée en cours n'est
+ * de toute façon pas ce qu'on observe dans un championnat.
+ *
+ * Chacun joue donc trois rencontres, comme nous. Les scores sont choisis pour que
+ * personne n'atteigne nos six points : `standings.test.ts` et le test du seed
+ * vérifient le classement obtenu.
+ */
 const OUTSIDE_GAMES: OutsideGame[] = [
-  { home: 2, away: 3, date: JOURNEES[0] }, { home: 4, away: 5, date: JOURNEES[0] },
-  { home: 1, away: 4, date: JOURNEES[1] }, { home: 3, away: 5, date: JOURNEES[1] },
-  { home: 1, away: 5, date: JOURNEES[2] }, { home: 2, away: 4, date: JOURNEES[2] },
-  { home: 1, away: 3, date: JOURNEES[3] }, { home: 2, away: 5, date: JOURNEES[3] },
-  { home: 1, away: 2, date: JOURNEES[4] }, { home: 3, away: 4, date: JOURNEES[4] },
+  { home: 2, away: 3, date: JOURNEES[0], score: [74, 68] },
+  { home: 4, away: 5, date: JOURNEES[0], score: [80, 72] },
+  { home: 1, away: 4, date: JOURNEES[1], score: [77, 70] },
+  { home: 3, away: 5, date: JOURNEES[1], score: [65, 73] },
+  { home: 1, away: 5, date: JOURNEES[2], score: [82, 75] },
+  { home: 2, away: 4, date: JOURNEES[2], score: [69, 76] },
 ]
 
-/** Score plausible de basket senior (60 à 90 points), variant avec l'index. */
 function buildResult(g: OutsideGame, idx: number): ReportedResult {
-  const homeScore = 60 + ((idx * 7 + 3) % 31)
-  const awayScore0 = 60 + ((idx * 5 + 11) % 31)
-  // Au basket il n'y a jamais match nul (prolongation) : si les deux formules
-  // coïncident par hasard, on écarte l'égalité plutôt que de la laisser passer.
-  const awayScore = awayScore0 === homeScore ? awayScore0 - 2 : awayScore0
+  const [homeScore, awayScore] = g.score
   return {
     id: `seed-r${idx}`, championshipLabel: CHAMP, date: g.date,
     homeId: teamId(g.home), awayId: teamId(g.away), homeScore, awayScore,
@@ -422,6 +666,35 @@ function buildMessage(): MessageEquipe {
     écritLe: new Date(Date.now() - 2 * 24 * 3600_000).toISOString(),
   }
 }
+
+/**
+ * Une empreinte des tables déclaratives du seed. Toute retouche de l'effectif, des
+ * poids de marque, du cinq majeur, des rotations, de nos scores ou des résultats
+ * extérieurs la fait changer — donc régénère les données sans qu'on ait à y penser.
+ *
+ * Les **dates** en sont exclues à dessein : elles sont ancrées sur le jour du seed,
+ * si bien que les inclure ferait tout régénérer chaque nuit et effacerait ce qu'un
+ * développeur a saisi la veille.
+ *
+ * Le hachage est un djb2 en base 36 : on ne cherche pas à résister à une collision
+ * malveillante, seulement à repérer qu'une constante a bougé.
+ */
+export function empreinte(valeur: unknown): string {
+  const texte = JSON.stringify(valeur)
+  let h = 5381
+  for (let i = 0; i < texte.length; i++) h = ((h * 33) ^ texte.charCodeAt(i)) >>> 0
+  return h.toString(36)
+}
+
+export const EMPREINTE_DONNEES = empreinte([
+  EFFECTIF, TEAMS, POIDS, THEMES,
+  ROLES, POIDS_STAT, PAR_PERIODE, FAUTES_PAR_PERIODE, MAX_FAUTES,
+  SPOTS_2, SPOTS_3,
+  [2, 11, 13, 15, 17], SUB_SWAPS,
+  FIXTURES.map((f) => [f.opponent, f.time, f.status, f.score]),
+  OUTSIDE_GAMES.map((g) => [g.home, g.away, g.score]),
+])
+const SEED_VERSION = `${SEED_DATA_VERSION}-${EMPREINTE_DONNEES}`
 
 export async function seedDevData(): Promise<void> {
   const already = (await db.teams.count()) > 0

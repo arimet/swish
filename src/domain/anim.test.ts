@@ -169,3 +169,93 @@ describe('instantane', () => {
     expect(instantane(s, { temps: 5, part: 0.5 }).pions).toEqual(s.temps[1].pions)
   })
 })
+
+/**
+ * Les lignes de déplacement, en option : ce que le coach voit du trajet pendant
+ * que la combinaison se joue.
+ *
+ * Le contrat tient en une phrase : la ligne est le trajet **réellement suivi**.
+ * Elle n'est donc pas la flèche dessinée — c'est cette flèche recalée sur les
+ * positions des deux temps, la même courbe que celle qui porte le pion. Une
+ * ligne qui divergerait du mouvement serait pire que pas de ligne.
+ */
+describe('instantane — les lignes de déplacement', () => {
+  const ligneDe = (s: Schema, part: number, poste: number) =>
+    instantane(s, { temps: 0, part }, true).fleches.find((f) => f.depuis.poste === poste)
+
+  it('n’émet aucune ligne quand on ne les demande pas', () => {
+    // Le comportement historique : l'animation nue. C'est encore le défaut.
+    const s = deuxTemps()
+    expect(instantane(s, { temps: 0, part: 0.5 }).fleches).toEqual([])
+  })
+
+  it('mène de la position de départ à celle d’arrivée', () => {
+    const s = deuxTemps()
+    const l = ligneDe(s, 0.5, 1)!
+    proche(l.points[0], { x: 0.5, y: 0.62 })
+    proche(l.points[l.points.length - 1], { x: 0.5, y: 0.2 })
+  })
+
+  it('reste la même sur toute la transition : c’est un trajet, pas une traînée', () => {
+    // La ligne ne se dessine pas au fur et à mesure. À 10 % comme à 90 %, elle
+    // montre le chemin entier — c'est ce qu'on montre du doigt au temps-mort.
+    const s = deuxTemps()
+    expect(ligneDe(s, 0.1, 1)!.points).toEqual(ligneDe(s, 0.9, 1)!.points)
+  })
+
+  it('emprunte la forme de la flèche dessinée, recalée', () => {
+    const s = deuxTemps()
+    s.temps[0] = { ...s.temps[0], fleches: [{
+      depuis: { camp: 'attaque', poste: 1 },
+      points: [{ x: 0.3, y: 0.7 }, { x: 0.1, y: 0.45 }, { x: 0.3, y: 0.25 }],   // dessinée à côté
+      trait: 'course',
+    }] }
+    const l = ligneDe(s, 0.5, 1)!
+    // Extrémités recalées sur les vraies positions…
+    proche(l.points[0], { x: 0.5, y: 0.62 })
+    proche(l.points[l.points.length - 1], { x: 0.5, y: 0.2 })
+    // …et le ventre du contournement conservé, donc à l'écart de la corde.
+    expect(Math.min(...l.points.map((p) => p.x))).toBeLessThan(0.45)
+    expect(l.trait).toBe('course')
+  })
+
+  it('donne une droite au pion qui bouge sans flèche dessinée', () => {
+    // Sinon la bascule éclairerait certains déplacements et pas d'autres, ce qui
+    // se lit comme une panne plutôt que comme une règle.
+    const s = deuxTemps()
+    const l = ligneDe(s, 0.5, 1)!
+    expect(l.points).toEqual([{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.2 }])
+    expect(l.trait).toBe('course')
+  })
+
+  it('ignore les pions immobiles', () => {
+    const s = deuxTemps()
+    expect(ligneDe(s, 0.5, 3)).toBeUndefined()
+  })
+
+  it('trace la passe quand le ballon change de mains', () => {
+    const s = deuxTemps()
+    s.temps[1] = { ...s.temps[1], ballon: { camp: 'attaque', poste: 3 } }
+    const passe = instantane(s, { temps: 0, part: 0.5 }, true).fleches.find((f) => f.trait === 'passe')!
+    expect(passe).toBeDefined()
+    proche(passe.points[0], { x: 0.5, y: 0.62 })          // le porteur au départ
+    proche(passe.points[passe.points.length - 1], { x: 0.78, y: 0.48 })   // le receveur
+  })
+
+  it('ne trace pas de passe quand le ballon ne change pas de mains', () => {
+    const s = deuxTemps()
+    expect(instantane(s, { temps: 0, part: 0.5 }, true).fleches.some((f) => f.trait === 'passe')).toBe(false)
+  })
+
+  it('n’émet rien sur le dernier temps, qui n’a pas de suite', () => {
+    const s = deuxTemps()
+    expect(instantane(s, { temps: 1, part: 0 }, true).fleches).toEqual([])
+  })
+
+  it('montre le trajet dès le premier instant, avant que rien n’ait bougé', () => {
+    // À part 0 les pions sont encore aux positions dessinées, mais la ligne doit
+    // déjà être là : elle annonce le geste, elle ne le commente pas après coup.
+    const s = deuxTemps()
+    expect(ligneDe(s, 0, 1)).toBeDefined()
+  })
+})

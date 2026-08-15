@@ -35,7 +35,7 @@ export function ClockEditDialog({ open, seconds, max, onClose, onSubmit }: {
           inputMode="numeric"
           placeholder="MM:SS"
           className={`mt-2 w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-center text-4xl font-black tabular-nums outline-none transition ${
-            valid ? 'border-[var(--c-border)] focus:border-[var(--c-accent)]' : 'border-red-500/60'
+            valid ? 'border-[var(--c-border)] focus:border-[var(--c-accent)]' : 'border-[var(--c-danger)]'
           }`}
         />
         <p className="mt-1.5 text-center text-xs text-[var(--c-muted)]">Format MM:SS — max {fmt(max)}</p>
@@ -46,7 +46,7 @@ export function ClockEditDialog({ open, seconds, max, onClose, onSubmit }: {
           <button
             disabled={!valid}
             onClick={submit}
-            className="flex-1 rounded-xl bg-[var(--c-accent)] py-2.5 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-40"
+            className="flex-1 rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110 disabled:opacity-40"
           >
             Valider
           </button>
