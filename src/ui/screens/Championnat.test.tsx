@@ -124,7 +124,7 @@ describe('Championnat', () => {
 
 describe('Championnat — droits', () => {
   it('saisir un résultat est administratif : la table de marque ne voit ni bouton ni champs, et rien n’est enregistré', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderChamp()
     await screen.findByText(/aucun résultat saisi/i)
 
@@ -149,7 +149,7 @@ describe('Championnat — droits', () => {
     // s'ouvrait à la frappe sans le droit, un refus laisserait à l'écran une valeur
     // que la base n'a pas — et le classement juste au-dessus continuerait de compter
     // l'ancienne. Le score s'affiche donc en toutes lettres, sans champ à frapper.
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     renderChamp()
     await screen.findByRole('table')

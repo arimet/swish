@@ -120,7 +120,7 @@ describe('SchemaRecu — la combinaison arrivée par un lien', () => {
   })
 
   it('l’ajout est administratif : la table de marque se voit demander le code, et rien n’est écrit', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     ouvrir(await encoder(deuxTemps()))
     await screen.findByRole('img', { name: /tableau tactique/ })
 

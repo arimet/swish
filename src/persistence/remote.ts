@@ -2,30 +2,29 @@ import type { Table } from 'dexie'
 import { db, type OutboxItem } from './db'
 
 /**
- * Le miroir local et son tampon d'écriture.
+ * The local mirror and its write buffer.
  *
- * **La base serveur est la source de vérité**, IndexedDB en est le reflet. Ce
- * n'est pas une seconde vérité : c'est le prix du gymnase. La table de marque
- * écrit à chaque geste — plusieurs centaines de fois sur deux heures — et sans
- * base locale, ces écritures seraient soit un aller-retour réseau par tap, qui
- * s'arrête net sans couverture, soit un tampon en mémoire, qui meurt quand le
- * téléphone se verrouille.
+ * **The server database is the source of truth**, IndexedDB is its reflection. It
+ * is not a second truth: it is the price of the gym. The scorer's table writes on
+ * every gesture — several hundred times over two hours — and without a local
+ * store those writes would be either one network round trip per tap, which stops
+ * dead without coverage, or an in-memory buffer, which dies when the phone locks.
  *
- * Activé uniquement si `VITE_SYNC_URL` est défini — sinon l'application reste
- * 100 % locale : aucune écriture dans la file, aucun appel réseau.
+ * Enabled only if `VITE_SYNC_URL` is set — otherwise the application stays 100%
+ * local: nothing written to the queue, no network call.
  */
 const BASE = (import.meta.env.VITE_SYNC_URL as string | undefined)?.replace(/\/+$/, '') || ''
 export const remoteEnabled = (): boolean => BASE !== ''
 
-/** Le curseur d'hydratation : le plus grand numéro d'écriture déjà vu. */
+/** The hydration cursor: the highest write number already seen. */
 const REV_KEY = 'swish-sync-rev'
 /**
- * Le jeton d'écriture, saisi une fois par appareil.
+ * The write token, entered once per device.
  *
- * Il n'est pas dans le bundle, contrairement aux trois codes d'accès : ceux-là
- * gardent une porte que le client s'ouvre lui-même, celui-ci est vérifié par le
- * serveur. Il vit dans `localStorage` et non dans `sessionStorage`, comme
- * l'identité de joueur : c'est un réglage d'appareil, pas une session.
+ * It is not in the bundle, unlike the three access codes: those guard a door the
+ * client opens for itself, this one is checked by the server. It lives in
+ * `localStorage` rather than `sessionStorage`, like the player identity: it is a
+ * device setting, not a session.
  */
 export const TOKEN_KEY = 'swish-sync-token'
 
@@ -45,27 +44,27 @@ type Kind = OutboxItem['kind']
 interface RemoteState {
   rev: number
   docs: { kind: Kind; id: string; doc: unknown }[]
-  /** Les `kind:id` que la base détient **encore**. */
+  /** The `kind:id` pairs the database **still** holds. */
   alive: string[]
 }
 
-/** Ce que la dernière tentative de synchronisation a donné. L'interface s'en sert
- *  pour dire à l'administrateur si son jeton passe, plutôt que d'échouer en
- *  silence comme le faisait la version Redis. */
+/** What the last sync attempt gave. The interface uses it to tell the
+ *  administrator whether their token passes, rather than failing silently the way
+ *  the Redis version did. */
 export type State = 'idle' | 'ok' | 'token' | 'network'
 let lastState: State = 'idle'
 export const syncState = (): State => lastState
 
-/** Ce qu'un écran a besoin de savoir : où en est l'envoi, et combien d'actions
- *  attendent encore. Le compte est la mesure honnête — il grossit si ça coince. */
+/** What a screen needs to know: where the sending stands, and how many actions are
+ *  still waiting. The count is the honest measure — it grows when things jam. */
 export interface Health { state: State; pending: number }
 
-/* On prévient plutôt que de faire interroger. Un sondage sur la table Dexie
-   marcherait, mais `doFlush` sait exactement quand l'état change : le faire dire
-   coûte moins et ne fabrique pas de latence entre l'échec et son affichage. */
+/* We announce rather than make callers poll. Polling the Dexie table would work,
+   but `doFlush` knows exactly when the state changes: having it say so costs less
+   and does not manufacture latency between a failure and its display. */
 const listeners = new Set<(s: Health) => void>()
 
-/** S'abonne à la santé de la synchronisation. Renvoie de quoi se désabonner. */
+/** Subscribes to the health of the synchronisation. Returns an unsubscribe. */
 export function onHealth(f: (s: Health) => void): () => void {
   listeners.add(f)
   void notify()
@@ -90,10 +89,10 @@ async function readState(): Promise<RemoteState | null> {
   } catch { lastState = 'network'; return null }
 }
 
-/* Le genre d'un document dit dans quelle table du miroir il se range. La clef
-   primaire n'est pas toujours `id` : un message est rangé sous son club, une
-   convocation sous sa rencontre. Le balayage ci-dessous lit les clefs primaires
-   de chaque table, il suit donc ces choix sans avoir à les connaître. */
+/* A document's kind says which mirror table it files under. The primary key is not
+   always `id`: a message is filed under its club, a call-up under its game. The
+   sweep below reads each table's primary keys, so it follows those choices without
+   having to know them. */
 const TABLES = {
   team: db.teams, player: db.players, match: db.matches,
   result: db.results, convocation: db.convocations, training: db.trainings,
@@ -101,21 +100,20 @@ const TABLES = {
 } as const
 
 /**
- * Aligne le miroir local sur la source de vérité.
+ * Brings the local mirror in line with the source of truth.
  *
- * Deux moitiés, et c'est la seconde qu'on oublie. `docs` porte ce qui a changé.
- * `vivants` dit ce que la base détient encore : tout ce qui n'y figure pas est
- * supprimé en local. C'est ainsi qu'une suppression se propage, puisqu'elle
- * supprime vraiment la ligne côté serveur et ne laisse aucune trace à
- * transporter.
+ * Two halves, and it is the second one people forget. `docs` carries what changed.
+ * `alive` says what the database still holds: anything absent from it is deleted
+ * locally. That is how a deletion propagates, since it really removes the row
+ * server-side and leaves no trace to carry around.
  *
- * **Une hydratation gagne, y compris quand elle est vide.** Le serveur fait foi
- * sans exception — c'est la propriété que ce chantier existe pour établir, et
- * une régression compatissante aurait envie de la casser.
+ * **A hydration wins, including when it is empty.** The server is authoritative
+ * without exception — that is the property this work exists to establish, and a
+ * compassionate regression would love to break it.
  *
- * Une seule réserve, et ce n'en est pas une : ce qui attend dans la file n'est
- * pas effacé. Ce n'est pas du périmé que le serveur ignorerait, c'est une
- * écriture que la personne vient de faire et qui n'est pas encore partie.
+ * One reservation, and it is not really one: whatever waits in the queue is not
+ * erased. That is not stale data the server would ignore, it is a write the person
+ * has just made and that has not left yet.
  */
 export async function hydrate(): Promise<boolean> {
   const s = await readState()
@@ -124,13 +122,12 @@ export async function hydrate(): Promise<boolean> {
   const pending = new Set((await db.outbox.toArray()).map((o) => `${o.kind}:${o.id}`))
   const alive = new Set(s.alive)
 
-  // Les huit tables, et pas seulement celles que `docs` touche : le balayage des
-  // morts lit les clefs primaires de chacune. Dexie les veut dans un tableau
-  // au-delà de cinq.
+  // All eight tables, not only those `docs` touches: the sweep for the dead reads
+  // the primary keys of each. Dexie wants them in an array beyond five.
   await db.transaction('rw', Object.values(TABLES), async () => {
-    // Le document vient du serveur tel qu'il y a été rangé. Le transtypage assume
-    // ce que TypeScript ne peut pas vérifier ici : chaque genre a sa table, et
-    // `GENRES` côté serveur refuse tout ce qui n'en est pas un.
+    // The document comes from the server as it was filed there. The cast assumes
+    // what TypeScript cannot check here: each kind has its table, and `KINDS`
+    // server-side rejects anything that is not one.
     for (const d of s.docs) await (TABLES[d.kind] as Table<unknown, string> | undefined)?.put(d.doc)
     for (const [kind, table] of Object.entries(TABLES) as [Kind, (typeof TABLES)[Kind]][]) {
       const ids = (await table.toCollection().primaryKeys()) as string[]
@@ -143,17 +140,18 @@ export async function hydrate(): Promise<boolean> {
   return true
 }
 
-/** Rafraîchit depuis le serveur (à appeler à l'ouverture des pages de listes). */
+/** Refreshes from the server (to call when a list page opens). */
 export async function refresh(): Promise<void> { if (BASE) await hydrate() }
 
-// --- File d'attente sortante ---
+// --- Outgoing queue ---
 
 async function enqueue(op: Omit<OutboxItem, 'ts' | 'seq' | 'modifiedAt'>): Promise<void> {
-  if (!BASE) return // mode local : rien à synchroniser
-  // L'horodatage est posé ICI, au moment du geste, et pas à l'arrivée sur le
-  // serveur. C'est ce qui fait gagner la modification la plus récente et non la
-  // plus récemment reçue : une file bloquée deux heures par un gymnase sans
-  // réseau n'écrase pas une correction faite entre-temps sur un autre appareil.
+  if (!BASE) return // local mode: nothing to synchronise
+  // The timestamp is stamped HERE, at the moment of the gesture, and not on arrival
+  // at the server. That is what makes the most recent *modification* win rather
+  // than the most recently *received* one: a queue held up for two hours by a gym
+  // with no coverage does not overwrite a correction made meanwhile on another
+  // device.
   await db.outbox.add({ ...op, ts: Date.now(), modifiedAt: new Date().toISOString() })
   void notify()
   flush()
@@ -164,7 +162,7 @@ export const enqueueDel = (kind: Kind, id: string) => enqueue({ kind, op: 'del',
 let flushing = false
 let timer: ReturnType<typeof setTimeout> | undefined
 
-/** Vide la file vers le serveur (dédupliquée par entité). Débounce par défaut. */
+/** Empties the queue towards the server (deduplicated per entity). Debounced by default. */
 export function flush(delay = 700): void {
   if (!BASE) return
   clearTimeout(timer)
@@ -177,7 +175,7 @@ async function doFlush(): Promise<void> {
   try {
     const items = await db.outbox.orderBy('seq').toArray()
     if (items.length) {
-      // Déduplication : on ne garde que la dernière opération par (kind:id).
+      // Deduplication: only the last operation per (kind:id) is kept.
       const byKey = new Map<string, OutboxItem>()
       for (const it of items) byKey.set(`${it.kind}:${it.id}`, it)
       const ops = [...byKey.values()].map((it) => ({
@@ -186,28 +184,27 @@ async function doFlush(): Promise<void> {
       }))
       const body = JSON.stringify({ ops })
       /*
-       * `keepalive` laisse l'envoi survivre à la fermeture de l'onglet — précieux
-       * quand quelqu'un quitte l'application juste après une saisie. Mais le
-       * navigateur le **plafonne à 64 Ko**, et au-delà `fetch` échoue sèchement,
-       * sans jamais atteindre le réseau.
+       * `keepalive` lets the send outlive the closing of the tab — precious when
+       * someone quits the application right after an entry. But the browser
+       * **caps it at 64 KB**, and beyond that `fetch` fails outright, without ever
+       * reaching the network.
        *
-       * Ce n'est pas théorique : une seule rencontre pèse des dizaines de
-       * kilooctets une fois son journal d'évènements sérialisé, et un premier
-       * envoi qui rattrape une saison en dépasse largement le seuil. L'échec
-       * tombait dans le `catch` avec les pannes de réseau, donc la file
-       * réessayait indéfiniment un envoi qui ne pouvait pas aboutir.
+       * This is not theoretical: a single game weighs tens of kilobytes once its
+       * event log is serialised, and a first send catching up on a season goes well
+       * past the threshold. The failure landed in the `catch` along with network
+       * outages, so the queue retried forever a send that could not succeed.
        *
-       * Au-delà du seuil on envoie donc sans `keepalive` : un gros lot perdu à la
-       * fermeture reste dans la file et repart au démarrage suivant, ce qui est
-       * infiniment préférable à un lot qui ne part jamais.
+       * Past the threshold we therefore send without `keepalive`: a large batch lost
+       * on closing stays in the queue and leaves again at the next start, which is
+       * infinitely preferable to a batch that never leaves at all.
        */
       const r = await fetch(`${BASE}/mutate`, {
         method: 'POST', headers: headers(), body,
         keepalive: new Blob([body]).size < 60_000,
       })
-      // Un jeton refusé n'est pas un incident de réseau : réessayer ne servira à
-      // rien tant que personne n'aura corrigé le réglage. On garde la file — les
-      // écritures ne sont pas perdues — et on le fait dire à l'administration.
+      // A rejected token is not a network incident: retrying will achieve nothing
+      // until someone fixes the setting. We keep the queue — the writes are not
+      // lost — and let the admin screen say so.
       if (r.status === 401 || r.status === 503) lastState = 'token'
       else if (r.ok) { lastState = 'ok'; await db.outbox.bulkDelete(items.map((i) => i.seq!)) }
       else lastState = 'network'
@@ -218,13 +215,13 @@ async function doFlush(): Promise<void> {
   }
 }
 
-// Vide la file dès que la connexion revient.
+// Empties the queue as soon as the connection comes back.
 if (typeof window !== 'undefined' && BASE) window.addEventListener('online', () => flush(0))
 
-/** Force l'envoi immédiat de la file et permet de l'attendre. À utiliser après
- *  une écriture que l'utilisateur peut suivre d'une navigation : sans cela, le
- *  débounce laisse une fenêtre pendant laquelle une hydratation écraserait
- *  l'écriture avec un état serveur pas encore au courant. */
+/** Forces an immediate send of the queue and lets callers await it. To be used
+ *  after a write the user may follow with a navigation: without it, the debounce
+ *  leaves a window during which a hydration would overwrite the write with a server
+ *  state that does not know about it yet. */
 export function flushNow(): Promise<void> {
   clearTimeout(timer)
   return doFlush()

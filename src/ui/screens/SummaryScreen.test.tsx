@@ -96,7 +96,7 @@ describe('SummaryScreen — droits', () => {
   it('la correction après match est refusée à la table de marque : ni bouton, ni mode correction', async () => {
     // Corriger une feuille close n'est pas le travail du bénévole du samedi : les
     // deux boutons de correction ne lui sont pas proposés, et le mode ne s'ouvre pas.
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderRésumé()
     await screen.findByText('Visiteurs · VERDUN')
 

@@ -172,7 +172,7 @@ describe('parcours complet', () => {
 describe('LiveMatch — droits', () => {
   it('la table de marque saisit le match sans qu’aucun code lui soit demandé', async () => {
     // Le cœur du modèle : le bénévole tient la feuille sans détenir le code admin.
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderLive()
     await userEvent.click(await screen.findByRole('button', { name: 'Ajouter 2 points à VERDUN' }))
 

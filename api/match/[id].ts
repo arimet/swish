@@ -3,23 +3,23 @@ import { preamble } from '../_db.js'
 import { bundle } from '../_bundle.js'
 
 /**
- * Le suivi spectateur d'une rencontre.
+ * The spectator view of a game.
  *
- * **Publique, et c'est sa raison d'être** : on partage ce lien à des parents, qui
- * n'ont ni l'application ni le jeton du club. C'est la seule route qui ne passe
- * pas la garde de `_db.refuse`.
+ * **Public, and that is its whole point**: this link is shared with parents, who
+ * have neither the application nor the club's token. It is the one route that does
+ * not go through `_db.unauthorized`.
  *
- * Il n'y a plus de `PUT` : le paquet est dérivé de la table (voir `_bundle`), et
- * la rencontre y arrive déjà par la file d'attente de la table de marque.
+ * There is no `PUT` any more: the bundle is derived from the table (see
+ * `_bundle`), and the game already arrives there through the scorer's table queue.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (preamble(req, res, 'GET')) return
 
   const id = req.query.id as string
-  if (!id) return res.status(400).json({ error: 'id manquant' })
+  if (!id) return res.status(400).json({ error: 'id missing' })
 
   const p = await bundle(id)
-  if (!p) return res.status(404).json({ error: 'Rencontre introuvable' })
+  if (!p) return res.status(404).json({ error: 'Game not found' })
 
   return res.status(200).json(p)
 }

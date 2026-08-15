@@ -7,11 +7,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { devApi } from './dev-api.js'
 
 export default defineConfig(({ mode }) => {
-  // Vite ne verse dans `import.meta.env` que les variables préfixées `VITE_`, et
-  // ne touche pas à `process.env`. Or les fonctions d'`api/` lisent `DATABASE_URL`
-  // et `SYNC_WRITE_TOKEN` — deux secrets qui ne doivent surtout PAS être préfixés,
-  // sans quoi ils partiraient dans le bundle. On les verse donc à la main, pour
-  // que le `.env` du développement les atteigne comme le ferait Vercel.
+  // Vite only pours `VITE_`-prefixed variables into `import.meta.env`, and does not
+  // touch `process.env`. But the `api/` functions read `DATABASE_URL` and
+  // `SYNC_WRITE_TOKEN` — two secrets that must emphatically NOT be prefixed, or they
+  // would leave in the bundle. So we pour them by hand, so that development's `.env`
+  // reaches them the way Vercel would.
   const env = loadEnv(mode, process.cwd(), '')
   for (const k of ['DATABASE_URL', 'SYNC_WRITE_TOKEN']) if (env[k]) process.env[k] = env[k]
 
@@ -23,16 +23,16 @@ export default defineConfig(({ mode }) => {
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        // Le même titre qu'`index.html`, et pour la même raison : il nomme le produit
-        // — le hub d'une équipe — et non l'un de ses neuf écrans.
+        // The same title as `index.html`, and for the same reason: it names the
+        // product — a team's hub — and not one of its nine screens.
         name: 'Swish — Le hub de votre équipe de basket',
         short_name: 'Swish',
         description: 'Table de marque, statistiques, calendrier et schémas tactiques pour une équipe de basket amateur.',
         display: 'standalone',
-        // L'écran de démarrage et la barre de l'application installée : le cadre
-        // et la gouttière du thème clair, comme les `theme-color` de l'index.
-        // Ces deux-là suivent `ui/theme/themes.css` à la main — un manifeste PWA
-        // ne lit pas de variables CSS.
+        // The splash screen and the installed application's bar: the light theme's
+        // frame and gutter, like the index's `theme-color`. These two follow
+        // `ui/theme/themes.css` by hand — a PWA manifest does not read CSS
+        // variables.
         background_color: '#0e1116',
         theme_color: '#07090c',
         icons: [
@@ -52,16 +52,15 @@ export default defineConfig(({ mode }) => {
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/setupTests.ts'],
-    // La suite exerce le chemin local-first, et elle ne doit pas dépendre du
-    // `.env` de la machine qui la lance : un développeur qui branche sa base de
-    // développement verrait sinon une dizaine d'écrans partir chercher le réseau
-    // et rester sur « Chargement… ». Un test de la synchronisation elle-même
-    // poserait sa propre valeur, explicitement.
+    // The suite exercises the local-first path, and must not depend on the `.env`
+    // of the machine running it: a developer who plugs in their dev database would
+    // otherwise see a dozen screens head off to the network and sit on "Loading…".
+    // A test of the synchronisation itself would set its own value, explicitly.
     env: { VITE_SYNC_URL: '' },
-    // Les worktrees vivent sous `.claude/`, donc *dans* le dépôt : sans cette
-    // exclusion, une exécution depuis la racine ramasse aussi les tests de
-    // chaque branche en cours et les fait échouer sur un alias `@` qui pointe
-    // ailleurs. Deux cents échecs qui ne disent rien du code de `main`.
+    // Worktrees live under `.claude/`, hence *inside* the repo: without this
+    // exclusion, a run from the root also picks up the tests of every branch in
+    // progress and fails them on an `@` alias pointing elsewhere. Two hundred
+    // failures that say nothing about `main`'s code.
     exclude: ['**/node_modules/**', '**/dist/**', '**/.claude/**'],
   },
   }

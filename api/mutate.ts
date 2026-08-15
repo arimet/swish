@@ -5,23 +5,21 @@ import { mergeMatches } from '../src/domain/fusion.js'
 import type { Match } from '../src/domain/types.js'
 
 /**
- * La feuille de match ne s'écrase pas, elle se fusionne.
+ * A match sheet is not overwritten, it is merged.
  *
- * C'est le seul document qui échappe à « la plus récente gagne », et ce n'est pas
- * une exception de confort : quand deux appareils saisissent la même rencontre,
- * le perdant de l'arbitrage n'a pas tort — il a noté d'autres évènements. Les
- * écraser reviendrait à faire disparaître des paniers, ce que ce produit
- * considère comme sa pire catégorie de défaut.
+ * It is the one document that escapes "most recent wins", and not as a convenience
+ * exception: when two devices record the same game, the loser of the arbitration
+ * is not wrong — it noted other events. Overwriting them would make baskets
+ * disappear, which this product considers its worst category of defect.
  *
- * L'arbitrage garde donc son rôle, mais seulement sur ce qui se remplace
- * (`meta`, `roster`) : le vainqueur passe en second à `fusionnerMatchs`, dont
- * l'étalement des champs le fait gagner. Les évènements, eux, s'unissent quel
- * qu'il soit.
+ * Arbitration therefore keeps its role, but only over what replaces (`meta`,
+ * `roster`): the winner goes second into `mergeMatches`, whose field spread makes
+ * it win. The events, for their part, unite whichever it is.
  */
 async function writeMatch(client: PoolClient, id: string, incoming: Match, when: Date) {
-  // `for update` verrouille la ligne le temps de la transaction : sans lui, deux
-  // envois simultanés liraient le même état et le second écraserait la fusion du
-  // premier — précisément le scénario que cette fonction existe pour empêcher.
+  // `for update` locks the row for the duration of the transaction: without it, two
+  // simultaneous sends would read the same state and the second would overwrite the
+  // first one's merge — precisely the scenario this function exists to prevent.
   const { rows } = await client.query<{ doc: Match; modified_at: Date }>(
     "select doc, modified_at from documents where kind = 'match' and id = $1 for update", [id])
 
@@ -46,36 +44,36 @@ async function writeMatch(client: PoolClient, id: string, incoming: Match, when:
     [id, merged, when])
 }
 
-/** Les genres que la base accepte. Une opération d'un genre inconnu est ignorée
- *  plutôt que refusée : un appareil resté sur une version plus récente ne doit
- *  pas voir toute sa file rejetée pour un seul élément. */
-const GENRES = new Set(['team', 'player', 'match', 'result', 'convocation', 'training', 'play', 'message'])
+/** The kinds the database accepts. An operation of an unknown kind is ignored
+ *  rather than rejected: a device left on a newer version must not have its whole
+ *  queue turned away over a single item. */
+const KINDS = new Set(['team', 'player', 'match', 'result', 'convocation', 'training', 'play', 'message'])
 
 interface Op {
   kind?: string
   op?: 'put' | 'del'
   id?: string
   doc?: unknown
-  /** Quand la personne a modifié, sur son appareil. Voir plus bas. */
+  /** When the person made the change, on their device. See below. */
   modifiedAt?: string
 }
 
 /**
- * Écritures venues de la file d'attente d'un appareil.
+ * Writes coming from a device's queue.
  *
- * **La modification la plus récente gagne — la plus récemment faite, pas la plus
- * récemment reçue.** Toute la logique tient dans les deux clauses `where`
- * ci-dessous, et elles existent pour le scénario suivant :
+ * **The most recent modification wins — the most recently *made*, not the most
+ * recently *received*.** The whole logic sits in the two `where` clauses below, and
+ * they exist for the following scenario:
  *
- *   Le marqueur corrige le lieu à 14 h, sans réseau.
- *   Le coach corrige le même champ à 15 h, en ligne : ça part tout de suite.
- *   Le marqueur retrouve du réseau à 16 h et sa file se vide.
+ *   The scorer corrects the venue at 2pm, with no network.
+ *   The coach corrects the same field at 3pm, online: it leaves right away.
+ *   The scorer gets coverage back at 4pm and their queue empties.
  *
- * Arbitrer sur l'arrivée ferait gagner le marqueur, dont la saisie a deux heures
- * de retard. `modified_at` est donc posé par l'appareil au moment du geste.
+ * Arbitrating on arrival would let the scorer win, whose entry is two hours behind.
+ * `modified_at` is therefore stamped by the device at the moment of the gesture.
  *
- * La contrepartie est assumée : on fait confiance à l'horloge des téléphones. Le
- * décalage courant se compte en secondes, le retard qu'on corrige en heures.
+ * The trade-off is accepted: we trust phone clocks. The usual drift is counted in
+ * seconds, the lateness we are correcting in hours.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (preamble(req, res, 'POST')) return
@@ -83,15 +81,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
   const ops: Op[] = body?.ops
-  if (!Array.isArray(ops)) return res.status(400).json({ error: 'ops manquant' })
+  if (!Array.isArray(ops)) return res.status(400).json({ error: 'ops missing' })
 
   const client = await pool!.connect()
   try {
-    // Un lot est tout ou rien : une file à moitié appliquée laisserait le client
-    // croire son envoi perdu et rejouer par-dessus un état déjà à moitié à jour.
+    // A batch is all or nothing: a half-applied queue would leave the client
+    // believing its send lost, and replaying on top of a half-updated state.
     await client.query('begin')
     for (const o of ops) {
-      if (!o?.id || !o.kind || !GENRES.has(o.kind)) continue
+      if (!o?.id || !o.kind || !KINDS.has(o.kind)) continue
       const when = o.modifiedAt ? new Date(o.modifiedAt) : null
       if (!when || Number.isNaN(when.getTime())) continue
 
@@ -109,8 +107,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           [o.kind, o.id, o.doc, when],
         )
       } else if (o.op === 'del') {
-        // La suppression s'arbitre comme le reste : une suppression décidée à 14 h
-        // n'emporte pas une modification faite à 15 h sur un autre appareil.
+        // A deletion is arbitrated like the rest: a deletion decided at 2pm does not
+        // carry off a modification made at 3pm on another device.
         await client.query(
           'delete from documents where kind = $1 and id = $2 and modified_at < $3',
           [o.kind, o.id, when],

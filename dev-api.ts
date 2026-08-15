@@ -2,22 +2,22 @@ import type { Plugin, ViteDevServer } from 'vite'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
 /**
- * Monte les fonctions d'`api/` dans le serveur de développement.
+ * Mounts the `api/` functions inside the dev server.
  *
- * Sans ça, `/api/*` n'existe qu'une fois déployé, et la synchronisation ne se
- * teste jamais avant la production. L'alternative — `vercel dev` — imposerait le
- * CLI Vercel et un projet lié à quiconque veut seulement lancer le dépôt, ce qui
- * est trop cher pour un projet qu'on invite à forker.
+ * Without this, `/api/*` only exists once deployed, and the synchronisation is
+ * never exercised before production. The alternative — `vercel dev` — would impose
+ * the Vercel CLI and a linked project on anyone who only wants to run the repo,
+ * which is too expensive for a project we invite people to fork.
  *
- * Les gestionnaires Vercel sont des fonctions `(req, res)` ordinaires : il suffit
- * de leur donner ce que la plateforme ajoute à Node, c'est-à-dire `query`, `body`
- * et les raccourcis `status`/`json`. C'est ce que fait ce fichier, et rien de plus
- * — un seul chemin de code répond en développement et en production.
+ * Vercel handlers are ordinary `(req, res)` functions: all they need is what the
+ * platform adds to Node, that is `query`, `body` and the `status`/`json`
+ * shorthands. That is what this file does, and nothing more — a single code path
+ * answers in development and in production.
  *
- * **Le plugin ne se monte que si `DATABASE_URL` est présente.** Sans elle, `pnpm
- * dev` se comporte exactement comme avant : aucune API, aucun appel réseau,
- * l'application est 100 % locale avec son jeu de données de démonstration. C'est
- * ce que doit vivre quelqu'un qui clone le dépôt pour la première fois.
+ * **The plugin only mounts if `DATABASE_URL` is present.** Without it, `pnpm dev`
+ * behaves exactly as before: no API, no network call, the application is 100% local
+ * with its demo dataset. That is what someone cloning the repo for the first time
+ * should experience.
  */
 export function devApi(): Plugin {
   return {
@@ -25,10 +25,10 @@ export function devApi(): Plugin {
     apply: 'serve',
     configureServer(server: ViteDevServer) {
       if (!process.env.DATABASE_URL) {
-        server.config.logger.info('  ➜  API : hors service (DATABASE_URL absente) — mode 100 % local')
+        server.config.logger.info('  ➜  API: off (DATABASE_URL absent) — 100% local mode')
         return
       }
-      server.config.logger.info('  ➜  API : /api/* servi depuis api/ (DATABASE_URL présente)')
+      server.config.logger.info('  ➜  API: /api/* served from api/ (DATABASE_URL present)')
 
       server.middlewares.use(async (req, res, next) => {
         const url = new URL(req.url ?? '/', 'http://localhost')
@@ -42,7 +42,7 @@ export function devApi(): Plugin {
           await mod.default(await enrich(req, { ...route.params, ...query(url) }), decorate(res))
         } catch (e) {
           server.ssrFixStacktrace(e as Error)
-          server.config.logger.error(`  ✖  /api${url.pathname.slice(4)} : ${(e as Error).message}`)
+          server.config.logger.error(`  ✖  /api${url.pathname.slice(4)}: ${(e as Error).message}`)
           if (!res.headersSent) res.statusCode = 500
           res.end(JSON.stringify({ error: (e as Error).message }))
         }
@@ -51,34 +51,34 @@ export function devApi(): Plugin {
   }
 }
 
-/** Le routage de Vercel, réduit aux quatre routes du projet. Les crochets d'un
- *  nom de fichier deviennent un paramètre. */
-function resolve(chemin: string): { file: string; params: Record<string, string> } | null {
-  const p = chemin.replace(/^\/api\//, '').replace(/\/$/, '')
+/** Vercel's routing, reduced to the project's four routes. The brackets in a file
+ *  name become a parameter. */
+function resolve(pathname: string): { file: string; params: Record<string, string> } | null {
+  const p = pathname.replace(/^\/api\//, '').replace(/\/$/, '')
   if (p === 'state') return { file: 'state.ts', params: {} }
   if (p === 'mutate') return { file: 'mutate.ts', params: {} }
   const stream = p.match(/^match\/([^/]+)\/stream$/)
   if (stream) return { file: 'match/[id]/stream.ts', params: { id: decodeURIComponent(stream[1]) } }
-  const un = p.match(/^match\/([^/]+)$/)
-  if (un) return { file: 'match/[id].ts', params: { id: decodeURIComponent(un[1]) } }
+  const one = p.match(/^match\/([^/]+)$/)
+  if (one) return { file: 'match/[id].ts', params: { id: decodeURIComponent(one[1]) } }
   return null
 }
 
 const query = (url: URL) => Object.fromEntries(url.searchParams)
 
-/** Vercel décode le corps JSON avant d'appeler le gestionnaire ; Node, non. */
+/** Vercel decodes the JSON body before calling the handler; Node does not. */
 async function enrich(req: IncomingMessage, params: Record<string, string>) {
-  const brut = await new Promise<string>((ok) => {
+  const raw = await new Promise<string>((ok) => {
     let d = ''
     req.on('data', (c) => { d += c })
     req.on('end', () => ok(d))
   })
   let body: unknown
-  try { body = brut ? JSON.parse(brut) : undefined } catch { body = brut }
+  try { body = raw ? JSON.parse(raw) : undefined } catch { body = raw }
   return Object.assign(req, { query: params, body, cookies: {} })
 }
 
-/** Les raccourcis que Vercel ajoute à la réponse. */
+/** The shorthands Vercel adds to the response. */
 function decorate(res: ServerResponse) {
   return Object.assign(res, {
     status(code: number) { res.statusCode = code; return this },

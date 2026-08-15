@@ -17,30 +17,29 @@ export function useMatch(matchId: string) {
   const apply = (next: Match) => { matchRef.current = next; setMatch(next) }
 
   /**
-   * Applique l'état à l'écran, l'enregistre, et **revient en arrière** si
-   * l'enregistrement échoue.
+   * Applies the state to the screen, saves it, and **rolls back** if the save fails.
    *
-   * L'affichage précédait l'écriture sans jamais la vérifier, ce qui est exactement
-   * l'inverse de ce qu'une feuille de match peut se permettre. Un `saveMatch` en échec
-   * laissait l'écran afficher un panier que la base n'avait pas : le tableau
-   * d'affichage disait 42, la base 40, et le point disparaissait au rechargement.
-   * Pour un score officiel, un état qui mente est plus grave qu'une action refusée.
+   * The display preceded the write without ever checking it, which is exactly the
+   * opposite of what a match sheet can afford. A failed `saveMatch` left the screen
+   * showing a basket the database did not have: the scoreboard said 42, the database
+   * 40, and the point vanished on reload. For an official score, a state that lies is
+   * worse than an action refused.
    *
-   * L'optimisme reste, et il est justifié : à la table de marque, la saisie doit
-   * répondre au doigt sans attendre le disque. Ce qui manquait, c'est le retour en
-   * arrière quand la promesse n'est pas tenue.
+   * The optimism stays, and it is justified: at the scorer's table, entry must answer
+   * the finger without waiting for the disk. What was missing is the rollback when
+   * the promise is not kept.
    *
-   * Renvoie l'issue, car « Terminer » navigue hors de la rencontre juste après :
-   * partir en croyant le match clos alors que rien n'a été écrit, c'est la même
-   * tromperie un cran plus loin.
+   * Returns the outcome, because "Finish" navigates out of the game right after:
+   * leaving in the belief the game is closed when nothing was written is the same
+   * deception one notch further on.
    */
-  const persister = useCallback(async (next: Match, precedent: Match): Promise<boolean> => {
+  const persist = useCallback(async (next: Match, previous: Match): Promise<boolean> => {
     apply(next); setError(null)
     try {
       await saveMatch(next)
       return true
     } catch {
-      apply(precedent)
+      apply(previous)
       setError(translate('erreur.enregistrement'))
       return false
     }
@@ -54,24 +53,24 @@ export function useMatch(matchId: string) {
     const current = matchRef.current
     if (!current) return
     const event = { ...input, id: newId(), wallClock: Date.now() } as GameEvent
-    /* Deux causes d'échec, deux traitements. `appendEvent` ne lance que des messages
-       intentionnels du règlement (« Impossible de marquer avant le démarrage du
-       chrono. ») : ils s'affichent tels quels, et rien n'a encore été appliqué. Une
-       panne d'écriture est autre chose, et tombait jusqu'ici dans le même `catch` —
-       elle y montrait une exception technique brute à un bénévole. */
+    /* Two causes of failure, two treatments. `appendEvent` only throws deliberate
+       rulebook messages ("Cannot score before the clock starts."): they are shown as
+       they are, and nothing has been applied yet. A write failure is something else,
+       and used to land in the same `catch` — where it showed a raw technical
+       exception to a volunteer. */
     let next: Match
     try {
       next = appendEvent(current, event)
     } catch (e) {
-      // Le domaine renvoie une clef de règle, pas une phrase : voir `validateEvent`.
+      // The domain returns a rule key, not a sentence: see `validateEvent`.
       setError(translate((e as Error).message))
       return
     }
-    await persister(next, current)
-  }, [persister, translate])
+    await persist(next, current)
+  }, [persist, translate])
 
-  /** Enchaîne plusieurs évènements en un seul état/sauvegarde atomique — évite qu'un
-   * second dispatch synchrone n'écrase le premier en repartant d'un match périmé. */
+  /** Chains several events into a single atomic state/save — stops a second
+   * synchronous dispatch from overwriting the first by starting from a stale game. */
   const dispatchMany = useCallback(async (inputs: EventInput[]) => {
     const current = matchRef.current
     if (!current) return
@@ -85,32 +84,32 @@ export function useMatch(matchId: string) {
       setError(translate((e as Error).message))
       return
     }
-    await persister(next, current)
-  }, [persister, translate])
+    await persist(next, current)
+  }, [persist, translate])
 
   const undo = useCallback(async () => {
     const current = matchRef.current
     if (!current) return
-    await persister(undoLast(current), current)
-  }, [persister])
+    await persist(undoLast(current), current)
+  }, [persist])
 
-  /** Correction ciblée : retire le dernier évènement satisfaisant le prédicat. */
+  /** Targeted correction: removes the last event satisfying the predicate. */
   const removeLast = useCallback(async (predicate: (e: GameEvent) => boolean) => {
     const current = matchRef.current
     if (!current) return
     const next = removeLastEvent(current, predicate)
     if (next === current) return
-    await persister(next, current)
-  }, [persister])
+    await persist(next, current)
+  }, [persist])
 
-  /** Clôture définitivement le match (spec §8) : passe le statut à 'finished' et
-   *  persiste. Renvoie `false` si l'écriture a échoué — l'appelant ne doit alors pas
-   *  quitter la rencontre, elle n'est pas terminée. */
+  /** Closes the game for good (spec §8): moves the status to 'finished' and saves.
+   *  Returns `false` if the write failed — the caller must then not leave the game,
+   *  it is not finished. */
   const finish = useCallback(async (): Promise<boolean> => {
     const current = matchRef.current
     if (!current) return false
-    return persister({ ...current, status: 'finished' }, current)
-  }, [persister])
+    return persist({ ...current, status: 'finished' }, current)
+  }, [persist])
 
   return { match, dispatch, dispatchMany, undo, removeLast, finish, error }
 }

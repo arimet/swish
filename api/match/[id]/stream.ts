@@ -3,13 +3,13 @@ import { pool } from '../../_db.js'
 import { bundle } from '../../_bundle.js'
 
 /**
- * Flux SSE : pousse le paquet d'une rencontre aux spectateurs dès qu'il change.
+ * SSE stream: pushes a game's bundle to spectators as soon as it changes.
  *
- * Le runtime passe d'Edge à Node, parce que Postgres se parle en TCP et que le
- * runtime Edge ne l'ouvre pas. Conséquence : la boucle ne peut plus tenir cinq
- * minutes — une fonction Vercel a une durée bornée — donc on tient cinquante
- * secondes et on laisse `EventSource` se reconnecter, ce qu'il fait tout seul.
- * Le client garde de toute façon son repli en interrogation périodique.
+ * The runtime moves from Edge to Node, because Postgres is spoken over TCP and the
+ * Edge runtime does not open one. Consequence: the loop can no longer hold five
+ * minutes — a Vercel function has a bounded duration — so we hold fifty seconds and
+ * let `EventSource` reconnect, which it does on its own. The client keeps its
+ * polling fallback in any case.
  */
 export const config = { maxDuration: 60 }
 
@@ -18,10 +18,10 @@ const STEP_MS = 1500
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  if (!pool) return res.status(501).end('Synchronisation non configurée')
+  if (!pool) return res.status(501).end('Sync not configured')
 
   const id = req.query.id as string
-  if (!id) return res.status(400).end('id manquant')
+  if (!id) return res.status(400).end('id missing')
 
   res.writeHead(200, {
     'content-type': 'text/event-stream; charset=utf-8',
@@ -33,9 +33,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let open = true
   req.on('close', () => { open = false })
 
-  // On n'émet que sur changement réel : `rev` est un numéro d'écriture, donc
-  // comparer deux entiers suffit — pas besoin de sérialiser le paquet pour savoir
-  // s'il a bougé.
+  // We emit only on a real change: `rev` is a write number, so comparing two
+  // integers is enough — no need to serialise the bundle to know whether it moved.
   let last = -1
   res.write(': ok\n\n')
 
@@ -49,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         res.write(': ping\n\n')
       }
-    } catch { /* transitoire : on réessaie au tour suivant */ }
+    } catch { /* transient: we retry on the next turn */ }
     await new Promise((r) => setTimeout(r, STEP_MS))
   }
 

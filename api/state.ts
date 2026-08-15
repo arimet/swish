@@ -2,30 +2,29 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { pool, preamble, unauthorized } from './_db.js'
 
 /**
- * Hydratation du miroir local depuis la source de vérité.
+ * Hydration of the local mirror from the source of truth.
  *
- * Renvoie deux choses, et la seconde est celle qu'on oublie :
+ * Returns two things, and the second is the one people forget:
  *
- * - `docs` — ce qui a bougé depuis `since`. Sans `since`, tout.
- * - `vivants` — les identifiants que la base détient **encore**. Le client
- *   supprime en local ce qui n'y figure pas.
+ * - `docs` — what moved since `since`. Without `since`, everything.
+ * - `alive` — the ids the database **still** holds. The client deletes locally
+ *   whatever is not in it.
  *
- * Le manifeste existe parce qu'une suppression supprime vraiment la ligne : il
- * n'y a donc aucune pierre tombale à transporter, et une hydratation
- * incrémentale ne peut pas décrire ce qui n'existe plus. L'absence le dit à sa
- * place — ce qui est plus robuste qu'une trace, puisque rien ne peut expirer ni
- * être manqué : un appareil resté six mois hors ligne se remet d'aplomb en une
- * hydratation.
+ * The manifest exists because a deletion really removes the row: there is
+ * therefore no tombstone to carry around, and an incremental hydration cannot
+ * describe what no longer exists. Absence says it instead — which is sturdier than
+ * a trace, since nothing can expire or be missed: a device left offline for six
+ * months rights itself in one hydration.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (preamble(req, res, 'GET')) return
   if (unauthorized(req, res)) return
 
-  const brut = Number(req.query.since)
-  const since = Number.isFinite(brut) && brut > 0 ? brut : 0
+  const raw = Number(req.query.since)
+  const since = Number.isFinite(raw) && raw > 0 ? raw : 0
 
-  // Une seule requête pour les deux réponses : chaque ligne donne son identifiant
-  // au manifeste, et son document seulement si elle a bougé depuis le curseur.
+  // One query for both answers: every row gives its id to the manifest, and its
+  // document only if it moved since the cursor.
   const { rows } = await pool!.query<{ kind: string; id: string; rev: string; doc: unknown }>(
     `select kind, id, rev, case when rev > $1 then doc else null end as doc
        from documents

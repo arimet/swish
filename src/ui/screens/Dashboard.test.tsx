@@ -67,7 +67,7 @@ describe('Dashboard', () => {
   it('met le match en direct en tête', async () => {
     // Le raccourci vers la table de marque est réservé à qui la tient : ce test se
     // place de son côté, le cas du visiteur est vérifié juste en dessous.
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live' })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
@@ -176,7 +176,7 @@ describe('Dashboard', () => {
     // rien, `nextFixture` ignorant de toute façon une date passée comme '2026-01-10'.
     // Aucune autre échéance que la rencontre en direct : le bloc doit inviter à
     // planifier plutôt que répéter l'adversaire déjà affiché dans le bandeau.
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(0), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
@@ -188,7 +188,7 @@ describe('Dashboard', () => {
     // (démarrée par erreur) : les deux doivent rester exclues des échéances à venir,
     // sans quoi la seconde serait annoncée comme « prochaine échéance » alors qu'elle
     // a déjà commencé.
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(0), clubId: 'ta', opponentId: 'tb' } })
     await saveMatch({ ...finished('m5', 2, 1), id: 'm5', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(1), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
@@ -370,7 +370,7 @@ describe('Dashboard — le message à l’équipe', () => {
   })
 
   it('écrire est administratif : la table de marque ne voit pas le bouton, et rien n’est enregistré', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderDash()
     await screen.findByText('VIGNOT')
 
@@ -383,7 +383,7 @@ describe('Dashboard — le message à l’équipe', () => {
   })
 
   it('effacer est administratif : la table de marque ne voit pas le bouton, et le message reste', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: new Date().toISOString() })
     renderDash()
 

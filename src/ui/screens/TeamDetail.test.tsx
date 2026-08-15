@@ -89,7 +89,7 @@ describe('TeamDetail — fiche signalétique', () => {
 
 describe('TeamDetail — droits', () => {
   it('modifier l’effectif est administratif : la table de marque n’en voit aucun bouton, et rien n’est écrit', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderTeam()
     await screen.findByText(/MARTIN/)
 
@@ -134,7 +134,7 @@ describe('TeamDetail — droits', () => {
     // affiche et ce que contient la base doivent dire la même chose. Le champ ne
     // s'affiche donc pas du tout sans le droit, plutôt que de s'ouvrir à la frappe
     // pour se voir refuser à l'envoi.
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderTeam()
     await screen.findByText(/MARTIN/)
 

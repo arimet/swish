@@ -1,11 +1,11 @@
--- Swish — la source de vérité.
+-- Swish — the source of truth.
 --
--- Une seule table, des documents JSON. L'application est orientée document de bout
--- en bout : Dexie range des objets entiers, la file d'attente émet déjà
--- { kind, op, id, doc }. Huit tables relationnelles demanderaient huit migrations
--- à chaque champ ajouté, pour une donnée que personne n'interroge par colonne.
+-- One table, JSON documents. The application is document-oriented end to end:
+-- Dexie stores whole objects, the queue already emits { kind, op, id, doc }. Eight
+-- relational tables would demand eight migrations for every field added, for data
+-- nobody queries by column.
 --
--- À appliquer sur une base neuve :
+-- To apply on a fresh database:
 --   psql "$DATABASE_URL" -f db/schema.sql
 
 create sequence if not exists documents_rev;
@@ -16,27 +16,27 @@ create table if not exists documents (
 
   doc         jsonb       not null,
 
-  -- QUAND LA PERSONNE A MODIFIÉ, sur son appareil, au moment du geste.
-  -- C'est lui qui arbitre les conflits, et surtout pas l'heure d'arrivée : une
-  -- file bloquée deux heures par un gymnase sans réseau ne doit pas écraser une
-  -- correction faite entre-temps sur un autre appareil.
+  -- WHEN THE PERSON MADE THE CHANGE, on their device, at the moment of the gesture.
+  -- This is what arbitrates conflicts, and certainly not the time of arrival: a
+  -- queue held up for two hours by a gym with no coverage must not overwrite a
+  -- correction made meanwhile on another device.
   modified_at timestamptz not null,
 
-  -- DANS QUEL ORDRE LE SERVEUR A ÉCRIT. Une séquence, donc un ordre total strict :
-  -- c'est le curseur d'hydratation, et rien d'autre. Des horodatages peuvent se
-  -- croiser, une séquence non.
+  -- IN WHICH ORDER THE SERVER WROTE. A sequence, hence a strict total order: this
+  -- is the hydration cursor, and nothing else. Timestamps can cross, a sequence
+  -- cannot.
   rev         bigint      not null default nextval('documents_rev'),
 
   primary key (kind, id)
 );
 
--- L'hydratation incrémentale lit « tout ce qui a bougé depuis `rev` ».
+-- Incremental hydration reads "everything that moved since `rev`".
 create index if not exists documents_rev_idx on documents (rev);
 
--- Le suivi spectateur retrouve l'effectif d'un club sans parcourir la table.
+-- The spectator view finds a club's roster without scanning the table.
 create index if not exists documents_team_idx
   on documents ((doc ->> 'teamId')) where kind = 'player';
 
--- La table ne contient que du vivant : une suppression supprime la ligne. Les
--- autres appareils l'apprennent par l'absence de l'identifiant du manifeste que
--- renvoie `GET /api/state`, pas par une pierre tombale qui pourrait expirer.
+-- The table holds only the living: a deletion removes the row. The other devices
+-- learn of it from the absence of the id in the manifest returned by
+-- `GET /api/state`, not from a tombstone that could expire.

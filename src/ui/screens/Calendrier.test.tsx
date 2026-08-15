@@ -211,7 +211,7 @@ describe('Calendrier — les schémas de la séance', () => {
   })
 
   it('attacher un schéma est administratif : la table de marque n’a pas de case à cocher, et rien n’est enregistré', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran', playIds: ['s1'] })
     await savePlay(schema('s1', 'Pick and roll haut'))
     await savePlay(schema('s2', 'Corner pour le 4'))
@@ -231,7 +231,7 @@ describe('Calendrier — les schémas de la séance', () => {
 
 describe('Calendrier — droits', () => {
   it('planifier est administratif : la table de marque ne voit ni bouton ni formulaire, et rien n’est enregistré', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderCal()
     await screen.findByText(/VERDUN/)
 

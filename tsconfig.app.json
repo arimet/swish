@@ -4,10 +4,10 @@
     "target": "es2023",
     "lib": ["ES2023", "DOM"],
     "module": "esnext",
-    // "node" pour les tests, qui vivent sous `src` et sont donc dans ce projet :
-    // `ui/theme/contrast.test.ts` relit `themes.css` avec `node:fs`. Sous jsdom,
-    // ni `import.meta.url` (une URL http) ni `import … ?raw` (Vitest remplace les
-    // imports CSS par une chaîne vide) ne donnent accès au fichier.
+    // "node" for the tests, which live under `src` and are therefore in this
+    // project: `ui/theme/contrast.test.ts` re-reads `themes.css` with `node:fs`.
+    // Under jsdom, neither `import.meta.url` (an http URL) nor `import … ?raw`
+    // (Vitest replaces CSS imports with an empty string) gives access to the file.
     "types": ["vite/client", "node"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,

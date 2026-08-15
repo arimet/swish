@@ -4,22 +4,22 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- La barre du navigateur suit la page, pas l'accent : c'est le prolongement
-         du fond, et un bandeau rose au-dessus d'une application claire se voit
-         comme une erreur. Les deux thèmes sont déclarés, le clair d'abord. -->
+    <!-- The browser bar follows the page, not the accent: it is the continuation of
+         the background, and a pink band above a light application reads as a bug.
+         Both themes are declared, light first. -->
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#c3cbd6" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#07090c" />
-    <!-- Le titre dit ce que le produit *est* — le hub d'une équipe — et non ce qu'il
-         affiche. « Feuille de match » nommait un écran parmi neuf, alors que le
-         positionnement du produit est ailleurs : une équipe, sa saison, ses données.
-         Ce titre sert d'onglet, de nom d'application installée et d'aperçu de lien
-         partagé ; il est le même que le `name` du manifeste, dans vite.config.ts. -->
+    <!-- The title says what the product *is* — a team's hub — and not what it
+         displays. "Match sheet" named one screen out of nine, while the product's
+         positioning is elsewhere: a team, its season, its data. This title serves as
+         the tab, the installed application's name and the shared link preview; it is
+         the same as the manifest's `name`, in vite.config.ts. -->
     <title>Swish — Le hub de votre équipe de basket</title>
-    <!-- Le thème est posé avant la première peinture, et il faut que ce soit ici :
-         les jetons clairs vivent sur `:root` nu, donc un appareil réglé en sombre
-         aurait vu un éclair blanc le temps que React monte. Choix enregistré
-         d'abord, préférence du système ensuite. Le même couple de clés est relu
-         par `ui/theme/ThemeProvider.tsx` — s'il change, il change aux deux endroits. -->
+    <!-- The theme is set before the first paint, and it has to be here: the light
+         tokens live on bare `:root`, so a device set to dark would have seen a white
+         flash while React mounted. Saved choice first, system preference second. The
+         same pair of keys is read back by `ui/theme/ThemeProvider.tsx` — if it
+         changes, it changes in both places. -->
     <script>
       (function () {
         try {
@@ -27,12 +27,12 @@
           if (t !== 'light' && t !== 'dark') t = 'dark'
           document.documentElement.setAttribute('data-theme', t)
           document.documentElement.classList.toggle('dark', t === 'dark')
-          // Et la langue, pour la même raison : `lang` décide de la césure, des
-          // guillemets et de la voix d'un lecteur d'écran. Le document naissait en
-          // `lang="en"` alors que tout son contenu était français.
+          // And the language, for the same reason: `lang` decides hyphenation,
+          // quotation marks and a screen reader's voice. The document was born
+          // `lang="en"` while all its content was French.
           var l = localStorage.getItem('swish-lang')
           document.documentElement.lang = (l === 'fr' || l === 'en') ? l : 'fr'
-        } catch (e) { /* navigation privée : le thème clair par défaut fait l'affaire */ }
+        } catch (e) { /* private browsing: the default light theme will do */ }
       })()
     </script>
   </head>
