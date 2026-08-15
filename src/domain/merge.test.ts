@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mergeMatches, furthest } from './fusion'
+import { mergeMatches, furthest } from './merge'
 import { undoLast, removeLastEvent } from './reducer'
 import type { GameEvent, Match } from './types'
 

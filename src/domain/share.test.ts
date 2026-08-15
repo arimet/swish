@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { encoder, decode, LIMITE_LIEN } from './partage'
+import { encoder, decode, LIMITE_LIEN } from './share'
 import { newPlay, nextStep, type Play } from './plays'
 
 const full = (): Play => {

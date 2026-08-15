@@ -16,13 +16,13 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ExportSchema, deliver } from './ExportSchema'
+import { SharePlay, deliver } from './SharePlay'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
-import { decode } from '../../domain/partage'
+import { decode } from '../../domain/share'
 import { newPlay, nextStep, type Arrow, type Play } from '../../domain/plays'
 import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
-import { SchemaView } from '../screens/SchemaView'
+import { PlayView } from '../screens/PlayView'
 
 const deuxTemps = (): Play => {
   const s: Play = { id: 's1', ...newPlay('ta', 'half', true), name: 'Pick and roll haut', note: 'Écran au meneur' }
@@ -48,8 +48,8 @@ const troisMilleGestes = (): Play => {
   return { ...s, steps: [{ ...s.steps[0], arrows }, s.steps[1]] }
 }
 
-const ouvrir = (schema: Play) =>
-  render(<ExportSchema schema={schema} stepIndex={0} open onClose={() => {}} />)
+const ouvrir = (play: Play) =>
+  render(<SharePlay play={play} stepIndex={0} open onClose={() => {}} />)
 
 /** The link as the dialog offers it for copying. */
 const lienAffiche = async () =>
@@ -155,7 +155,7 @@ describe('ExportSchema — sharing a play', () => {
     render(
       <MemoryRouter initialEntries={['/schemas/s1']}>
         <AuthProvider>
-          <Routes><Route path="/schemas/:id" element={<SchemaView />} /></Routes>
+          <Routes><Route path="/schemas/:id" element={<PlayView />} /></Routes>
         </AuthProvider>
       </MemoryRouter>,
     )

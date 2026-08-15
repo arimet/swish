@@ -54,7 +54,7 @@ function TeamRow({ id, name, score, won, fieldId, editable, onScore }: {
   )
 }
 
-export function Championnat() {
+export function Standings() {
   const translate = useT()
   const { clubId, teams } = useClub()
   const { can, guard } = useAuth()

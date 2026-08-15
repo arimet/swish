@@ -18,7 +18,7 @@
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { snapshot, transitions } from '../../domain/anim'
-import { LIMITE_LIEN, encoder } from '../../domain/partage'
+import { LIMITE_LIEN, encoder } from '../../domain/share'
 import type { Play, Step } from '../../domain/plays'
 import { C, bd } from '../olive/kit'
 import { useT } from '../../i18n'
@@ -31,7 +31,7 @@ const depth = (s: Play) => (s.court === 'full' ? D * 2 : D)
 
 /** The file name, stripped of what a file system dislikes. */
 const fileName = (s: Play, ext: string) =>
-  `${(s.name || 'schéma').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'schema'}.${ext}`
+  `${(s.name || 'schéma').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'play'}.${ext}`
 
 /** The off-screen renderer only arrives on the first share: two hundred kilobytes
  *  a coach has no business downloading to open a match sheet. The service worker
@@ -47,9 +47,9 @@ const renderer = async () => (await import('react-dom/server')).renderToStaticMa
  * only its `viewBox`, and React's typographic quotation marks in ids are stripped:
  * this SVG is re-read by a strict XML parser.
  */
-async function standaloneSvg(schema: Play, step: Step, width: number, height: number): Promise<string> {
+async function standaloneSvg(play: Play, step: Step, width: number, height: number): Promise<string> {
   const toMarkup = await renderer()
-  return toMarkup(<PlayBoard schema={schema} stepIndex={0} step={step} apercu />)
+  return toMarkup(<PlayBoard play={play} stepIndex={0} step={step} apercu />)
     .replace('<svg', `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"`)
     .replace(/[«»]/g, '_')
 }
@@ -84,9 +84,9 @@ const toBlob = (c: HTMLCanvasElement, type: string, q?: number) =>
 
 /** The step rendered at twice its viewBox — 3000 × 2800 for a half court, an image
  *  that holds up on a changing-room wall. */
-async function makePng(schema: Play, step: Step): Promise<Blob> {
-  const h = depth(schema)
-  const canvas = await rasterise(await standaloneSvg(schema, step, W * 2, h * 2), W * 2, h * 2)
+async function makePng(play: Play, step: Step): Promise<Blob> {
+  const h = depth(play)
+  const canvas = await rasterise(await standaloneSvg(play, step, W * 2, h * 2), W * 2, h * 2)
   return toBlob(canvas, 'image/png')
 }
 
@@ -186,19 +186,19 @@ function assemblePdf(pages: { jpeg: Uint8Array; l: number; h: number; title: str
 }
 
 /** One page per step, the name and the note at the top. */
-async function makePdf(schema: Play): Promise<Blob> {
-  const h = depth(schema)
+async function makePdf(play: Play): Promise<Blob> {
+  const h = depth(play)
   // 1200 wide: enough to print cleanly without weighing megabytes.
   const l = 1200
   const hi = Math.round((h / W) * l)
   const pages = []
-  for (let i = 0; i < schema.steps.length; i++) {
-    const canvas = await rasterise(await standaloneSvg(schema, schema.steps[i], l, hi), l, hi)
+  for (let i = 0; i < play.steps.length; i++) {
+    const canvas = await rasterise(await standaloneSvg(play, play.steps[i], l, hi), l, hi)
     const jpeg = new Uint8Array(await (await toBlob(canvas, 'image/jpeg', 0.85)).arrayBuffer())
     pages.push({
       jpeg, l, h: hi,
-      title: `${schema.name} — temps ${i + 1} / ${schema.steps.length}`,
-      sub: schema.note?.slice(0, 110) || (schema.court === 'half' ? 'Demi-terrain' : 'Terrain complet'),
+      title: `${play.name} — temps ${i + 1} / ${play.steps.length}`,
+      sub: play.note?.slice(0, 110) || (play.court === 'half' ? 'Demi-terrain' : 'Terrain complet'),
     })
   }
   return assemblePdf(pages)
@@ -301,12 +301,12 @@ function frames(s: Play) {
   return list
 }
 
-async function makeGif(schema: Play, onProgress?: (done: number, total: number) => void): Promise<Blob> {
-  const h = depth(schema)
+async function makeGif(play: Play, onProgress?: (done: number, total: number) => void): Promise<Blob> {
+  const h = depth(play)
   const k = GIF_SIDE / Math.max(W, h)
   const l = Math.round(W * k)
   const hi = Math.round(h * k)
-  const list = frames(schema)
+  const list = frames(play)
 
   const bytes: number[] = []
   bytes.push(...bytesOf('GIF89a'))
@@ -317,7 +317,7 @@ async function makeGif(schema: Play, onProgress?: (done: number, total: number) 
   bytes.push(0x21, 0xff, 0x0b, ...bytesOf('NETSCAPE2.0'), 0x03, 0x01, 0xff, 0xff, 0x00)
 
   for (let i = 0; i < list.length; i++) {
-    const canvas = await rasterise(await standaloneSvg(schema, snapshot(schema, list[i]), l, hi), l, hi)
+    const canvas = await rasterise(await standaloneSvg(play, snapshot(play, list[i]), l, hi), l, hi)
     const rgba = canvas.getContext('2d')!.getImageData(0, 0, l, hi).data
     const indexes = new Uint8Array(l * hi)
     for (let p = 0; p < indexes.length; p++) {
@@ -364,8 +364,8 @@ export async function deliver(file: File): Promise<void> {
 
 // ──────────────────────────────── The screen ────────────────────────────────
 
-export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
-  schema: Play
+export function SharePlay({ play, stepIndex = 0, open, onClose }: {
+  play: Play
   /** The step displayed: that is the one the image takes up. */
   stepIndex?: number
   open: boolean
@@ -382,11 +382,11 @@ export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
     if (!open) return
     let alive = true
     setStatus('')
-    encoder(schema).then((code) => {
+    encoder(play).then((code) => {
       if (alive) setLink(code.length > LIMITE_LIEN ? null : `${location.origin}/schemas/recu#${code}`)
     })
     return () => { alive = false }
-  }, [open, schema])
+  }, [open, play])
 
   /** Every file output follows the same path: announce, build, hand over — and if
    *  the device cannot draw, say so plainly. */
@@ -395,7 +395,7 @@ export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
     setStatus(translate('share.building', { what: label }))
     try {
       const blob = await faire()
-      await deliver(new File([blob], fileName(schema, ext), { type }))
+      await deliver(new File([blob], fileName(play, ext), { type }))
       setStatus(translate('share.ready', { what: label, kb: Math.round(blob.size / 1024) }))
     } catch {
       setStatus(translate('share.fileFailed', { what: label }))
@@ -413,7 +413,7 @@ export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
       setStatus(translate('share.clipboardRefused'))
     }
     if (navigator.share) {
-      try { await navigator.share({ title: schema.name, url: link }) } catch { /* share cancelled */ }
+      try { await navigator.share({ title: play.name, url: link }) } catch { /* share cancelled */ }
     }
   }
 
@@ -421,7 +421,7 @@ export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-extrabold">{translate('share.title', { name: schema.name })}</DialogTitle>
+          <DialogTitle className="text-lg font-extrabold">{translate('share.title', { name: play.name })}</DialogTitle>
         </DialogHeader>
 
         {link === undefined && <p className="text-[13px]" style={{ color: C.muted }}>{translate('share.preparing')}</p>}
@@ -462,11 +462,11 @@ export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
           <span className="h-px flex-1" style={{ background: C.border }} />
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <FileButton label={translate('share.png')} what={translate('share.thisStep')} disabled={busy} onClick={out(translate('share.theImage'), () => makePng(schema, schema.steps[stepIndex] ?? schema.steps[0]), 'png', 'image/png')} />
-          <FileButton label={translate('share.pdf')} what={translate('share.everyStep')} disabled={busy} onClick={out(translate('share.thePdf'), () => makePdf(schema), 'pdf', 'application/pdf')} />
+          <FileButton label={translate('share.png')} what={translate('share.thisStep')} disabled={busy} onClick={out(translate('share.theImage'), () => makePng(play, play.steps[stepIndex] ?? play.steps[0]), 'png', 'image/png')} />
+          <FileButton label={translate('share.pdf')} what={translate('share.everyStep')} disabled={busy} onClick={out(translate('share.thePdf'), () => makePdf(play), 'pdf', 'application/pdf')} />
           <FileButton
             label={translate('share.gif')} what={translate('share.animation')} disabled={busy}
-            onClick={out(translate('share.theGif'), () => makeGif(schema, (done, total) => setStatus(translate('share.gifProgress', { done: done, total }))), 'gif', 'image/gif')}
+            onClick={out(translate('share.theGif'), () => makeGif(play, (done, total) => setStatus(translate('share.gifProgress', { done: done, total }))), 'gif', 'image/gif')}
           />
         </div>
 

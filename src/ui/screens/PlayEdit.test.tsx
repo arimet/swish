@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { SchemaEdit } from './SchemaEdit'
+import { PlayEdit } from './PlayEdit'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { db } from '../../persistence/db'
 import { getPlay, savePlay } from '../../persistence/repositories'
@@ -35,7 +35,7 @@ const renderEdit = (id: string) =>
   render(
     <MemoryRouter initialEntries={[`/schemas/${id}/edit`]}>
       <AuthProvider>
-        <Routes><Route path="/schemas/:id/edit" element={<SchemaEdit />} /></Routes>
+        <Routes><Route path="/schemas/:id/edit" element={<PlayEdit />} /></Routes>
       </AuthProvider>
     </MemoryRouter>,
   )
@@ -213,7 +213,7 @@ describe('SchemaEdit — the playbook editor', () => {
       <MemoryRouter initialEntries={['/schemas/s1/edit']}>
         <AuthProvider>
           <Routes>
-            <Route path="/schemas/:id/edit" element={<SchemaEdit />} />
+            <Route path="/schemas/:id/edit" element={<PlayEdit />} />
             <Route path="/schemas/:id" element={<p>consultation</p>} />
           </Routes>
         </AuthProvider>

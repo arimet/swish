@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import type { PoolClient } from 'pg'
 import { pool, preamble, unauthorized } from './_db.js'
-import { mergeMatches } from '../src/domain/fusion.js'
+import { mergeMatches } from '../src/domain/merge.js'
 import type { Match } from '../src/domain/types.js'
 
 /**

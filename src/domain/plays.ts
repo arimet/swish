@@ -46,8 +46,8 @@ export interface Play {
 /** The folders these plays declare: distinct non-empty values, sorted the French way
  *  ("Écran" before "Remise"). A folder emptied of its plays disappears on its own,
  *  since nothing stores it anywhere else. */
-export function folders(schemas: Play[]): string[] {
-  const noms = new Set(schemas.map((s) => s.folder?.trim()).filter((d): d is string => !!d))
+export function folders(plays: Play[]): string[] {
+  const noms = new Set(plays.map((s) => s.folder?.trim()).filter((d): d is string => !!d))
   return [...noms].sort((a, b) => a.localeCompare(b, 'fr'))
 }
 

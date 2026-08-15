@@ -8,7 +8,7 @@ import { C, bd, Ic, ICON } from './kit'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { LangSwitcher } from '../../i18n/LangSwitcher'
 import { useT } from '../../i18n'
-import { SyncState } from '../components/EtatSynchro'
+import { SyncState } from '../components/SyncState'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 

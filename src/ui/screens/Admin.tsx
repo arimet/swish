@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { years, hasEvents, leagues, clubsOfGames, ofYear, ofLeague } from '../../domain/menage'
+import { years, hasEvents, leagues, clubsOfGames, ofYear, ofLeague } from '../../domain/cleanup'
 import type { Match, ReportedResult, Training } from '../../domain/types'
 import type { Play } from '../../domain/plays'
 import {

@@ -3,14 +3,14 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { SchemaList } from './SchemaList'
+import { PlayList } from './PlayList'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { listPlays, savePlay, saveTeam } from '../../persistence/repositories'
 import { newPlay, type Play } from '../../domain/plays'
 
-const schema = (id: string, name: string, extra: Partial<Play> = {}): Play =>
+const play = (id: string, name: string, extra: Partial<Play> = {}): Play =>
   ({ id, ...newPlay('ta', 'half', false), name, ...extra })
 
 beforeEach(async () => {
@@ -30,7 +30,7 @@ const renderList = () =>
       <ClubProvider>
         <AuthProvider>
           <Routes>
-            <Route path="/schemas" element={<SchemaList />} />
+            <Route path="/schemas" element={<PlayList />} />
             {/* The editor is beside the point here: a marker is enough to see that we
                 get there. */}
             <Route path="/schemas/:id/edit" element={<p>éditeur</p>} />
@@ -42,10 +42,10 @@ const renderList = () =>
 
 describe('SchemaList — the playbook', () => {
   it('lists the club\'s plays as thumbnails', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut'))
-    await savePlay(schema('s2', 'Corner pour le 4'))
+    await savePlay(play('s1', 'Pick and roll haut'))
+    await savePlay(play('s2', 'Corner pour le 4'))
     // Another club's play has no business in the library.
-    await savePlay({ ...schema('s3', 'Combinaison de Metz'), clubId: 'tz' })
+    await savePlay({ ...play('s3', 'Combinaison de Metz'), clubId: 'tz' })
     renderList()
 
     const cartes = await screen.findAllByRole('article')
@@ -87,7 +87,7 @@ describe('SchemaList — the playbook', () => {
   })
 
   it('duplicating adds a named copy, without touching the original', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(play('s1', 'Pick and roll haut'))
     renderList()
     await userEvent.click(within((await screen.findAllByRole('article'))[0]).getByRole('button', { name: 'Dupliquer' }))
 
@@ -98,7 +98,7 @@ describe('SchemaList — the playbook', () => {
 
   it('duplicating and deleting are administrative: the scorer\'s table only gets "Play", and nothing is written', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
-    await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(play('s1', 'Pick and roll haut'))
     renderList()
     const carte = (await screen.findAllByRole('article'))[0]
 
@@ -111,7 +111,7 @@ describe('SchemaList — the playbook', () => {
   })
 
   it('deleting a play is confirmed and then takes effect', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(play('s1', 'Pick and roll haut'))
     renderList()
     const carte = (await screen.findAllByRole('article'))[0]
     await userEvent.click(within(carte).getByRole('button', { name: 'Supprimer' }))
@@ -128,9 +128,9 @@ describe('SchemaList — the playbook', () => {
 
 describe('SchemaList — filing the library', () => {
   it('derives the folder bar from the plays, "Unfiled" last', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
-    await savePlay(schema('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
-    await savePlay(schema('s3', 'Brouillon'))
+    await savePlay(play('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
+    await savePlay(play('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
+    await savePlay(play('s3', 'Brouillon'))
     renderList()
 
     const barre = await screen.findByRole('group', { name: 'Dossiers' })
@@ -139,7 +139,7 @@ describe('SchemaList — filing the library', () => {
   })
 
   it('offers "Unfiled" only while unfiled plays remain', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
+    await savePlay(play('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     renderList()
 
     const barre = await screen.findByRole('group', { name: 'Dossiers' })
@@ -147,9 +147,9 @@ describe('SchemaList — filing the library', () => {
   })
 
   it('choosing a folder leaves only its plays in the grid', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
-    await savePlay(schema('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
-    await savePlay(schema('s3', 'Brouillon'))
+    await savePlay(play('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
+    await savePlay(play('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
+    await savePlay(play('s3', 'Brouillon'))
     renderList()
 
     const barre = await screen.findByRole('group', { name: 'Dossiers' })
@@ -167,8 +167,8 @@ describe('SchemaList — filing the library', () => {
   })
 
   it('the search filters on the name', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut'))
-    await savePlay(schema('s2', 'Remise ligne de fond'))
+    await savePlay(play('s1', 'Pick and roll haut'))
+    await savePlay(play('s2', 'Remise ligne de fond'))
     renderList()
 
     await userEvent.type(await screen.findByRole('searchbox'), 'PICK')
@@ -178,8 +178,8 @@ describe('SchemaList — filing the library', () => {
 
   it('the search also filters on the note, ignoring accents', async () => {
     // The word searched for is in no name: only the note can return it.
-    await savePlay(schema('s1', 'Pick and roll haut', { note: 'Sortie contre une défense en zone' }))
-    await savePlay(schema('s2', 'Remise ligne de fond', { note: 'Sur panier encaissé' }))
+    await savePlay(play('s1', 'Pick and roll haut', { note: 'Sortie contre une défense en zone' }))
+    await savePlay(play('s2', 'Remise ligne de fond', { note: 'Sur panier encaissé' }))
     renderList()
 
     await userEvent.type(await screen.findByRole('searchbox'), 'defense')
@@ -190,9 +190,9 @@ describe('SchemaList — filing the library', () => {
   it('orders from most recently edited to oldest, plays never stamped last', async () => {
     // A direct write: `savePlay` stamps the current time, and we could not otherwise
     // build three distinct dates nor a play from before the timestamping.
-    await db.plays.put(schema('s1', 'Ancien', { updatedAt: '2026-01-01T10:00:00.000Z' }))
-    await db.plays.put(schema('s2', 'Récent', { updatedAt: '2026-06-01T10:00:00.000Z' }))
-    await db.plays.put(schema('s3', 'Jamais horodaté'))
+    await db.plays.put(play('s1', 'Ancien', { updatedAt: '2026-01-01T10:00:00.000Z' }))
+    await db.plays.put(play('s2', 'Récent', { updatedAt: '2026-06-01T10:00:00.000Z' }))
+    await db.plays.put(play('s3', 'Jamais horodaté'))
     renderList()
 
     await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(3))
@@ -201,7 +201,7 @@ describe('SchemaList — filing the library', () => {
   })
 
   it('the administrator files a play into a folder, which appears in the bar', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(play('s1', 'Pick and roll haut'))
     renderList()
 
     await userEvent.click(await screen.findByRole('button', { name: 'Dossier de « Pick and roll haut »' }))
@@ -215,7 +215,7 @@ describe('SchemaList — filing the library', () => {
 
   it('changing the folder is administrative: the scorer\'s table reads it without being able to change it', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
-    await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
+    await savePlay(play('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     renderList()
     const carte = (await screen.findAllByRole('article'))[0]
 
@@ -230,8 +230,8 @@ describe('SchemaList — filing the library', () => {
 
   it('a visitor searches and filters without being asked for any code', async () => {
     sessionStorage.removeItem(ROLE_KEY)
-    await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
-    await savePlay(schema('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
+    await savePlay(play('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
+    await savePlay(play('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
     renderList()
 
     const barre = await screen.findByRole('group', { name: 'Dossiers' })

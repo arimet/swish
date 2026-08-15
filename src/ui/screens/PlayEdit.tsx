@@ -145,11 +145,11 @@ const PROP_KINDS: { key: Prop['kind']; label: string }[] = [
 
 const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
 
-export function SchemaEdit() {
+export function PlayEdit() {
   const translate = useT()
   const { id } = useParams<{ id: string }>()
   const { can, guard } = useAuth()
-  const [schema, setSchema] = useState<Play | null | undefined>(undefined)
+  const [play, setPlay] = useState<Play | null | undefined>(undefined)
   const [stepIndex, setStepIndex] = useState(0)
   const [tool, setTool] = useState<Tool>('deplacer')
   const [propKind, setPropKind] = useState<Prop['kind']>('cone')
@@ -165,7 +165,7 @@ export function SchemaEdit() {
 
   useEffect(() => {
     if (!id) return
-    getPlay(id).then((s) => { setSchema(s ?? null); setName(s?.name ?? ''); setNote(s?.note ?? '') })
+    getPlay(id).then((s) => { setPlay(s ?? null); setName(s?.name ?? ''); setNote(s?.note ?? '') })
   }, [id])
 
   if (!id) return null
@@ -175,8 +175,8 @@ export function SchemaEdit() {
   // screen, which is ungated and shows the same play. The guards below do not move:
   // this redirect is a display convenience, not the protection.
   if (!can('manage')) return <Navigate to={`/schemas/${id}`} replace />
-  if (schema === undefined) return <div className="p-4 sm:p-6"><div className="h-96 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
-  if (schema === null) return (
+  if (play === undefined) return <div className="p-4 sm:p-6"><div className="h-96 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
+  if (play === null) return (
     <div className="p-4 sm:p-6">
       <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
         {translate('play.notFound')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{translate('team.back')}</Link>
@@ -184,7 +184,6 @@ export function SchemaEdit() {
     </div>
   )
 
-  const play = schema
   const index = Math.min(stepIndex, play.steps.length - 1)
   const step = play.steps[index]
   const height = play.court === 'full' ? D * 2 : D
@@ -202,7 +201,7 @@ export function SchemaEdit() {
       copy[index] = [...(copy[index] ?? []), before].slice(-UNDO_DEPTH)
       return copy
     })
-    setSchema(next)
+    setPlay(next)
     savePlay(next)
   })
 
@@ -215,7 +214,7 @@ export function SchemaEdit() {
     guard('manage', () => {
       const next = { ...play, props: entry.props, steps: play.steps.map((t, i) => (i === index ? entry.step : t)) }
       setUndoStack((p) => p.map((s, i) => (i === index ? s.slice(0, -1) : s)))
-      setSchema(next)
+      setPlay(next)
       savePlay(next)
     })
   }
@@ -285,7 +284,7 @@ export function SchemaEdit() {
     // scale and restoring them would put the markers anywhere — at worst in the back
     // court. We clear it, as on reordering.
     setUndoStack([])
-    setSchema(r.ok)
+    setPlay(r.ok)
     savePlay(r.ok)
   })
 
@@ -424,7 +423,7 @@ export function SchemaEdit() {
               screen height, ceiling); `courtWidth` is what holds them.
               `select-none`: without it, a drag selects the markers' numbers. */}
           <div className="select-none" style={{ maxWidth: courtWidth(play.court, 'edition') }}>
-            <PlayBoard schema={shown} stepIndex={index} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
+            <PlayBoard play={shown} stepIndex={index} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
               {/* The gesture in progress, raw: it disappears on release, replaced by the
                   simplified arrow — or by nothing at all if the right was refused. */}
               {drawing && drawing.points.length > 1 && (
@@ -461,7 +460,7 @@ export function SchemaEdit() {
                 className="w-20 shrink-0 rounded-xl p-1"
                 style={{ background: C.card, border: i === index ? `2px solid ${C.accent}` : bd }}
               >
-                <PlayBoard schema={play} stepIndex={i} apercu />
+                <PlayBoard play={play} stepIndex={i} apercu />
                 <span className="mt-1 block text-[12px] font-bold" style={{ color: i === index ? C.accent : C.muted }}>{i + 1}</span>
               </button>
             ))}
