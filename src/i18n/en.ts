@@ -538,6 +538,7 @@ export const en: Record<string, string> = {
   'equipe.fermerJoueur': 'close {name}',
   'equipe.modifierJoueur': 'edit {name}',
   'equipe.retirerJoueur': 'Remove {name}',
+  'bord.themeSeance': 'Focus: {theme}',
   'champ.scoreDe': '{name} score',
   'equipe.coachSuffixe': 'Coach {name}',
   'commun.joueurMot': 'Player',
