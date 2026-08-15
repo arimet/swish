@@ -8,8 +8,8 @@ import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
 import { newPlay, nextStep, type Play } from '../../domain/plays'
 
-/** Deux temps : le meneur descend de 0,62 à 0,20 ; personne d'autre ne bouge.
- *  Sa course est tracée droite, pour que le trajet reste la corde. */
+/** Two steps: the point guard goes down from 0.62 to 0.20; nobody else moves. Their
+ *  cut is drawn straight, so that the path stays the chord. */
 const deuxTemps = (): Play => {
   const s: Play = { id: 's1', ...newPlay('ta', 'half', false), name: 'Corner pour le 4' }
   const t0 = {
@@ -21,18 +21,18 @@ const deuxTemps = (): Play => {
   return { ...s, steps: [t0, t1] }
 }
 
-/** Les deux ordonnées du meneur dans les unités du viewBox (profondeur 1400). */
+/** The point guard's two y-coordinates in viewBox units (depth 1400). */
 const DEPART = 0.62 * 1400
 const ARRIVEE = 0.2 * 1400
 const MILIEU = (DEPART + ARRIVEE) / 2
 
-/** Ce que le système répond à `prefers-reduced-motion`, réglé test par test. */
+/** What the system answers to `prefers-reduced-motion`, set test by test. */
 let reducedMotion = false
 
 beforeEach(async () => {
   reducedMotion = false
-  // jsdom n'a pas `matchMedia` : sans cette doublure, le lecteur ne peut pas
-  // demander au système s'il faut supprimer l'interpolation.
+  // jsdom has no `matchMedia`: without this stub, the viewer cannot ask the system
+  // whether to drop the interpolation.
   window.matchMedia = ((media: string) => ({
     media, matches: reducedMotion, onchange: null,
     addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
@@ -46,9 +46,9 @@ beforeEach(async () => {
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 /**
- * Rend le lecteur, attend que le schéma soit chargé, puis passe aux minuteurs
- * simulés : en jsdom rien n'avance tout seul, et une boucle d'animation qu'on
- * ne pilote pas donnerait des tests qui passent sans rien prouver.
+ * Renders the viewer, waits for the play to load, then switches to fake timers: in
+ * jsdom nothing advances on its own, and an animation loop nobody drives would give
+ * tests that pass without proving anything.
  */
 async function ouvrir() {
   render(
@@ -69,8 +69,8 @@ const avancer = (ms: number) => act(() => { vi.advanceTimersByTime(ms) })
 const bouton = (name: string | RegExp) => screen.getByRole('button', { name: name })
 
 /**
- * L'ordonnée du meneur telle que le tableau la dessine : la seule preuve que la
- * lecture déplace vraiment quelque chose, plutôt qu'un compteur d'écran.
+ * The point guard's y-coordinate as the board draws it: the only proof that playback
+ * really moves something, rather than a counter on screen.
  */
 function ordonneeDuMeneur(): number {
   const groupe = [...document.querySelectorAll('g[data-marker="offense"]')]
@@ -81,13 +81,13 @@ function ordonneeDuMeneur(): number {
 describe('SchemaPlayer — the time-out viewer', () => {
   it('a visitor opens the viewer and steps through without being asked for any code', async () => {
     await ouvrir()
-    // Aucun rôle en session : la lecture n'est jamais protégée, un joueur ouvre
+    // No role in the session: reading is never gated, a player opens
     // la combinaison chez lui.
     expect(screen.getByRole('img', { name: 'tableau tactique — Corner pour le 4' })).toBeInTheDocument()
     fireEvent.click(bouton('Temps suivant'))
     expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
     expect(screen.queryByRole('heading', { name: /Accès .* requis/ })).not.toBeInTheDocument()
-    // Un écran plein sans sortie visible est un piège.
+    // A full screen with no visible way out is a trap.
     expect(screen.getByRole('link', { name: /Quitter/ })).toHaveAttribute('href', '/schemas/s1')
   })
 
@@ -96,8 +96,8 @@ describe('SchemaPlayer — the time-out viewer', () => {
     const precedent = bouton('Temps précédent')
     const suivant = bouton('Temps suivant')
 
-    // Au premier temps, reculer ne fait rien : la zone est éteinte et le tableau
-    // ne bouge pas. Boucler ici ferait croire qu'il reste des temps derrière.
+    // On the first step, going back does nothing: the half is dark and the board does
+    // not move. Wrapping here would suggest there are steps behind.
     expect(precedent).toBeDisabled()
     fireEvent.click(precedent)
     expect(ordonneeDuMeneur()).toBeCloseTo(DEPART, 6)
@@ -106,7 +106,7 @@ describe('SchemaPlayer — the time-out viewer', () => {
     expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
     expect(screen.getByText('Temps 2 / 2')).toBeInTheDocument()
 
-    // Au dernier temps, avancer ne fait rien non plus.
+    // On the last step, going forward does nothing either.
     expect(suivant).toBeDisabled()
     fireEvent.click(suivant)
     expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
@@ -116,9 +116,9 @@ describe('SchemaPlayer — the time-out viewer', () => {
   })
 
   it('from a pause mid-transition, the next half does not stride over a step', async () => {
-    // Trois temps : le meneur descend par paliers. En pause à 70 % du premier
-    // mouvement, « suivant » doit poser sur le temps 2 — arrondir au plus proche
-    // le ferait sauter au temps 3, et le coach ne verrait jamais l'étape qu'il
+    // Three steps: the point guard descends in stages. Paused at 70% of the first
+    // movement, "next" must land on step 2 — rounding to the nearest would jump to
+    // step 3, and the coach would never see the stage they
     // s'était arrêté pour commenter.
     const s = deuxTemps()
     const t2 = nextStep(s.steps[1])
@@ -128,17 +128,17 @@ describe('SchemaPlayer — the time-out viewer', () => {
 
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
-    avancer(1050)                                   // 70 % de la première transition
+    avancer(1050)                                   // 70% of the first transition
     fireEvent.click(bouton('Pause'))
     fireEvent.click(bouton('Temps suivant'))
 
-    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)   // le temps 2, pas le temps 3
+    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)   // step 2, not step 3
   })
 
   it('"Play" runs the play, "Pause" leaves it where it is', async () => {
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
-    // Une transition dure 1,5 s : à mi-course, le meneur est à mi-chemin.
+    // A transition lasts 1.5 s: halfway through, the point guard is halfway along.
     avancer(750)
     expect(ordonneeDuMeneur()).toBeCloseTo(MILIEU, 0)
 
@@ -153,11 +153,11 @@ describe('SchemaPlayer — the time-out viewer', () => {
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
     avancer(2000)
-    // Sans boucle : on s'arrête net sur le dernier temps.
+    // Without looping: we stop dead on the last step.
     expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
     expect(bouton('Lecture')).toBeInTheDocument()
 
-    // Avec la boucle, le dernier temps tenu, on repart du premier et ça continue.
+    // With looping, the last step held, we restart from the first and it goes on.
     fireEvent.click(bouton('Boucle'))
     fireEvent.click(bouton('Lecture'))
     avancer(1600)
@@ -169,7 +169,7 @@ describe('SchemaPlayer — the time-out viewer', () => {
     await ouvrir()
     fireEvent.click(bouton('Ralenti'))
     fireEvent.click(bouton('Lecture'))
-    // 1,5 s au ralenti, c'est la moitié du chemin : à pleine vitesse on serait arrivé.
+    // 1.5 s in slow motion is half the way: at full speed we would have arrived.
     avancer(1500)
     expect(ordonneeDuMeneur()).toBeCloseTo(MILIEU, 0)
     avancer(1500)
@@ -180,8 +180,8 @@ describe('SchemaPlayer — the time-out viewer', () => {
     reducedMotion = true
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
-    // Pas d'interpolation du tout : à mi-course on est encore exactement au
-    // premier temps, puis on bascule d'un coup sur le second.
+    // No interpolation at all: halfway through we are still exactly on the first step,
+    // then we switch to the second in one go.
     avancer(750)
     expect(ordonneeDuMeneur()).toBeCloseTo(DEPART, 6)
     avancer(750)
@@ -191,11 +191,12 @@ describe('SchemaPlayer — the time-out viewer', () => {
   it('the notebook\'s strokes fade during playback and come back at a stop', async () => {
     await ouvrir()
     const traits = () => document.querySelectorAll('g[data-stroke]').length
-    // Arrêté sur un temps, on relit le dessin du coach.
+    // Stopped on a step, we re-read the coach's drawing.
     expect(traits()).toBe(1)
     fireEvent.click(bouton('Lecture'))
     avancer(750)
-    // En mouvement, les traits satureraient l'image — c'est ce que l'animation remplace.
+    // In motion, the strokes would saturate the picture — that is what the animation
+    // replaces.
     expect(traits()).toBe(0)
     fireEvent.click(bouton('Pause'))
     fireEvent.click(bouton('Temps suivant'))
@@ -212,21 +213,21 @@ describe('SchemaPlayer — the time-out viewer', () => {
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
     fireEvent(document, new Event('visibilitychange'))
     avancer(3000)
-    // Sur un téléphone, une animation qui tourne en arrière-plan vide la
-    // batterie et se retrouve à un endroit imprévu au retour.
+    // On a phone, an animation running in the background drains the battery and ends up
+    // somewhere unexpected on return.
     expect(ordonneeDuMeneur()).toBe(arret)
     expect(bouton('Lecture')).toBeInTheDocument()
   })
 })
 
 /**
- * La bascule des trajets. Ce que le coach demande au temps-mort, c'est de voir
- * *où va* chaque joueur pendant que la combinaison se joue — pas seulement où il
- * en est. Les tests visent le SVG et non l'état interne : un compteur qui change
- * sans que le terrain change ne prouverait rien.
+ * The paths toggle. What the coach asks for during a time-out is to see *where each
+ * player is going* while the play runs — not only where they are. The tests aim at the
+ * SVG and not at internal state: a counter that changes without the court changing
+ * would prove nothing.
  */
 describe('SchemaPlayer — showing the movement paths', () => {
-  /** Les trajets tracés sur le terrain, par leur trait. */
+  /** The paths drawn on the court, by their stroke. */
   const trajets = () => [...document.querySelectorAll('g[data-stroke]')].map((n) => n.getAttribute('data-stroke'))
 
   it('the toggle exists and starts off', async () => {
@@ -235,7 +236,7 @@ describe('SchemaPlayer — showing the movement paths', () => {
   })
 
   it('without it, playback shows no path', async () => {
-    // Le comportement d'avant, préservé : pendant l'animation, les joueurs seuls.
+    // The previous behaviour, preserved: during the animation, the players alone.
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
     avancer(750)
@@ -251,7 +252,7 @@ describe('SchemaPlayer — showing the movement paths', () => {
   })
 
   it('the path stays shown for as long as the transition lasts', async () => {
-    // Un trajet qui clignote en cours de route serait pire que pas de trajet.
+    // A path that flickers along the way would be worse than no path.
     await ouvrir()
     fireEvent.click(bouton('Trajets'))
     fireEvent.click(bouton('Lecture'))
@@ -262,7 +263,8 @@ describe('SchemaPlayer — showing the movement paths', () => {
   })
 
   it('and the point guard really does travel along that path', async () => {
-    // La ligne et le mobile sortent du même calcul ; ce test le vérifie de dehors.
+    // The line and the moving marker come out of the same computation; this test
+    // checks that from the outside.
     await ouvrir()
     fireEvent.click(bouton('Trajets'))
     fireEvent.click(bouton('Lecture'))
@@ -283,8 +285,8 @@ describe('SchemaPlayer — showing the movement paths', () => {
   })
 
   it('stopped on a step, the notebook stays the notebook', async () => {
-    // Arrêté sur un temps entier, on relit les flèches dessinées — la bascule ne
-    // change rien là, elle ne parle que de ce qui se joue.
+    // Stopped on a whole step, we re-read the drawn arrows — the toggle changes nothing
+    // there, it only speaks about what is being played.
     await ouvrir()
     expect(trajets()).toContain('cut')
     fireEvent.click(bouton('Trajets'))
