@@ -72,7 +72,7 @@ describe('Calendar', () => {
   })
 
   it('at an equal time, the game comes before the training in the same group', async () => {
-    // Départage explicite requis (cf. `nextFixture` dans src/domain/fixtures.ts) :
+    // An explicit tie-break is required (see `nextFixture` in src/domain/fixtures.ts):
     // without it, two fixtures on the same date with no time would be ordered by
     // insertion, correct by accident and fragile at the first rearrangement.
     await saveMatch(mk('m3', 'ta', 'tc', '2026-03-01'))
@@ -97,12 +97,12 @@ describe('Calendar', () => {
     // frame, three per cent above the AA threshold and 3.1:1 in rendered pixels. What
     // the test keeps is that there is a fade and that today has none — not its exact
     // value, which is a setting.
-    const passé = (await screen.findByText('Séance passée')).closest('section')
-    expect(passé).toHaveClass('opacity-75')
+    const past = (await screen.findByText('Séance passée')).closest('section')
+    expect(past).toHaveClass('opacity-75')
 
-    const jourMême = screen.getByText('Séance du jour').closest('section')
-    expect(jourMême?.className ?? '').not.toMatch(/opacity-/)
-    expect(within(jourMême!).getByText(/^aujourd/i)).toBeInTheDocument()
+    const sameDay = screen.getByText('Séance du jour').closest('section')
+    expect(sameDay?.className ?? '').not.toMatch(/opacity-/)
+    expect(within(sameDay!).getByText(/^aujourd/i)).toBeInTheDocument()
   })
 
   it('points at the next fixture when nothing is scheduled today', async () => {
@@ -131,9 +131,9 @@ describe('Calendar', () => {
     await userEvent.click(screen.getByRole('button', { name: /ajouter l'entraînement/i }))
 
     expect(await screen.findByText('Tirs extérieurs')).toBeInTheDocument()
-    const enregistrés = await listTrainings()
-    expect(enregistrés).toHaveLength(1)
-    expect(enregistrés[0]).toMatchObject({ clubId: 'ta', date: '2026-02-03', time: '19:00', place: 'Gymnase des Tilleuls', theme: 'Tirs extérieurs' })
+    const saved = await listTrainings()
+    expect(saved).toHaveLength(1)
+    expect(saved[0]).toMatchObject({ clubId: 'ta', date: '2026-02-03', time: '19:00', place: 'Gymnase des Tilleuls', theme: 'Tirs extérieurs' })
   })
 
   it('deletes a training only after confirmation', async () => {
@@ -158,14 +158,14 @@ describe('Calendar', () => {
 })
 
 describe('Calendar — the session\'s plays', () => {
-  const ouvrirLesSchemas = async () =>
+  const openPlays = async () =>
     userEvent.click(await screen.findByText(/schémas travaillés/i))
 
   it('attaches a play to the training, announces it on the row, and unticking removes it', async () => {
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })
     await savePlay(play('s1', 'Pick and roll haut'))
     renderCal()
-    await ouvrirLesSchemas()
+    await openPlays()
 
     await userEvent.click(await screen.findByRole('checkbox', { name: /pick and roll haut/i }))
     // Attaching goes through `guard()`, which fires the action without awaiting it.
@@ -187,7 +187,7 @@ describe('Calendar — the session\'s plays', () => {
     await savePlay(play('s1', 'Pick and roll haut'))
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Séance', playIds: ['s1', 'disparu'] })
     renderCal()
-    await ouvrirLesSchemas()
+    await openPlays()
 
     expect(await screen.findByText(/1 schéma$/)).toBeInTheDocument()
     expect(screen.queryByText(/2 schémas/)).not.toBeInTheDocument()
@@ -202,7 +202,7 @@ describe('Calendar — the session\'s plays', () => {
     await savePlay(play('s1', 'Pick and roll haut'))
     await savePlay(play('s2', 'Corner pour le 4'))
     renderCal()
-    await ouvrirLesSchemas()
+    await openPlays()
 
     fireEvent.click(await screen.findByRole('checkbox', { name: /pick and roll haut/i }))
     fireEvent.click(screen.getByRole('checkbox', { name: /corner pour le 4/i }))
@@ -216,7 +216,7 @@ describe('Calendar — the session\'s plays', () => {
     await savePlay(play('s1', 'Pick and roll haut'))
     await savePlay(play('s2', 'Corner pour le 4'))
     renderCal()
-    await ouvrirLesSchemas()
+    await openPlays()
 
     // It reads the session's programme — that is what interests it — but no box is
     // offered to it, hence no code prompt on a click.
@@ -281,8 +281,8 @@ describe('Calendar — rights', () => {
     expect(await screen.findByText('Défense sur écran')).toBeInTheDocument()
     expect(await screen.findByText(/VERDUN/)).toBeInTheDocument()
     expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
-    // Nothing that writes is shown to them: no planning, no calling up, no
-    // supprimer une séance.
+    // Nothing that writes is shown to them: no planning, no calling up, no deleting
+    // a session.
     expect(screen.queryByRole('link', { name: /convoquer/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /supprimer cet entraînement/i })).not.toBeInTheDocument()
   })

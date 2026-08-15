@@ -52,11 +52,11 @@ describe('mergeMatches', () => {
   it('a retracted event does not come back at the next flush', () => {
     // Second round: the scorer pushes their stale log again, against a server state
     // that already carries the retraction.
-    const serveur = mergeMatches(match([basket('a', 10), basket('b', 20)]),
+    const server = mergeMatches(match([basket('a', 10), basket('b', 20)]),
                                     undoLast(match([basket('a', 10), basket('b', 20)])))
-    const marqueurEnRetard = match([basket('a', 10), basket('b', 20)])
+    const lateScorer = match([basket('a', 10), basket('b', 20)])
 
-    expect(journal(mergeMatches(serveur, marqueurEnRetard))).toEqual(['a'])
+    expect(journal(mergeMatches(server, lateScorer))).toEqual(['a'])
   })
 
   it('accumulates the retractions from both sides', () => {
@@ -87,10 +87,10 @@ describe('the status never moves backwards', () => {
   it('a finished game does not reopen under a late queue', () => {
     // A device offline for an hour empties its queue carrying a stale `live`. A
     // reopened sheet suggests it can still be corrected.
-    const serveur = match([], { status: 'finished' })
-    const enRetard = match([], { status: 'live' })
+    const server = match([], { status: 'finished' })
+    const late = match([], { status: 'live' })
 
-    expect(mergeMatches(serveur, enRetard).status).toBe('finished')
+    expect(mergeMatches(server, late).status).toBe('finished')
   })
 
   it('but it advances when that is the direction of travel', () => {

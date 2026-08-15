@@ -20,7 +20,7 @@ export interface Arrow { from: { side: Side; position: Position }; points: Point
 
 export interface Step {
   markers: Marker[]                                   // 5 ou 10 selon `defense`
-  ball: { side: Side; position: Position } | Point    // porté par un pion, ou posé au sol
+  ball: { side: Side; position: Position } | Point    // carried by a marker, or on the floor
   arrows: Arrow[]
 }
 
@@ -33,9 +33,9 @@ export interface Play {
   note?: string
   court: Court
   defense: boolean
-  props: Prop[]                             // communs à tous les temps
-  steps: Step[]                                  // au moins un
-  /** Étiquette de rangement. Absent = « Sans dossier ». Un seul niveau : la liste
+  props: Prop[]                             // shared by every step
+  steps: Step[]                                  // at least one
+  /** A filing label. Absent = "Unfiled". One level only: the list
    *  of folders is derived from the plays; there is no table and no entity. */
   folder?: string
   /** ISO date of the last save, written by the persistence layer. Orders the library
@@ -47,8 +47,8 @@ export interface Play {
  *  ("Écran" before "Remise"). A folder emptied of its plays disappears on its own,
  *  since nothing stores it anywhere else. */
 export function folders(plays: Play[]): string[] {
-  const noms = new Set(plays.map((s) => s.folder?.trim()).filter((d): d is string => !!d))
-  return [...noms].sort((a, b) => a.localeCompare(b, 'fr'))
+  const names = new Set(plays.map((s) => s.folder?.trim()).filter((d): d is string => !!d))
+  return [...names].sort((a, b) => a.localeCompare(b, 'fr'))
 }
 
 /** The basket's normalised position, per court (1.575 m from the baseline). */
@@ -161,8 +161,8 @@ function backcourtOccupant(s: Play): Occupant | null {
     for (const p of t.markers) if (p.at.y > 0.5) return { key: 'play.occPosition', n: p.position }
     for (const fl of t.arrows) if (fl.points.some((p) => p.y > 0.5)) return { key: 'play.occArrow', n: fl.from.position }
   }
-  const noms: Record<Prop['kind'], string> = { cone: 'play.occCone', ball: 'play.occLooseBall', ladder: 'play.occLadder' }
-  for (const o of s.props) if (o.at.y > 0.5) return { key: noms[o.kind] }
+  const names: Record<Prop['kind'], string> = { cone: 'play.occCone', ball: 'play.occLooseBall', ladder: 'play.occLadder' }
+  for (const o of s.props) if (o.at.y > 0.5) return { key: names[o.kind] }
   for (const t of s.steps) if ('x' in t.ball && t.ball.y > 0.5) return { key: 'play.occBall' }
   return null
 }

@@ -200,9 +200,9 @@ describe('bulk cleanup', () => {
     await saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
     await saveConvocation({ matchId: 'm3', playerIds: ['p1'] })
 
-    const supprimées = await deleteMatchesWhere(ofLeague('Poule A'))
+    const deleted = await deleteMatchesWhere(ofLeague('Poule A'))
 
-    expect(supprimées.sort()).toEqual(['m1', 'm2'])
+    expect(deleted.sort()).toEqual(['m1', 'm2'])
     expect((await listMatches()).map((m) => m.id)).toEqual(['m3'])
     expect(await getConvocation('m1')).toBeUndefined()
     expect(await getConvocation('m3')).toBeDefined()

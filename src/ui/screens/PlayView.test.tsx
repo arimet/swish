@@ -9,7 +9,7 @@ import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
 import { newPlay, nextStep, type Play } from '../../domain/plays'
 
-const deuxTemps = (): Play => {
+const twoSteps = (): Play => {
   const s: Play = { id: 's1', ...newPlay('ta', 'half', false), name: 'Corner pour le 4' }
   return { ...s, steps: [s.steps[0], nextStep(s.steps[0])] }
 }
@@ -17,7 +17,7 @@ const deuxTemps = (): Play => {
 beforeEach(async () => {
   sessionStorage.removeItem(ROLE_KEY)
   await db.plays.clear()
-  await savePlay(deuxTemps())
+  await savePlay(twoSteps())
 })
 
 const renderView = () =>

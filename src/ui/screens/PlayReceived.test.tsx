@@ -8,12 +8,12 @@ import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { listPlays, savePlay, saveTeam } from '../../persistence/repositories'
-import { encoder } from '../../domain/share'
+import { encode } from '../../domain/share'
 import { newPlay, nextStep, type Play } from '../../domain/plays'
 
 /** Two steps: the point guard goes down from 0.62 to 0.20. The same play as the
  *  viewer's, so that stepping through is proved on a marker that really moves. */
-const deuxTemps = (): Play => {
+const twoSteps = (): Play => {
   const s: Play = { id: 's1', ...newPlay('ta', 'half', false), name: 'Corner pour le 4', note: 'Sortie de balle' }
   const t0 = {
     ...s.steps[0],
@@ -25,12 +25,12 @@ const deuxTemps = (): Play => {
 }
 
 /** The point guard's two y-coordinates in viewBox units (depth 1400). */
-const DEPART = 0.62 * 1400
-const ARRIVEE = 0.2 * 1400
+const START = 0.62 * 1400
+const FINISH = 0.2 * 1400
 
 /** The point guard's y-coordinate as the board draws it: the only proof that
  *  stepping through really shows another step, rather than a counter on screen. */
-function ordonneeDuMeneur(): number {
+function pointGuardY(): number {
   const groupe = [...document.querySelectorAll('g[data-marker="offense"]')]
     .find((n) => n.querySelector('text')?.textContent === '1')
   return Number(groupe!.querySelector('circle')!.getAttribute('cy'))
@@ -48,7 +48,7 @@ beforeEach(async () => {
 
 /** Opens the receiving screen on the given fragment. `useLocation().hash` returns the
  *  `#` along with the code: `MemoryRouter` carries it as it is. */
-const ouvrir = (code: string) =>
+const open = (code: string) =>
   render(
     <MemoryRouter initialEntries={[`/schemas/recu#${code}`]}>
       <ClubProvider>
@@ -67,7 +67,7 @@ const ouvrir = (code: string) =>
 
 describe('SchemaRecu — the play that arrived by link', () => {
   it('shows the play the link carries, name and board', async () => {
-    ouvrir(await encoder(deuxTemps()))
+    open(await encode(twoSteps()))
 
     expect(await screen.findByRole('img', { name: 'tableau tactique — Corner pour le 4' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Corner pour le 4' })).toBeInTheDocument()
@@ -75,22 +75,22 @@ describe('SchemaRecu — the play that arrived by link', () => {
   })
 
   it('can be stepped through: the steps advance', async () => {
-    ouvrir(await encoder(deuxTemps()))
+    open(await encode(twoSteps()))
     await screen.findByRole('img', { name: /tableau tactique/ })
 
-    expect(ordonneeDuMeneur()).toBeCloseTo(DEPART, 6)
+    expect(pointGuardY()).toBeCloseTo(START, 6)
     expect(screen.getByText('Temps 1 / 2')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Temps suivant' }))
-    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
+    expect(pointGuardY()).toBeCloseTo(FINISH, 6)
     expect(screen.getByText('Temps 2 / 2')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Temps précédent' }))
-    expect(ordonneeDuMeneur()).toBeCloseTo(DEPART, 6)
+    expect(pointGuardY()).toBeCloseTo(START, 6)
   })
 
   it('on a damaged link, says so plainly rather than rendering a blank page', async () => {
-    ouvrir('ce-lien-a-ete-tronque-par-la-messagerie')
+    open('ce-lien-a-ete-tronque-par-la-messagerie')
 
     expect(await screen.findByText(/Ce lien est incomplet ou abîmé/)).toBeInTheDocument()
     expect(screen.queryByRole('img', { name: /tableau tactique/ })).not.toBeInTheDocument()
@@ -102,20 +102,20 @@ describe('SchemaRecu — the play that arrived by link', () => {
   it('"Add to my library" creates a fresh play, without touching the original', async () => {
     // Sender and recipient share the same store: this is the case where a botched
     // import would overwrite the original play.
-    const original = deuxTemps()
+    const original = twoSteps()
     await savePlay(original)
-    ouvrir(await encoder(original))
+    open(await encode(original))
     await screen.findByRole('img', { name: /tableau tactique/ })
 
     await userEvent.click(screen.getByRole('button', { name: /Ajouter à ma bibliothèque/ }))
 
     await waitFor(async () => expect(await listPlays('ta')).toHaveLength(2))
     const plays = await listPlays('ta')
-    const ajoute = plays.find((s) => s.id !== 's1')!
-    expect(ajoute.id).not.toBe('')
-    expect(ajoute.clubId).toBe('ta')
-    expect(ajoute.name).toBe('Corner pour le 4')
-    expect(ajoute.steps).toEqual(original.steps)
+    const added = plays.find((s) => s.id !== 's1')!
+    expect(added.id).not.toBe('')
+    expect(added.clubId).toBe('ta')
+    expect(added.name).toBe('Corner pour le 4')
+    expect(added.steps).toEqual(original.steps)
     // The original is intact, and it is the created play's record that opens.
     expect(plays.find((s) => s.id === 's1')!.name).toBe('Corner pour le 4')
     expect(await screen.findByText('fiche')).toBeInTheDocument()
@@ -123,7 +123,7 @@ describe('SchemaRecu — the play that arrived by link', () => {
 
   it('adding is administrative: the scorer\'s table is asked for the code, and nothing is written', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
-    ouvrir(await encoder(deuxTemps()))
+    open(await encode(twoSteps()))
     await screen.findByRole('img', { name: /tableau tactique/ })
 
     await userEvent.click(screen.getByRole('button', { name: /Ajouter à ma bibliothèque/ }))
@@ -135,12 +135,12 @@ describe('SchemaRecu — the play that arrived by link', () => {
 
   it('reading a received play asks for no code, even with no role at all', async () => {
     sessionStorage.removeItem(ROLE_KEY)
-    ouvrir(await encoder(deuxTemps()))
+    open(await encode(twoSteps()))
     await screen.findByRole('img', { name: /tableau tactique/ })
 
     await userEvent.click(screen.getByRole('button', { name: 'Temps suivant' }))
 
-    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
+    expect(pointGuardY()).toBeCloseTo(FINISH, 6)
     expect(screen.queryByRole('heading', { name: /Accès .* requis/ })).not.toBeInTheDocument()
   })
 
@@ -148,7 +148,7 @@ describe('SchemaRecu — the play that arrived by link', () => {
     // Whoever receives the link may never have opened the application: the play shows
     // all the same, and only the add waits for a club to be chosen.
     localStorage.clear()
-    ouvrir(await encoder(deuxTemps()))
+    open(await encode(twoSteps()))
 
     expect(await screen.findByRole('img', { name: /tableau tactique/ })).toBeInTheDocument()
     const lien = await screen.findByRole('link', { name: /Choisir un club/ })

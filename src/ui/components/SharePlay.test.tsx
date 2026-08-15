@@ -24,7 +24,7 @@ import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
 import { PlayView } from '../screens/PlayView'
 
-const deuxTemps = (): Play => {
+const twoSteps = (): Play => {
   const s: Play = { id: 's1', ...newPlay('ta', 'half', true), name: 'Pick and roll haut', note: 'Écran au meneur' }
   const t0 = {
     ...s.steps[0],
@@ -38,8 +38,8 @@ const deuxTemps = (): Play => {
  * would compress almost to nothing, and the test would no longer say anything about
  * the limit.
  */
-const troisMilleGestes = (): Play => {
-  const s = deuxTemps()
+const threeThousandGestures = (): Play => {
+  const s = twoSteps()
   const arrows: Arrow[] = Array.from({ length: 24 }, () => ({
     from: { side: 'offense' as const, position: 1 as const },
     stroke: 'cut' as const,
@@ -48,7 +48,7 @@ const troisMilleGestes = (): Play => {
   return { ...s, steps: [{ ...s.steps[0], arrows }, s.steps[1]] }
 }
 
-const ouvrir = (play: Play) =>
+const open = (play: Play) =>
   render(<SharePlay play={play} stepIndex={0} open onClose={() => {}} />)
 
 /** The link as the dialog offers it for copying. */
@@ -60,7 +60,7 @@ afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 describe('ExportSchema — sharing a play', () => {
   it('offers the four outputs: the link first, then the image, the PDF and the GIF', async () => {
-    ouvrir(deuxTemps())
+    open(twoSteps())
 
     expect(await screen.findByRole('button', { name: /Copier le lien/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Image PNG' })).toBeInTheDocument()
@@ -72,8 +72,8 @@ describe('ExportSchema — sharing a play', () => {
   })
 
   it('the link really carries the play: reopening its fragment returns the original', async () => {
-    const original = deuxTemps()
-    ouvrir(original)
+    const original = twoSteps()
+    open(original)
 
     const lien = new URL(await lienAffiche())
     expect(lien.pathname).toBe('/schemas/recu')
@@ -90,7 +90,7 @@ describe('ExportSchema — sharing a play', () => {
   })
 
   it('past the limit no link is offered, and the screen says why', async () => {
-    ouvrir(troisMilleGestes())
+    open(threeThousandGestures())
 
     expect(await screen.findByText(/trop chargée pour tenir dans un lien/)).toBeInTheDocument()
     expect(screen.queryByLabelText('Lien de la combinaison')).not.toBeInTheDocument()
@@ -106,7 +106,7 @@ describe('ExportSchema — sharing a play', () => {
       share: { value: share },
       clipboard: { value: { writeText: vi.fn().mockResolvedValue(undefined) } },
     }))
-    ouvrir(deuxTemps())
+    open(twoSteps())
     const lien = await lienAffiche()
 
     await userEvent.click(screen.getByRole('button', { name: /Copier le lien/ }))
@@ -118,7 +118,7 @@ describe('ExportSchema — sharing a play', () => {
   it('without a native share, the link at least reaches the clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', Object.create(navigator, { clipboard: { value: { writeText } } }))
-    ouvrir(deuxTemps())
+    open(twoSteps())
     const lien = await lienAffiche()
 
     await userEvent.click(screen.getByRole('button', { name: /Copier le lien/ }))
@@ -151,7 +151,7 @@ describe('ExportSchema — sharing a play', () => {
 
   it('sharing asks for no code, even with no role at all', async () => {
     await db.plays.clear()
-    await savePlay(deuxTemps())
+    await savePlay(twoSteps())
     render(
       <MemoryRouter initialEntries={['/schemas/s1']}>
         <AuthProvider>

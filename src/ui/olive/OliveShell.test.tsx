@@ -26,14 +26,14 @@ const renderShell = () =>
 
 /** The access entry point exists in two copies (mobile header and sidebar): we always
  *  go through the sidebar's. */
-const ouvrirLesAcces = async () => {
+const openAccess = async () => {
   const aside = await screen.findByRole('complementary')
   await userEvent.click(within(aside).getByRole('button', { name: /accès/i }))
 }
 
 /** The access dialog is modal: whatever is behind it stays unreachable to role
  *  queries until it is closed. */
-const fermerLesAcces = async () => {
+const closeAccess = async () => {
   await userEvent.keyboard('{Escape}')
   await waitFor(() => expect(screen.queryByLabelText(/code d.accès/i)).not.toBeInTheDocument())
 }
@@ -56,7 +56,7 @@ beforeEach(async () => {
 describe('the access entry point', () => {
   it('states the current role, takes another on entering a code, and locks', async () => {
     renderShell()
-    await ouvrirLesAcces()
+    await openAccess()
     expect(await screen.findByText(/accès en cours : visiteur/i)).toBeInTheDocument()
 
     await saisirLeCode('marque')
@@ -68,7 +68,7 @@ describe('the access entry point', () => {
 
   it('refuses an unknown code without changing the current role', async () => {
     renderShell()
-    await ouvrirLesAcces()
+    await openAccess()
     await saisirLeCode('n-importe-quoi')
     expect(await screen.findByText(/code inconnu/i)).toBeInTheDocument()
     expect(screen.getByText(/accès en cours : visiteur/i)).toBeInTheDocument()
@@ -76,7 +76,7 @@ describe('the access entry point', () => {
 
   it('the player code opens the name picker without granting any write right', async () => {
     renderShell()
-    await ouvrirLesAcces()
+    await openAccess()
     await saisirLeCode('joueur')
     expect(await screen.findByRole('button', { name: /MARTIN Lucas/ })).toBeInTheDocument()
     // Two independent axes: identifying yourself does not raise your rights.
@@ -92,22 +92,22 @@ describe('the administration entry', () => {
     const aside = await screen.findByRole('complementary')
     expect(within(aside).queryByRole('link', { name: /administration/i })).not.toBeInTheDocument()
 
-    await ouvrirLesAcces()
+    await openAccess()
     await saisirLeCode('marque')
     // The dialog is modal: while it is open, the rest of the page is hidden from role
     // queries and the link's absence would prove nothing.
-    await fermerLesAcces()
+    await closeAccess()
     expect(within(await screen.findByRole('complementary')).queryByRole('link', { name: /administration/i })).not.toBeInTheDocument()
   })
 
   it('appears under the access button as soon as the administrator code is entered', async () => {
     renderShell()
-    await ouvrirLesAcces()
+    await openAccess()
     await saisirLeCode('admin')
-    await fermerLesAcces()
+    await closeAccess()
     const aside = await screen.findByRole('complementary')
-    const entrée = within(aside).getByRole('link', { name: /administration/i })
-    expect(entrée).toHaveAttribute('href', '/admin')
+    const entry = within(aside).getByRole('link', { name: /administration/i })
+    expect(entry).toHaveAttribute('href', '/admin')
   })
 })
 
@@ -117,7 +117,7 @@ describe('the player\'s identity in the roster', () => {
     // Choosing a name does save the identity — it is the dashboard and the player's
     // record that show it now.
     renderShell()
-    await ouvrirLesAcces()
+    await openAccess()
     await saisirLeCode('joueur')
     await userEvent.click(await screen.findByRole('button', { name: /MARTIN Lucas/ }))
 

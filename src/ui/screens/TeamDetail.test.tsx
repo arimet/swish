@@ -63,7 +63,7 @@ describe('TeamDetail — the player details', () => {
 
     await waitFor(async () => {
       const [p] = await listPlayers('ta')
-      // Un champ vidé redevient `undefined`, jamais '' ni 0 ni NaN.
+      // A cleared field goes back to `undefined`, never '' nor 0 nor NaN.
       expect(p.birthDate).toBeUndefined()
       expect(p.height).toBeUndefined()
     })
@@ -80,9 +80,9 @@ describe('TeamDetail — the player details', () => {
     await userEvent.click(screen.getByRole('button', { name: /ajouter le joueur/i }))
 
     await waitFor(async () => {
-      const ajoute = (await listPlayers('ta')).find((p) => p.lastName === 'DUPONT')
-      expect(ajoute?.birthDate).toBe('1998-03-02')
-      expect(ajoute?.height).toBe(201)
+      const added = (await listPlayers('ta')).find((p) => p.lastName === 'DUPONT')
+      expect(added?.birthDate).toBe('1998-03-02')
+      expect(added?.height).toBe(201)
     })
   })
 })
@@ -145,7 +145,7 @@ describe('TeamDetail — rights', () => {
 
 describe('TeamDetail — top scorers', () => {
   /** A game played where MARTIN scores: with no points, the panel stays empty. */
-  const matchAvecPoints = async () => {
+  const matchWithPoints = async () => {
     await saveMatch({
       id: 'm1',
       meta: { championshipLabel: 'Poule A', date: '2026-01-10', clubId: 'ta', opponentId: 'tb' },
@@ -166,7 +166,7 @@ describe('TeamDetail — top scorers', () => {
     // already holds a link to the same record, so that a global `getByRole('link')`
     // passed even when the ranking's row was not a link at all. A test that cannot fail
     // proves nothing.
-    await matchAvecPoints()
+    await matchWithPoints()
     renderTeam()
     const titre = await screen.findByRole('heading', { name: 'Meilleurs marqueurs' })
     const panneau = titre.closest('section')!

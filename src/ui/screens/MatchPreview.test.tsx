@@ -145,9 +145,9 @@ describe('MatchPreview — the call-up', () => {
   })
 
   it("shows the game's club's roster, not the device setting's when they differ", async () => {
-    // An old game reopened after a club change on this device: the
-    // réglage local pointe maintenant vers VERDUN, mais la rencontre appartient à
-    // VIGNOT — it is that roster that must appear, never VERDUN's.
+    // An old game reopened after a club change on this device: the local setting now
+    // points at VERDUN, but the game belongs to VIGNOT — it is that roster that must
+    // appear, never VERDUN's.
     await savePlayer({ id: 'p9', teamId: 'tb', number: 1, lastName: 'DUPONT', firstName: 'Zoé' })
     localStorage.setItem('swish-club-id', 'tb')
     renderPreview()

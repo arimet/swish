@@ -32,7 +32,7 @@ export function matchRatios(match: Match): MatchRatios {
     const lead = a - b
     maxLeadA = Math.max(maxLeadA, lead)
     maxLeadB = Math.max(maxLeadB, -lead)
-    if (i > 0 && a === b) ties++ // égalité après un panier (0-0 initial exclu)
+    if (i > 0 && a === b) ties++ // a tie after a basket (the initial 0-0 excluded)
 
     // longest run: consecutive points by one team
     if (i > 0) {
@@ -55,5 +55,5 @@ export function matchRatios(match: Match): MatchRatios {
     A: { maxLead: maxLeadA, maxRun: maxRunA, benchPoints: 0, leadDurationSec: leadDurA },
     B: { maxLead: maxLeadB, maxRun: maxRunB, benchPoints: 0, leadDurationSec: leadDurB },
     ties,
-  } // benchPoints rempli par teamTotals côté UI ; ratio brut ici
+  } // benchPoints is filled by teamTotals on the UI side; the raw ratio here
 }

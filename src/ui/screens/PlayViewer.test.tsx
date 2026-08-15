@@ -10,7 +10,7 @@ import { newPlay, nextStep, type Play } from '../../domain/plays'
 
 /** Two steps: the point guard goes down from 0.62 to 0.20; nobody else moves. Their
  *  cut is drawn straight, so that the path stays the chord. */
-const deuxTemps = (): Play => {
+const twoSteps = (): Play => {
   const s: Play = { id: 's1', ...newPlay('ta', 'half', false), name: 'Corner pour le 4' }
   const t0 = {
     ...s.steps[0],
@@ -22,9 +22,9 @@ const deuxTemps = (): Play => {
 }
 
 /** The point guard's two y-coordinates in viewBox units (depth 1400). */
-const DEPART = 0.62 * 1400
-const ARRIVEE = 0.2 * 1400
-const MILIEU = (DEPART + ARRIVEE) / 2
+const START = 0.62 * 1400
+const FINISH = 0.2 * 1400
+const MIDDLE = (START + FINISH) / 2
 
 /** What the system answers to `prefers-reduced-motion`, set test by test. */
 let reducedMotion = false
@@ -40,7 +40,7 @@ beforeEach(async () => {
   })) as unknown as typeof window.matchMedia
   sessionStorage.removeItem(ROLE_KEY)
   await db.plays.clear()
-  await savePlay(deuxTemps())
+  await savePlay(twoSteps())
 })
 
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
@@ -50,7 +50,7 @@ afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
  * jsdom nothing advances on its own, and an animation loop nobody drives would give
  * tests that pass without proving anything.
  */
-async function ouvrir() {
+async function open() {
   render(
     <MemoryRouter initialEntries={['/schemas/s1/lecteur']}>
       <AuthProvider>
@@ -72,7 +72,7 @@ const bouton = (name: string | RegExp) => screen.getByRole('button', { name: nam
  * The point guard's y-coordinate as the board draws it: the only proof that playback
  * really moves something, rather than a counter on screen.
  */
-function ordonneeDuMeneur(): number {
+function pointGuardY(): number {
   const groupe = [...document.querySelectorAll('g[data-marker="offense"]')]
     .find((n) => n.querySelector('text')?.textContent === '1')
   return Number(groupe!.querySelector('circle')!.getAttribute('cy'))
@@ -80,19 +80,19 @@ function ordonneeDuMeneur(): number {
 
 describe('SchemaPlayer — the time-out viewer', () => {
   it('a visitor opens the viewer and steps through without being asked for any code', async () => {
-    await ouvrir()
+    await open()
     // No role in the session: reading is never gated, a player opens
     // la combinaison chez lui.
     expect(screen.getByRole('img', { name: 'tableau tactique — Corner pour le 4' })).toBeInTheDocument()
     fireEvent.click(bouton('Temps suivant'))
-    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
+    expect(pointGuardY()).toBeCloseTo(FINISH, 6)
     expect(screen.queryByRole('heading', { name: /Accès .* requis/ })).not.toBeInTheDocument()
     // A full screen with no visible way out is a trap.
     expect(screen.getByRole('link', { name: /Quitter/ })).toHaveAttribute('href', '/schemas/s1')
   })
 
   it('the two touch halves step forward and back, clamped at the ends', async () => {
-    await ouvrir()
+    await open()
     const precedent = bouton('Temps précédent')
     const suivant = bouton('Temps suivant')
 
@@ -100,96 +100,96 @@ describe('SchemaPlayer — the time-out viewer', () => {
     // not move. Wrapping here would suggest there are steps behind.
     expect(precedent).toBeDisabled()
     fireEvent.click(precedent)
-    expect(ordonneeDuMeneur()).toBeCloseTo(DEPART, 6)
+    expect(pointGuardY()).toBeCloseTo(START, 6)
 
     fireEvent.click(suivant)
-    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
+    expect(pointGuardY()).toBeCloseTo(FINISH, 6)
     expect(screen.getByText('Temps 2 / 2')).toBeInTheDocument()
 
     // On the last step, going forward does nothing either.
     expect(suivant).toBeDisabled()
     fireEvent.click(suivant)
-    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
+    expect(pointGuardY()).toBeCloseTo(FINISH, 6)
 
     fireEvent.click(precedent)
-    expect(ordonneeDuMeneur()).toBeCloseTo(DEPART, 6)
+    expect(pointGuardY()).toBeCloseTo(START, 6)
   })
 
   it('from a pause mid-transition, the next half does not stride over a step', async () => {
     // Three steps: the point guard descends in stages. Paused at 70% of the first
     // movement, "next" must land on step 2 — rounding to the nearest would jump to
-    // step 3, and the coach would never see the stage they
-    // s'était arrêté pour commenter.
-    const s = deuxTemps()
+    // step 3, and the coach would never see the stage they had stopped on to
+    // comment.
+    const s = twoSteps()
     const t2 = nextStep(s.steps[1])
     t2.markers = t2.markers.map((p) => (p.position === 1 ? { ...p, at: { x: 0.5, y: 0.05 } } : p))
     await db.plays.clear()
     await savePlay({ ...s, steps: [...s.steps, t2] })
 
-    await ouvrir()
+    await open()
     fireEvent.click(bouton('Lecture'))
     avancer(1050)                                   // 70% of the first transition
     fireEvent.click(bouton('Pause'))
     fireEvent.click(bouton('Temps suivant'))
 
-    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)   // step 2, not step 3
+    expect(pointGuardY()).toBeCloseTo(FINISH, 6)   // step 2, not step 3
   })
 
   it('"Play" runs the play, "Pause" leaves it where it is', async () => {
-    await ouvrir()
+    await open()
     fireEvent.click(bouton('Lecture'))
     // A transition lasts 1.5 s: halfway through, the point guard is halfway along.
     avancer(750)
-    expect(ordonneeDuMeneur()).toBeCloseTo(MILIEU, 0)
+    expect(pointGuardY()).toBeCloseTo(MIDDLE, 0)
 
     fireEvent.click(bouton('Pause'))
-    const arret = ordonneeDuMeneur()
+    const arret = pointGuardY()
     avancer(3000)
-    expect(ordonneeDuMeneur()).toBe(arret)
+    expect(pointGuardY()).toBe(arret)
     expect(bouton('Lecture')).toBeInTheDocument()
   })
 
   it('playback stops at the last step, and the loop restarts from the first', async () => {
-    await ouvrir()
+    await open()
     fireEvent.click(bouton('Lecture'))
     avancer(2000)
     // Without looping: we stop dead on the last step.
-    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
+    expect(pointGuardY()).toBeCloseTo(FINISH, 6)
     expect(bouton('Lecture')).toBeInTheDocument()
 
     // With looping, the last step held, we restart from the first and it goes on.
     fireEvent.click(bouton('Boucle'))
     fireEvent.click(bouton('Lecture'))
     avancer(1600)
-    expect(ordonneeDuMeneur()).toBeCloseTo(DEPART, 6)
+    expect(pointGuardY()).toBeCloseTo(START, 6)
     expect(bouton('Pause')).toBeInTheDocument()
   })
 
   it('slow motion doubles a transition\'s duration', async () => {
-    await ouvrir()
+    await open()
     fireEvent.click(bouton('Ralenti'))
     fireEvent.click(bouton('Lecture'))
     // 1.5 s in slow motion is half the way: at full speed we would have arrived.
     avancer(1500)
-    expect(ordonneeDuMeneur()).toBeCloseTo(MILIEU, 0)
+    expect(pointGuardY()).toBeCloseTo(MIDDLE, 0)
     avancer(1500)
-    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
+    expect(pointGuardY()).toBeCloseTo(FINISH, 6)
   })
 
   it('under prefers-reduced-motion, playback jumps from one step to the next', async () => {
     reducedMotion = true
-    await ouvrir()
+    await open()
     fireEvent.click(bouton('Lecture'))
     // No interpolation at all: halfway through we are still exactly on the first step,
     // then we switch to the second in one go.
     avancer(750)
-    expect(ordonneeDuMeneur()).toBeCloseTo(DEPART, 6)
+    expect(pointGuardY()).toBeCloseTo(START, 6)
     avancer(750)
-    expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
+    expect(pointGuardY()).toBeCloseTo(FINISH, 6)
   })
 
   it('the notebook\'s strokes fade during playback and come back at a stop', async () => {
-    await ouvrir()
+    await open()
     const traits = () => document.querySelectorAll('g[data-stroke]').length
     // Stopped on a step, we re-read the coach's drawing.
     expect(traits()).toBe(1)
@@ -205,17 +205,17 @@ describe('SchemaPlayer — the time-out viewer', () => {
   })
 
   it('playback pauses when the tab goes into the background', async () => {
-    await ouvrir()
+    await open()
     fireEvent.click(bouton('Lecture'))
     avancer(750)
-    const arret = ordonneeDuMeneur()
+    const arret = pointGuardY()
 
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
     fireEvent(document, new Event('visibilitychange'))
     avancer(3000)
     // On a phone, an animation running in the background drains the battery and ends up
     // somewhere unexpected on return.
-    expect(ordonneeDuMeneur()).toBe(arret)
+    expect(pointGuardY()).toBe(arret)
     expect(bouton('Lecture')).toBeInTheDocument()
   })
 })
@@ -231,20 +231,20 @@ describe('SchemaPlayer — showing the movement paths', () => {
   const trajets = () => [...document.querySelectorAll('g[data-stroke]')].map((n) => n.getAttribute('data-stroke'))
 
   it('the toggle exists and starts off', async () => {
-    await ouvrir()
+    await open()
     expect(bouton('Trajets')).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('without it, playback shows no path', async () => {
     // The previous behaviour, preserved: during the animation, the players alone.
-    await ouvrir()
+    await open()
     fireEvent.click(bouton('Lecture'))
     avancer(750)
     expect(trajets()).toEqual([])
   })
 
   it('with it, playback shows the point guard\'s path', async () => {
-    await ouvrir()
+    await open()
     fireEvent.click(bouton('Trajets'))
     fireEvent.click(bouton('Lecture'))
     avancer(750)
@@ -253,7 +253,7 @@ describe('SchemaPlayer — showing the movement paths', () => {
 
   it('the path stays shown for as long as the transition lasts', async () => {
     // A path that flickers along the way would be worse than no path.
-    await ouvrir()
+    await open()
     fireEvent.click(bouton('Trajets'))
     fireEvent.click(bouton('Lecture'))
     for (const t of [100, 400, 700, 1000, 1300]) {
@@ -265,17 +265,17 @@ describe('SchemaPlayer — showing the movement paths', () => {
   it('and the point guard really does travel along that path', async () => {
     // The line and the moving marker come out of the same computation; this test
     // checks that from the outside.
-    await ouvrir()
+    await open()
     fireEvent.click(bouton('Trajets'))
     fireEvent.click(bouton('Lecture'))
     avancer(750)
     expect(trajets()).toContain('cut')
-    expect(ordonneeDuMeneur()).toBeLessThan(DEPART)
-    expect(ordonneeDuMeneur()).toBeGreaterThan(ARRIVEE)
+    expect(pointGuardY()).toBeLessThan(START)
+    expect(pointGuardY()).toBeGreaterThan(FINISH)
   })
 
   it('turning the toggle off mid-playback removes the paths', async () => {
-    await ouvrir()
+    await open()
     fireEvent.click(bouton('Trajets'))
     fireEvent.click(bouton('Lecture'))
     avancer(400)
@@ -287,7 +287,7 @@ describe('SchemaPlayer — showing the movement paths', () => {
   it('stopped on a step, the notebook stays the notebook', async () => {
     // Stopped on a whole step, we re-read the drawn arrows — the toggle changes nothing
     // there, it only speaks about what is being played.
-    await ouvrir()
+    await open()
     expect(trajets()).toContain('cut')
     fireEvent.click(bouton('Trajets'))
     expect(trajets()).toContain('cut')

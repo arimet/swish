@@ -10,8 +10,8 @@ const m = (id: string, champ: string | undefined, date: string | undefined, club
 
 describe('cleanup — scopes derived from the games', () => {
   it('derives the leagues from the games, deduplicated and sorted', () => {
-    const liste = leagues([m('m1', 'Poule B', '2026-01-10'), m('m2', 'Poule A', '2026-01-17'), m('m3', 'Poule A', '2026-01-24')])
-    expect(liste).toEqual(['Poule A', 'Poule B'])
+    const list = leagues([m('m1', 'Poule B', '2026-01-10'), m('m2', 'Poule A', '2026-01-17'), m('m3', 'Poule A', '2026-01-24')])
+    expect(list).toEqual(['Poule A', 'Poule B'])
   })
 
   it('files a game with no league under « Match amical », as everywhere else', () => {
@@ -23,9 +23,9 @@ describe('cleanup — scopes derived from the games', () => {
   })
 
   it('ignores games with no date: they belong to no year', () => {
-    const sansDate = [m('m1', 'A', undefined), m('m2', 'A', '2026-01-17')]
-    expect(years(sansDate)).toEqual(['2026'])
-    expect(sansDate.filter(ofYear('2026')).map((x) => x.id)).toEqual(['m2'])
+    const noDate = [m('m1', 'A', undefined), m('m2', 'A', '2026-01-17')]
+    expect(years(noDate)).toEqual(['2026'])
+    expect(noDate.filter(ofYear('2026')).map((x) => x.id)).toEqual(['m2'])
   })
 
   it('frames the league filter on the targeted league alone', () => {

@@ -44,7 +44,7 @@ const renderAdmin = () =>
 
 /** An operation's row, found by its button: that is where the count of what it will
  *  destroy is shown. */
-const ligne = (aria: string) => screen.getByRole('button', { name: aria }).closest('li') as HTMLElement
+const row = (aria: string) => screen.getByRole('button', { name: aria }).closest('li') as HTMLElement
 
 const confirmer = async () => userEvent.click(await screen.findByRole('button', { name: /supprimer définitivement/i }))
 
@@ -53,15 +53,15 @@ describe('Administration — the counts announced', () => {
     renderAdmin()
     await screen.findByRole('button', { name: 'Supprimer les rencontres de Poule A' })
 
-    expect(ligne('Supprimer les rencontres de Poule A')).toHaveTextContent('2 rencontres')
-    expect(ligne('Supprimer les rencontres de Poule B')).toHaveTextContent('1 rencontre')
-    expect(ligne('Supprimer les rencontres de l’année 2026')).toHaveTextContent('2 rencontres')
-    expect(ligne('Supprimer les rencontres de l’année 2025')).toHaveTextContent('1 rencontre')
+    expect(row('Supprimer les rencontres de Poule A')).toHaveTextContent('2 rencontres')
+    expect(row('Supprimer les rencontres de Poule B')).toHaveTextContent('1 rencontre')
+    expect(row('Supprimer les rencontres de l’année 2026')).toHaveTextContent('2 rencontres')
+    expect(row('Supprimer les rencontres de l’année 2025')).toHaveTextContent('1 rencontre')
     // Two games carry events, the third is still blank.
-    expect(ligne('Vider les feuilles de VIGNOT')).toHaveTextContent('2 feuilles à vider')
-    expect(ligne('Supprimer les résultats saisis')).toHaveTextContent('1 résultat')
-    expect(ligne('Supprimer les entraînements')).toHaveTextContent('1 séance')
-    expect(ligne('Supprimer les schémas')).toHaveTextContent('1 schéma')
+    expect(row('Vider les feuilles de VIGNOT')).toHaveTextContent('2 feuilles à vider')
+    expect(row('Supprimer les résultats saisis')).toHaveTextContent('1 résultat')
+    expect(row('Supprimer les entraînements')).toHaveTextContent('1 séance')
+    expect(row('Supprimer les schémas')).toHaveTextContent('1 schéma')
   })
 
   it('says in the confirmation what will be destroyed, and how much', async () => {
@@ -73,9 +73,9 @@ describe('Administration — the counts announced', () => {
   it('disables an operation that would destroy nothing, showing its count at zero', async () => {
     await db.results.clear(); await db.plays.clear()
     renderAdmin()
-    await waitFor(() => expect(ligne('Supprimer les résultats saisis')).toHaveTextContent('0 résultat'))
+    await waitFor(() => expect(row('Supprimer les résultats saisis')).toHaveTextContent('0 résultat'))
     expect(screen.getByRole('button', { name: 'Supprimer les résultats saisis' })).toBeDisabled()
-    expect(ligne('Supprimer les schémas')).toHaveTextContent('0 schéma')
+    expect(row('Supprimer les schémas')).toHaveTextContent('0 schéma')
     expect(screen.getByRole('button', { name: 'Supprimer les schémas' })).toBeDisabled()
   })
 
@@ -176,7 +176,7 @@ describe('Administration — rights', () => {
 
     // The screen is nothing but a board of destructive buttons: without the right it
     // does not mount at all, rather than lining up buttons that demand a code.
-    const opérations = [
+    const operations = [
       'Supprimer les rencontres de Poule A',
       'Supprimer les rencontres de l’année 2026',
       'Vider les feuilles de VIGNOT',
@@ -185,7 +185,7 @@ describe('Administration — rights', () => {
       'Supprimer les schémas',
       'Tout effacer',
     ]
-    for (const name of opérations) {
+    for (const name of operations) {
       expect(screen.queryByRole('button', { name: name })).not.toBeInTheDocument()
     }
     // And no confirmation can open behind it.

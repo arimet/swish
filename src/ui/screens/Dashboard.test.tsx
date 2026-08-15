@@ -15,12 +15,12 @@ const play = (id: string, name: string): Play => ({ id, ...newPlay('ta', 'half',
 
 const TOP3 = { x: 0.5, y: 0.65 }
 
-// The hard-coded dates ('2026-01-10' and friends) serve the tests that do not look
-// jamais « aujourd'hui » (bilan, hot zone) : `nextFixture` compare bien à la date
+// The hard-coded dates ('2026-01-10' and friends) serve the tests that never look at
+// "today" (record, hot zone): `nextFixture` does compare against the
 // real clock at the moment the test runs, so the fixtures we want kept must be
 // computed relative to it, not to a fixed date that would eventually fall into the
 // past.
-const dansNJours = (n: number) => {
+const inNDays = (n: number) => {
   const d = new Date()
   d.setDate(d.getDate() + n)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -86,13 +86,13 @@ describe('Dashboard', () => {
   })
 
   it('announces the next game when none is in progress', async () => {
-    await saveMatch({ ...finished('m3', 0, 0), id: 'm3', status: 'setup', meta: { championshipLabel: 'Poule A', date: dansNJours(5), clubId: 'ta', opponentId: 'tb' } })
+    await saveMatch({ ...finished('m3', 0, 0), id: 'm3', status: 'setup', meta: { championshipLabel: 'Poule A', date: inNDays(5), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByText(/prochaine rencontre/i)).toBeInTheDocument()
   })
 
   it('does not announce in the banner a game planned and never played, when the fixture block already excludes it', async () => {
-    // Statut resté à `setup` mais date passée : une rencontre planifiée puis jamais
+    // Status left at `setup` but the date is past: a game planned and then never
     // played. The banner must apply the same rule as `nextFixture` (which excludes
     // the past), otherwise it would announce "Next game" next to a contradictory
     // "Nothing planned yet" block.
@@ -123,7 +123,7 @@ describe('Dashboard', () => {
   })
 
   it('shows the number called up and the meeting point of the next fixture called up', async () => {
-    await saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: dansNJours(5), clubId: 'ta', opponentId: 'tb' } })
+    await saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: inNDays(5), clubId: 'ta', opponentId: 'tb' } })
     await saveConvocation({ matchId: 'm4', playerIds: ['p1'], meetTime: '18:00', meetPlace: 'Gymnase Colette' })
     renderDash()
     expect(await screen.findByText(/prochaine échéance/i)).toBeInTheDocument()
@@ -178,7 +178,7 @@ describe('Dashboard', () => {
     // No fixture other than the live game: the block must invite planning rather than
     // repeat the opposition already shown in the banner.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
-    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(0), clubId: 'ta', opponentId: 'tb' } })
+    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(0), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
@@ -190,8 +190,8 @@ describe('Dashboard', () => {
     // be announced as the "next fixture" although it
     // a déjà commencé.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
-    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(0), clubId: 'ta', opponentId: 'tb' } })
-    await saveMatch({ ...finished('m5', 2, 1), id: 'm5', status: 'live', meta: { championshipLabel: 'Poule A', date: dansNJours(1), clubId: 'ta', opponentId: 'tb' } })
+    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(0), clubId: 'ta', opponentId: 'tb' } })
+    await saveMatch({ ...finished('m5', 2, 1), id: 'm5', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(1), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
@@ -202,13 +202,13 @@ describe('Dashboard — the next session\'s plays', () => {
   // `queryAll` and not `getAll`: without the write right, a dashboard with no upcoming
   // game has no link left at all — "+ Plan" is reserved for whoever manages the club —
   // and `getAllByRole` would throw instead of returning an empty list.
-  const lecteurs = () => screen.queryAllByRole('link').filter((l) => l.getAttribute('href')?.endsWith('/lecteur'))
+  const viewerLinks = () => screen.queryAllByRole('link').filter((l) => l.getAttribute('href')?.endsWith('/lecteur'))
 
   it('leads to the viewer of every play scheduled for the next session', async () => {
     // The shortest path between "it is Tuesday" and "here is what we are working on".
     await savePlay(play('s1', 'Pick and roll haut'))
     await savePlay(play('s2', 'Corner pour le 4'))
-    await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes', playIds: ['s1', 's2'] })
+    await saveTraining({ id: 't1', clubId: 'ta', date: inNDays(2), theme: 'Systèmes', playIds: ['s1', 's2'] })
     renderDash()
 
     expect(await screen.findByText(/prochaine échéance/i)).toBeInTheDocument()
@@ -218,21 +218,21 @@ describe('Dashboard — the next session\'s plays', () => {
 
   it('ignores a deleted play the session still cites', async () => {
     await savePlay(play('s1', 'Pick and roll haut'))
-    await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes', playIds: ['disparu', 's1'] })
+    await saveTraining({ id: 't1', clubId: 'ta', date: inNDays(2), theme: 'Systèmes', playIds: ['disparu', 's1'] })
     renderDash()
 
     expect(await screen.findByRole('link', { name: /pick and roll haut/i })).toBeInTheDocument()
     // An orphan id must neither break the screen nor open an empty viewer.
-    expect(lecteurs()).toHaveLength(1)
+    expect(viewerLinks()).toHaveLength(1)
   })
 
   it('announces no play when the session carries none', async () => {
     await savePlay(play('s1', 'Pick and roll haut'))
-    await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes' })
+    await saveTraining({ id: 't1', clubId: 'ta', date: inNDays(2), theme: 'Systèmes' })
     renderDash()
 
     expect(await screen.findByText(/prochaine échéance/i)).toBeInTheDocument()
-    expect(lecteurs()).toHaveLength(0)
+    expect(viewerLinks()).toHaveLength(0)
   })
 })
 
@@ -243,26 +243,26 @@ describe('the player\'s identity', () => {
     await saveMatch({ ...finished('m1', 10, 4, [{ type: 'SCORE', team: 'A', playerId: 'p2', kind: '2int' }]), roster: ['p1', 'p2'] })
     renderDash()
 
-    const marqueurs = (await screen.findByText('Meilleurs marqueurs')).closest('section')!
-    const ligne = within(marqueurs).getByText('MARTIN Lucas').closest('a')!
-    expect(within(ligne).getByText('vous')).toBeInTheDocument()
+    const scorers = (await screen.findByText('Meilleurs marqueurs')).closest('section')!
+    const row = within(scorers).getByText('MARTIN Lucas').closest('a')!
+    expect(within(row).getByText('vous')).toBeInTheDocument()
     // The team-mate appears in the same list without inheriting the mark.
-    const autre = within(marqueurs).getByText('DURAND Théo').closest('a')!
+    const autre = within(scorers).getByText('DURAND Théo').closest('a')!
     expect(within(autre).queryByText('vous')).not.toBeInTheDocument()
 
     expect(await screen.findByRole('link', { name: /ma fiche/i })).toBeInTheDocument()
   })
 
   it('ignores an id matching no player in the roster', async () => {
-    // A player removed from the roster, their id surviving in localStorage:
-    // ni mise en évidence fantôme, ni raccourci vers une fiche inexistante.
+    // A player removed from the roster, their id surviving in localStorage: no ghost
+    // highlight, no shortcut to a record that no longer exists.
     localStorage.setItem(PLAYER_ID_KEY, 'parti')
     await saveMatch(finished('m1', 10, 4))
     renderDash()
 
-    const marqueurs = (await screen.findByText('Meilleurs marqueurs')).closest('section')!
-    expect(within(marqueurs).getByText('MARTIN Lucas')).toBeInTheDocument()
-    expect(within(marqueurs).queryByText('vous')).not.toBeInTheDocument()
+    const scorers = (await screen.findByText('Meilleurs marqueurs')).closest('section')!
+    expect(within(scorers).getByText('MARTIN Lucas')).toBeInTheDocument()
+    expect(within(scorers).queryByText('vous')).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /ma fiche/i })).not.toBeInTheDocument()
   })
 })
@@ -273,7 +273,7 @@ describe('the player\'s identity', () => {
 // administrateur.
 
 describe('Dashboard — the message to the team', () => {
-  const ouvrirLaSaisie = async () => userEvent.click(await screen.findByRole('button', { name: /message à l’équipe/i }))
+  const openEntry = async () => userEvent.click(await screen.findByRole('button', { name: /message à l’équipe/i }))
 
   it('shows the message written, with its age', async () => {
     const avantHier = new Date(Date.now() - 2 * 86400_000).toISOString()
@@ -316,7 +316,7 @@ describe('Dashboard — the message to the team', () => {
     await screen.findByText('VIGNOT')
     expect(screen.queryByLabelText(/message à l’équipe/i)).not.toBeInTheDocument()
 
-    await ouvrirLaSaisie()
+    await openEntry()
     await userEvent.type(await screen.findByLabelText(/message à l’équipe/i), 'Gymnase fermé mardi.')
     await userEvent.click(screen.getByRole('button', { name: /publier/i }))
 
@@ -399,14 +399,14 @@ describe('Dashboard — the message to the team', () => {
   it('says that the message stays on this device', async () => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
     renderDash()
-    await ouvrirLaSaisie()
+    await openEntry()
     expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
   })
 })
 
 describe('Dashboard — reaching the call-up', () => {
   const rencontreAVenir = async () =>
-    saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: dansNJours(5), clubId: 'ta', opponentId: 'tb' } })
+    saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: inNDays(5), clubId: 'ta', opponentId: 'tb' } })
 
   // Calling up writes: the shortcut is the coach's, so these tests stand on their
   // side. Showing who is called up is checked without the right further down.

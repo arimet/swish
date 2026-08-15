@@ -27,8 +27,8 @@ describe('demo data', () => {
 
   it('creates no opposition roster', async () => {
     const matches = await listMatches()
-    const adversaires = new Set(matches.map((m) => m.meta.opponentId))
-    for (const id of adversaires) expect(await listPlayers(id)).toHaveLength(0)
+    const opponents = new Set(matches.map((m) => m.meta.opponentId))
+    for (const id of opponents) expect(await listPlayers(id)).toHaveLength(0)
   })
 
   it('produces rotations, hence credible court time', async () => {
@@ -48,9 +48,9 @@ describe('demo data', () => {
     const byId = Object.fromEntries(teams.map((t) => [t.id, t]))
     const lines = standings(matches, results, byId)[0].lines
     expect(lines[0].name).toBe('AVENIR DE VIGNOT')
-    expect(lines[0].v).toBe(3)
-    expect(lines[0].d).toBe(0)
-    expect(new Set(lines.map((l) => l.j))).toEqual(new Set([3]))
+    expect(lines[0].wins).toBe(3)
+    expect(lines[0].losses).toBe(0)
+    expect(new Set(lines.map((l) => l.played))).toEqual(new Set([3]))
     // And top outright: a tie on points broken by the differential would rest on the
     // luck of the scores, not on an intention.
     expect(lines[0].pts).toBeGreaterThan(lines[1].pts)
@@ -59,15 +59,15 @@ describe('demo data', () => {
   it('the starting five is the one the coach named', async () => {
     const matches = await listMatches()
     const players = await listPlayers(matches[0].meta.clubId)
-    const cinq = new Set([2, 11, 13, 15, 17])
+    const five = new Set([2, 11, 13, 15, 17])
     const match = matches.find((m) => m.events.some((e) => e.type === 'STARTING_FIVE'))!
     const ev = match.events.find((e) => e.type === 'STARTING_FIVE') as Extract<typeof match.events[number], { type: 'STARTING_FIVE' }>
     const numeros = ev.playerIds.map((id) => players.find((p) => p.id === id)!.number)
-    expect(new Set(numeros)).toEqual(cinq)
+    expect(new Set(numeros)).toEqual(five)
   })
 
   it('distributes the baskets plausibly: BUZZI in front, a credible match sheet', async () => {
-    // Trois tentatives ratées avant celle-ci, toutes invisibles sans mesure.
+    // Three failed attempts before this one, all invisible without a measurement.
     // The weighted list grouped by player: `k % length` never left the first block,
     // and one player took every basket (202 points for a substitute). Interleaved: we
     // never got past the first two rounds, so the weights changed nothing. And the
@@ -77,16 +77,16 @@ describe('demo data', () => {
     const matches = await listMatches()
     const players = await listPlayers(matches[0].meta.clubId)
     const joues = matches.filter((m) => m.status === 'finished')
-    const parJoueur = new Map<string, number>()
+    const byPlayer = new Map<string, number>()
     let total = 0
     for (const m of joues) {
       for (const s of playerStats(m)) {
-        parJoueur.set(s.playerId, (parJoueur.get(s.playerId) ?? 0) + s.points)
+        byPlayer.set(s.playerId, (byPlayer.get(s.playerId) ?? 0) + s.points)
         total += s.points
       }
     }
     const numero = (id: string) => players.find((p) => p.id === id)!.number
-    const classe = [...parJoueur.entries()].sort((a, b) => b[1] - a[1])
+    const classe = [...byPlayer.entries()].sort((a, b) => b[1] - a[1])
 
     // The top scorer is the one the coach named.
     expect(numero(classe[0][0])).toBe(11)
@@ -95,14 +95,14 @@ describe('demo data', () => {
     // And the gap from first to last scorer stays that of a match sheet, not that of
     // an aberration: a ratio of ten meant the weights
     // étaient trop écartés.
-    const marqueurs = classe.filter(([, pts]) => pts > 0)
-    expect(classe[0][1] / marqueurs[marqueurs.length - 1][1]).toBeLessThan(7)
+    const scorers = classe.filter(([, pts]) => pts > 0)
+    expect(classe[0][1] / scorers[scorers.length - 1][1]).toBeLessThan(7)
     // The bench scores: an allocation that does not reach it is broken.
-    expect(marqueurs.length).toBeGreaterThanOrEqual(9)
+    expect(scorers.length).toBeGreaterThanOrEqual(9)
     // The starting five stay ahead overall — a productive sixth man may pass the fifth
     // starter, as happens in a real team.
-    const cinq = new Set([2, 11, 13, 15, 17])
-    expect(classe.slice(0, 5).filter(([id]) => cinq.has(numero(id))).length).toBeGreaterThanOrEqual(4)
+    const five = new Set([2, 11, 13, 15, 17])
+    expect(classe.slice(0, 5).filter(([id]) => five.has(numero(id))).length).toBeGreaterThanOrEqual(4)
   })
 
   /**
@@ -159,21 +159,21 @@ describe('demo data', () => {
 
     // At least one period reaches the bonus (five team fouls under FFBB rules, not
     // four as in the NBA): the demo must be able to show the pill.
-    const parPeriode = new Map<number, number>()
+    const byPeriod = new Map<number, number>()
     for (const e of joues[0].events)
-      if (e.type === 'FOUL' && e.team === 'A') parPeriode.set(e.period, (parPeriode.get(e.period) ?? 0) + 1)
-    expect(Math.max(...parPeriode.values())).toBeGreaterThanOrEqual(TEAM_FOUL_BONUS)
+      if (e.type === 'FOUL' && e.team === 'A') byPeriod.set(e.period, (byPeriod.get(e.period) ?? 0) + 1)
+    expect(Math.max(...byPeriod.values())).toBeGreaterThanOrEqual(TEAM_FOUL_BONUS)
   })
 
   it('creates outside results so that the standings make sense', async () => {
     const results = await listResults()
     const matches = await listMatches()
     const clubId = matches[0].meta.clubId
-    // Aucun résultat saisi ne doit concerner notre club : nos rencontres font foi.
+    // No entered result may concern our own club: our own games are authoritative.
     expect(results.every((r) => r.homeId !== clubId && r.awayId !== clubId)).toBe(true)
-    // Chaque adversaire doit avoir joué contre plusieurs équipes, pas seulement contre nous.
-    const adversaires = new Set(matches.map((m) => m.meta.opponentId))
-    for (const id of adversaires) {
+    // Every opponent must have played several teams, not only us.
+    const opponents = new Set(matches.map((m) => m.meta.opponentId))
+    for (const id of opponents) {
       const rencontres = results.filter((r) => r.homeId === id || r.awayId === id).length
       expect(rencontres).toBeGreaterThanOrEqual(2)
     }
@@ -248,20 +248,20 @@ describe('demo data', () => {
     expect(pnr.steps).toHaveLength(4)
     const fin = pnr.steps[3]
     expect(fin.ball).toEqual({ side: 'offense', position: 5 })
-    const cinqAvant = pnr.steps[2].markers.find((p) => p.side === 'offense' && p.position === 5)!
-    const cinqApres = fin.markers.find((p) => p.side === 'offense' && p.position === 5)!
-    expect(cinqApres.at.y).toBeLessThan(cinqAvant.at.y)
+    const fiveBefore = pnr.steps[2].markers.find((p) => p.side === 'offense' && p.position === 5)!
+    const fiveAfter = fin.markers.find((p) => p.side === 'offense' && p.position === 5)!
+    expect(fiveAfter.at.y).toBeLessThan(fiveBefore.at.y)
     // Near the basket (y = 0 at the baseline), and not halfway.
-    expect(cinqApres.at.y).toBeLessThan(0.25)
+    expect(fiveAfter.at.y).toBeLessThan(0.25)
 
     // The next upcoming session carries two plays, both of which exist — an orphan id
     // would make the calendar's count lie.
-    const aujourdHui = new Date()
-    const jour = `${aujourdHui.getFullYear()}-${String(aujourdHui.getMonth() + 1).padStart(2, '0')}-${String(aujourdHui.getDate()).padStart(2, '0')}`
+    const today = new Date()
+    const jour = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
     const prochaine = (await listTrainings()).filter((t) => t.date >= jour).sort((a, b) => a.date.localeCompare(b.date))[0]
     expect(prochaine.playIds).toHaveLength(2)
-    const existants = new Set(plays.map((s) => s.id))
-    expect(prochaine.playIds!.every((id) => existants.has(id))).toBe(true)
+    const existing = new Set(plays.map((s) => s.id))
+    expect(prochaine.playIds!.every((id) => existing.has(id))).toBe(true)
   })
 
   it('clears trainings and call-ups before re-seeding, so as to leave no orphans', async () => {
@@ -281,10 +281,10 @@ describe('the seed\'s version guard', () => {
     // Browsers already up to date on the old version therefore regenerated nothing, and
     // the fixed bug stayed visible.
     const base = [[[2, 'CAUTENET', 'Louis']], { 11: 6 }]
-    const autreJoueur = [[[2, 'CAUTENET', 'Louise']], { 11: 6 }]
-    const autrePoids = [[[2, 'CAUTENET', 'Louis']], { 11: 7 }]
-    expect(fingerprint(base)).not.toBe(fingerprint(autreJoueur))
-    expect(fingerprint(base)).not.toBe(fingerprint(autrePoids))
+    const otherPlayer = [[[2, 'CAUTENET', 'Louise']], { 11: 6 }]
+    const otherWeight = [[[2, 'CAUTENET', 'Louis']], { 11: 7 }]
+    expect(fingerprint(base)).not.toBe(fingerprint(otherPlayer))
+    expect(fingerprint(base)).not.toBe(fingerprint(otherWeight))
     expect(fingerprint(base)).toBe(fingerprint(base))   // et stable à données égales
   })
 

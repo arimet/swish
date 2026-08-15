@@ -18,7 +18,7 @@ async function moduleDistant() {
 }
 
 /** A hydration response, as `GET /api/state` returns it. */
-const etat = (docs: unknown[], alive: string[], rev = 1) =>
+const state = (docs: unknown[], alive: string[], rev = 1) =>
   ({ ok: true, status: 200, json: async () => ({ rev, docs, alive }) })
 
 beforeEach(async () => {
@@ -31,7 +31,7 @@ describe('hydrate — the server is authoritative', () => {
   it('writes what the server sends', async () => {
     const { hydrate } = await moduleDistant()
     vi.stubGlobal('fetch', vi.fn(async () =>
-      etat([{ kind: 'team', id: 'ta', doc: { id: 'ta', name: 'VIGNOT' } }], ['team:ta'])))
+      state([{ kind: 'team', id: 'ta', doc: { id: 'ta', name: 'VIGNOT' } }], ['team:ta'])))
 
     expect(await hydrate()).toBe(true)
     expect((await db.teams.get('ta'))?.name).toBe('VIGNOT')
@@ -44,7 +44,7 @@ describe('hydrate — the server is authoritative', () => {
     await db.teams.put({ id: 'retiree', name: 'PARTIE' })
     await db.teams.put({ id: 'ta', name: 'VIGNOT' })
     const { hydrate } = await moduleDistant()
-    vi.stubGlobal('fetch', vi.fn(async () => etat([], ['team:ta'])))
+    vi.stubGlobal('fetch', vi.fn(async () => state([], ['team:ta'])))
 
     await hydrate()
     expect(await db.teams.get('retiree')).toBeUndefined()
@@ -58,7 +58,7 @@ describe('hydrate — the server is authoritative', () => {
     await db.teams.put({ id: 'ta', name: 'VIGNOT' })
     await db.players.put({ id: 'p1', teamId: 'ta', number: 4, lastName: 'X', firstName: 'Y' })
     const { hydrate } = await moduleDistant()
-    vi.stubGlobal('fetch', vi.fn(async () => etat([], [])))
+    vi.stubGlobal('fetch', vi.fn(async () => state([], [])))
 
     await hydrate()
     expect(await db.teams.count()).toBe(0)
@@ -71,7 +71,7 @@ describe('hydrate — the server is authoritative', () => {
     await db.teams.put({ id: 'neuve', name: 'CRÉÉE HORS LIGNE' })
     await db.outbox.add({ kind: 'team', op: 'put', id: 'neuve', ts: Date.now(), modifiedAt: new Date().toISOString() })
     const { hydrate } = await moduleDistant()
-    vi.stubGlobal('fetch', vi.fn(async () => etat([], [])))
+    vi.stubGlobal('fetch', vi.fn(async () => state([], [])))
 
     await hydrate()
     expect(await db.teams.get('neuve')).toBeDefined()
@@ -80,7 +80,7 @@ describe('hydrate — the server is authoritative', () => {
   it('advances the cursor, and sends it back on the next request', async () => {
     const { hydrate } = await moduleDistant()
     const appels: string[] = []
-    vi.stubGlobal('fetch', vi.fn(async (url: string) => { appels.push(url); return etat([], [], 42) }))
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => { appels.push(url); return state([], [], 42) }))
 
     await hydrate()
     await hydrate()
@@ -190,17 +190,17 @@ describe('the outgoing queue', () => {
 
   it('keeps only the last operation per entity', async () => {
     const { enqueuePut, flushNow } = await moduleDistant()
-    let envoye: { ops: { id: string; doc: { name: string } }[] } | null = null
+    let sent: { ops: { id: string; doc: { name: string } }[] } | null = null
     vi.stubGlobal('fetch', vi.fn(async (_u: string, init: RequestInit) => {
-      envoye = JSON.parse(init.body as string); return { ok: true, status: 204 }
+      sent = JSON.parse(init.body as string); return { ok: true, status: 204 }
     }))
 
     await enqueuePut('team', 'ta', { id: 'ta', name: 'PREMIER' })
     await enqueuePut('team', 'ta', { id: 'ta', name: 'DERNIER' })
     await flushNow()
 
-    expect(envoye!.ops).toHaveLength(1)
-    expect(envoye!.ops[0].doc.name).toBe('DERNIER')
+    expect(sent!.ops).toHaveLength(1)
+    expect(sent!.ops[0].doc.name).toBe('DERNIER')
     expect(await db.outbox.count()).toBe(0)
   })
 })

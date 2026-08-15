@@ -43,7 +43,7 @@ const renderEdit = (id: string) =>
 // The interactive board carries the `application` role; the step strip's thumbnails
 // are `img`s. That is what tells them apart, their accessible name being
 // le même.
-const tableau = async () => await screen.findByRole('application')
+const board = async () => await screen.findByRole('application')
 
 describe('SchemaEdit — the playbook editor', () => {
   it('groups the tools by family and says which is active', async () => {
@@ -71,7 +71,7 @@ describe('SchemaEdit — the playbook editor', () => {
   it('draws a cut arrow from a marker and saves it', async () => {
     renderEdit('s1')
     await userEvent.click(await screen.findByRole('button', { name: 'Course' }))
-    const svg = await tableau()
+    const svg = await board()
     // from the point guard (0.5, 0.62) → (150, 173.6) px towards the corner (30, 250)
     fireEvent.pointerDown(svg, { clientX: 150, clientY: 174 })
     fireEvent.pointerMove(svg, { clientX: 90, clientY: 220 })
@@ -84,7 +84,7 @@ describe('SchemaEdit — the playbook editor', () => {
   it('ignores a stroke that does not start from a marker', async () => {
     renderEdit('s1')
     await userEvent.click(await screen.findByRole('button', { name: 'Course' }))
-    const svg = await tableau()
+    const svg = await board()
     // (0.05, 0.9): the court's corner, no marker within grab range
     fireEvent.pointerDown(svg, { clientX: 15, clientY: 252 })
     fireEvent.pointerMove(svg, { clientX: 90, clientY: 200 })
@@ -99,7 +99,7 @@ describe('SchemaEdit — the playbook editor', () => {
     renderEdit('s1')
     await userEvent.click(await screen.findByRole('button', { name: 'Gomme' }))
     // (0.5, 0.45): in the middle of the cut's stroke
-    fireEvent.pointerDown(await tableau(), { clientX: 150, clientY: 126 })
+    fireEvent.pointerDown(await board(), { clientX: 150, clientY: 126 })
     await waitFor(async () => expect((await getPlay('s1'))!.steps[0].arrows).toHaveLength(0))
 
     await userEvent.click(screen.getByRole('button', { name: 'Annuler la dernière action' }))
@@ -136,7 +136,7 @@ describe('SchemaEdit — the playbook editor', () => {
     // them as they are would put the markers anywhere — at worst in the back court, the
     // very thing the half court refuses.
     renderEdit('s1')
-    const svg = await tableau()
+    const svg = await board()
     // A marker moved, so that there is something to undo.
     fireEvent.pointerDown(svg, { clientX: 150, clientY: 174 })
     fireEvent.pointerMove(svg, { clientX: 120, clientY: 240 })
@@ -158,7 +158,7 @@ describe('SchemaEdit — the playbook editor', () => {
     const s: Play = { id: 's2', ...newPlay('c1', 'half', true) }
     await savePlay(s)
     renderEdit('s2')
-    const svg = await tableau()
+    const svg = await board()
     fireEvent.pointerDown(svg, { clientX: 150, clientY: 174 })
     fireEvent.pointerMove(svg, { clientX: 120, clientY: 240 })
     fireEvent.pointerUp(svg, { clientX: 120, clientY: 240 })
@@ -195,7 +195,7 @@ describe('SchemaEdit — the playbook editor', () => {
     // beside themselves.
     renderEdit('s1')
     await userEvent.click(await screen.findByRole('button', { name: 'Course' }))
-    const svg = await tableau()
+    const svg = await board()
     // The point guard is at (0.5, 0.62); we touch clearly beside them, within the grab
     // radius.
     fireEvent.pointerDown(svg, { clientX: 160, clientY: 182 })
