@@ -32,7 +32,7 @@ beforeEach(async () => {
 })
 
 describe('SpectatorMatch', () => {
-  it("affiche le score adverse réel côté spectateur, pas un tableau vide à 0", async () => {
+  it("shows the opposition's real score on the spectator side, not an empty table at 0", async () => {
     render(
       <MemoryRouter>
         <SpectatorMatch matchId={MATCH_ID} />
@@ -55,7 +55,7 @@ const SPEC_MATCH_ID = 'spec-1'
 const ev = (e: Partial<GameEvent>, i: number): GameEvent =>
   ({ id: `e${i}`, wallClock: i, period: 1, gameClock: 600, ...e } as GameEvent)
 
-describe('SpectatorMatch — carte de tirs par joueur', () => {
+describe('SpectatorMatch — per-player shot chart', () => {
   beforeEach(async () => {
     await saveTeam({ id: 'ta2', name: 'VIGNOT' }); await saveTeam({ id: 'tb2', name: 'VERDUN' })
     await savePlayer({ id: 'p2', teamId: 'ta2', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
@@ -74,7 +74,7 @@ describe('SpectatorMatch — carte de tirs par joueur', () => {
     await saveMatch(m)
   })
 
-  it('déplie la carte du joueur au clic sur sa ligne', async () => {
+  it('unfolds the player\'s chart on a click on their row', async () => {
     render(<MemoryRouter><SpectatorMatch matchId={SPEC_MATCH_ID} /></MemoryRouter>)
     const row = await screen.findByRole('button', { name: /MARTIN/ })
     expect(screen.queryByLabelText('Carte des tirs')).not.toBeInTheDocument()
@@ -82,7 +82,7 @@ describe('SpectatorMatch — carte de tirs par joueur', () => {
     expect(await screen.findByLabelText('Carte des tirs')).toBeInTheDocument()
   })
 
-  it('n’ouvre qu’une carte à la fois et referme au second clic', async () => {
+  it('opens one chart at a time and closes on a second click', async () => {
     render(<MemoryRouter><SpectatorMatch matchId={SPEC_MATCH_ID} /></MemoryRouter>)
     const row = await screen.findByRole('button', { name: /MARTIN/ })
     await userEvent.click(row)
@@ -90,7 +90,7 @@ describe('SpectatorMatch — carte de tirs par joueur', () => {
     expect(screen.queryByLabelText('Carte des tirs')).not.toBeInTheDocument()
   })
 
-  it('ouvrir la carte d’un second joueur referme celle du premier (état partagé, pas par ligne)', async () => {
+  it('opening a second player\'s chart closes the first (shared state, not per row)', async () => {
     render(<MemoryRouter><SpectatorMatch matchId={SPEC_MATCH_ID} /></MemoryRouter>)
     const rowA = await screen.findByRole('button', { name: /MARTIN/ })
     const rowB = await screen.findByRole('button', { name: /DUPONT/ })

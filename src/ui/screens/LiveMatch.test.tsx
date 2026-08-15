@@ -33,13 +33,13 @@ const renderLive = () =>
   render(<AuthProvider><MemoryRouter><LiveMatch matchId={MATCH_ID} onFinish={vi.fn()} /></MemoryRouter></AuthProvider>)
 
 describe('LiveMatch', () => {
-  it('n’affiche qu’une colonne d’équipe', async () => {
+  it('shows a single team column', async () => {
     renderLive()
     expect(await screen.findByText('MARTIN')).toBeInTheDocument()
     expect(screen.queryByText('VISITEURS')).not.toBeInTheDocument()
   })
 
-  it('ajoute un panier adverse sans joueur identifié', async () => {
+  it('adds an opposition basket with no player named', async () => {
     renderLive()
     await userEvent.click(await screen.findByRole('button', { name: 'Ajouter 3 points à VERDUN' }))
     await waitFor(async () => {
@@ -51,7 +51,7 @@ describe('LiveMatch', () => {
     })
   })
 
-  it('retire le dernier panier adverse', async () => {
+  it('removes the last opposition basket', async () => {
     renderLive()
     await userEvent.click(await screen.findByRole('button', { name: 'Ajouter 2 points à VERDUN' }))
     await userEvent.click(screen.getByRole('button', { name: 'Retirer le dernier panier de VERDUN' }))
@@ -66,7 +66,7 @@ describe('LiveMatch', () => {
 // plus aucun test de parcours depuis la suppression de l'ancien écran à deux
 // équipes. Une inversion de `onScore`/`onMiss`, ou une rupture de la porte du cinq
 // de départ, doit faire échouer ces tests — vérifié par mutation (voir le rapport).
-describe('parcours complet', () => {
+describe('the full run', () => {
   const ID = 'e2e'
 
   beforeEach(async () => {
@@ -84,7 +84,7 @@ describe('parcours complet', () => {
   const renderE2E = (onFinish = vi.fn()) =>
     render(<AuthProvider><MemoryRouter><LiveMatch matchId={ID} onFinish={onFinish} /></MemoryRouter></AuthProvider>)
 
-  it('porte du cinq → panier avec position → tir manqué → changement → terminer', async () => {
+  it('starting five → located basket → missed shot → substitution → finish', async () => {
     const onFinish = vi.fn()
     renderE2E(onFinish)
 
@@ -169,8 +169,8 @@ describe('parcours complet', () => {
   })
 })
 
-describe('LiveMatch — droits', () => {
-  it('la table de marque saisit le match sans qu’aucun code lui soit demandé', async () => {
+describe('LiveMatch — rights', () => {
+  it('the scorer\'s table records the game without being asked for any code', async () => {
     // Le cœur du modèle : le bénévole tient la feuille sans détenir le code admin.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderLive()
@@ -183,7 +183,7 @@ describe('LiveMatch — droits', () => {
     })
   })
 
-  it('un visiteur ne saisit rien : l’écran annonce l’accès table de marque au lieu de la feuille', async () => {
+  it('a visitor records nothing: the screen announces the scorer\'s-table access instead of the sheet', async () => {
     sessionStorage.removeItem(ROLE_KEY)
     renderLive()
     expect(await screen.findByRole('heading', { name: /Accès Table de marque requis/ })).toBeInTheDocument()

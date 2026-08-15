@@ -17,7 +17,7 @@ const mk = (events: Partial<GameEvent>[]): Match => ({
 })
 
 describe('teamTotals', () => {
-  it('separe titulaires et banc', () => {
+  it('separates starters and bench', () => {
     const t = teamTotals(
       mk([
         { type: 'STARTING_FIVE', team: 'A', playerIds: ['p1'] },
@@ -31,7 +31,7 @@ describe('teamTotals', () => {
     expect(t.bench.points).toBe(3)
   })
 
-  it('separe 1ere et 2eme mi-temps', () => {
+  it('separates first and second half', () => {
     const t = teamTotals(
       mk([
         { type: 'CLOCK_START', period: 2 },
@@ -44,7 +44,7 @@ describe('teamTotals', () => {
     expect(t.secondHalf.points).toBe(3)
   })
 
-  it('compte les fautes coach a part', () => {
+  it('counts coach fouls separately', () => {
     const t = teamTotals(
       mk([
         { type: 'FOUL', team: 'A', target: { kind: 'coach' }, foulType: 'technical' },
@@ -53,7 +53,7 @@ describe('teamTotals', () => {
     expect(t.coachFouls).toBe(1)
   })
 
-  it('exclut les fautes banc des buckets', () => {
+  it('excludes bench fouls from the buckets', () => {
     const t = teamTotals(
       mk([
         { type: 'FOUL', team: 'A', target: { kind: 'bench' }, foulType: 'technical' },
@@ -63,7 +63,7 @@ describe('teamTotals', () => {
     expect(t.coachFouls).toBe(0)
   })
 
-  it('bucket overtime pour period >= 5', () => {
+  it('an overtime bucket for period >= 5', () => {
     const t = teamTotals(
       mk([
         { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int', period: 5 },
@@ -74,7 +74,7 @@ describe('teamTotals', () => {
     expect(t.secondHalf.points).toBe(0)
   })
 
-  it('ignore les paniers adverses (côté B) dans nos totaux, y compris par période', () => {
+  it('ignores the opposition\'s baskets (side B) in our totals, including per period', () => {
     const t = teamTotals(
       mk([
         { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' },
@@ -82,8 +82,8 @@ describe('teamTotals', () => {
       ]),
     )
     expect(t.team.points).toBe(2)
-    // t.team.points dérive de playerStats (déjà verrouillé ailleurs) ; seule cette
-    // assertion protège la boucle par période de teamTotals elle-même.
+    // t.team.points derives from playerStats (already locked down elsewhere); only
+    // this assertion protects teamTotals' own per-period loop.
     expect(t.firstHalf.points).toBe(2)
   })
 })

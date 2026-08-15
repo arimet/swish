@@ -78,8 +78,8 @@ function ordonneeDuMeneur(): number {
   return Number(groupe!.querySelector('circle')!.getAttribute('cy'))
 }
 
-describe('SchemaPlayer — le lecteur du temps-mort', () => {
-  it('un visiteur ouvre le lecteur et fait défiler sans qu’aucun code lui soit demandé', async () => {
+describe('SchemaPlayer — the time-out viewer', () => {
+  it('a visitor opens the viewer and steps through without being asked for any code', async () => {
     await ouvrir()
     // Aucun rôle en session : la lecture n'est jamais protégée, un joueur ouvre
     // la combinaison chez lui.
@@ -91,7 +91,7 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     expect(screen.getByRole('link', { name: /Quitter/ })).toHaveAttribute('href', '/schemas/s1')
   })
 
-  it('les deux zones tactiles avancent et reculent d’un temps, bornées aux extrémités', async () => {
+  it('the two touch halves step forward and back, clamped at the ends', async () => {
     await ouvrir()
     const precedent = bouton('Temps précédent')
     const suivant = bouton('Temps suivant')
@@ -115,7 +115,7 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     expect(ordonneeDuMeneur()).toBeCloseTo(DEPART, 6)
   })
 
-  it('depuis une pause à mi-transition, la zone suivante n’enjambe pas un temps', async () => {
+  it('from a pause mid-transition, the next half does not stride over a step', async () => {
     // Trois temps : le meneur descend par paliers. En pause à 70 % du premier
     // mouvement, « suivant » doit poser sur le temps 2 — arrondir au plus proche
     // le ferait sauter au temps 3, et le coach ne verrait jamais l'étape qu'il
@@ -135,7 +135,7 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)   // le temps 2, pas le temps 3
   })
 
-  it('« Lecture » joue la combinaison, « Pause » la laisse où elle en est', async () => {
+  it('"Play" runs the play, "Pause" leaves it where it is', async () => {
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
     // Une transition dure 1,5 s : à mi-course, le meneur est à mi-chemin.
@@ -149,7 +149,7 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     expect(bouton('Lecture')).toBeInTheDocument()
   })
 
-  it('la lecture s’arrête au dernier temps, et la boucle repart du premier', async () => {
+  it('playback stops at the last step, and the loop restarts from the first', async () => {
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
     avancer(2000)
@@ -165,7 +165,7 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     expect(bouton('Pause')).toBeInTheDocument()
   })
 
-  it('le ralenti double la durée d’une transition', async () => {
+  it('slow motion doubles a transition\'s duration', async () => {
     await ouvrir()
     fireEvent.click(bouton('Ralenti'))
     fireEvent.click(bouton('Lecture'))
@@ -176,7 +176,7 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
   })
 
-  it('sous « prefers-reduced-motion », la lecture saute d’un temps au suivant', async () => {
+  it('under prefers-reduced-motion, playback jumps from one step to the next', async () => {
     reducedMotion = true
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
@@ -188,7 +188,7 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     expect(ordonneeDuMeneur()).toBeCloseTo(ARRIVEE, 6)
   })
 
-  it('les traits du carnet s’effacent pendant la lecture et reviennent à l’arrêt', async () => {
+  it('the notebook\'s strokes fade during playback and come back at a stop', async () => {
     await ouvrir()
     const traits = () => document.querySelectorAll('g[data-stroke]').length
     // Arrêté sur un temps, on relit le dessin du coach.
@@ -203,7 +203,7 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     expect(traits()).toBe(1)
   })
 
-  it('la lecture se met en pause quand l’onglet passe en arrière-plan', async () => {
+  it('playback pauses when the tab goes into the background', async () => {
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
     avancer(750)
@@ -225,16 +225,16 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
  * en est. Les tests visent le SVG et non l'état interne : un compteur qui change
  * sans que le terrain change ne prouverait rien.
  */
-describe('SchemaPlayer — afficher les déplacements', () => {
+describe('SchemaPlayer — showing the movement paths', () => {
   /** Les trajets tracés sur le terrain, par leur trait. */
   const trajets = () => [...document.querySelectorAll('g[data-stroke]')].map((n) => n.getAttribute('data-stroke'))
 
-  it('la bascule existe et part éteinte', async () => {
+  it('the toggle exists and starts off', async () => {
     await ouvrir()
     expect(bouton('Trajets')).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('sans elle, la lecture ne montre aucun trajet', async () => {
+  it('without it, playback shows no path', async () => {
     // Le comportement d'avant, préservé : pendant l'animation, les joueurs seuls.
     await ouvrir()
     fireEvent.click(bouton('Lecture'))
@@ -242,7 +242,7 @@ describe('SchemaPlayer — afficher les déplacements', () => {
     expect(trajets()).toEqual([])
   })
 
-  it('avec elle, la lecture montre le trajet du meneur', async () => {
+  it('with it, playback shows the point guard\'s path', async () => {
     await ouvrir()
     fireEvent.click(bouton('Trajets'))
     fireEvent.click(bouton('Lecture'))
@@ -250,7 +250,7 @@ describe('SchemaPlayer — afficher les déplacements', () => {
     expect(trajets()).toContain('cut')
   })
 
-  it('le trajet reste affiché tant que la transition dure', async () => {
+  it('the path stays shown for as long as the transition lasts', async () => {
     // Un trajet qui clignote en cours de route serait pire que pas de trajet.
     await ouvrir()
     fireEvent.click(bouton('Trajets'))
@@ -261,7 +261,7 @@ describe('SchemaPlayer — afficher les déplacements', () => {
     }
   })
 
-  it('et le meneur avance bel et bien le long de ce trajet', async () => {
+  it('and the point guard really does travel along that path', async () => {
     // La ligne et le mobile sortent du même calcul ; ce test le vérifie de dehors.
     await ouvrir()
     fireEvent.click(bouton('Trajets'))
@@ -272,7 +272,7 @@ describe('SchemaPlayer — afficher les déplacements', () => {
     expect(ordonneeDuMeneur()).toBeGreaterThan(ARRIVEE)
   })
 
-  it('éteindre la bascule en pleine lecture retire les trajets', async () => {
+  it('turning the toggle off mid-playback removes the paths', async () => {
     await ouvrir()
     fireEvent.click(bouton('Trajets'))
     fireEvent.click(bouton('Lecture'))
@@ -282,7 +282,7 @@ describe('SchemaPlayer — afficher les déplacements', () => {
     expect(trajets()).toEqual([])
   })
 
-  it('à l’arrêt sur un temps, le carnet reste le carnet', async () => {
+  it('stopped on a step, the notebook stays the notebook', async () => {
     // Arrêté sur un temps entier, on relit les flèches dessinées — la bascule ne
     // change rien là, elle ne parle que de ce qui se joue.
     await ouvrir()

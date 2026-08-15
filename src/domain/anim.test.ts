@@ -6,16 +6,16 @@ const proche = (a: { x: number; y: number }, b: { x: number; y: number }) => {
   expect(a.x).toBeCloseTo(b.x, 6); expect(a.y).toBeCloseTo(b.y, 6)
 }
 
-describe('recaler', () => {
-  it('fait tomber les extrémités exactement sur le départ et l’arrivée', () => {
+describe('refit', () => {
+  it('lands the endpoints exactly on the start and the end', () => {
     const trace = [{ x: 0.2, y: 0.2 }, { x: 0.2, y: 0.6 }, { x: 0.6, y: 0.6 }]
     const r = recaler(trace, { x: 0.1, y: 0.1 }, { x: 0.9, y: 0.5 })
     proche(r[0], { x: 0.1, y: 0.1 })
     proche(r[r.length - 1], { x: 0.9, y: 0.5 })
   })
 
-  it('préserve la forme : un L reste un L', () => {
-    // Le coude est à angle droit ; une fitTo conserve les angles.
+  it('preserves the shape: an L stays an L', () => {
+    // The corner is a right angle; a similarity preserves angles.
     const trace = [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }]
     const r = recaler(trace, { x: 0.2, y: 0.3 }, { x: 0.8, y: 0.7 })
     const u = { x: r[0].x - r[1].x, y: r[0].y - r[1].y }
@@ -23,26 +23,26 @@ describe('recaler', () => {
     expect(u.x * v.x + u.y * v.y).toBeCloseTo(0, 6)   // produit scalaire nul
   })
 
-  it('conserve les proportions le long du tracé', () => {
-    // Le milieu d’un segment droit reste au milieu après recalage.
+  it('keeps the proportions along the stroke', () => {
+    // The midpoint of a straight segment stays the midpoint after refitting.
     const trace = [{ x: 0, y: 0 }, { x: 0.5, y: 0 }, { x: 1, y: 0 }]
     const r = recaler(trace, { x: 0.2, y: 0.2 }, { x: 0.8, y: 0.8 })
     proche(r[1], { x: 0.5, y: 0.5 })
   })
 
-  it('retombe sur la ligne droite quand le tracé est dégénéré', () => {
+  it('falls back to the straight line when the stroke is degenerate', () => {
     // Extrémités confondues : aucune fitTo n’est définie.
     const trace = [{ x: 0.3, y: 0.3 }, { x: 0.4, y: 0.5 }, { x: 0.3, y: 0.3 }]
     const r = recaler(trace, { x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 })
     expect(r).toEqual([{ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 }])
   })
 
-  it('laisse tel quel un tracé de moins de deux points, ramené aux bornes', () => {
+  it('leaves a stroke of fewer than two points as it is, clamped to the bounds', () => {
     expect(recaler([], { x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 })).toEqual([{ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 }])
   })
 })
 
-/** Deux temps : le poste 1 descend de (0.5,0.62) à (0.5,0.2), les autres ne bougent pas. */
+/** Two steps: position 1 goes down from (0.5,0.62) to (0.5,0.2), the others stay put. */
 function deuxTemps(): Play {
   const s: Play = { id: 'x', ...newPlay('c1', 'half', false) }
   const t1 = nextStep(s.steps[0])
@@ -52,28 +52,28 @@ function deuxTemps(): Play {
 }
 
 describe('snapshot', () => {
-  it('rend exactement le temps de départ à part 0, et le suivant à part 1', () => {
+  it('renders exactly the starting step at part 0, and the next at part 1', () => {
     const s = deuxTemps()
     expect(snapshot(s, { step: 0, part: 0 }).markers).toEqual(s.steps[0].markers)
     expect(snapshot(s, { step: 0, part: 1 }).markers).toEqual(s.steps[1].markers)
   })
 
-  it('interpole en ligne droite le pion sans flèche', () => {
+  it('interpolates a marker with no arrow in a straight line', () => {
     const s = deuxTemps()
     const p = snapshot(s, { step: 0, part: 0.5 }).markers.find((q) => q.position === 1)!
     expect(p.at.x).toBeCloseTo(0.5, 6)
     expect(p.at.y).toBeCloseTo(0.41, 6)          // (0.62 + 0.2) / 2
   })
 
-  it('laisse strictement immobile un pion qui ne bouge pas', () => {
+  it('leaves a marker that does not move strictly still', () => {
     const s = deuxTemps()
     const avant = s.steps[0].markers.find((q) => q.position === 3)!
     const p = snapshot(s, { step: 0, part: 0.37 }).markers.find((q) => q.position === 3)!
     expect(p.at).toEqual(avant.at)
   })
 
-  it('laisse strictement immobile un pion immobile malgré sa flèche', () => {
-    // Le tracé recalé sur deux positions confondues est de longueur nulle : le
+  it('leaves a still marker still despite its arrow', () => {
+    // A stroke refitted onto two coincident positions has zero length: the
     // pion doit rester posé là, pas partir en NaN.
     const s = deuxTemps()
     s.steps[0] = { ...s.steps[0], arrows: [{
@@ -86,9 +86,9 @@ describe('snapshot', () => {
     expect(p.at).toEqual(avant.at)
   })
 
-  it('suit la forme de la flèche plutôt que la corde', () => {
-    // Une course qui contourne par la gauche : à mi-chemin, le pion est à l’écart
-    // de la ligne droite qui joint les deux positions.
+  it('follows the arrow\'s shape rather than the chord', () => {
+    // A cut that curves round to the left: halfway along, the marker is off the
+    // straight line joining the two positions.
     const s = deuxTemps()
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 1 },
@@ -96,12 +96,12 @@ describe('snapshot', () => {
       stroke: 'cut',
     }] }
     const p = snapshot(s, { step: 0, part: 0.5 }).markers.find((q) => q.position === 1)!
-    expect(p.at.x).toBeLessThan(0.4)             // nettement à gauche de la corde
+    expect(p.at.x).toBeLessThan(0.4)             // clearly left of the chord
   })
 
-  it('recale la flèche : un tracé dessiné à côté mène quand même aux positions réelles', () => {
-    // La flèche part de (0.3,0.7) et finit en (0.3,0.25) — nulle part près du
-    // pion. Suivre le tracé brut ferait démarrer et arriver le pion à côté.
+  it('refits the arrow: a stroke drawn beside still leads to the real positions', () => {
+    // The arrow runs from (0.3,0.7) to (0.3,0.25) — nowhere near the marker.
+    // Following the raw stroke would start and land the marker beside itself.
     const s = deuxTemps()
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 1 },
@@ -113,9 +113,9 @@ describe('snapshot', () => {
     expect(Math.hypot(tout(0.99).x - 0.5, tout(0.99).y - 0.2)).toBeLessThan(0.03)
   })
 
-  it('avance à vitesse constante, quelle que soit la densité des points du tracé', () => {
-    // Tracé droit mais échantillonné serré au départ : paramétrer par le rang
-    // des points ferait ramper le pion au début puis bondir à la fin.
+  it('advances at constant speed, whatever the density of the stroke\'s points', () => {
+    // A straight stroke but densely sampled at the start: parameterising by point
+    // index would make the marker crawl at first and then leap at the end.
     const s = deuxTemps()
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 1 },
@@ -123,10 +123,10 @@ describe('snapshot', () => {
       stroke: 'cut',
     }] }
     const p = snapshot(s, { step: 0, part: 0.5 }).markers.find((q) => q.position === 1)!
-    expect(p.at.y).toBeCloseTo(0.41, 6)          // la moitié de la longueur, pas le point de rang 1,5
+    expect(p.at.y).toBeCloseTo(0.41, 6)          // half the length, not the point at index 1.5
   })
 
-  it('n’expose aucune flèche : l’animation montre les joueurs, pas les traits', () => {
+  it('exposes no arrow: the animation shows the players, not the strokes', () => {
     const s = deuxTemps()
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 1 }, points: [{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.2 }], stroke: 'cut',
@@ -134,19 +134,19 @@ describe('snapshot', () => {
     expect(snapshot(s, { step: 0, part: 0.5 }).arrows).toEqual([])
   })
 
-  it('mène le ballon au nouveau porteur quand il change de mains', () => {
+  it('carries the ball to its new holder when it changes hands', () => {
     const s = deuxTemps()
     s.steps[1] = { ...s.steps[1], ball: { side: 'offense', position: 3 } }
     const mi = snapshot(s, { step: 0, part: 0.5 })
     const start = s.steps[0].markers.find((q) => q.position === 1)!.at
     const end = s.steps[1].markers.find((q) => q.position === 3)!.at
-    // Le ballon est en vol : posé au sol, à mi-distance des deux porteurs.
+    // The ball is in flight: on the floor, halfway between the two carriers.
     expect('x' in mi.ball).toBe(true)
     const b = mi.ball as { x: number; y: number }
     expect(b.x).toBeCloseTo((start.x + end.x) / 2, 6)
   })
 
-  it('fait suivre au ballon la flèche de passe, pas la corde', () => {
+  it('makes the ball follow the pass arrow, not the chord', () => {
     const s = deuxTemps()
     s.steps[1] = { ...s.steps[1], ball: { side: 'offense', position: 3 } }
     s.steps[0] = { ...s.steps[0], arrows: [{
@@ -155,15 +155,15 @@ describe('snapshot', () => {
       stroke: 'pass',
     }] }
     const b = snapshot(s, { step: 0, part: 0.5 }).ball as { x: number; y: number }
-    expect(b.y).toBeGreaterThan(0.7)             // haut de la cloche, loin de la corde
+    expect(b.y).toBeGreaterThan(0.7)             // top of the arc, far from the chord
   })
 
-  it('garde le ballon porté quand le porteur ne change pas', () => {
+  it('keeps the ball carried when the carrier does not change', () => {
     const s = deuxTemps()
     expect(snapshot(s, { step: 0, part: 0.5 }).ball).toEqual({ side: 'offense', position: 1 })
   })
 
-  it('compte les transitions, et rend le dernier temps au-delà', () => {
+  it('counts the transitions, and renders the last step beyond them', () => {
     const s = deuxTemps()
     expect(transitions(s)).toBe(1)
     expect(snapshot(s, { step: 5, part: 0.5 }).markers).toEqual(s.steps[1].markers)
@@ -171,39 +171,38 @@ describe('snapshot', () => {
 })
 
 /**
- * Les lines de déplacement, en option : ce que le coach voit du path pendant
- * que la combinaison se joue.
+ * The movement paths, optional: what the coach sees of the path while the play runs.
  *
- * Le contrat tient en une phrase : la ligne est le path **réellement suivi**.
- * Elle n'est donc pas la flèche dessinée — c'est cette flèche recalée sur les
- * positions des deux temps, la même courbe que celle qui porte le pion. Une
- * ligne qui divergerait du mouvement serait pire que pas de ligne.
+ * The contract fits in one sentence: the line is the path **actually travelled**. It
+ * is therefore not the drawn arrow — it is that arrow refitted onto the two steps'
+ * positions, the same curve that carries the marker. A line diverging from the
+ * movement would be worse than no line.
  */
-describe('snapshot — les lines de déplacement', () => {
+describe('snapshot — the movement paths', () => {
   const ligneDe = (s: Play, part: number, position: number) =>
     snapshot(s, { step: 0, part }, true).arrows.find((f) => f.from.position === position)
 
-  it('n’émet aucune ligne quand on ne les demande pas', () => {
-    // Le comportement historique : l'animation nue. C'est encore le défaut.
+  it('emits no path when none is asked for', () => {
+    // The historical behaviour: the bare animation. It is still the default.
     const s = deuxTemps()
     expect(snapshot(s, { step: 0, part: 0.5 }).arrows).toEqual([])
   })
 
-  it('mène de la position de départ à celle d’arrivée', () => {
+  it('leads from the starting position to the arrival one', () => {
     const s = deuxTemps()
     const l = ligneDe(s, 0.5, 1)!
     proche(l.points[0], { x: 0.5, y: 0.62 })
     proche(l.points[l.points.length - 1], { x: 0.5, y: 0.2 })
   })
 
-  it('reste la même sur toute la transition : c’est un path, pas une traînée', () => {
-    // La ligne ne se dessine pas au fur et à mesure. À 10 % comme à 90 %, elle
-    // montre le chemin entier — c'est ce qu'on montre du doigt au temps-mort.
+  it('stays the same across the whole transition: it is a path, not a trail', () => {
+    // The line is not drawn progressively. At 10% as at 90%, it shows the whole
+    // path — that is what gets pointed at during a time-out.
     const s = deuxTemps()
     expect(ligneDe(s, 0.1, 1)!.points).toEqual(ligneDe(s, 0.9, 1)!.points)
   })
 
-  it('emprunte la forme de la flèche dessinée, recalée', () => {
+  it('borrows the drawn arrow\'s shape, refitted', () => {
     const s = deuxTemps()
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 1 },
@@ -211,50 +210,50 @@ describe('snapshot — les lines de déplacement', () => {
       stroke: 'cut',
     }] }
     const l = ligneDe(s, 0.5, 1)!
-    // Extrémités recalées sur les vraies positions…
+    // Endpoints refitted onto the real positions…
     proche(l.points[0], { x: 0.5, y: 0.62 })
     proche(l.points[l.points.length - 1], { x: 0.5, y: 0.2 })
-    // …et le ventre du contournement conservé, donc à l'écart de la corde.
+    // …and the belly of the curve kept, hence off the chord.
     expect(Math.min(...l.points.map((p) => p.x))).toBeLessThan(0.45)
     expect(l.stroke).toBe('cut')
   })
 
-  it('donne une droite au pion qui bouge sans flèche dessinée', () => {
-    // Sinon la bascule éclairerait certains déplacements et pas d'autres, ce qui
-    // se lit comme une panne plutôt que comme une règle.
+  it('gives a straight line to a marker that moves with no arrow drawn', () => {
+    // Otherwise the toggle would light some movements and not others, which reads
+    // as a fault rather than as a rule.
     const s = deuxTemps()
     const l = ligneDe(s, 0.5, 1)!
     expect(l.points).toEqual([{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.2 }])
     expect(l.stroke).toBe('cut')
   })
 
-  it('ignore les pions immobiles', () => {
+  it('ignores still markers', () => {
     const s = deuxTemps()
     expect(ligneDe(s, 0.5, 3)).toBeUndefined()
   })
 
-  it('trace la passe quand le ballon change de mains', () => {
+  it('draws the pass when the ball changes hands', () => {
     const s = deuxTemps()
     s.steps[1] = { ...s.steps[1], ball: { side: 'offense', position: 3 } }
     const pass = snapshot(s, { step: 0, part: 0.5 }, true).arrows.find((f) => f.stroke === 'pass')!
     expect(pass).toBeDefined()
-    proche(pass.points[0], { x: 0.5, y: 0.62 })          // le porteur au départ
+    proche(pass.points[0], { x: 0.5, y: 0.62 })          // the carrier at the start
     proche(pass.points[pass.points.length - 1], { x: 0.78, y: 0.48 })   // le receveur
   })
 
-  it('ne trace pas de passe quand le ballon ne change pas de mains', () => {
+  it('draws no pass when the ball does not change hands', () => {
     const s = deuxTemps()
     expect(snapshot(s, { step: 0, part: 0.5 }, true).arrows.some((f) => f.stroke === 'pass')).toBe(false)
   })
 
-  it('n’émet rien sur le dernier temps, qui n’a pas de suite', () => {
+  it('emits nothing on the last step, which has nothing after it', () => {
     const s = deuxTemps()
     expect(snapshot(s, { step: 1, part: 0 }, true).arrows).toEqual([])
   })
 
-  it('montre le path dès le premier instant, avant que rien n’ait bougé', () => {
-    // À part 0 les pions sont encore aux positions dessinées, mais la ligne doit
-    // déjà être là : elle annonce le geste, elle ne le commente pas après coup.
+  it('shows the path from the first instant, before anything has moved', () => {
+    // At part 0 the markers are still at the drawn positions, but the line must
+    // already be there: it announces the gesture, it does not comment on it after.
     const s = deuxTemps()
     expect(ligneDe(s, 0, 1)).toBeDefined()
   })

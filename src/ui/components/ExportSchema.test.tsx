@@ -59,8 +59,8 @@ const lienAffiche = async () =>
 beforeEach(() => { sessionStorage.removeItem(ROLE_KEY) })
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
-describe('ExportSchema — le partage d’une combinaison', () => {
-  it('propose les quatre sorties : le lien d’abord, puis l’image, le PDF et le GIF', async () => {
+describe('ExportSchema — sharing a play', () => {
+  it('offers the four outputs: the link first, then the image, the PDF and the GIF', async () => {
     ouvrir(deuxTemps())
 
     expect(await screen.findByRole('button', { name: /Copier le lien/ })).toBeInTheDocument()
@@ -72,7 +72,7 @@ describe('ExportSchema — le partage d’une combinaison', () => {
     expect(screen.getByText(/contient la combinaison entière/)).toBeInTheDocument()
   })
 
-  it('le lien porte réellement le schéma : rouvrir son fragment rend l’original', async () => {
+  it('the link really carries the play: reopening its fragment returns the original', async () => {
     const original = deuxTemps()
     ouvrir(original)
 
@@ -90,7 +90,7 @@ describe('ExportSchema — le partage d’une combinaison', () => {
     expect(recu!.steps).toEqual(original.steps)
   })
 
-  it('au-delà de la limite, aucun lien n’est proposé et l’écran dit pourquoi', async () => {
+  it('past the limit no link is offered, and the screen says why', async () => {
     ouvrir(troisMilleGestes())
 
     expect(await screen.findByText(/trop chargée pour tenir dans un lien/)).toBeInTheDocument()
@@ -101,7 +101,7 @@ describe('ExportSchema — le partage d’une combinaison', () => {
     expect(screen.getByRole('button', { name: 'PDF' })).toBeInTheDocument()
   })
 
-  it('copier le lien passe aussi par le partage natif quand l’appareil en a un', async () => {
+  it('copying the link also goes through the native share when the device has one', async () => {
     const share = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', Object.create(navigator, {
       share: { value: share },
@@ -116,7 +116,7 @@ describe('ExportSchema — le partage d’une combinaison', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(lien)
   })
 
-  it('sans partage natif, le lien va au moins dans le presse-papiers', async () => {
+  it('without a native share, the link at least reaches the clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', Object.create(navigator, { clipboard: { value: { writeText } } }))
     ouvrir(deuxTemps())
@@ -128,7 +128,7 @@ describe('ExportSchema — le partage d’une combinaison', () => {
     expect(await screen.findByText('Lien copié.')).toBeInTheDocument()
   })
 
-  it('un fichier part par le partage natif s’il existe, et se télécharge sinon', async () => {
+  it('a file leaves through the native share if there is one, and downloads otherwise', async () => {
     // La fabrication du PNG, du PDF et du GIF ne peut pas être exercée en jsdom
     // (pas de canvas) ; leur **remise**, si — et c'est elle qui décide entre le
     // geste du téléphone et celui du bureau.
@@ -150,7 +150,7 @@ describe('ExportSchema — le partage d’une combinaison', () => {
     expect(clic).toHaveBeenCalledTimes(1)
   })
 
-  it('partager ne demande aucun code, même sans aucun rôle', async () => {
+  it('sharing asks for no code, even with no role at all', async () => {
     await db.plays.clear()
     await savePlay(deuxTemps())
     render(

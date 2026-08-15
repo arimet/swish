@@ -33,7 +33,7 @@ beforeEach(async () => {
 })
 
 describe('SummaryScreen', () => {
-  it('affiche le score adverse réel et la mention de saisie globale, pas un total à 0', async () => {
+  it('shows the opposition\'s real score and the entered-as-a-total note, not a total of 0', async () => {
     render(
       <AuthProvider>
         <MemoryRouter>
@@ -56,8 +56,8 @@ describe('SummaryScreen', () => {
   })
 })
 
-describe('SummaryScreen — colonne %Tirs', () => {
-  it("affiche — et non 100 % quand aucun tir manqué n'a été saisi sur la rencontre", async () => {
+describe('SummaryScreen — the shooting percentage column', () => {
+  it("shows a dash and not 100% when no missed shot was recorded in the game", async () => {
     const matchId = 'no-miss-tracked'
     await saveTeam({ id: 'tc', name: 'ÉPINAL' })
     await savePlayer({ id: 'p9', teamId: 'tc', number: 9, lastName: 'DUPONT', firstName: 'Marc' })
@@ -89,11 +89,11 @@ describe('SummaryScreen — colonne %Tirs', () => {
   })
 })
 
-describe('SummaryScreen — droits', () => {
+describe('SummaryScreen — rights', () => {
   const renderRésumé = () =>
     render(<AuthProvider><MemoryRouter><SummaryScreen matchId={MATCH_ID} onHome={vi.fn()} /></MemoryRouter></AuthProvider>)
 
-  it('la correction après match est refusée à la table de marque : ni bouton, ni mode correction', async () => {
+  it('post-game correction is refused to the scorer\'s table: no button, no correction mode', async () => {
     // Corriger une feuille close n'est pas le travail du bénévole du samedi : les
     // deux boutons de correction ne lui sont pas proposés, et le mode ne s'ouvre pas.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
@@ -105,7 +105,7 @@ describe('SummaryScreen — droits', () => {
     expect(screen.queryByText(/Mode correction/)).not.toBeInTheDocument()
   })
 
-  it('un visiteur consulte le résumé sans qu’aucun code lui soit demandé, et l’exporte', async () => {
+  it('a visitor reads the summary without being asked for any code, and exports it', async () => {
     renderRésumé()
     await screen.findByText('Visiteurs · VERDUN')
     expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()

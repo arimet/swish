@@ -158,7 +158,7 @@ describe.each([
 
   // Trois niveaux de gris qui se confondraient ne seraient qu'un seul niveau
   // avec trois noms — c'est ce qui rendait la hiérarchie illisible avant.
-  it('les trois niveaux de texte restent distincts', () => {
+  it('the three text levels stay distinct', () => {
     expect(contrast(t['--c-text'], t['--c-muted'])).toBeGreaterThan(1.6)
     expect(contrast(t['--c-muted'], t['--c-faint'])).toBeGreaterThan(1.05)
   })
@@ -172,7 +172,7 @@ describe.each([
   // mesurent que 1,1:1, et exiger 1,25 forcerait tout le thème sombre à s'éclaircir
   // en gris. Ce qui dessine réellement le bord d'une carte là-bas, c'est le filet
   // de `--c-border` et l'ombre portée — d'où la vérification qui suit.
-  it('les plans de l’application s’échelonnent du puits à la carte', () => {
+  it('the application\'s planes step from the well up to the card', () => {
     const ordre = ['--c-panel', '--c-frame', '--c-card']
     const clarites = ordre.map((n) => luminance(t[n]))
     const monotone = (signe: number) => clarites.every((v, i) => i === 0 || signe * (v - clarites[i - 1]) > 0)
@@ -195,13 +195,13 @@ describe.each([
    * l'application flottait. Le sens de l'écart, lui, suit la place disponible : sous
    * le papier en clair, au-dessus du cadre en sombre.
    */
-  it('la gouttière se voit sans dominer la carte', () => {
+  it('the gutter is visible without dominating the card', () => {
     const [page, frame, card] = ['--c-page', '--c-frame', '--c-card'].map((n) => luminance(t[n]))
     expect(Math.abs(page - frame), `gouttière ${page.toFixed(4)} contre cadre ${frame.toFixed(4)}`).toBeGreaterThan(0.003)
     expect(page, `gouttière ${page.toFixed(4)} contre carte ${card.toFixed(4)}`).toBeLessThan(card)
   })
 
-  it('la bordure détache la carte de son fond', () => {
+  it('the border detaches the card from its background', () => {
     expect(contrast(t['--c-border'], t['--c-card']), 'bordure sur carte').toBeGreaterThan(1.08)
     expect(contrast(t['--c-card'], t['--c-card2']), 'carte contre carte2').toBeGreaterThan(1.08)
   })

@@ -12,7 +12,7 @@ const TOP3 = { x: 0.5, y: 0.65 }
 const PAINT = { x: 0.5, y: 0.15 }
 
 describe('shotsOf', () => {
-  it('rassemble les tirs d\'un joueur sur plusieurs matchs', () => {
+  it('gathers a player\'s shots across several games', () => {
     const shots = shotsOf([
       mk('m1', [{ type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 }]),
       mk('m2', [{ type: 'MISS', team: 'A', playerId: 'p1', kind: '2int', shot: PAINT }]),
@@ -23,7 +23,7 @@ describe('shotsOf', () => {
     expect(shots.map((s) => s.matchId)).toEqual(['m1', 'm2'])
   })
 
-  it('exclut les tirs des autres joueurs', () => {
+  it('excludes other players\' shots', () => {
     const m = mk('m1', [
       { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
       { type: 'SCORE', team: 'A', playerId: 'p2', kind: '3', shot: TOP3 },
@@ -31,7 +31,7 @@ describe('shotsOf', () => {
     expect(shotsOf([m], 'p1')).toHaveLength(1)
   })
 
-  it('exclut les lancers francs et les paniers sans position', () => {
+  it('excludes free throws and baskets with no spot', () => {
     const m = mk('m1', [
       { type: 'SCORE', team: 'A', playerId: 'p1', kind: 'lf' },
       { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' }, // raccourci sans position
@@ -42,7 +42,7 @@ describe('shotsOf', () => {
 })
 
 describe('zoneSummary', () => {
-  it('cumule réussis et tentatives par zone, à zéro partout ailleurs', () => {
+  it('sums makes and attempts per zone, at zero everywhere else', () => {
     const m = mk('m1', [
       { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
       { type: 'MISS', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
@@ -56,7 +56,7 @@ describe('zoneSummary', () => {
 })
 
 describe('shootingPct', () => {
-  it('calcule la réussite globale et à 3 points', () => {
+  it('computes the overall and three-point percentages', () => {
     const m = mk('m1', [
       { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
       { type: 'MISS', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
@@ -66,7 +66,7 @@ describe('shootingPct', () => {
     expect(shootingPct(shotsOf([m], 'p1'))).toEqual({ fg: 75, three: 50 })
   })
 
-  it('renvoie null plutôt que zéro quand il n\'y a aucun tir', () => {
+  it('returns null rather than zero when there is no shot', () => {
     expect(shootingPct([])).toEqual({ fg: null, three: null })
   })
 })

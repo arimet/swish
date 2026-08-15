@@ -48,8 +48,8 @@ const ligne = (aria: string) => screen.getByRole('button', { name: aria }).close
 
 const confirmer = async () => userEvent.click(await screen.findByRole('button', { name: /supprimer définitivement/i }))
 
-describe('Administration — comptes annoncés', () => {
-  it('affiche le compte réel de ce que chaque opération détruirait', async () => {
+describe('Administration — the counts announced', () => {
+  it('shows the real count of what each operation would destroy', async () => {
     renderAdmin()
     await screen.findByRole('button', { name: 'Supprimer les rencontres de Poule A' })
 
@@ -64,13 +64,13 @@ describe('Administration — comptes annoncés', () => {
     expect(ligne('Supprimer les schémas')).toHaveTextContent('1 schéma')
   })
 
-  it('dit dans la confirmation ce qui sera détruit, et combien', async () => {
+  it('says in the confirmation what will be destroyed, and how much', async () => {
     renderAdmin()
     await userEvent.click(await screen.findByRole('button', { name: 'Supprimer les rencontres de Poule A' }))
     expect(await screen.findByText(/Les 2 rencontres de « Poule A », leurs feuilles et leurs convocations/)).toBeInTheDocument()
   })
 
-  it('désactive une opération qui ne détruirait rien, en affichant son compte à zéro', async () => {
+  it('disables an operation that would destroy nothing, showing its count at zero', async () => {
     await db.results.clear(); await db.plays.clear()
     renderAdmin()
     await waitFor(() => expect(ligne('Supprimer les résultats saisis')).toHaveTextContent('0 résultat'))
@@ -79,15 +79,15 @@ describe('Administration — comptes annoncés', () => {
     expect(screen.getByRole('button', { name: 'Supprimer les schémas' })).toBeDisabled()
   })
 
-  it('annonce le regroupement par année civile, faute de saison sportive dans les données', async () => {
+  it('announces the grouping by calendar year, for want of a sporting season in the data', async () => {
     renderAdmin()
     expect(await screen.findByText(/ne connaît pas la saison sportive/i)).toBeInTheDocument()
     expect(screen.getByText(/Le regroupement se fait par année civile/i)).toBeInTheDocument()
   })
 })
 
-describe('Administration — périmètres', () => {
-  it('supprime les rencontres du seul championnat visé, avec leurs convocations', async () => {
+describe('Administration — scopes', () => {
+  it('deletes the games of the targeted league alone, with their call-ups', async () => {
     renderAdmin()
     await userEvent.click(await screen.findByRole('button', { name: 'Supprimer les rencontres de Poule A' }))
     await confirmer()
@@ -97,7 +97,7 @@ describe('Administration — périmètres', () => {
     expect(await getConvocation('m3')).toBeDefined()
   })
 
-  it('supprime les rencontres de la seule année visée', async () => {
+  it('deletes the games of the targeted year alone', async () => {
     renderAdmin()
     await userEvent.click(await screen.findByRole('button', { name: 'Supprimer les rencontres de l’année 2025' }))
     await confirmer()
@@ -105,7 +105,7 @@ describe('Administration — périmètres', () => {
     await waitFor(async () => expect((await listMatches()).map((m) => m.id).sort()).toEqual(['m1', 'm2']))
   })
 
-  it('vide les feuilles d’une équipe sans supprimer ses rencontres', async () => {
+  it('empties a team\'s sheets without deleting its games', async () => {
     renderAdmin()
     await userEvent.click(await screen.findByRole('button', { name: 'Vider les feuilles de VIGNOT' }))
     await confirmer()
@@ -118,7 +118,7 @@ describe('Administration — périmètres', () => {
     expect(await getConvocation('m1')).toBeDefined()
   })
 
-  it('supprime en bloc les résultats saisis, sans toucher aux rencontres', async () => {
+  it('deletes the entered results in bulk, without touching the games', async () => {
     renderAdmin()
     await userEvent.click(await screen.findByRole('button', { name: 'Supprimer les résultats saisis' }))
     await confirmer()
@@ -127,7 +127,7 @@ describe('Administration — périmètres', () => {
     expect(await listMatches()).toHaveLength(3)
   })
 
-  it('supprime en bloc les entraînements et les schémas du club', async () => {
+  it('deletes the club\'s trainings and plays in bulk', async () => {
     renderAdmin()
     await userEvent.click(await screen.findByRole('button', { name: 'Supprimer les entraînements' }))
     await confirmer()
@@ -139,8 +139,8 @@ describe('Administration — périmètres', () => {
   })
 })
 
-describe('Administration — tout effacer', () => {
-  it('refuse la remise à zéro tant que le nom du club n’est pas saisi exactement', async () => {
+describe('Administration — erase everything', () => {
+  it('refuses the reset until the club\'s name is typed exactly', async () => {
     renderAdmin()
     await userEvent.click(await screen.findByRole('button', { name: 'Tout effacer' }))
     const valider = await screen.findByRole('button', { name: /supprimer définitivement/i })
@@ -155,7 +155,7 @@ describe('Administration — tout effacer', () => {
     expect(valider).toBeEnabled()
   })
 
-  it('vide toutes les tables une fois le nom du club saisi', async () => {
+  it('empties every table once the club\'s name is typed', async () => {
     renderAdmin()
     await userEvent.click(await screen.findByRole('button', { name: 'Tout effacer' }))
     await userEvent.type(await screen.findByLabelText(/Saisissez « VIGNOT »/), 'VIGNOT')
@@ -169,8 +169,8 @@ describe('Administration — tout effacer', () => {
   })
 })
 
-describe('Administration — droits', () => {
-  it('ne montre aucune opération à la table de marque, et ne touche à rien', async () => {
+describe('Administration — rights', () => {
+  it('shows the scorer\'s table no operation, and touches nothing', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderAdmin()
 

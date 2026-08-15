@@ -45,8 +45,8 @@ const renderEdit = (id: string) =>
 // le même.
 const tableau = async () => await screen.findByRole('application')
 
-describe('SchemaEdit — l’éditeur du tableau tactique', () => {
-  it('range les outils par famille et dit lequel est actif', async () => {
+describe('SchemaEdit — the playbook editor', () => {
+  it('groups the tools by family and says which is active', async () => {
     // Huit pastilles de même poids ne disaient pas qu'elles font trois choses
     // différentes. Les quatre traits s'excluent : ils forment leur propre segment,
     // et chacun garde son nom accessible — c'est le mot qui cède la place au
@@ -67,7 +67,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     expect(screen.getByRole('button', { name: 'Déplacer' })).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('trace une flèche de course depuis un pion et l’enregistre', async () => {
+  it('draws a cut arrow from a marker and saves it', async () => {
     renderEdit('s1')
     await userEvent.click(await screen.findByRole('button', { name: 'Course' }))
     const svg = await tableau()
@@ -80,7 +80,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     expect((await getPlay('s1'))!.steps[0].arrows[0].from).toEqual({ side: 'offense', position: 1 })
   })
 
-  it('ignore un tracé qui ne part pas d’un pion', async () => {
+  it('ignores a stroke that does not start from a marker', async () => {
     renderEdit('s1')
     await userEvent.click(await screen.findByRole('button', { name: 'Course' }))
     const svg = await tableau()
@@ -91,7 +91,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     await waitFor(async () => expect((await getPlay('s1'))!.steps[0].arrows).toHaveLength(0))
   })
 
-  it('la gomme retire une flèche ; annuler la restaure', async () => {
+  it('the eraser removes an arrow; undo restores it', async () => {
     const s = schemaDemi()
     s.steps[0].arrows = [cut]
     await savePlay(s)
@@ -106,7 +106,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     await waitFor(async () => expect((await getPlay('s1'))!.steps[0].arrows).toHaveLength(1))
   })
 
-  it('« + » ajoute un temps qui hérite des positions, pas des flèches', async () => {
+  it('"+" adds a step that inherits the positions, not the arrows', async () => {
     const s = schemaDemi()
     s.steps[0].arrows = [cut]
     await savePlay(s)
@@ -119,7 +119,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     expect(apres.steps[1].arrows).toEqual([])
   })
 
-  it('refuse le passage en demi-terrain quand la moitié arrière est occupée', async () => {
+  it('refuses the move to a half court while the back court is occupied', async () => {
     const s: Play = { id: 's1', ...newPlay('c1', 'full', false) }
     s.steps[0].markers[0] = { ...s.steps[0].markers[0], at: { x: 0.5, y: 0.8 } }
     await savePlay(s)
@@ -130,7 +130,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     expect((await getPlay('s1'))!.court).toBe('full')
   })
 
-  it('n’annule pas dans l’ancienne échelle après un changement de terrain', async () => {
+  it('does not undo in the old scale after a court change', async () => {
     // Les étapes empilées portent les coordonnées d'avant le remappage. Les
     // restaurer telles quelles replacerait les pions n'importe où — au pire dans
     // la moitié arrière, celle que le demi-terrain refuse justement.
@@ -150,7 +150,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     expect((await getPlay('s1'))!.steps[0].markers[0].at.y).toBeCloseTo(0.4285, 3)
   })
 
-  it('n’annule pas une défense retirée : le schéma ne repasse pas à dix pions', async () => {
+  it('does not undo a removed defence: the play does not go back to ten markers', async () => {
     // Une étape empilée porte dix pions ; la restaurer après le retrait de la
     // défense écrirait `defense: false` avec ses croix — l'invariante « cinq ou
     // dix pions selon `defense` » cassée, et écrite en base.
@@ -173,7 +173,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     expect(apres.steps[0].markers).toHaveLength(5)
   })
 
-  it('pose la défense au panier le plus proche, pas toujours au panier avant', async () => {
+  it('puts the defence at the nearest basket, not always at the front one', async () => {
     // Sur terrain complet, une attaque dans la moitié arrière — transition, presse —
     // verrait sinon son défenseur posé au milieu du terrain, à dix mètres d'elle.
     const s: Play = { id: 's3', ...newPlay('c1', 'full', false) }
@@ -188,7 +188,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     croix.forEach((c) => expect(c.at.y).toBeGreaterThan(0.9))
   })
 
-  it('la flèche part de la position du pion, pas du point touché', async () => {
+  it('the arrow starts from the marker\'s position, not from the point touched', async () => {
     // Le doigt tombe à un rayon de prise près : partir du point touché détacherait
     // le trait du pion, et l'animation de 8B ferait démarrer le joueur à côté.
     renderEdit('s1')
@@ -204,7 +204,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     expect(f.points[0]).toEqual({ x: 0.5, y: 0.62 })
   })
 
-  it('la table de marque n’ouvre pas l’éditeur : elle est renvoyée à la consultation, sans rien écrire', async () => {
+  it('the scorer\'s table does not open the editor: it is redirected to the reading screen, writing nothing', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     const { container } = render(
       <MemoryRouter initialEntries={['/schemas/s1/edit']}>

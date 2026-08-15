@@ -17,28 +17,28 @@ beforeEach(async () => {
   await seedDevData()
 })
 
-describe('données de démonstration', () => {
-  it('ne crée que les équipes qui jouent', async () => {
+describe('demo data', () => {
+  it('creates only the teams that play', async () => {
     const teams = await listTeams()
     const matches = await listMatches()
     const utilisees = new Set(matches.flatMap((m) => [m.meta.clubId, m.meta.opponentId]))
     expect(teams.every((t) => utilisees.has(t.id))).toBe(true)
   })
 
-  it('ne crée aucun effectif adverse', async () => {
+  it('creates no opposition roster', async () => {
     const matches = await listMatches()
     const adversaires = new Set(matches.map((m) => m.meta.opponentId))
     for (const id of adversaires) expect(await listPlayers(id)).toHaveLength(0)
   })
 
-  it('produit des rotations, donc un temps de jeu crédible', async () => {
+  it('produces rotations, hence credible court time', async () => {
     const joue = (await listMatches()).find((m) => m.status === 'finished')!
     const steps = [...playingTimes(joue).values()].filter((t) => t > 0)
     // Sans SUBSTITUTION, seuls les cinq titulaires auraient du temps de jeu.
     expect(steps.length).toBeGreaterThan(5)
   })
 
-  it('place l’Avenir de Vignot en tête, à égalité de rencontres jouées', async () => {
+  it('puts Avenir de Vignot on top, on an equal number of games played', async () => {
     // Le classement FFBB compte des points absolus (V=2, D=1) : être premier exige
     // donc d'avoir joué autant que les autres. Le seed publiait les résultats des
     // cinq journées alors que nous n'en avons que trois de jouées, ce qui rendait la
@@ -56,7 +56,7 @@ describe('données de démonstration', () => {
     expect(lines[0].pts).toBeGreaterThan(lines[1].pts)
   })
 
-  it('le cinq majeur est celui que le coach a désigné', async () => {
+  it('the starting five is the one the coach named', async () => {
     const matches = await listMatches()
     const players = await listPlayers(matches[0].meta.clubId)
     const cinq = new Set([2, 11, 13, 15, 17])
@@ -66,7 +66,7 @@ describe('données de démonstration', () => {
     expect(new Set(numeros)).toEqual(cinq)
   })
 
-  it('répartit les paniers plausiblement : BUZZI devant, une feuille de match crédible', async () => {
+  it('distributes the baskets plausibly: BUZZI in front, a credible match sheet', async () => {
     // Trois tentatives ratées avant celle-ci, toutes invisibles sans mesure.
     // La liste pondérée groupée par joueur : `k % longueur` ne sortait jamais du
     // premier bloc, un seul joueur prenait tous les paniers (202 points pour un
@@ -119,7 +119,7 @@ describe('données de démonstration', () => {
    * poids sont inventés et se corrigent depuis l'application — mais il refuse le zéro,
    * qui est la seule valeur dont on est sûr qu'elle est fausse.
    */
-  it('remplit toute la feuille de match : 3 points, passes, rebonds, contres, fautes', async () => {
+  it('fills the whole match sheet: threes, assists, rebounds, blocks, fouls', async () => {
     const matches = await listMatches()
     const players = await listPlayers(matches[0].meta.clubId)
     const numero = (id: string) => players.find((p) => p.id === id)!.number
@@ -168,7 +168,7 @@ describe('données de démonstration', () => {
     expect(Math.max(...parPeriode.values())).toBeGreaterThanOrEqual(TEAM_FOUL_BONUS)
   })
 
-  it('crée des résultats extérieurs pour que le classement ait du sens', async () => {
+  it('creates outside results so that the standings make sense', async () => {
     const results = await listResults()
     const matches = await listMatches()
     const clubId = matches[0].meta.clubId
@@ -182,12 +182,12 @@ describe('données de démonstration', () => {
     }
   })
 
-  it('ne produit aucune égalité (un match de basket ne se termine jamais à égalité)', async () => {
+  it('produces no draw (a basketball game never ends level)', async () => {
     const results = await listResults()
     expect(results.every((r) => r.homeScore !== r.awayScore)).toBe(true)
   })
 
-  it('crée des entraînements pour notre club, aux semaines des rencontres', async () => {
+  it('creates trainings for our club, in the game weeks', async () => {
     const trainings = await listTrainings()
     const matches = await listMatches()
     const clubId = matches[0].meta.clubId
@@ -196,7 +196,7 @@ describe('données de démonstration', () => {
     expect(trainings.every((t) => t.clubId === clubId)).toBe(true)
   })
 
-  it('pose la convocation de démonstration sur la rencontre à venir, jamais sur une rencontre déjà jouée', async () => {
+  it('puts the demo call-up on the upcoming game, never on one already played', async () => {
     const matches = await listMatches()
     const aVenir = matches.find((m) => m.status === 'setup')!
     const convocation = await getConvocation(aVenir.id)
@@ -206,7 +206,7 @@ describe('données de démonstration', () => {
     }
   })
 
-  it('la prochaine échéance juste après un seed est la rencontre convoquée, pas un entraînement', async () => {
+  it('the next fixture right after a seed is the game called up, not a training', async () => {
     // Les entraînements de la dernière journée sont posés après la rencontre (pas
     // avant, comme les autres journées) : sans quoi, plus proches dans le temps que
     // la rencontre convoquée, ils masqueraient le bloc « convoqués » pendant plusieurs
@@ -224,7 +224,7 @@ describe('données de démonstration', () => {
     expect(await getConvocation(fixture!.id)).toBeDefined()
   })
 
-  it('la démonstration contient trois schémas, dont un sur terrain complet et un ballon posé', async () => {
+  it('the demo holds three plays, one of them on a full court and one with a loose ball', async () => {
     const matches = await listMatches()
     const schemas = await listPlays(matches[0].meta.clubId)
     expect(schemas).toHaveLength(3)
@@ -236,7 +236,7 @@ describe('données de démonstration', () => {
     for (const s of schemas) for (const t of s.steps) expect(t.markers).toHaveLength(s.defense ? 10 : 5)
   })
 
-  it('range les schémas de démonstration et en attache à la prochaine séance', async () => {
+  it('files the demo plays and attaches some to the next session', async () => {
     const matches = await listMatches()
     const clubId = matches[0].meta.clubId
     const schemas = await listPlays(clubId)
@@ -267,7 +267,7 @@ describe('données de démonstration', () => {
     expect(prochaine.playIds!.every((id) => existants.has(id))).toBe(true)
   })
 
-  it('vide entraînements et convocations avant de re-seeder, pour ne pas laisser d’orphelins', async () => {
+  it('clears trainings and call-ups before re-seeding, so as to leave no orphans', async () => {
     await saveTraining({ id: 'orphelin', clubId: 'zzz', date: '2000-01-01' })
     await saveConvocation({ matchId: 'inexistant', playerIds: ['x'] })
     localStorage.removeItem('seed-version') // force le re-seed au prochain appel
@@ -277,8 +277,8 @@ describe('données de démonstration', () => {
   })
 })
 
-describe('la garde de version du seed', () => {
-  it('l’empreinte change dès qu’une donnée change', () => {
+describe('the seed\'s version guard', () => {
+  it('the fingerprint changes as soon as a datum changes', () => {
     // Le vrai défaut n'était pas dans les données mais dans la garde : la version
     // était un numéro à incrémenter de mémoire, et on a oublié de le faire en
     // corrigeant la répartition des paniers. Les navigateurs déjà à jour sur
@@ -291,14 +291,14 @@ describe('la garde de version du seed', () => {
     expect(fingerprint(base)).toBe(fingerprint(base))   // et stable à données égales
   })
 
-  it('l’empreinte ne dépend pas de la date du jour', () => {
+  it('the fingerprint does not depend on today\'s date', () => {
     // Les dates du seed sont ancrées sur aujourd'hui. Les inclure ferait tout
     // régénérer chaque nuit, effaçant ce qu'un développeur a saisi la veille.
     expect(DATA_FINGERPRINT).toBe(DATA_FINGERPRINT)
     expect(DATA_FINGERPRINT).not.toMatch(new RegExp(String(new Date().getFullYear())))
   })
 
-  it('un re-seed suit la version, et ne rejoue rien à version égale', async () => {
+  it('a re-seed follows the version, and replays nothing at an equal version', async () => {
     const version = localStorage.getItem('seed-version')
     expect(version).toContain(DATA_FINGERPRINT)
     // À version identique, un second appel ne touche pas la base : on n'écrase pas

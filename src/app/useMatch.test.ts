@@ -23,7 +23,7 @@ describe('useMatch', () => {
    * panier que la base n'avait pas, et le point disparaissait au rechargement. Sur un
    * score officiel, un état qui mente est plus grave qu'une action refusée.
    */
-  it('revient en arrière et le dit quand l’enregistrement échoue', async () => {
+  it('rolls back and says so when the save fails', async () => {
     const { result } = renderHook(() => useMatch('m1'))
     await waitFor(() => expect(result.current.match).not.toBeNull())
     // Un évènement valide d'abord, pour partir d'un état non vide.
@@ -45,7 +45,7 @@ describe('useMatch', () => {
     expect(result.current.error).not.toMatch(/QuotaExceededError/)
   })
 
-  it('« Terminer » signale son échec, pour que l’appelant ne quitte pas la rencontre', async () => {
+  it('"Finish" reports its failure, so that the caller does not leave the game', async () => {
     const { result } = renderHook(() => useMatch('m1'))
     await waitFor(() => expect(result.current.match).not.toBeNull())
 
@@ -64,14 +64,14 @@ describe('useMatch', () => {
     expect((await db.matches.get('m1'))!.status).toBe('finished')
   })
 
-  it('charge le match, dispatch un évènement et persiste', async () => {
+  it('loads the game, dispatches an event and saves', async () => {
     const { result } = renderHook(() => useMatch('m1'))
     await waitFor(() => expect(result.current.match).not.toBeNull())
     await act(async () => { await result.current.dispatch({ type: 'PERIOD_START', period: 1, gameClock: 600 }) })
     expect(result.current.match!.events).toHaveLength(1)
     expect((await db.matches.get('m1'))!.events).toHaveLength(1)
   })
-  it('expose une erreur de validation sans planter', async () => {
+  it('surfaces a validation error without crashing', async () => {
     const { result } = renderHook(() => useMatch('m1'))
     await waitFor(() => expect(result.current.match).not.toBeNull())
     await act(async () => {
@@ -80,7 +80,7 @@ describe('useMatch', () => {
     expect(result.current.error).toBeTruthy()
     expect(result.current.match!.events).toHaveLength(0)
   })
-  it('dispatchMany persiste plusieurs évènements enchaînés en une seule sauvegarde', async () => {
+  it('dispatchMany saves several chained events in a single write', async () => {
     const { result } = renderHook(() => useMatch('m1'))
     await waitFor(() => expect(result.current.match).not.toBeNull())
     await act(async () => {
@@ -93,7 +93,7 @@ describe('useMatch', () => {
     const saved = await db.matches.get('m1')
     expect(saved!.events.map((e) => e.type)).toEqual(['PERIOD_END', 'PERIOD_START'])
   })
-  it('finish() passe le statut à finished et le persiste', async () => {
+  it('finish() moves the status to finished and saves it', async () => {
     const { result } = renderHook(() => useMatch('m1'))
     await waitFor(() => expect(result.current.match).not.toBeNull())
     expect(result.current.match!.status).toBe('live')
@@ -102,7 +102,7 @@ describe('useMatch', () => {
     const saved = await db.matches.get('m1')
     expect(saved!.status).toBe('finished')
   })
-  it('deux dispatch synchrones (même act) persistent tous les deux (pas de perte via une closure périmée)', async () => {
+  it('two synchronous dispatches (same act) both persist (nothing lost through a stale closure)', async () => {
     const { result } = renderHook(() => useMatch('m1'))
     await waitFor(() => expect(result.current.match).not.toBeNull())
     await act(async () => {

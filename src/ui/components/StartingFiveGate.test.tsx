@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { StartingFiveGate } from './StartingFiveGate'
 
 describe('StartingFiveGate', () => {
-  it('n’affiche qu’un seul panneau et garde le bouton de démarrage désactivé tant que le cinq n’est pas complet', () => {
+  it('shows a single panel and keeps the start button disabled until the five is complete', () => {
     render(
       <StartingFiveGate
         rosterA={[]} requiredA={5}

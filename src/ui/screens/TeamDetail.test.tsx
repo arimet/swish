@@ -27,8 +27,8 @@ const renderTeam = () =>
     </MemoryRouter>,
   )
 
-describe('TeamDetail — fiche signalétique', () => {
-  it('renseigne la date de naissance sans changer l’identifiant du joueur', async () => {
+describe('TeamDetail — the player details', () => {
+  it('fills in the birth date without changing the player\'s id', async () => {
     renderTeam()
     await userEvent.click(await screen.findByRole('button', { name: /modifier MARTIN/i }))
     // Libellé du bloc d'édition distinct de celui du formulaire d'ajout (« Date de
@@ -45,7 +45,7 @@ describe('TeamDetail — fiche signalétique', () => {
     })
   })
 
-  it('renseigne la taille', async () => {
+  it('fills in the height', async () => {
     renderTeam()
     await userEvent.click(await screen.findByRole('button', { name: /modifier MARTIN/i }))
     await userEvent.type(screen.getByLabelText(/taille du joueur/i), '192')
@@ -53,7 +53,7 @@ describe('TeamDetail — fiche signalétique', () => {
     await waitFor(async () => expect((await listPlayers('ta'))[0].height).toBe(192))
   })
 
-  it('efface la date de naissance et la taille déjà renseignées', async () => {
+  it('clears a birth date and a height already filled in', async () => {
     await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas', birthDate: '2000-06-15', height: 190 })
     renderTeam()
     await userEvent.click(await screen.findByRole('button', { name: /modifier MARTIN/i }))
@@ -69,7 +69,7 @@ describe('TeamDetail — fiche signalétique', () => {
     })
   })
 
-  it('ajoute un joueur avec sa date de naissance et sa taille', async () => {
+  it('adds a player with their birth date and height', async () => {
     renderTeam()
     // Le formulaire est replié : il apparaît sur un clic, jamais d'emblée.
     await userEvent.click(await screen.findByRole('button', { name: /ajouter un joueur/i }))
@@ -87,8 +87,8 @@ describe('TeamDetail — fiche signalétique', () => {
   })
 })
 
-describe('TeamDetail — droits', () => {
-  it('modifier l’effectif est administratif : la table de marque n’en voit aucun bouton, et rien n’est écrit', async () => {
+describe('TeamDetail — rights', () => {
+  it('editing the roster is administrative: the scorer\'s table sees none of its buttons, and nothing is written', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderTeam()
     await screen.findByText(/MARTIN/)
@@ -104,7 +104,7 @@ describe('TeamDetail — droits', () => {
     expect(await listPlayers('ta')).toHaveLength(1) // MARTIN seul, DUPONT n'a pas été ajouté
   })
 
-  it('ne retire un joueur qu’après confirmation', async () => {
+  it('removes a player only after confirmation', async () => {
     // Ce chemin n'était pas couvert, et c'est pour ça que le défaut a tenu : « retirer »
     // supprimait le joueur sur un clic unique, depuis un bouton de vingt-quatre pixels
     // collé à « modifier », alors que supprimer l'équipe juste au-dessus demandait
@@ -121,7 +121,7 @@ describe('TeamDetail — droits', () => {
     await waitFor(async () => expect(await listPlayers('ta')).toHaveLength(0))
   })
 
-  it('n’affiche le formulaire d’ajout qu’après un clic', async () => {
+  it('shows the add form only after a click', async () => {
     renderTeam()
     await screen.findByRole('button', { name: /ajouter un joueur/i })
     expect(screen.queryByPlaceholderText('N°')).not.toBeInTheDocument()
@@ -129,7 +129,7 @@ describe('TeamDetail — droits', () => {
     expect(await screen.findByPlaceholderText('N°')).toBeInTheDocument()
   })
 
-  it('ne laisse pas frapper un entraîneur que le droit n’autorise pas à enregistrer', async () => {
+  it('does not let anyone type a coach the right will not let them save', async () => {
     // Même exigence que sur le champ de score du championnat : ce que l'écran
     // affiche et ce que contient la base doivent dire la même chose. Le champ ne
     // s'affiche donc pas du tout sans le droit, plutôt que de s'ouvrir à la frappe
@@ -143,7 +143,7 @@ describe('TeamDetail — droits', () => {
   })
 })
 
-describe('TeamDetail — meilleurs marqueurs', () => {
+describe('TeamDetail — top scorers', () => {
   /** Une rencontre jouée où MARTIN marque : sans points, le panneau reste vide. */
   const matchAvecPoints = async () => {
     await saveMatch({
@@ -158,7 +158,7 @@ describe('TeamDetail — meilleurs marqueurs', () => {
     } as Parameters<typeof saveMatch>[0])
   }
 
-  it('chaque marqueur mène à sa fiche', async () => {
+  it('every scorer leads to their record', async () => {
     // Le même classement est cliquable au tableau de bord ; il était inerte ici, ce
     // qui obligeait à retrouver le nom dans l'effectif de onze juste au-dessus.
     //

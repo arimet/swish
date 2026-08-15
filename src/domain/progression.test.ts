@@ -9,7 +9,7 @@ const mk = (events: Partial<GameEvent>[]): Match => ({
 })
 
 describe('scoreProgression', () => {
-  it('commence à 0-0 et cumule les paniers', () => {
+  it('starts at 0-0 and accumulates the baskets', () => {
     const p = scoreProgression(mk([
       { type: 'CLOCK_START', gameClock: 600 },
       { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int', gameClock: 570 },
@@ -21,7 +21,7 @@ describe('scoreProgression', () => {
 })
 
 describe('matchRatios', () => {
-  it('calcule avantage max, série max et points du banc', () => {
+  it('computes the largest lead, the longest run and the bench points', () => {
     const r = matchRatios(mk([
       { type: 'CLOCK_START', gameClock: 600 },
       { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', gameClock: 590 },
@@ -32,7 +32,7 @@ describe('matchRatios', () => {
     expect(r.A.maxRun).toBe(5) // 3 + 2 consécutifs
     expect(r.B.maxLead).toBe(0)
   })
-  it('compte les égalités (hors 0-0 initial)', () => {
+  it('counts the ties (excluding the opening 0-0)', () => {
     const r = matchRatios(mk([
       { type: 'CLOCK_START', gameClock: 600 },
       { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int', gameClock: 590 }, // 2-0

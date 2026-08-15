@@ -38,13 +38,13 @@ const remplirFormulaire = async (home: string, away: string, hs: string, as_: st
   await userEvent.type(screen.getByLabelText('Score équipe visiteuse'), as_)
 }
 
-describe('Championnat', () => {
-  it('explique pourquoi le classement est incomplet quand rien n’est saisi', async () => {
+describe('Standings', () => {
+  it('explains why the table is incomplete when nothing has been entered', async () => {
     renderChamp()
     expect(await screen.findByText(/aucun résultat saisi/i)).toBeInTheDocument()
   })
 
-  it('fait apparaître au classement un résultat saisi', async () => {
+  it('brings an entered result into the table', async () => {
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     renderChamp()
     const table = await screen.findByRole('table')
@@ -52,14 +52,14 @@ describe('Championnat', () => {
     expect(within(table).getByText('METZ')).toBeInTheDocument()
   })
 
-  it('supprime un résultat saisi', async () => {
+  it('deletes an entered result', async () => {
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     renderChamp()
     await userEvent.click(await screen.findByRole('button', { name: /supprimer ce résultat/i }))
     await waitFor(async () => expect(await listResults()).toHaveLength(0))
   })
 
-  it('ne modifie pas le score enregistré quand on vide le champ puis qu’on en sort', async () => {
+  it('does not change the saved score when the field is cleared and then left', async () => {
     // Vider le champ est le premier geste de qui corrige une faute de frappe : ça ne
     // doit pas enregistrer 0 en silence (`Number('')` vaut 0, pas NaN).
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
@@ -71,12 +71,12 @@ describe('Championnat', () => {
     expect(scoreHome).toHaveValue(70)
   })
 
-  it('signale que les résultats saisis restent sur cet appareil', async () => {
+  it('says that the entered results stay on this device', async () => {
     renderChamp()
     expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
   })
 
-  it('refuse un résultat qui ferait doublon avec un résultat déjà saisi, même équipes inversées', async () => {
+  it('refuses a result that would duplicate one already entered, even with the teams reversed', async () => {
     // « VERDUN reçoit METZ » est déjà saisi : le saisir à nouveau dans l'autre sens
     // (METZ reçoit VERDUN, même championnat, même date) décrit la même confrontation.
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
@@ -92,13 +92,13 @@ describe('Championnat', () => {
     expect(await listResults()).toHaveLength(1)
   })
 
-  it('interdit l’ajout tant qu’un score saisi est négatif', async () => {
+  it('forbids adding while an entered score is negative', async () => {
     renderChamp()
     await remplirFormulaire('tb', 'tc', '-5', '60')
     expect(screen.getByRole('button', { name: /ajouter le résultat/i })).toBeDisabled()
   })
 
-  it('interdit l’ajout tant que la date n’est pas renseignée', async () => {
+  it('forbids adding until the date is filled in', async () => {
     // Sans date, une même rencontre saisie une fois datée et une fois vide produirait
     // deux clés de confrontation distinctes et compterait deux fois au classement.
     renderChamp()
@@ -108,7 +108,7 @@ describe('Championnat', () => {
     expect(screen.getByRole('button', { name: /ajouter le résultat/i })).toBeEnabled()
   })
 
-  it('signale, avant l’enregistrement, qu’une confrontation saisie correspond à une de nos rencontres', async () => {
+  it('warns, before saving, that an entered fixture matches one of our games', async () => {
     await saveMatch({
       id: 'm1',
       meta: { championshipLabel: 'Poule A', date: '2026-01-10', clubId: 'ta', opponentId: 'tb' },
@@ -122,8 +122,8 @@ describe('Championnat', () => {
   })
 })
 
-describe('Championnat — droits', () => {
-  it('saisir un résultat est administratif : la table de marque ne voit ni bouton ni champs, et rien n’est enregistré', async () => {
+describe('Standings — rights', () => {
+  it('entering a result is administrative: the scorer\'s table sees neither button nor fields, and nothing is saved', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderChamp()
     await screen.findByText(/aucun résultat saisi/i)
@@ -136,7 +136,7 @@ describe('Championnat — droits', () => {
     expect(await listResults()).toHaveLength(0)
   })
 
-  it('n’affiche le formulaire de saisie qu’après un clic', async () => {
+  it('shows the entry form only after a click', async () => {
     renderChamp()
     await screen.findByRole('button', { name: /saisir un résultat/i })
     expect(screen.queryByLabelText('Équipe reçue')).not.toBeInTheDocument()
@@ -144,7 +144,7 @@ describe('Championnat — droits', () => {
     expect(screen.getByLabelText('Équipe reçue')).toBeInTheDocument()
   })
 
-  it('ne laisse pas à l’écran un score corrigé que le droit n’autorise pas : la table de marque n’a pas de champ', async () => {
+  it('leaves no corrected score on screen that the right does not allow: the scorer\'s table gets no field', async () => {
     // Le champ n'est pas contrôlé : React ne le réinitialise pas tout seul. S'il
     // s'ouvrait à la frappe sans le droit, un refus laisserait à l'écran une valeur
     // que la base n'a pas — et le classement juste au-dessus continuerait de compter
@@ -161,7 +161,7 @@ describe('Championnat — droits', () => {
     expect((await listResults())[0].homeScore).toBe(70)
   })
 
-  it('un visiteur consulte le classement sans qu’aucun code lui soit demandé', async () => {
+  it('a visitor reads the standings without being asked for any code', async () => {
     sessionStorage.removeItem(ROLE_KEY)
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     renderChamp()

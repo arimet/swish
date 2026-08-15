@@ -9,7 +9,7 @@ const mk = (events: Partial<GameEvent>[]): Match => ({
 })
 
 describe('playingTimes', () => {
-  it('accumule le temps des titulaires pendant que le chrono tourne', () => {
+  it('accumulates the starters\' time while the clock runs', () => {
     const t = playingTimes(mk([
       { type: 'STARTING_FIVE', team: 'A', playerIds: ['p1', 'p2'] },
       { type: 'CLOCK_START', gameClock: 600 },
@@ -17,9 +17,9 @@ describe('playingTimes', () => {
     ]))
     expect(t.get('p1')).toBe(60)
     expect(t.get('p2')).toBe(60)
-    expect(t.get('p3') ?? 0).toBe(0) // sur le banc
+    expect(t.get('p3') ?? 0).toBe(0) // on the bench
   })
-  it('gère un changement en cours de chrono', () => {
+  it('handles a substitution with the clock running', () => {
     const t = playingTimes(mk([
       { type: 'STARTING_FIVE', team: 'A', playerIds: ['p1'] },
       { type: 'CLOCK_START', gameClock: 600 },
@@ -29,7 +29,7 @@ describe('playingTimes', () => {
     expect(t.get('p1')).toBe(30)
     expect(t.get('p2')).toBe(30)
   })
-  it("n'accumule rien quand le chrono est arrêté", () => {
+  it("accumulates nothing while the clock is stopped", () => {
     const t = playingTimes(mk([
       { type: 'STARTING_FIVE', team: 'A', playerIds: ['p1'] },
     ]))

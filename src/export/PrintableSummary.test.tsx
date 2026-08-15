@@ -12,14 +12,14 @@ const match: Match = {
 }
 
 describe('PrintableSummary', () => {
-  it('affiche l’en-tête de la rencontre', () => {
+  it('shows the game\'s header', () => {
     render(<PrintableSummary match={match} players={{}} teamNames={{ A: 'VIGNOT', B: 'VERDUN' }} />)
     expect(screen.getByText(/Pré régionale masculine/)).toBeInTheDocument()
     expect(screen.getByText(/78/)).toBeInTheDocument()
     expect(screen.getByText(/BART S/)).toBeInTheDocument()
   })
 
-  it('affiche le score adverse réel plutôt qu’un total à 0', () => {
+  it('shows the opposition\'s real score rather than a total of 0', () => {
     const soloMatch: Match = {
       ...match,
       events: [

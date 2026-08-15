@@ -13,31 +13,31 @@ const ev = (e: Partial<GameEvent> & Pick<GameEvent, 'type'>): GameEvent =>
   ({ id: 'e', wallClock: 0, period: 1, gameClock: 600, ...e } as GameEvent)
 
 describe('appendEvent', () => {
-  it('ajoute un evenement de facon immuable', () => {
+  it('adds an event immutably', () => {
     const m = baseMatch()
     const m2 = appendEvent(m, ev({ type: 'PERIOD_START' }))
     expect(m.events).toHaveLength(0)
     expect(m2.events).toHaveLength(1)
   })
-  it('refuse un SCORE si le chrono na jamais demarré sur la periode', () => {
+  it('refuses a SCORE if the clock never started in the period', () => {
     const m = baseMatch()
     expect(() =>
       appendEvent(m, ev({ type: 'SCORE', team: 'A', playerId: 'p1', kind: '3' } as Partial<GameEvent> & { type: 'SCORE' })),
     ).toThrow()
   })
-  it('refuse aussi un MISS si le chrono na jamais demarré sur la periode', () => {
+  it('also refuses a MISS if the clock never started in the period', () => {
     const m = baseMatch()
     expect(() =>
       appendEvent(m, ev({ type: 'MISS', team: 'A', playerId: 'p1', kind: '3', shot: { x: 0.5, y: 0.65 } } as Partial<GameEvent> & { type: 'MISS' })),
     ).toThrow()
   })
-  it('refuse deux CLOCK_START consecutifs', () => {
+  it('refuses two consecutive CLOCK_STARTs', () => {
     let m = baseMatch()
     m = appendEvent(m, ev({ type: 'PERIOD_START' }))
     m = appendEvent(m, ev({ type: 'CLOCK_START' }))
     expect(() => appendEvent(m, ev({ type: 'CLOCK_START' }))).toThrow()
   })
-  it('refuse CLOCK_STOP si le chrono est deja arrete', () => {
+  it('refuses CLOCK_STOP if the clock is already stopped', () => {
     let m = baseMatch()
     m = appendEvent(m, ev({ type: 'PERIOD_START' }))
     m = appendEvent(m, ev({ type: 'CLOCK_START' }))
@@ -47,7 +47,7 @@ describe('appendEvent', () => {
 })
 
 describe('undoLast', () => {
-  it('retire le dernier evenement', () => {
+  it('removes the last event', () => {
     let m = baseMatch()
     m = appendEvent(m, ev({ type: 'PERIOD_START' }))
     m = appendEvent(m, ev({ type: 'CLOCK_START' }))
@@ -55,7 +55,7 @@ describe('undoLast', () => {
     expect(m2.events).toHaveLength(1)
     expect(m2.events[0].type).toBe('PERIOD_START')
   })
-  it('undoLast sur journal vide ne casse pas', () => {
+  it('undoLast on an empty log does not break', () => {
     expect(undoLast(baseMatch()).events).toHaveLength(0)
   })
 })
@@ -70,25 +70,25 @@ describe('removeLastEvent', () => {
     m = appendEvent(m, ev({ type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', id: 's2' } as Partial<GameEvent> & { type: 'SCORE' }))
     return m
   }
-  it('retire le dernier evenement correspondant, pas les autres', () => {
+  it('removes the last matching event, not the others', () => {
     const m = removeLastEvent(scored(), (e) => e.type === 'SCORE' && e.playerId === 'p1')
     const scores = m.events.filter((e) => e.type === 'SCORE')
     expect(scores).toHaveLength(1)
-    expect(scores[0].id).toBe('s1') // le plus récent (s2) a été retiré
+    expect(scores[0].id).toBe('s1') // the most recent (s2) was removed
   })
-  it('ne retire quun seul evenement (la faute reste)', () => {
+  it('removes only one event (the foul stays)', () => {
     const m = removeLastEvent(scored(), (e) => e.type === 'FOUL')
     expect(m.events.filter((e) => e.type === 'FOUL')).toHaveLength(0)
     expect(m.events.filter((e) => e.type === 'SCORE')).toHaveLength(2)
   })
-  it('no-op (meme reference) si aucun evenement ne correspond', () => {
+  it('no-op (same reference) when no event matches', () => {
     const m = scored()
     expect(removeLastEvent(m, (e) => e.type === 'TIMEOUT')).toBe(m)
   })
 })
 
 describe('validateEvent', () => {
-  it('retourne null pour PERIOD_START valide', () => {
+  it('returns null for a valid PERIOD_START', () => {
     expect(validateEvent(baseMatch(), ev({ type: 'PERIOD_START' }))).toBeNull()
   })
 })
