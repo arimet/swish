@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { fmt } from './GameClock'
 import { useT } from '../../i18n'
 
-/** Saisie manuelle du chrono (format MM:SS ou secondes brutes), borné à `max`. */
+/** Manual clock entry (MM:SS format or raw seconds), bounded by `max`. */
 function parseClock(text: string): number | null {
   const t = text.trim()
   const mmss = t.match(/^(\d{1,3}):([0-5]?\d)$/)

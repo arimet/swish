@@ -17,7 +17,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ExportSchema, livrer } from './ExportSchema'
+import { ExportSchema, deliver } from './ExportSchema'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { decoder } from '../../domain/partage'
 import { newPlay, nextStep, type Arrow, type Play } from '../../domain/plays'
@@ -141,12 +141,12 @@ describe('ExportSchema — le partage d’une combinaison', () => {
 
     const share = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', Object.create(navigator, { share: { value: share } }))
-    await livrer(file)
+    await deliver(file)
     expect(share).toHaveBeenCalledWith({ files: [file], title: 'pick-and-roll.png' })
     expect(clic).not.toHaveBeenCalled()
 
     vi.stubGlobal('navigator', Object.create(navigator, { share: { value: undefined } }))
-    await livrer(file)
+    await deliver(file)
     expect(clic).toHaveBeenCalledTimes(1)
   })
 

@@ -2,13 +2,13 @@ import type { Player } from '../../domain/types'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
 
-/* La marque, comme sur la table de marque : `--team-a` valait un presque-noir en
-   thème clair, d'où des anneaux et des filets noirs sur cet écran. */
+/* The brand, as on the scorer's table: `--team-a` was a near-black in the light
+   theme, hence black rings and hairlines on this screen. */
 const TEAM_A = C.brand
 
 /**
- * Porte d'entrée avant tout démarrage de chrono : notre équipe doit désigner
- * son cinq de départ (STARTING_FIVE) avant que le match live ne s'affiche.
+ * The gate before any clock starts: our team must name its starting five
+ * (STARTING_FIVE) before the live game shows.
  */
 export function StartingFiveGate({
   rosterA, requiredA, selected, onToggle, onStart, canStart, onExit,
@@ -23,8 +23,8 @@ export function StartingFiveGate({
 }) {
   const translate = useT()
   return (
-    /* La table de marque vit hors de la coquille : cet écran porte donc lui-même
-       son fond et sa hauteur, sinon il flotterait sur le gris de la page. */
+    /* The scorer's table lives outside the shell: this screen therefore carries its
+       own background and height, otherwise it would float on the page's grey. */
     <div className="min-h-dvh overflow-y-auto" style={{ background: C.frame, color: C.text }}>
       <div className="mx-auto max-w-4xl px-4 py-8 sm:py-10">
         <div className="mb-8 text-center">

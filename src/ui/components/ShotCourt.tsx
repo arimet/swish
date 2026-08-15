@@ -5,25 +5,25 @@ import type { ShotSpot } from '../../domain/types'
 import { C, T } from '../olive/kit'
 import { useT } from '../../i18n'
 
-// viewBox en centimètres, ligne de fond en haut. Voir les repères du plan.
-// Exportés parce que le tableau tactique dessine sur le même demi-terrain — et,
-// pour le terrain complet, sur son miroir : une seule géométrie pour tous.
-/** Rayon des coins, en unités de terrain : 110 sur 1500 de large, soit environ
- *  7 % — assez pour se voir à toute taille, ce qu'un rayon en pixels ne fait pas. */
+// viewBox in centimetres, baseline at the top. See the plan's landmarks.
+// Exported because the tactical board draws on the same half court — and, for the
+// full court, on its mirror: one geometry for all.
+/** Corner radius, in court units: 110 out of 1500 wide, roughly 7% — enough to be
+ *  seen at any size, which a pixel radius is not. */
 export const RAYON = 110
 
 export const W = 1500
 export const D = 1400
 
 /**
- * Le cadre du terrain : rentré de 4 unités du viewBox et arrondi de `RAYON`.
- * Une seule définition, parce que trois tracés doivent coïncider au pixel près —
- * le cadre dessiné, son homologue du terrain complet, et la découpe des zones.
- * `h` est la profondeur : `D` pour un demi-terrain, le double pour un complet.
+ * The court's frame: inset 4 units from the viewBox and rounded by `RAYON`. One
+ * definition, because three paths must coincide to the pixel — the drawn frame, its
+ * full-court counterpart, and the zone clip. `h` is the depth: `D` for a half court,
+ * twice that for a full one.
  */
 export const cadre = (h = D) => ({ x: 4, y: 4, width: W - 8, height: h - 8, rx: RAYON })
 
-/** Contours des zones, dans le même ordre que ZONES. Les arcs suivent la ligne à 3 points. */
+/** Zone outlines, in the same order as ZONES. The arcs follow the three-point line. */
 export const ZONE_PATH: Record<ShotZone, string> = {
   paint: 'M 505 0 H 995 V 580 H 505 Z',
   mid_left: 'M 90 0 H 505 V 786.5 A 675 675 0 0 1 90 299.01 Z',
@@ -35,48 +35,48 @@ export const ZONE_PATH: Record<ShotZone, string> = {
 }
 
 /**
- * Tracés réglementaires. Purement décoratif : aucune de ces formes n'entre dans le
- * calcul des zones, qui repose sur `zoneAt` et `ZONE_PATH`.
- * Trois poids de trait : les limites et la ligne à 3 points guident le regard, la
- * raquette et le cercle de lancer franc viennent ensuite, le reste s'efface.
+ * Regulation markings. Purely decorative: none of these shapes enters the zone
+ * computation, which rests on `zoneAt` and `ZONE_PATH`.
+ * Three stroke weights: the boundaries and the three-point line guide the eye, the
+ * key and the free-throw circle come next, the rest recedes.
  */
 export function CourtLines({ bord = true }: { bord?: boolean }) {
-  // Les lignes d'un terrain sont peintes, pas suggérées. Elles étaient à 70 %,
-  // 40 % et 22 % d'opacité : même les principales étaient des fantômes, et c'est
-  // ce qui donnait au tableau son air de brouillon plutôt que de terrain. Les
-  // principales passent à l'opacité pleine ; les secondaires gardent un retrait,
-  // parce qu'un cercle de lancer franc n'a pas à disputer l'attention aux joueurs.
+  // A court's lines are painted, not suggested. They were at 70%, 40% and 22%
+  // opacity: even the main ones were ghosts, and that is what gave the board its
+  // draft-like look rather than a court's. The main ones move to full opacity; the
+  // secondary ones keep a step back, because a free-throw circle has no business
+  // competing with the players for attention.
   const major = { fill: 'none', stroke: 'currentColor', strokeWidth: 9, opacity: 1 } as const
   const minor = { fill: 'none', stroke: 'currentColor', strokeWidth: 6, opacity: 0.62 } as const
   const faint = { fill: 'none', stroke: 'currentColor', strokeWidth: 4, opacity: 0.34 } as const
   return (
     <g style={{ color: T.line }}>
-      {/* La raquette **peinte**, comme dans un gymnase. Elle était remplie de l'encre
-          des trajets à cinq pour cent d'opacité, c'est-à-dire invisible : le terrain
-          n'avait aucune couleur propre, seulement des marques posées sur une dalle
-          nue. C'est la surface qui manquait, pas la teinte du bois. */}
+      {/* The key **painted**, as in a gym. It was filled with the paths' ink at five
+          per cent opacity, that is to say invisible: the court had no colour of its
+          own, only markings laid on a bare slab. It was the surface that was missing,
+          not the wood's hue. */}
       <rect x={505} y={0} width={490} height={580} fill={T.paint} />
-      {/* Prolongements des lignes de raquette : laissent deviner les cibles de mi-distance */}
+      {/* Extensions of the lane lines: they hint at the mid-range targets. */}
       <g {...faint} strokeDasharray="18 22">
         <line x1={505} y1={580} x2={505} y2={786.5} />
         <line x1={995} y1={580} x2={995} y2={786.5} />
       </g>
-      {/* Zone restrictive (1,25 m sous le panier) */}
+      {/* Restricted area (1.25 m under the basket). */}
       <path d="M 625 157.5 A 125 125 0 0 0 875 157.5" {...faint} />
-      {/* Cercle de lancer franc : la moitié hors-raquette (côté milieu de terrain) en
-          trait plein, la moitié qui chevauche la raquette en pointillés — règle FIBA
-          « les parties du cercle situées dans la raquette sont tracées en pointillés ».
-          Balayage à 0 des deux côtés : vérifié par calcul, un balayage à 1 inverse les
-          deux moitiés et fait bomber le trait plein vers le panier. */}
+      {/* Free-throw circle: the half outside the key (towards half court) solid, the
+          half overlapping the key dashed — the FIBA rule that the parts of the circle
+          inside the restricted area are drawn dashed. Sweep 0 on both sides: checked
+          by computation, a sweep of 1 swaps the two halves and bulges the solid stroke
+          towards the basket. */}
       <path d="M 570 580 A 180 180 0 0 0 930 580" {...minor} />
       <path d="M 930 580 A 180 180 0 0 0 570 580" {...minor} strokeDasharray="30 26" />
       <rect x={505} y={0} width={490} height={580} {...minor} />
-      {/* Panneau puis arceau */}
+      {/* Backboard, then rim. */}
       <rect x={660} y={112} width={180} height={14} fill="currentColor" opacity={0.55} />
       <circle cx={750} cy={157.5} r={22.5} {...major} />
-      {/* Ligne à 3 points et limites du terrain. Le cadre est optionnel : mis bout
-          à bout avec son miroir (terrain complet), il doublerait la ligne médiane
-          et y planterait deux coins arrondis — l'appelant le trace alors lui-même. */}
+      {/* Three-point line and court boundaries. The frame is optional: put end to end
+          with its mirror (full court), it would double the half-way line and plant two
+          rounded corners on it — the caller then draws it itself. */}
       <path d="M 90 0 L 90 299.01 A 675 675 0 0 0 1410 299.01 L 1410 0" {...major} />
       {bord && <rect {...cadre()} {...major} />}
     </g>
@@ -84,13 +84,13 @@ export function CourtLines({ bord = true }: { bord?: boolean }) {
 }
 
 /**
- * Découpe ses enfants à la forme réelle du terrain. Les contours de `ZONE_PATH`
- * courent jusqu'au bord du viewBox — `corner3_left` part de (0,0) — alors que le
- * terrain s'arrête au cadre, rentré et arrondi : sans cette découpe, le
- * remplissage d'une zone déborde dans les coins que le cadre arrondit.
+ * Clips its children to the court's real shape. The `ZONE_PATH` outlines run to the
+ * edge of the viewBox — `corner3_left` starts at (0,0) — whereas the court stops at
+ * the frame, inset and rounded: without this clip, a zone's fill spills into the
+ * corners the frame rounds off.
  */
-function ZonesDecoupees({ children }: { children: ReactNode }) {
-  const id = `terrain-${useId()}`
+function ClippedZones({ children }: { children: ReactNode }) {
+  const id = `court-clip-${useId()}`
   return (
     <>
       <defs><clipPath id={id}><rect {...cadre()} /></clipPath></defs>
@@ -116,9 +116,9 @@ function Court({ children, label, onClick }: { children: ReactNode; label: strin
           <stop offset="100%" stopColor={T.court} />
         </radialGradient>
       </defs>
-      {/* Le fond porte l'arrondi, pas un masque CSS : un rayon en pixels ne suit
-          pas la taille du terrain et laisse le cadre dessiné, coté en unités de
-          terrain, dépasser ou se faire couper. Ici les deux coïncident toujours. */}
+      {/* The background carries the rounding, not a CSS mask: a pixel radius does not
+          follow the court's size and leaves the drawn frame, expressed in court units,
+          overhanging or clipped. Here the two always coincide. */}
       <rect x={2} y={2} width={W - 4} height={D - 4} rx={RAYON} fill={`url(#${gid})`} />
       {children}
     </svg>
@@ -127,21 +127,21 @@ function Court({ children, label, onClick }: { children: ReactNode; label: strin
 
 export const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
 
-/** Durée d'affichage du retour visuel après un tap, avant fermeture de la popup. */
+/** How long the visual feedback stays after a tap, before the popup closes. */
 export const SHOT_FEEDBACK_MS = 350
 
-/** Vibration courte là où le navigateur la supporte. iOS ne l'implémente sur aucun
- *  navigateur : le retour visuel reste le mécanisme principal, la vibration un bonus. */
+/** A short buzz where the browser supports it. iOS implements it in no browser: the
+ *  visual feedback stays the main mechanism, the buzz is a bonus. */
 function buzz(): void {
   if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(15)
 }
 
 /**
- * Terrain de saisie, **contrôlé** : c'est l'appelant qui détient la confirmation du
- * dernier tir. Tant qu'elle est posée, toute saisie est neutralisée — sans ce garde,
- * un second tap pendant les 350 ms d'affichage enregistrerait un second tir.
- * Les sept boutons sous le terrain donnent le même résultat au clavier, à la
- * précision de la zone près.
+ * The entry court, **controlled**: it is the caller that holds the last shot's
+ * confirmation. While it stands, all input is neutralised — without that guard, a
+ * second tap during the 350 ms of feedback would record a second shot.
+ * The seven buttons under the court give the same result from the keyboard, to the
+ * zone's precision.
  */
 export function ShotPicker({ onPick, confirmation, shots }: {
   onPick: (spot: ShotSpot) => void
@@ -163,16 +163,16 @@ export function ShotPicker({ onPick, confirmation, shots }: {
   }
   return (
     <div>
-      {/* La largeur est bornée, jamais la hauteur : le SVG est un élément remplacé,
-          sa boîte suit donc le rapport du viewBox tant qu'on ne lui impose que sa
-          largeur. Borner la hauteur le centrerait dans des marges internes et
-          `getBoundingClientRect` ci-dessus convertirait le doigt de travers — un tir
-          enregistré à côté de l'endroit touché. Même piège que dans `SchemaPlayer`.
-          Ces 240 px suffisent à viser une zone au doigt et laissent les actions du bas
-          (lancer franc, passe décisive, contre…) au-dessus de la ligne de flottaison,
-          aussi bien en 1440×900 qu'en 375×812. */}
+      {/* The width is bounded, never the height: an SVG is a replaced element, so its
+          box follows the viewBox's ratio as long as only its width is imposed. Bounding
+          the height would centre it inside internal margins and
+          `getBoundingClientRect` above would convert the finger crooked — a shot
+          recorded next to the spot touched. Same trap as in `SchemaPlayer`.
+          These 240px are enough to aim at a zone with a finger and keep the actions
+          below (free throw, assist, block…) above the fold, at 1440×900 as much as at
+          375×812. */}
       <div className="mx-auto w-full max-w-[240px]">
-        <Court label="Demi-terrain — toucher le point de tir" onClick={pickFromEvent}>
+        <Court label={translate('tir.terrainSaisie')} onClick={pickFromEvent}>
           {shots?.map((s, i) => (
             <circle
               key={i}
@@ -187,10 +187,11 @@ export function ShotPicker({ onPick, confirmation, shots }: {
           {confirmation && <Confirmation spot={confirmation.spot} made={confirmation.made} />}
         </Court>
       </div>
-      {/* Toujours rendue (contenu vide sans confirmation) : la pastille ne doit jamais
-          apparaître ni disparaître, sinon tout ce qui suit — dont les boutons de zone
-          et « + 1 Lancer franc » — se décale pendant que le verrou anti-double-comptage
-          les protège encore, exposant une fenêtre où un second tap vise une cible fantôme. */}
+      {/* Always rendered (empty content without a confirmation): the pill must never
+          appear or disappear, otherwise everything after it — including the zone
+          buttons and "+ 1 free throw" — shifts while the anti-double-count lock is
+          still protecting them, opening a window where a second tap aims at a ghost
+          target. */}
       <p role="status" className="mt-2 rounded-lg px-3 py-1.5 text-center text-[13px] font-black uppercase tracking-wide"
         style={{
           visibility: confirmation ? 'visible' : 'hidden',
@@ -217,19 +218,19 @@ export function ShotPicker({ onPick, confirmation, shots }: {
 }
 
 /**
- * Point de tir enregistré : zone illuminée, point plein, anneau qui s'étend.
- * Même convention que les tirs passés (`shots?.map` plus haut) : disque plein en
- * `C.accent` pour un tir réussi, anneau creux gris pour un manqué. Sans quoi le
- * disque géant du retour visuel dirait « panier » même quand le tir est manqué.
+ * A recorded shot spot: the zone lights up, a filled dot, an expanding ring.
+ * The same convention as past shots (`shots?.map` above): a filled disc for a made
+ * shot, a hollow grey ring for a miss. Without it, the feedback's giant disc would
+ * say "basket" even when the shot missed.
  */
 function Confirmation({ spot, made }: { spot: ShotSpot; made: boolean }) {
   const cx = spot.x * W
   const cy = spot.y * D
   return (
     <g>
-      <ZonesDecoupees>
+      <ClippedZones>
         <path d={ZONE_PATH[zoneAt(spot.x, spot.y)]} fill={made ? T.attack : T.line} fillOpacity={0.22} />
-      </ZonesDecoupees>
+      </ClippedZones>
       <circle
         data-confirmation={made ? 'made' : 'missed'}
         cx={cx} cy={cy} r={26}
@@ -245,15 +246,15 @@ function Confirmation({ spot, made }: { spot: ShotSpot; made: boolean }) {
 }
 
 /**
- * Carte de chaleur. Une zone reste neutre sous `minAttempts` tentatives :
- * afficher « 100 % » sur un seul tir donnerait une lecture fausse.
+ * Heat map. A zone stays neutral below `minAttempts` attempts: showing "100%" off a
+ * single shot would give a false reading.
  */
 export function ShotChart({ shots, minAttempts = 3 }: { shots: Shot[]; minAttempts?: number }) {
   const translate = useT()
   const sum = zoneSummary(shots)
   return (
     <Court label={translate('bord.carteDesTirs')}>
-      <ZonesDecoupees>
+      <ClippedZones>
         {ZONES.map((z) => {
           const { made, attempts } = sum[z]
           const enough = attempts >= minAttempts
@@ -267,7 +268,7 @@ export function ShotChart({ shots, minAttempts = 3 }: { shots: Shot[]; minAttemp
             />
           )
         })}
-      </ZonesDecoupees>
+      </ClippedZones>
       <CourtLines />
       {shots.map((s, i) => (
         <circle
@@ -284,10 +285,10 @@ export function ShotChart({ shots, minAttempts = 3 }: { shots: Shot[]; minAttemp
       {ZONES.map((z) => {
         const { made, attempts } = sum[z]
         if (attempts < minAttempts) return null
-        // Les corners sont trop étroits (90 unités) pour un ratio centré en
-        // fontSize 62 gras (~175 unités) : même « 10/10 » déborde du viewBox.
-        // Ancrer le texte à son bord plutôt qu'à son centre le fait toujours
-        // grandir vers l'intérieur du terrain, quelle que soit sa longueur.
+        // The corners are too narrow (90 units) for a ratio centred at fontSize 62
+        // bold (~175 units): even "10/10" spills out of the viewBox. Anchoring the
+        // text to its edge rather than its centre always makes it grow towards the
+        // inside of the court, whatever its length.
         const anchor = z === 'corner3_left' ? 'start' : z === 'corner3_right' ? 'end' : 'middle'
         return (
           <text

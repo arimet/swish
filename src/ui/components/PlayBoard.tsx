@@ -1,8 +1,8 @@
 /**
- * Le rendu du tableau tactique : un terrain (demi ou complet), les objets posés,
- * puis un temps du schéma — flèches, pions, ballon. Purement présentatif :
- * l'éditeur pose ses gestes par-dessus via les callbacks et `children`, il ne
- * redessine rien.
+ * Rendering of the tactical board: a court (half or full), the props laid on it,
+ * then one step of the play — arrows, markers, ball. Purely presentational: the
+ * editor lays its gestures on top through the callbacks and `children`, it
+ * redraws nothing.
  */
 import type { ReactNode } from 'react'
 import type { Arrow, Prop, Marker, Point, Play, Step } from '../../domain/plays'
@@ -10,61 +10,59 @@ import { T } from '../olive/kit'
 import { useT } from '../../i18n'
 import { cadre, clamp01, CourtLines, D, RAYON, W } from './ShotCourt'
 
-/** Profondeur du viewBox : le terrain complet, c'est le demi et son miroir. */
-const profondeur = (s: Play) => (s.court === 'full' ? D * 2 : D)
+/** The viewBox's depth: a full court is the half court and its mirror. */
+const depth = (s: Play) => (s.court === 'full' ? D * 2 : D)
 
 /**
- * Largeur maximale d'un terrain affiché. Trois bornes, et c'est la plus petite
- * qui l'emporte :
+ * The maximum width of a displayed court. Three bounds, and the smallest wins:
  *
- * — `100%`, la largeur réellement disponible. Elle est la seule à ne jamais
- *   mentir : sans elle, un téléphone de 375 px se voyait imposer un terrain de
- *   422 px (52 % de 812 px de haut), qui débordait de la colonne et se faisait
- *   couper à droite. La hauteur d'écran ne dit rien de la largeur d'une colonne.
- * — la place verticale qu'on s'autorise, exprimée en `vh` : un tableau tactique
- *   se lit d'un coup d'œil, et ce qui le limite d'ordinaire est la hauteur.
- *   Comme la largeur suit le rapport du terrain, on la déduit de cette hauteur.
- *   Un demi-terrain fait 15/14, donc 77vh de haut valent ~77vh de large ; le
- *   terrain complet est deux fois plus profond, donc deux fois moins large.
- * — un plafond en pixels, pour les très grands écrans où suivre la hauteur
- *   donnerait un terrain de plus d'un mètre : passé une certaine taille l'œil
- *   balaie au lieu d'embrasser, et rien n'est gagné.
+ * — `100%`, the width actually available. It is the only one that never lies:
+ *   without it, a 375px phone was handed a 422px court (52% of 812px of height),
+ *   which overflowed the column and got clipped on the right. Screen height says
+ *   nothing about a column's width.
+ * — the vertical room we allow ourselves, in `vh`: a playbook diagram is read at a
+ *   glance, and what usually limits it is height. Since width follows the court's
+ *   ratio, we derive it from that height. A half court is 15/14, so 77vh of height
+ *   is worth ~77vh of width; a full court is twice as deep, hence half as wide.
+ * — a pixel ceiling, for very large screens where following the height would give a
+ *   court over a metre across: past a certain size the eye scans instead of taking
+ *   it in, and nothing is gained.
  *
- * C'est bien la **largeur** qui est bornée, jamais la hauteur : la boîte du SVG
- * doit garder exactement le rapport du viewBox, sinon il se centre dans des
- * marges et `versSvg` convertit les gestes de travers.
+ * It is the **width** that is bounded, never the height: the SVG's box must keep
+ * exactly the viewBox's ratio, otherwise it centres itself inside margins and
+ * `toSvg` converts gestures crooked.
  */
 export const courtWidth = (court: Play['court'], place: 'lecture' | 'edition' = 'lecture') => {
-  // L'édition a plus à loger sous le terrain — barre d'outils, bande des temps —
-  // que la lecture, qui n'a qu'un rang de commandes. D'où deux réserves.
+  // Editing has more to fit under the court — toolbar, step strip — than reading,
+  // which has only one row of controls. Hence two reserves.
   const vh = place === 'edition' ? 52 : 77
   const max = place === 'edition' ? 560 : 840
   const part = court === 'full' ? 2 : 1
   return `min(100%, ${vh / part}vh, ${max / part}px)`
 }
 
-/** Coordonnées normalisées → unités du viewBox (des centimètres). */
-const enUnites = (p: Point, h: number): Point => ({ x: p.x * W, y: p.y * h })
+/** Normalised coordinates → viewBox units (centimetres). */
+const toUnits = (p: Point, h: number): Point => ({ x: p.x * W, y: p.y * h })
 
 const n1 = (v: number) => v.toFixed(1)
 
 /**
- * Conversion écran → coordonnées normalisées, bornée aux limites du terrain.
- * L'éditeur s'en sert pour chaque point de geste ; d'où la tolérance au SVG
- * pas encore mesuré (boîte vide), qui renverrait sinon des NaN.
+ * Screen → normalised coordinates, clamped to the court's bounds. The editor uses
+ * it for every point of a gesture; hence the tolerance for an SVG not yet measured
+ * (empty box), which would otherwise return NaN.
  */
-export function versSvg(e: { clientX: number; clientY: number }, svg: SVGSVGElement): Point {
+export function toSvg(e: { clientX: number; clientY: number }, svg: SVGSVGElement): Point {
   const r = svg.getBoundingClientRect()
   if (!r.width || !r.height) return { x: 0, y: 0 }
   return { x: clamp01((e.clientX - r.left) / r.width), y: clamp01((e.clientY - r.top) / r.height) }
 }
 
 /**
- * Lissage Catmull-Rom → Bézier cubique : le tracé passe par tous les points
- * échantillonnés au lieu de les couper. Deux points : un segment droit, un
- * geste rectiligne ne doit pas bomber.
+ * Catmull-Rom → cubic Bézier smoothing: the path goes through every sampled point
+ * instead of cutting them. Two points: a straight segment, a straight gesture must
+ * not bulge.
  */
-function lisser(pts: Point[]): string {
+function smooth(pts: Point[]): string {
   if (pts.length === 2) return `M ${n1(pts[0].x)} ${n1(pts[0].y)} L ${n1(pts[1].x)} ${n1(pts[1].y)}`
   let d = `M ${n1(pts[0].x)} ${n1(pts[0].y)}`
   for (let i = 0; i < pts.length - 1; i++) {
@@ -80,13 +78,13 @@ function lisser(pts: Point[]): string {
 }
 
 /**
- * Le trait de dribble : une sinusoïde suivie le long de la polyligne, décalage
- * perpendiculaire à la direction locale. Échantillonner tous les `pas` donne
- * environ dix points par ondulation — assez pour que l'œil lise une courbe.
+ * The dribble stroke: a sine wave followed along the polyline, offset
+ * perpendicular to the local direction. Sampling every `step` gives roughly ten
+ * points per wave — enough for the eye to read a curve.
  */
-function onduler(pts: Point[], amp = 26, lambda = 130, pas = 13): string {
+function wavy(pts: Point[], amp = 26, lambda = 130, step = 13): string {
   const out: Point[] = []
-  let parcouru = 0
+  let travelled = 0
   for (let i = 0; i < pts.length - 1; i++) {
     const a = pts[i]
     const b = pts[i + 1]
@@ -94,29 +92,29 @@ function onduler(pts: Point[], amp = 26, lambda = 130, pas = 13): string {
     if (!L) continue
     const ux = (b.x - a.x) / L
     const uy = (b.y - a.y) / L
-    for (let t = 0; t < L; t += pas) {
-      const o = amp * Math.sin((2 * Math.PI * (parcouru + t)) / lambda)
+    for (let t = 0; t < L; t += step) {
+      const o = amp * Math.sin((2 * Math.PI * (travelled + t)) / lambda)
       out.push({ x: a.x + ux * t - uy * o, y: a.y + uy * t + ux * o })
     }
-    parcouru += L
+    travelled += L
   }
-  // Le dernier point exact : la pointe de flèche s'aligne dessus.
+  // The exact last point: the arrowhead aligns on it.
   out.push(pts[pts.length - 1])
   return out.map((p, i) => `${i ? 'L' : 'M'} ${n1(p.x)} ${n1(p.y)}`).join(' ')
 }
 
-/** Pointe de flèche : deux segments ouverts, ~33° de part et d'autre du tracé. */
-function pointe(a: Point, b: Point, taille = 54): string {
+/** Arrowhead: two open segments, ~33° either side of the path. */
+function head(a: Point, b: Point, size = 54): string {
   const ang = Math.atan2(b.y - a.y, b.x - a.x)
-  const bras = (d: number) => `${n1(b.x + taille * Math.cos(ang + d))} ${n1(b.y + taille * Math.sin(ang + d))}`
-  return `M ${bras(Math.PI * 0.815)} L ${n1(b.x)} ${n1(b.y)} L ${bras(-Math.PI * 0.815)}`
+  const arm = (d: number) => `${n1(b.x + size * Math.cos(ang + d))} ${n1(b.y + size * Math.sin(ang + d))}`
+  return `M ${arm(Math.PI * 0.815)} L ${n1(b.x)} ${n1(b.y)} L ${arm(-Math.PI * 0.815)}`
 }
 
 /**
- * L'écran : barre en T perpendiculaire au dernier segment, à la place de la
- * pointe. C'est la convention du carnet — une pointe ici se lirait « course ».
+ * The screen: a T-bar perpendicular to the last segment, in place of the head.
+ * That is the notebook's convention — a head here would read as "cut".
  */
-function barreT(a: Point, b: Point, half = 58): string {
+function tBar(a: Point, b: Point, half = 58): string {
   const L = Math.hypot(b.x - a.x, b.y - a.y) || 1
   const nx = (-(b.y - a.y) / L) * half
   const ny = ((b.x - a.x) / L) * half
@@ -124,11 +122,11 @@ function barreT(a: Point, b: Point, half = 58): string {
 }
 
 /**
- * Ce que la mise bout à bout des deux moitiés ne donne pas : le cadre du terrain
- * complet d'un seul tenant, la ligne médiane (une seule) et le rond central.
- * Les deux `CourtLines` sont donc rendues sans leur propre cadre.
+ * What putting the two halves end to end does not give: the full court's frame in
+ * one piece, the half-way line (a single one) and the centre circle. The two
+ * `CourtLines` are therefore rendered without frames of their own.
  */
-function Milieu() {
+function Midcourt() {
   const stroke = { fill: 'none', stroke: T.line, strokeWidth: 9, opacity: 0.7 } as const
   return (
     <g>
@@ -139,73 +137,71 @@ function Milieu() {
   )
 }
 
-/** Les quatre traits du carnet de coach, distingués par la forme seule. */
-function FlecheTracee({ f, h }: { f: Arrow; h: number }) {
-  const pts = f.points.map((p) => enUnites(p, h))
+/** The coach's notebook's four strokes, told apart by shape alone. */
+function DrawnArrow({ f, h }: { f: Arrow; h: number }) {
+  const pts = f.points.map((p) => toUnits(p, h))
   if (pts.length < 2) return null
   const a = pts[pts.length - 2]
   const b = pts[pts.length - 1]
   return (
     <g data-stroke={f.stroke} fill="none" stroke={T.ink} strokeWidth={11} strokeLinecap="round" strokeLinejoin="round">
       <path
-        d={f.stroke === 'dribble' ? onduler(pts) : lisser(pts)}
+        d={f.stroke === 'dribble' ? wavy(pts) : smooth(pts)}
         strokeDasharray={f.stroke === 'pass' ? '38 30' : undefined}
       />
-      <path d={f.stroke === 'screen' ? barreT(a, b) : pointe(a, b)} />
+      <path d={f.stroke === 'screen' ? tBar(a, b) : head(a, b)} />
     </g>
   )
 }
 
 /**
- * Attaque : disque plein rose, numéro blanc. Défense : croix tracée puis numéro,
- * en blanc sur un liseré sombre.
+ * Offense: a filled disc in the attack colour, the number on top. Defence: an open
+ * ring with the number inside it.
  *
- * La croix était un simple texte gris qui se noyait dans les lignes du terrain,
- * surtout en vignette. Tracée, elle porte le même poids de trait que le disque :
- * les deux camps se lisent d'un coup d'œil, et se distinguent par la **forme** —
- * disque plein contre croix ouverte — donc aussi en noir et blanc.
- * La paire croix + numéro reste centrée sur la position du pion, comme avant :
- * la croix occupe la moitié gauche, le numéro la moitié droite.
+ * The defender used to be a plain grey text cross that drowned in the court's
+ * lines, especially in a thumbnail. Drawn, it carries the same stroke weight as
+ * the disc: both sides read at a glance, and they are told apart by **shape** —
+ * filled disc against open ring — hence in black and white too. The opaque fill
+ * detaches the marker from the court's lines.
  */
-function PionDessine({ pion, h }: { pion: Marker; h: number }) {
-  const { x, y } = enUnites(pion.at, h)
-  const commun = { textAnchor: 'middle', dominantBaseline: 'central', fontWeight: 900 } as const
-  if (pion.side === 'defense') {
-    // Même encombrement que l'attaquant, et un seul glyphe : la croix posée à côté
-    // de son chiffre s'étalait sur deux fois la largeur d'un disque et se lisait
-    // comme deux choses. Ici le numéro est là où l'œil le cherche, au centre du pion.
-    // La distinction tient sans la couleur — disque plein contre disque ouvert —
-    // et le fond opaque détache le pion des lignes du terrain.
+function DrawnMarker({ marker, h }: { marker: Marker; h: number }) {
+  const { x, y } = toUnits(marker.at, h)
+  const common = { textAnchor: 'middle', dominantBaseline: 'central', fontWeight: 900 } as const
+  if (marker.side === 'defense') {
+    // The same footprint as an attacker, and a single glyph: the cross set beside
+    // its digit spread over twice a disc's width and read as two things. Here the
+    // number is where the eye looks for it, at the centre of the marker.
     return (
       <g data-marker="defense">
         <circle cx={x} cy={y} r={54} fill={T.court} stroke={T.def} strokeWidth={13} />
-        <text x={x} y={y} {...commun} fontSize={62} fill={T.def}>{String(pion.position)}</text>
+        <text x={x} y={y} {...common} fontSize={62} fill={T.def}>{String(marker.position)}</text>
       </g>
     )
   }
   return (
     <g data-marker="offense">
       <circle cx={x} cy={y} r={54} fill={T.attack} />
-      {/* `onAttack` et non `ink` : l'encre des trajets et le numero ecrit sur le
-          disque sont deux roles, et `ink` les tenait tous les deux. Quand le
-          terrain est passe au parquet clair, `ink` a vire au sombre pour les
-          trajets — et le numero s'est retrouve en noir sur rouge, a 2,4:1. */}
-      <text x={x} y={y} {...commun} fontSize={62} fill={T.onAttack}>{String(pion.position)}</text>
+      {/* `onAttack` and not `ink`: the ink of the paths and the number written on
+          the disc are two roles, and `ink` held both. When the court turned to light
+          hardwood, `ink` went dark for the paths — and the number ended up black on
+          red, at 2.4:1. */}
+      <text x={x} y={y} {...common} fontSize={62} fill={T.onAttack}>{String(marker.position)}</text>
     </g>
   )
 }
 
-/** Le ballon : sur le pion porteur (décalé pour ne pas masquer son numéro), ou
- *  au sol. Ambre et non rose : posé sur un attaquant rose, il disparaîtrait. */
-function Ballon({ t, h }: { t: Step; h: number }) {
+/** The ball: on the marker carrying it (offset so as not to hide their number), or
+ *  on the floor. Amber and not the attack colour: sitting on an attacker, it would
+ *  disappear. */
+function Ball({ t, h }: { t: Step; h: number }) {
   const translate = useT()
   const b = t.ball
   let at: Point | null = null
-  if ('x' in b) at = enUnites(b, h)
+  if ('x' in b) at = toUnits(b, h)
   else {
-    const porteur = t.markers.find((p) => p.side === b.side && p.position === b.position)
-    if (porteur) {
-      const u = enUnites(porteur.at, h)
+    const carrier = t.markers.find((p) => p.side === b.side && p.position === b.position)
+    if (carrier) {
+      const u = toUnits(carrier.at, h)
       at = { x: u.x + 48, y: u.y - 48 }
     }
   }
@@ -213,10 +209,9 @@ function Ballon({ t, h }: { t: Step; h: number }) {
   return <circle aria-label={translate('sch.ballon')} cx={at.x} cy={at.y} r={28} fill={T.ball} stroke={T.court} strokeWidth={6} />
 }
 
-/** Plot, ballon posé, échelle de rythme : le matériel de l'exercice, commun à
- *  tous les temps. */
-function Objet({ o, h }: { o: Prop; h: number }) {
-  const { x, y } = enUnites(o.at, h)
+/** Cone, loose ball, agility ladder: the drill's equipment, shared by every step. */
+function DrawnProp({ o, h }: { o: Prop; h: number }) {
+  const { x, y } = toUnits(o.at, h)
   return (
     <g data-prop={o.kind} transform={`translate(${n1(x)} ${n1(y)})`} fill="none" stroke={T.ball} strokeWidth={8} opacity={0.9}>
       {o.kind === 'cone' && <path d="M 0 -34 L 27 30 H -27 Z" fill={T.ball} stroke="none" />}
@@ -232,43 +227,44 @@ function Objet({ o, h }: { o: Prop; h: number }) {
 }
 
 /**
- * Le tableau. `tempsIndex` choisit le temps affiché ; hors bornes, on retombe
- * sur le premier — un schéma a toujours au moins un temps, une vignette ne doit
- * jamais rendre un terrain vide. `apercu` coupe toute interaction (vignettes).
+ * The board. `stepIndex` picks the step shown; out of bounds, we fall back to the
+ * first — a play always has at least one step, and a thumbnail must never render an
+ * empty court. `apercu` cuts all interaction (thumbnails).
  */
-export function PlayBoard({ schema, stepIndex, steps, onPointerDown, onPointerMove, onPointerUp, children, apercu, remplit }: {
+export function PlayBoard({ schema, stepIndex, step, onPointerDown, onPointerMove, onPointerUp, children, apercu, remplit }: {
   schema: Play
   stepIndex: number
-  /** Un temps calculé — l'instantané du lecteur — à afficher au lieu de celui du
-   *  schéma. Le rendu ne change pas : l'animation n'est qu'une suite d'états. */
-  steps?: Step
+  /** A computed step — the player's snapshot — to display instead of the play's own.
+   *  The rendering does not change: an animation is only a sequence of states. */
+  step?: Step
   onPointerDown?: (e: React.PointerEvent<SVGSVGElement>) => void
   onPointerMove?: (e: React.PointerEvent<SVGSVGElement>) => void
   onPointerUp?: (e: React.PointerEvent<SVGSVGElement>) => void
   children?: ReactNode
   apercu?: boolean
-  /** Le SVG remplit sa boîte au lieu de suivre sa largeur. Réservé au lecteur, qui
-   *  cale lui-même le rapport du terrain : un appelant qui convertit des
-   *  coordonnées de pointeur ne doit pas l'utiliser. */
+  /** The SVG fills its box instead of following its width. Reserved for the player,
+   *  which sets the court's ratio itself: a caller that converts pointer coordinates
+   *  must not use it. */
   remplit?: boolean
 }) {
   const translate = useT()
-  const h = profondeur(schema)
-  const t = steps ?? schema.steps[stepIndex] ?? schema.steps[0]
-  const interactif = !apercu && !!(onPointerDown || onPointerMove || onPointerUp)
+  const h = depth(schema)
+  const t = step ?? schema.steps[stepIndex] ?? schema.steps[0]
+  const interactive = !apercu && !!(onPointerDown || onPointerMove || onPointerUp)
   return (
     <svg
       viewBox={`0 0 ${W} ${h}`}
-      role={interactif ? 'application' : 'img'}
+      role={interactive ? 'application' : 'img'}
       aria-label={translate('sch.tableauTactique', { name: schema.name })}
       onPointerDown={apercu ? undefined : onPointerDown}
       onPointerMove={apercu ? undefined : onPointerMove}
       onPointerUp={apercu ? undefined : onPointerUp}
-      className={`${remplit ? 'h-full w-full' : 'w-full'} ${interactif ? 'cursor-crosshair' : ''}`}
-      style={{ touchAction: interactif ? 'none' : 'manipulation' }}
+      className={`${remplit ? 'h-full w-full' : 'w-full'} ${interactive ? 'cursor-crosshair' : ''}`}
+      style={{ touchAction: interactive ? 'none' : 'manipulation' }}
     >
-      {/* Le fond porte l'arrondi, pas un masque CSS : coté en unités de terrain,
-          il suit la taille du tableau et coïncide toujours avec le cadre dessiné. */}
+      {/* The background carries the rounding, not a CSS mask: expressed in court
+          units, it follows the board's size and always coincides with the drawn
+          frame. */}
       <rect x={2} y={2} width={W - 4} height={h - 4} rx={RAYON} fill={T.court} />
       <CourtLines bord={schema.court === 'half'} />
       {schema.court === 'full' && (
@@ -276,14 +272,14 @@ export function PlayBoard({ schema, stepIndex, steps, onPointerDown, onPointerMo
           <g transform={`translate(0 ${D * 2}) scale(1 -1)`}>
             <CourtLines bord={false} />
           </g>
-          <Milieu />
+          <Midcourt />
         </>
       )}
-      {schema.props.map((o, i) => <Objet key={i} o={o} h={h} />)}
-      {/* Les flèches d'abord : un pion ne doit jamais être barré par un trait. */}
-      {t.arrows.map((f, i) => <FlecheTracee key={i} f={f} h={h} />)}
-      {t.markers.map((p) => <PionDessine key={`${p.side}${p.position}`} pion={p} h={h} />)}
-      <Ballon t={t} h={h} />
+      {schema.props.map((o, i) => <DrawnProp key={i} o={o} h={h} />)}
+      {/* Arrows first: a marker must never be struck through by a stroke. */}
+      {t.arrows.map((f, i) => <DrawnArrow key={i} f={f} h={h} />)}
+      {t.markers.map((p) => <DrawnMarker key={`${p.side}${p.position}`} marker={p} h={h} />)}
+      <Ball t={t} h={h} />
       {children}
     </svg>
   )

@@ -14,7 +14,7 @@ import { getPlay, savePlay } from '../../persistence/repositories'
 import { remoteEnabled } from '../../persistence/remote'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
-import { courtWidth, PlayBoard, versSvg } from '../components/PlayBoard'
+import { courtWidth, PlayBoard, toSvg } from '../components/PlayBoard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { D, W } from '../components/ShotCourt'
 import { C, bd, Ic } from '../olive/kit'
@@ -220,7 +220,7 @@ export function SchemaEdit() {
   }
 
   const onDown = (e: React.PointerEvent<SVGSVGElement>) => {
-    const p = versSvg(e, e.currentTarget)
+    const p = toSvg(e, e.currentTarget)
     // Sans capture, un doigt qui sort du terrain laisserait le geste en suspens.
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* pas de pointeur actif (jsdom) */ }
     const pion = pionSous(step, p)
@@ -254,13 +254,13 @@ export function SchemaEdit() {
 
   const onMove = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!prise && !trace) return
-    const p = versSvg(e, e.currentTarget)
+    const p = toSvg(e, e.currentTarget)
     if (prise) { setPrise({ ...prise, at: p }); return }
     setTrace((t) => t && { ...t, points: [...t.points, p] })
   }
 
   const onUp = (e: React.PointerEvent<SVGSVGElement>) => {
-    const p = versSvg(e, e.currentTarget)
+    const p = toSvg(e, e.currentTarget)
     if (prise) {
       const { quoi, depart } = prise
       setPrise(null)

@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import type { Period } from '../../domain/types'
 
-/** Frise des périodes façon « date strip » : Q1→Q4 puis prolongations, courante en surbrillance. */
+/** A period strip in the "date strip" manner: Q1→Q4 then overtimes, the current one
+ *  highlighted. */
 export function PeriodStrip({ current }: { current: Period }) {
   const otCount = Math.max(0, current - 4)
   const chips: { period: Period; label: string }[] = [
@@ -27,32 +28,31 @@ export function PeriodStrip({ current }: { current: Period }) {
 }
 
 /**
- * Un côté du tableau d'affichage, et le seul mouvement authorial du produit : le
- * nombre accuse réception du geste qui l'a changé.
+ * One side of the scoreboard, and the product's only authored motion: the number
+ * acknowledges the gesture that changed it.
  *
- * Le sens compte. Le score monte parce qu'on a marqué, il descend parce qu'on a
- * annulé — deux causes, deux mouvements, sinon on lit « ça a changé » là où il faut
- * lire « quoi ». Rien au premier rendu : à l'ouverture, le score n'a pas changé, et
- * une chorégraphie de chargement n'a pas sa place sur un écran de saisie.
+ * The direction matters. The score goes up because someone scored, down because
+ * someone undid — two causes, two motions, otherwise you read "it changed" where you
+ * need to read "what". Nothing on the first render: at opening, the score has not
+ * changed, and a loading choreography has no place on an entry screen.
  *
- * Le `key` sur le nombre est ce qui redéclenche l'animation : React remonte le
- * nœud, le navigateur rejoue le keyframe. C'est aussi ce qui **empêche** le
- * mouvement de se déclencher à tort — cet écran se rerend une fois par seconde
- * (le chrono), et une classe posée à la main clignoterait au tic. Le `key` ne
- * change que quand le score change.
+ * The `key` on the number is what re-triggers the animation: React remounts the
+ * node, the browser replays the keyframe. It is also what **stops** the motion from
+ * firing wrongly — this screen re-renders once a second (the clock), and a class set
+ * by hand would flash on every tick. The `key` only changes when the score changes.
  *
- * L'écart mémorisé suit le motif React de l'ajustement d'état au changement de
- * prop : comparer, corriger, rerendre aussitôt. Pas d'effet, donc pas d'image
- * intermédiaire où le mouvement serait en retard d'un cran sur le nombre.
+ * The remembered previous value follows React's adjust-state-on-prop-change pattern:
+ * compare, correct, re-render at once. No effect, hence no intermediate frame where
+ * the motion would lag the number by one step.
  */
 export function ScoreSide({ align, color, name, score, lead }: {
   align: 'left' | 'right'; color: string; name: string; score: number; lead: boolean
 }) {
-  const [precedent, setPrecedent] = useState(score)
-  const [sens, setSens] = useState<'up' | 'down' | null>(null)
-  if (precedent !== score) {
-    setPrecedent(score)
-    setSens(score > precedent ? 'up' : 'down')
+  const [previous, setPrevious] = useState(score)
+  const [direction, setDirection] = useState<'up' | 'down' | null>(null)
+  if (previous !== score) {
+    setPrevious(score)
+    setDirection(score > previous ? 'up' : 'down')
   }
 
   return (
@@ -63,7 +63,7 @@ export function ScoreSide({ align, color, name, score, lead }: {
       </span>
       <span
         key={score}
-        className={`nums text-[2.75rem] font-black leading-none tabular-nums sm:text-8xl ${sens ? `score-${sens}` : ''}`}
+        className={`nums text-[2.75rem] font-black leading-none tabular-nums sm:text-8xl ${direction ? `score-${direction}` : ''}`}
         style={{ color, opacity: lead ? 1 : 0.85 }}
       >
         {score}
@@ -73,16 +73,15 @@ export function ScoreSide({ align, color, name, score, lead }: {
 }
 
 /**
- * Une correction de chrono. Ces boutons faisaient 25 pixels de haut et se
- * touchaient à quatre pixels près : à la table de marque, le pouce qui visait
- * « −1s » enlevait dix secondes au match. Ils font maintenant la hauteur d'un
- * doigt (44 px, le minimum tenable au tactile), et le pas de dix est séparé du
- * pas de un par un écart qu'on sent.
+ * A clock correction. These buttons were 25 pixels tall and sat four pixels apart:
+ * at the scorer's table, a thumb aiming at "−1s" took ten seconds off the game. They
+ * are now a finger tall (44px, the minimum that holds up under touch), and the step
+ * of ten is separated from the step of one by a gap you can feel.
  */
-export function ClockAdjust({ children, onClick, ecart }: { children: ReactNode; onClick: () => void; ecart?: boolean }) {
+export function ClockAdjust({ children, onClick, gap }: { children: ReactNode; onClick: () => void; gap?: boolean }) {
   return (
     <button onClick={onClick}
-      className={`nums h-11 min-w-11 rounded-lg bg-[var(--c-card2)] px-2.5 text-[13px] font-bold tabular-nums text-[var(--c-muted)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90 ${ecart ? 'ml-2' : ''}`}>
+      className={`nums h-11 min-w-11 rounded-lg bg-[var(--c-card2)] px-2.5 text-[13px] font-bold tabular-nums text-[var(--c-muted)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90 ${gap ? 'ml-2' : ''}`}>
       {children}
     </button>
   )
