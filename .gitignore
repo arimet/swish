@@ -29,4 +29,12 @@ docs/superpowers/
 # Réglages locaux de l'outil de revue de design. `*.local` ci-dessus ne les
 # attrape pas : le fichier s'appelle `config.local.json`, le motif veut un nom qui
 # *finisse* par « .local ».
-.impeccable/
+#
+# Le contenu du dossier, et non le dossier lui-même (`.impeccable/` avec la barre
+# finale) : git ne descend pas dans un répertoire exclu, si bien qu'aucune négation
+# ne pourrait ensuite y réinclure un fichier.
+.impeccable/*
+# Car le sidecar de la charte, lui, est un artefact **partagé** — comme le DESIGN.md
+# qu'il prolonge (rampes tonales, jetons de mouvement, extraits de composants).
+# Le reste du dossier est du cache et de la préférence de machine.
+!.impeccable/design.json
