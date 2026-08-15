@@ -22,18 +22,18 @@ import { periodLength, seedSeconds } from '../../domain/ids'
 import type { Match, Player, ScoreKind, ShotSpot, StatKind, FoulType } from '../../domain/types'
 import { Eye, Pencil, RotateCcw, X } from 'lucide-react'
 
-/* L'accent de notre équipe, et c'est la marque — pas un jeton `--team-a` à part.
-   Celui-là valait un presque-noir en thème clair, ce qui donnait au panneau de
-   l'effectif un filet supérieur noir, des anneaux noirs autour des numéros et des
-   points noirs : rien qui ressemblât au reste de l'application. Une seule équipe
-   est détaillée sur cet écran, donc « notre couleur » et « la couleur du produit »
-   sont la même chose et n'ont pas à être deux jetons. */
+/* Our team's accent, and it is the brand — not a separate `--team-a` token. That
+   one was a near-black in the light theme, which gave the roster panel a black top
+   rule, black rings around the numbers and black dots: nothing that resembled the
+   rest of the application. Only one team is detailed on this screen, so "our colour"
+   and "the product's colour" are the same thing and have no business being two
+   tokens. */
 const TEAM_A = C.brand
 const OPP_POINTS: { k: ScoreKind; n: number }[] = [{ k: 'lf', n: 1 }, { k: '2int', n: 2 }, { k: '3', n: 3 }]
 
 /**
- * Table de marque du match : notre effectif est détaillé joueur par joueur,
- * l'adversaire se résume à un score saisi globalement.
+ * The game's scorer's table: our roster is detailed player by player, the opposition
+ * comes down to a score entered as a total.
  */
 export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: () => void }) {
   const translate = useT()
@@ -75,10 +75,10 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     }
   }, [ls?.clockRunning])
 
-  /* Le suivi spectateur n'a plus rien à publier depuis ici. Il lit la rencontre
-     dans la base, où la file d'attente la porte déjà, et le serveur assemble le
-     paquet. Cet écran republiait l'état entier à chaque évènement — donc deux
-     chemins d'écriture pour une même donnée, et deux façons de se contredire. */
+  /* The spectator view has nothing left to publish from here. It reads the game from
+     the database, where the queue already carries it, and the server assembles the
+     bundle. This screen used to republish the whole state on every event — two write
+     paths for the same data, and two ways to contradict each other. */
 
   if (!match || !ls)
     return <div className="grid min-h-dvh place-items-center text-muted-foreground">{translate('commun.chargement')}</div>
@@ -119,7 +119,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   const foul = (type: FoulType) => pick &&
     dispatch({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId: pick.id }, foulType: type, period: ls.period, gameClock: seconds })
 
-  // Panier adverse : pas de joueur identifié, seul le score compte.
+  // An opposition basket: no player named, only the score counts.
   const oppScore = (kind: ScoreKind) =>
     dispatch({ type: 'SCORE', team: 'B', kind, period: ls.period, gameClock: seconds })
   const removeOppScore = () =>
@@ -159,58 +159,58 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   }
 
   return (
-    /* `h-dvh`, pas `min-h-full` : le tableau d'affichage et le chrono ne défilent
-       plus jamais hors de l'écran, seul l'effectif défile — et il ne défile plus
-       guère, puisque la coquille ne lui prend plus ses cent pixels. */
+    /* `h-dvh`, not `min-h-full`: the scoreboard and the clock never scroll off the
+       screen again, only the roster scrolls — and it barely scrolls now that the
+       shell no longer takes its hundred pixels. */
     <div className="flex h-dvh flex-col overflow-hidden" style={{ background: C.frame, color: C.text }}>
-      {/* Le bandeau est une carte, et non plus une surface qui refuse le thème : un
-          `--scoreboard` charbon en dur posait un rectangle noir en haut d'une
-          application claire. Il garde sa présence par le plan (la carte est le point
-          haut) et par le filet qui le sépare de l'écran, pas par une valeur qui
-          n'appartient qu'à lui. */}
+      {/* The banner is a card, no longer a surface that refuses the theme: a
+          hard-coded charcoal `--scoreboard` laid a black rectangle at the top of a
+          light application. It keeps its presence through the plane (the card is the
+          high point) and through the rule that separates it from the screen, not
+          through a value that belongs to it alone. */}
       <header className="shrink-0 px-4 pb-4 pt-3 sm:px-6" style={{ background: C.card, color: C.text, borderBottom: `1px solid ${C.border}` }}>
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
-          {/* La sortie voyage avec la frise des périodes, pas avec les actions :
-              quitter n'est pas une action de saisie, et la ligne des périodes a la
-              place que celle des boutons n'a plus. Le match n'est pas terminé pour
-              autant — on revient à sa fiche, et « Reprendre » ramène ici. */}
+          {/* The way out travels with the period strip, not with the actions: leaving
+              is not a recording action, and the period row has the room the button row
+              no longer has. The game is not over for all that — you return to its
+              record, and "Resume" brings you back here. */}
           <div className="flex items-center gap-2">
-            {/* La table de marque vit hors de la coquille : sans cette copie, le seul
-                écran où l'on saisit pendant deux heures serait le seul à ne rien dire
-                d'un partage interrompu. */}
+            {/* The scorer's table lives outside the shell: without this copy, the one
+                screen where people record for two hours would be the only one saying
+                nothing about an interrupted share. */}
             <SyncState compact />
             <Link to={`/match/${match.id}`} aria-label={translate('live.quitter')} title={translate('live.quitter')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><X className="h-5 w-5" strokeWidth={2.5} /></Link>
             <PeriodStrip current={ls.period} />
           </div>
-          {/* `flex-wrap` : cinq commandes larges d'un doigt ne tiennent pas toujours
-              sur une ligne de téléphone. Elles passent à la ligne — elles ne sortent
-              plus de l'écran, comme « Terminer » le faisait, hors d'atteinte. */}
+          {/* `flex-wrap`: five finger-wide controls do not always fit on one phone
+              row. They wrap — they no longer leave the screen, as "Finish" did, out of
+              reach. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Link to={`/match/${match.id}/watch`} target="_blank" aria-label={translate('live.suivi')} title={translate('live.suivi')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><Eye className="h-[18px] w-[18px]" strokeWidth={2} /></Link>
             <SbButton onClick={undo} title={translate('live.annulerTitre')}>{translate('live.annuler')}</SbButton>
             <SbButton onClick={nextPeriod} title={translate('live.periodeTitre')}>{translate('live.periode')}</SbButton>
-            {/* Un écart avant l'irréversible. « Terminer » fige le score ; il était
-                à huit pixels de « Période suivante », soit la largeur d'un pouce
-                mal posé. */}
+            {/* A gap before the irreversible. "Finish" freezes the score; it sat eight
+                pixels from "Next period", which is the width of a badly placed
+                thumb. */}
             <span className="w-3 shrink-0" aria-hidden />
             <SbButton onClick={() => setAskFinish(true)} danger>{translate('live.terminer')}</SbButton>
           </div>
         </div>
 
         <div className="mx-auto mt-3 grid max-w-4xl grid-cols-[1fr_auto_1fr] items-center gap-1 overflow-hidden sm:gap-6">
-          {/* Nous en encre, l'adversaire en accent : « nous ou eux », et les deux
-              jetons basculent avec le thème au lieu de porter du blanc en dur. */}
+          {/* Us in ink, the opposition in accent: "us or them", and both tokens switch
+              with the theme instead of carrying a hard-coded white. */}
           <ScoreSide align="right" color={C.text} name={teamNames.A} score={ls.score.a} lead={ls.score.a > ls.score.b} />
           <GameClock running={ls.clockRunning} seconds={seconds} onToggle={toggleClock} />
           <ScoreSide align="left" color={C.accent} name={teamNames.B} score={ls.score.b} lead={ls.score.b > ls.score.a} />
         </div>
 
-        {/* Les corrections de chrono sur leur propre ligne, et non dans la colonne
-            centrale de la grille : à cinq boutons larges d'un doigt, cette colonne
-            devenait plus large que l'écran et poussait les deux scores hors du
-            cadre. Le score passe avant le réglage. */}
+        {/* The clock corrections on their own row, and not in the grid's centre
+            column: at five finger-wide buttons that column grew wider than the screen
+            and pushed both scores out of frame. The score comes before the
+            adjustment. */}
         <div className="mx-auto mt-2.5 flex max-w-4xl flex-wrap items-center justify-center gap-1" title={translate('live.corrigerChrono')}>
           <ClockAdjust onClick={() => setSeconds((s) => clampClock(s - 10))}>−10s</ClockAdjust>
           <ClockAdjust gap onClick={() => setSeconds((s) => clampClock(s - 1))}>−1s</ClockAdjust>
@@ -222,10 +222,9 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
 
       {error && <div className="shrink-0 bg-[var(--c-danger-bg)] py-1.5 text-center text-sm font-semibold text-[var(--c-danger)]">{error}</div>}
 
-      {/* SCORE ADVERSE : global, sans joueurs. Une seule ligne — la mention
-          « score global, pas de détail joueur » expliquait à chaque match un fait
-          qu'on apprend au premier, et la troisième ligne qu'elle imposait au
-          téléphone se prenait sur l'effectif. */}
+      {/* OPPOSITION SCORE: a total, with no players. One row — the "total score, no
+          player detail" note explained at every game a fact you learn at the first,
+          and the third row it forced on a phone was taken out of the roster. */}
       <div className="mx-auto mt-2 flex w-full max-w-4xl shrink-0 items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 sm:mt-4 sm:px-4">
         <span className="min-w-0 truncate text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
@@ -242,9 +241,9 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         </div>
       </div>
 
-      {/* `min-h-0` : sans lui, un enfant flexible refuse de se laisser comprimer
-          sous la taille de son contenu et l'effectif repousserait le tableau
-          d'affichage hors de l'écran au lieu de défiler dans sa propre boîte. */}
+      {/* `min-h-0`: without it, a flex child refuses to be squeezed below its
+          content's size and the roster would push the scoreboard off the screen
+          instead of scrolling in its own box. */}
       <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col p-2 sm:p-4">
         <TeamPanel
           title={teamNames.A.toUpperCase()} color={TEAM_A} players={onCourt()}
@@ -275,10 +274,10 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
       />
       <ClockEditDialog open={editClock} seconds={seconds} max={periodLength(ls.period)}
         onClose={() => setEditClock(false)} onSubmit={(s) => setSeconds(clampClock(s))} />
-      {/* On ne quitte la rencontre que si elle est réellement clôturée. `finish()`
-          renvoyait `void` et l'on partait quoi qu'il arrive : une écriture en échec
-          faisait sortir vers une fiche annonçant un match terminé qui ne l'était pas.
-          En cas d'échec, on reste, et le bandeau d'erreur au-dessus l'explique. */}
+      {/* We only leave the game if it really is closed. `finish()` used to return
+          `void` and we left whatever happened: a failed write took you out to a record
+          announcing a finished game that was not. On failure we stay, and the error
+          band above explains it. */}
       <ConfirmDialog open={askFinish} onClose={() => setAskFinish(false)} onConfirm={async () => { if (await finish()) onFinish() }}
         title={translate('live.terminerTitre')} message={translate('live.terminerTexte')} confirmLabel={translate('live.terminer')} danger />
       <SubstitutionDialog open={sub} onClose={() => setSub(false)}
