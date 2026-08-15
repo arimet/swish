@@ -22,11 +22,11 @@ beforeEach(async () => {
 const renderChamp = () =>
   render(<MemoryRouter><ClubProvider><AuthProvider><Championnat /></AuthProvider></ClubProvider></MemoryRouter>)
 
-/** Sélectionne les équipes et scores du formulaire de saisie, sans valider.
- *  Le formulaire est replié : il faut d'abord l'ouvrir — un formulaire de saisie
- *  apparaît sur un clic, jamais d'emblée.
- *  Les équipes du club viennent d'un chargement asynchrone : on attend qu'elles
- *  soient là avant de choisir une valeur, sinon le select n'a que « — Choisir — ». */
+/** Selects the teams and scores in the entry form, without submitting.
+ *  The form is folded away: it has to be opened first — an entry form appears on a
+ *  click, never up front.
+ *  The club's teams come from an asynchronous load: we wait for them to be there
+ *  before choosing a value, otherwise the select only holds "— Choisir —". */
 const remplirFormulaire = async (home: string, away: string, hs: string, as_: string) => {
   await userEvent.click(await screen.findByRole('button', { name: /saisir un résultat/i }))
   await waitFor(() => expect((screen.getByLabelText('Équipe reçue') as HTMLSelectElement).options.length).toBeGreaterThan(1))
@@ -60,8 +60,8 @@ describe('Standings', () => {
   })
 
   it('does not change the saved score when the field is cleared and then left', async () => {
-    // Vider le champ est le premier geste de qui corrige une faute de frappe : ça ne
-    // doit pas enregistrer 0 en silence (`Number('')` vaut 0, pas NaN).
+    // Clearing the field is the first gesture of someone correcting a typo: it must not
+    // silently save 0 (`Number('')` is 0, not NaN).
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     renderChamp()
     const scoreHome = await screen.findByLabelText(/score verdun/i)
@@ -77,7 +77,7 @@ describe('Standings', () => {
   })
 
   it('refuses a result that would duplicate one already entered, even with the teams reversed', async () => {
-    // « VERDUN reçoit METZ » est déjà saisi : le saisir à nouveau dans l'autre sens
+    // "VERDUN hosts METZ" is already entered: entering it again the other way round
     // (METZ reçoit VERDUN, même championnat, même date) décrit la même confrontation.
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     renderChamp()
@@ -99,8 +99,8 @@ describe('Standings', () => {
   })
 
   it('forbids adding until the date is filled in', async () => {
-    // Sans date, une même rencontre saisie une fois datée et une fois vide produirait
-    // deux clés de confrontation distinctes et compterait deux fois au classement.
+    // With no date, the same game entered once dated and once blank would produce two
+    // distinct fixture keys and count twice in the standings.
     renderChamp()
     await remplirFormulaire('tb', 'tc', '70', '60')
     expect(screen.getByRole('button', { name: /ajouter le résultat/i })).toBeDisabled()
@@ -128,11 +128,11 @@ describe('Standings — rights', () => {
     renderChamp()
     await screen.findByText(/aucun résultat saisi/i)
 
-    // Le bloc de saisie entier disparaît : une carte vide, sans bouton, ne dirait
-    // rien — et plus rien ne réclame de code au clic.
+    // The whole entry block disappears: an empty card with no button would say nothing
+    // — and nothing demands a code on a click any more.
     expect(screen.queryByRole('button', { name: /saisir un résultat/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Équipe reçue')).not.toBeInTheDocument()
-    // Ce qui compte : rien n'est écrit en base.
+    // What matters: nothing is written to the store.
     expect(await listResults()).toHaveLength(0)
   })
 
@@ -145,10 +145,10 @@ describe('Standings — rights', () => {
   })
 
   it('leaves no corrected score on screen that the right does not allow: the scorer\'s table gets no field', async () => {
-    // Le champ n'est pas contrôlé : React ne le réinitialise pas tout seul. S'il
-    // s'ouvrait à la frappe sans le droit, un refus laisserait à l'écran une valeur
-    // que la base n'a pas — et le classement juste au-dessus continuerait de compter
-    // l'ancienne. Le score s'affiche donc en toutes lettres, sans champ à frapper.
+    // The field is uncontrolled: React does not reset it on its own. If it opened to
+    // typing without the right, a refusal would leave on screen a value the store does
+    // not have — and the standings just above would keep counting the old one. The
+    // score is therefore shown as plain text, with no field to type into.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     renderChamp()
@@ -156,7 +156,7 @@ describe('Standings — rights', () => {
 
     expect(screen.queryByLabelText(/score verdun/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /supprimer ce résultat/i })).not.toBeInTheDocument()
-    // Le résultat reste lisible dans sa ligne, et la base intacte.
+    // The result stays readable in its row, and the store intact.
     expect(within(screen.getByRole('listitem')).getByText(/70/)).toBeInTheDocument()
     expect((await listResults())[0].homeScore).toBe(70)
   })

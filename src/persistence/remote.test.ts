@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
 import { db } from './db'
 
 /**
- * Le miroir face à la source de vérité.
+ * The mirror against the source of truth.
  *
- * `remote.ts` lit `VITE_SYNC_URL` **à l'import**, et la configuration de vitest
- * la vide pour toute la suite (voir `vite.config.ts`) : ce fichier la repose donc
- * lui-même, puis importe le module dynamiquement. C'est la seule façon d'exercer
- * le chemin distant sans forcer les cinquante autres fichiers de test à le
+ * `remote.ts` reads `VITE_SYNC_URL` **at import time**, and the vitest configuration
+ * blanks it for the whole suite (see `vite.config.ts`): this file therefore sets it
+ * back itself, then imports the module dynamically. It is the only way to exercise the
+ * remote path without forcing the fifty other test files to
  * traverser.
  */
 async function moduleDistant() {
@@ -17,7 +17,7 @@ async function moduleDistant() {
   return import('./remote')
 }
 
-/** Une réponse d'hydratation, telle que `GET /api/state` la renvoie. */
+/** A hydration response, as `GET /api/state` returns it. */
 const etat = (docs: unknown[], alive: string[], rev = 1) =>
   ({ ok: true, status: 200, json: async () => ({ rev, docs, alive }) })
 
@@ -38,9 +38,9 @@ describe('hydrate — the server is authoritative', () => {
   })
 
   it('deletes locally whatever is no longer in the manifest', async () => {
-    // C'est la propriété qui remplace les pierres tombales : une suppression
-    // supprime vraiment la ligne côté serveur, donc rien ne la décrit — c'est
-    // l'absence de l'identifiant qui la porte.
+    // This is the property that replaces tombstones: a deletion really removes the row
+    // server-side, so nothing describes it — the absence of the id is what carries
+    // it.
     await db.teams.put({ id: 'retiree', name: 'PARTIE' })
     await db.teams.put({ id: 'ta', name: 'VIGNOT' })
     const { hydrate } = await moduleDistant()
@@ -52,9 +52,9 @@ describe('hydrate — the server is authoritative', () => {
   })
 
   it('an empty hydration empties the mirror', async () => {
-    // Le test existe pour verrouiller l'invariant, pas malgré lui : « on ne va
-    // quand même pas effacer ses données » est exactement la régression
-    // compatissante qui rendrait au miroir un statut de seconde vérité.
+    // The test exists to lock the invariant down, not in spite of it: "surely we are
+    // not going to erase their data" is exactly the compassionate regression that
+    // would give the mirror back the status of a second truth.
     await db.teams.put({ id: 'ta', name: 'VIGNOT' })
     await db.players.put({ id: 'p1', teamId: 'ta', number: 4, lastName: 'X', firstName: 'Y' })
     const { hydrate } = await moduleDistant()
@@ -66,8 +66,8 @@ describe('hydrate — the server is authoritative', () => {
   })
 
   it('does not erase what is waiting in the queue', async () => {
-    // Ce n'est pas du périmé que le serveur ignorerait : c'est une écriture que
-    // la personne vient de faire et qui n'est pas encore partie.
+    // This is not stale data the server would ignore: it is a write the person has
+    // just made and that has not left yet.
     await db.teams.put({ id: 'neuve', name: 'CRÉÉE HORS LIGNE' })
     await db.outbox.add({ kind: 'team', op: 'put', id: 'neuve', ts: Date.now(), modifiedAt: new Date().toISOString() })
     const { hydrate } = await moduleDistant()
@@ -101,8 +101,8 @@ describe('hydrate — the server is authoritative', () => {
 
 describe('the synchronisation\'s health', () => {
   it('announces the number of pending actions and the state of the last send', async () => {
-    // Le compte est la mesure honnête : « en attente » ne dit pas si ça avance,
-    // un nombre qui grossit, si.
+    // The count is the honest measure: "waiting" does not say whether it is
+    // progressing; a number that grows does.
     const { enqueuePut, flushNow, onHealth } = await moduleDistant()
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 401 })))
     const vus: { state: string; pending: number }[] = []
@@ -117,8 +117,8 @@ describe('the synchronisation\'s health', () => {
   })
 
   it('falls back to zero when the queue leaves', async () => {
-    // C'est ce qui fait disparaître la pastille toute seule : elle ne s'efface pas
-    // au bout d'un délai, elle s'efface quand la condition cesse d'être vraie.
+    // This is what makes the pill disappear on its own: it does not fade after a
+    // delay, it fades when the condition stops being true.
     const { enqueuePut, flushNow, onHealth } = await moduleDistant()
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 204 })))
     const vus: { state: string; pending: number }[] = []
@@ -144,9 +144,9 @@ describe('the synchronisation\'s health', () => {
 
 describe('the outgoing queue', () => {
   it('stamps each operation at the moment of the gesture, not of the send', async () => {
-    // L'arbitrage des conflits repose entièrement là-dessus : une file bloquée
-    // deux heures par un gymnase sans réseau ne doit pas écraser une correction
-    // faite entre-temps sur un autre appareil.
+    // Conflict arbitration rests entirely on this: a queue held up for two hours by a
+    // gym with no coverage must not overwrite a correction made meanwhile on another
+    // device.
     const { enqueuePut } = await moduleDistant()
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 204 })))
 
@@ -170,10 +170,10 @@ describe('the outgoing queue', () => {
   })
 
   it('does not send a large batch with `keepalive` — the browser caps it at 64 kB', async () => {
-    // Sans cette précaution, `fetch` échoue sèchement au-delà du quota, l'échec
-    // tombe dans le `catch` avec les pannes de réseau, et la file réessaie
-    // indéfiniment un envoi qui ne peut pas aboutir. Une seule rencontre pèse
-    // des dizaines de kilooctets une fois son journal sérialisé.
+    // Without this precaution, `fetch` fails outright past the quota, the failure lands
+    // in the `catch` alongside network outages, and the queue retries forever a send
+    // that cannot succeed. A single game weighs tens of kilobytes once its log is
+    // serialised.
     const { enqueuePut, flushNow } = await moduleDistant()
     const appels: RequestInit[] = []
     vi.stubGlobal('fetch', vi.fn(async (_u: string, init: RequestInit) => { appels.push(init); return { ok: true, status: 204 } }))

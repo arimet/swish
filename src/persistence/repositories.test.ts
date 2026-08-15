@@ -39,8 +39,8 @@ describe('repositories', () => {
     await saveTeam({ id: 'ta', name: 'VIGNOT' })
     await saveTeam({ id: 'tb', name: 'VERDUN' })
     await saveTeam({ id: 'tc', name: 'METZ' })
-    // « ta » supprimée : le premier résultat (ta reçoit tb) et le second (tc reçoit ta)
-    // la mentionnent chacun d'un côté différent — les deux doivent disparaître.
+    // "ta" deleted: the first result (ta hosts tb) and the second (tc hosts ta) each
+    // mention it on a different side — both must disappear.
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'ta', awayId: 'tb', homeScore: 70, awayScore: 60 })
     await saveResult({ id: 'r2', championshipLabel: 'Poule A', date: '2026-01-17', homeId: 'tc', awayId: 'ta', homeScore: 55, awayScore: 80 })
     await saveResult({ id: 'r3', championshipLabel: 'Poule A', date: '2026-01-17', homeId: 'tb', awayId: 'tc', homeScore: 60, awayScore: 50 })
@@ -109,9 +109,9 @@ describe('repositories', () => {
   })
 
   it('deletes two plays in quick succession without an id coming back', async () => {
-    // Lire les séances avant la transaction, c'est en prendre un instantané : les
-    // deux suppressions partiraient du même état et la seconde réinstallerait
-    // l'identifiant que la première venait de retirer, pour de bon.
+    // Reading the sessions before the transaction is taking a snapshot: both deletions
+    // would start from the same state and the second would reinstate the id the first
+    // had just removed, for good.
     await savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
     await savePlay({ id: 's2', ...newPlay('ta', 'half', false), name: 'B' })
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-09-01', playIds: ['s1', 's2'] })
@@ -129,9 +129,9 @@ describe('repositories', () => {
   })
 })
 
-// ── Le message d'équipe ─────────────────────────────────────────────────────
-// Un seul message à la fois par club : la clé est le club, pas le message. En
-// écrire un nouveau remplace le précédent, il n'y a rien à ranger ni à purger.
+// ── The team message ────────────────────────────────────────────────────────
+// One message at a time per club: the key is the club, not the message. Writing a new
+// one replaces the previous; there is nothing to file and nothing to purge.
 
 describe('the team message', () => {
   it('saves a message and reads it back as it is', async () => {
@@ -175,7 +175,7 @@ describe('the team message', () => {
   })
 
   it('the message goes through the sync queue', async () => {
-    // Comme les convocations, les entraînements et les schémas : local à l'appareil.
+    // Like the call-ups, the trainings and the plays: it goes through the queue.
     await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: '2026-08-10T18:00:00.000Z' })
     await deleteMessage('ta')
     expect(await db.outbox.count()).toBe(0)
@@ -183,8 +183,8 @@ describe('the team message', () => {
 })
 
 // ── Ménage d'administration : suppressions groupées, irréversibles ───────────
-// Chacune ne doit emporter QUE son périmètre : une opération de ménage qui
-// déborde ne se rattrape pas, il n'y a pas de corbeille et rien n'est synchronisé.
+// Each must take ONLY its own scope: a cleanup operation that overreaches cannot be
+// undone, there is no bin.
 
 const evt = (id: string): GameEvent => ({ id, type: 'PERIOD_START', wallClock: 0, period: 1, gameClock: 600 })
 
@@ -229,10 +229,10 @@ describe('bulk cleanup', () => {
     const m1 = await getMatch('m1')
     expect(m1?.events).toEqual([])
     expect(m1?.meta.date).toBe('2026-01-10')
-    // La feuille est vierge : la rencontre n'est plus « terminée », sans quoi elle
-    // s'afficherait 0–0 comme un score réellement observé.
+    // The sheet is blank: the game is no longer "finished", otherwise it would show
+    // 0–0 like a score actually observed.
     expect(m1?.status).toBe('setup')
-    // Le club voisin et la convocation ne bougent pas : vider n'est pas supprimer.
+    // The neighbouring club and the call-up do not move: emptying is not deleting.
     expect((await getMatch('m2'))?.events).toHaveLength(1)
     expect(await getConvocation('m1')).toBeDefined()
   })
@@ -265,9 +265,9 @@ describe('bulk cleanup', () => {
   })
 
   it('deletes two clubs\' plays in quick succession without an id coming back', async () => {
-    // Même piège que `deletePlay` : lire les séances avant la transaction, c'est en
-    // prendre un instantané — les deux ménages partiraient du même état et le second
-    // réinstallerait l'identifiant que le premier venait de retirer, pour de bon.
+    // The same trap as `deletePlay`: reading the sessions before the transaction is
+    // taking a snapshot — both cleanups would start from the same state and the second
+    // would reinstate the id the first had just removed, for good.
     await savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
     await savePlay({ id: 's2', ...newPlay('tz', 'half', false), name: 'B' })
     await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-09-01', playIds: ['s1', 's2'] })
@@ -286,7 +286,7 @@ describe('bulk cleanup', () => {
     await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
     await savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
     await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: '2026-08-10T18:00:00.000Z' })
-    // Une mutation en attente d'envoi : elle ne doit pas survivre à la remise à zéro.
+    // A mutation waiting to be sent: it must not survive the reset.
     await db.outbox.add({ kind: 'match', op: 'put', id: 'm1', ts: Date.now(), modifiedAt: new Date().toISOString() })
 
     await wipeAll()
@@ -299,8 +299,8 @@ describe('bulk cleanup', () => {
   })
 
   it('counts as a sheet to empty only a game that carries events', async () => {
-    // Le compte annoncé à l'écran est celui de ce qui sera réellement détruit :
-    // une rencontre encore vierge n'a rien à perdre et ne doit pas le gonfler.
+    // The count announced on screen is that of what will actually be destroyed: a game
+    // still blank has nothing to lose and must not inflate it.
     await saveMatch(rencontre('vierge', 'Poule A', '2026-01-10', 'ta'))
     await saveMatch(rencontre('remplie', 'Poule A', '2026-01-17', 'ta', [evt('e1')]))
 

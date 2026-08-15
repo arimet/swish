@@ -42,8 +42,8 @@ beforeEach(async () => {
 const renderAdmin = () =>
   render(<MemoryRouter><ClubProvider><AuthProvider><Admin /></AuthProvider></ClubProvider></MemoryRouter>)
 
-/** La ligne d'une opération, repérée par son bouton : c'est là que s'affiche le
- *  compte de ce qu'elle détruira. */
+/** An operation's row, found by its button: that is where the count of what it will
+ *  destroy is shown. */
 const ligne = (aria: string) => screen.getByRole('button', { name: aria }).closest('li') as HTMLElement
 
 const confirmer = async () => userEvent.click(await screen.findByRole('button', { name: /supprimer définitivement/i }))
@@ -57,7 +57,7 @@ describe('Administration — the counts announced', () => {
     expect(ligne('Supprimer les rencontres de Poule B')).toHaveTextContent('1 rencontre')
     expect(ligne('Supprimer les rencontres de l’année 2026')).toHaveTextContent('2 rencontres')
     expect(ligne('Supprimer les rencontres de l’année 2025')).toHaveTextContent('1 rencontre')
-    // Deux rencontres portent des évènements, la troisième est encore vierge.
+    // Two games carry events, the third is still blank.
     expect(ligne('Vider les feuilles de VIGNOT')).toHaveTextContent('2 feuilles à vider')
     expect(ligne('Supprimer les résultats saisis')).toHaveTextContent('1 résultat')
     expect(ligne('Supprimer les entraînements')).toHaveTextContent('1 séance')
@@ -114,7 +114,7 @@ describe('Administration — scopes', () => {
     const restantes = await listMatches()
     expect(restantes.map((m) => m.id).sort()).toEqual(['m1', 'm2', 'm3'])
     expect(restantes.find((m) => m.id === 'm1')?.meta.date).toBe('2026-01-10')
-    // Vider n'est pas supprimer : les convocations restent attachées à leur rencontre.
+    // Emptying is not deleting: the call-ups stay attached to their game.
     expect(await getConvocation('m1')).toBeDefined()
   })
 
@@ -174,8 +174,8 @@ describe('Administration — rights', () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderAdmin()
 
-    // L'écran n'est qu'une planche de boutons destructeurs : sans le droit, il ne
-    // se monte pas du tout plutôt que d'aligner des boutons qui réclament un code.
+    // The screen is nothing but a board of destructive buttons: without the right it
+    // does not mount at all, rather than lining up buttons that demand a code.
     const opérations = [
       'Supprimer les rencontres de Poule A',
       'Supprimer les rencontres de l’année 2026',
@@ -188,10 +188,10 @@ describe('Administration — rights', () => {
     for (const name of opérations) {
       expect(screen.queryByRole('button', { name: name })).not.toBeInTheDocument()
     }
-    // Et aucune confirmation ne peut s'ouvrir derrière.
+    // And no confirmation can open behind it.
     expect(screen.queryByRole('button', { name: /supprimer définitivement/i })).not.toBeInTheDocument()
 
-    // Ce qui compte : rien n'a été effacé en base.
+    // What matters: nothing was erased from the store.
     expect(await listMatches()).toHaveLength(3)
     expect((await listMatches()).flatMap((m) => m.events)).toHaveLength(2)
     expect(await listResults()).toHaveLength(1)

@@ -18,8 +18,8 @@ beforeEach(async () => {
   localStorage.clear()
   await db.plays.clear()
   await db.teams.clear()
-  // Sans équipe en base, `ClubProvider` oublierait le club réglé : la
-  // bibliothèque n'aurait alors aucun club dont lister les schémas.
+  // With no team in the store, `ClubProvider` would forget the club set: the library
+  // would then have no club whose plays to list.
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   localStorage.setItem('swish-club-id', 'ta')
 })
@@ -31,7 +31,8 @@ const renderList = () =>
         <AuthProvider>
           <Routes>
             <Route path="/schemas" element={<SchemaList />} />
-            {/* L'éditeur est hors sujet ici : un jalon suffit à constater qu'on y va. */}
+            {/* The editor is beside the point here: a marker is enough to see that we
+                get there. */}
             <Route path="/schemas/:id/edit" element={<p>éditeur</p>} />
           </Routes>
         </AuthProvider>
@@ -43,14 +44,14 @@ describe('SchemaList — the playbook', () => {
   it('lists the club\'s plays as thumbnails', async () => {
     await savePlay(schema('s1', 'Pick and roll haut'))
     await savePlay(schema('s2', 'Corner pour le 4'))
-    // Un schéma d'un autre club n'a rien à faire dans la bibliothèque.
+    // Another club's play has no business in the library.
     await savePlay({ ...schema('s3', 'Combinaison de Metz'), clubId: 'tz' })
     renderList()
 
     const cartes = await screen.findAllByRole('article')
     expect(cartes).toHaveLength(2)
-    // Chaque carte porte son nom et sa vignette : c'est à la forme du premier
-    // temps que le coach reconnaît sa combinaison.
+    // Each card carries its name and its thumbnail: it is by the first step's shape
+    // that the coach recognises their play.
     const noms = cartes.map((c) => within(c).getByRole('heading').textContent)
     expect(noms).toEqual(expect.arrayContaining(['Pick and roll haut', 'Corner pour le 4']))
     for (const carte of cartes) {
@@ -65,12 +66,12 @@ describe('SchemaList — the playbook', () => {
     renderList()
     await screen.findByText(/la bibliothèque est vide/i)
 
-    // Ni dans la barre d'action, ni dans l'état vide, qui lui dit plutôt ce qu'il
-    // attend — au lieu de l'inviter à dessiner ce qu'elle n'a pas le droit d'écrire.
+    // Neither in the action bar nor in the empty state, which tells it instead what it
+    // is waiting for — rather than inviting it to draw what it has no right to write.
     expect(screen.queryByRole('button', { name: /Nouveau schéma/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /dessiner ma première combinaison/i })).not.toBeInTheDocument()
     expect(screen.getByText(/apparaîtront ici/i)).toBeInTheDocument()
-    // Ce qui compte : rien en base, et l'éditeur reste fermé.
+    // What matters: nothing in the store, and the editor stays shut.
     expect(await listPlays('ta')).toHaveLength(0)
     expect(screen.queryByText('éditeur')).not.toBeInTheDocument()
   })
@@ -103,9 +104,9 @@ describe('SchemaList — the playbook', () => {
 
     expect(within(carte).queryByRole('button', { name: 'Dupliquer' })).not.toBeInTheDocument()
     expect(within(carte).queryByRole('button', { name: 'Supprimer' })).not.toBeInTheDocument()
-    // Jouer reste, c'est ce qu'on vient chercher au bord du terrain.
+    // Play stays: it is what people come to the sideline for.
     expect(within(carte).getByRole('link', { name: /jouer/i })).toBeInTheDocument()
-    // Ce qui compte : la bibliothèque n'a pas bougé.
+    // What matters: the library has not moved.
     expect(await listPlays('ta')).toHaveLength(1)
   })
 
@@ -117,7 +118,7 @@ describe('SchemaList — the playbook', () => {
 
     const dialogue = await screen.findByRole('dialog')
     expect(within(dialogue).getByText(/Supprimer le schéma/)).toBeInTheDocument()
-    // Tant qu'on n'a pas confirmé, le schéma est toujours là.
+    // Until it is confirmed, the play is still there.
     expect(await listPlays('ta')).toHaveLength(1)
 
     await userEvent.click(within(dialogue).getByRole('button', { name: 'Supprimer' }))
@@ -156,7 +157,7 @@ describe('SchemaList — filing the library', () => {
     expect(screen.getAllByRole('article').map((c) => within(c).getByRole('heading').textContent))
       .toEqual(['Remise ligne de fond'])
 
-    // « Sans dossier » ne montre que les schémas non rangés, jamais les autres.
+    // "Unfiled" shows only the unfiled plays, never the others.
     await userEvent.click(within(barre).getByRole('button', { name: 'Sans dossier' }))
     expect(screen.getAllByRole('article').map((c) => within(c).getByRole('heading').textContent))
       .toEqual(['Brouillon'])
@@ -176,7 +177,7 @@ describe('SchemaList — filing the library', () => {
   })
 
   it('the search also filters on the note, ignoring accents', async () => {
-    // Le mot cherché n'est dans aucun nom : seule la note peut le rendre.
+    // The word searched for is in no name: only the note can return it.
     await savePlay(schema('s1', 'Pick and roll haut', { note: 'Sortie contre une défense en zone' }))
     await savePlay(schema('s2', 'Remise ligne de fond', { note: 'Sur panier encaissé' }))
     renderList()
@@ -187,8 +188,8 @@ describe('SchemaList — filing the library', () => {
   })
 
   it('orders from most recently edited to oldest, plays never stamped last', async () => {
-    // Écriture directe : `savePlay` horodate à l'instant, on ne pourrait pas
-    // fabriquer trois dates distinctes ni un schéma d'avant l'horodatage.
+    // A direct write: `savePlay` stamps the current time, and we could not otherwise
+    // build three distinct dates nor a play from before the timestamping.
     await db.plays.put(schema('s1', 'Ancien', { updatedAt: '2026-01-01T10:00:00.000Z' }))
     await db.plays.put(schema('s2', 'Récent', { updatedAt: '2026-06-01T10:00:00.000Z' }))
     await db.plays.put(schema('s3', 'Jamais horodaté'))
@@ -218,8 +219,8 @@ describe('SchemaList — filing the library', () => {
     renderList()
     const carte = (await screen.findAllByRole('article'))[0]
 
-    // Le rangement reste lisible — c'est un classement, pas une action — mais il
-    // n'y a plus de bouton à presser pour se voir réclamer un code.
+    // The filing stays readable — it is a classification, not an action — but there is
+    // no longer a button to press only to be asked for a code.
     expect(within(carte).getByText('Attaque placée')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Dossier de « Pick and roll haut »' })).not.toBeInTheDocument()
     // Ni saisie ouverte, ni écriture en base.

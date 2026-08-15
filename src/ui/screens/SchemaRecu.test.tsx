@@ -11,8 +11,8 @@ import { listPlays, savePlay, saveTeam } from '../../persistence/repositories'
 import { encoder } from '../../domain/partage'
 import { newPlay, nextStep, type Play } from '../../domain/plays'
 
-/** Deux temps : le meneur descend de 0,62 à 0,20. Le même schéma que le lecteur
- *  de 8B, pour que le défilement se prouve sur un pion qui bouge vraiment. */
+/** Two steps: the point guard goes down from 0.62 to 0.20. The same play as the
+ *  viewer's, so that stepping through is proved on a marker that really moves. */
 const deuxTemps = (): Play => {
   const s: Play = { id: 's1', ...newPlay('ta', 'half', false), name: 'Corner pour le 4', note: 'Sortie de balle' }
   const t0 = {
@@ -24,12 +24,12 @@ const deuxTemps = (): Play => {
   return { ...s, steps: [t0, t1] }
 }
 
-/** Les deux ordonnées du meneur dans les unités du viewBox (profondeur 1400). */
+/** The point guard's two y-coordinates in viewBox units (depth 1400). */
 const DEPART = 0.62 * 1400
 const ARRIVEE = 0.2 * 1400
 
-/** L'ordonnée du meneur telle que le tableau la dessine : la seule preuve que le
- *  défilement montre bien un autre temps, plutôt qu'un compteur d'écran. */
+/** The point guard's y-coordinate as the board draws it: the only proof that
+ *  stepping through really shows another step, rather than a counter on screen. */
 function ordonneeDuMeneur(): number {
   const groupe = [...document.querySelectorAll('g[data-marker="offense"]')]
     .find((n) => n.querySelector('text')?.textContent === '1')
@@ -46,8 +46,8 @@ beforeEach(async () => {
   localStorage.setItem('swish-club-id', 'ta')
 })
 
-/** Ouvre l'écran de réception sur le fragment donné. `useLocation().hash` rend le
- *  `#` avec le code : `MemoryRouter` le transporte tel quel. */
+/** Opens the receiving screen on the given fragment. `useLocation().hash` returns the
+ *  `#` along with the code: `MemoryRouter` carries it as it is. */
 const ouvrir = (code: string) =>
   render(
     <MemoryRouter initialEntries={[`/schemas/recu#${code}`]}>
@@ -55,7 +55,8 @@ const ouvrir = (code: string) =>
         <AuthProvider>
           <Routes>
             <Route path="/schemas/recu" element={<SchemaRecu />} />
-            {/* La fiche est hors sujet ici : un jalon suffit à constater qu'on y va. */}
+            {/* The record is beside the point here: a marker is enough to see that we
+                get there. */}
             <Route path="/schemas/:id" element={<p>fiche</p>} />
             <Route path="/" element={<p>bienvenue</p>} />
           </Routes>
@@ -93,13 +94,14 @@ describe('SchemaRecu — the play that arrived by link', () => {
 
     expect(await screen.findByText(/Ce lien est incomplet ou abîmé/)).toBeInTheDocument()
     expect(screen.queryByRole('img', { name: /tableau tactique/ })).not.toBeInTheDocument()
-    // Un écran sans issue est un piège : on doit pouvoir rejoindre l'application.
+    // A screen with no way out is a trap: it must be possible to reach the
+    // application.
     expect(screen.getByRole('link', { name: /Swish/ })).toBeInTheDocument()
   })
 
   it('"Add to my library" creates a fresh play, without touching the original', async () => {
-    // L'expéditeur et le destinataire partagent la même base : c'est le cas où
-    // un import mal fait écraserait le schéma d'origine.
+    // Sender and recipient share the same store: this is the case where a botched
+    // import would overwrite the original play.
     const original = deuxTemps()
     await savePlay(original)
     ouvrir(await encoder(original))
@@ -114,7 +116,7 @@ describe('SchemaRecu — the play that arrived by link', () => {
     expect(ajoute.clubId).toBe('ta')
     expect(ajoute.name).toBe('Corner pour le 4')
     expect(ajoute.steps).toEqual(original.steps)
-    // L'original est intact, et c'est la fiche du schéma créé qu'on ouvre.
+    // The original is intact, and it is the created play's record that opens.
     expect(schemas.find((s) => s.id === 's1')!.name).toBe('Corner pour le 4')
     expect(await screen.findByText('fiche')).toBeInTheDocument()
   })
@@ -143,8 +145,8 @@ describe('SchemaRecu — the play that arrived by link', () => {
   })
 
   it('with no club set, leads to the club choice instead of a button that would fail', async () => {
-    // Celui qui reçoit le lien n'a peut-être jamais ouvert l'application : le
-    // schéma s'affiche quand même, seul l'ajout attend qu'un club soit choisi.
+    // Whoever receives the link may never have opened the application: the play shows
+    // all the same, and only the add waits for a club to be chosen.
     localStorage.clear()
     ouvrir(await encoder(deuxTemps()))
 
