@@ -86,7 +86,7 @@ export function SchemaRecu() {
           <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>{trad('recu.titre')}</p>
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.nom}</h1>
           <p className="text-sm" style={{ color: C.muted }}>
-            {schema.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'} · {schema.temps.length} temps{schema.defense ? ' · défense' : ''}
+            {trad(schema.terrain === 'demi' ? 'sch.demiTerrain' : 'sch.terrainComplet')} · {trad('sch.compteTemps', { count: schema.temps.length })}{schema.defense ? ` ${trad('sch.defense')}` : ''}
           </p>
         </div>
 

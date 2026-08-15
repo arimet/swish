@@ -47,7 +47,7 @@ export function TeamsList() {
               <TeamBadge id={t.id} name={t.name} size="h-11 w-11 text-sm" />
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-[15px] font-extrabold tracking-tight">{t.name}</h3>
-                <p className="text-sm" style={{ color: C.muted }}>{counts[t.id] ?? 0} joueur{(counts[t.id] ?? 0) > 1 ? 's' : ''}</p>
+                <p className="text-sm" style={{ color: C.muted }}>{trad('commun.joueur', { count: counts[t.id] ?? 0 })}</p>
               </div>
               <span className="opacity-0 transition group-hover:opacity-100" style={{ color: C.accent }}>→</span>
             </Link>

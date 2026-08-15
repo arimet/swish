@@ -41,10 +41,10 @@ export function useMatch(matchId: string) {
       return true
     } catch {
       apply(precedent)
-      setError('Enregistrement impossible sur cet appareil. L’action n’a pas été retenue — réessayez.')
+      setError(trad('erreur.enregistrement'))
       return false
     }
-  }, [])
+  }, [trad])
 
   useEffect(() => {
     getMatch(matchId).then((m) => { matchRef.current = m ?? null; setMatch(m ?? null) })

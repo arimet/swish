@@ -395,13 +395,13 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
    *  remet — et si l'appareil ne sait pas dessiner, on le dit franchement. */
   const sortie = (libelle: string, faire: () => Promise<Blob>, ext: string, type: string) => async () => {
     setOccupe(true)
-    setEtat(`${libelle} en préparation…`)
+    setEtat(trad('partage.enPreparation', { quoi: libelle }))
     try {
       const blob = await faire()
       await livrer(new File([blob], nomFichier(schema, ext), { type }))
-      setEtat(`${libelle} : ${Math.round(blob.size / 1024)} ko prêts.`)
+      setEtat(trad('partage.pret', { quoi: libelle, ko: Math.round(blob.size / 1024) }))
     } catch {
-      setEtat(`${libelle} : cet appareil n’a pas pu produire le fichier.`)
+      setEtat(trad('partage.echecFichier', { quoi: libelle }))
     } finally {
       setOccupe(false)
     }
@@ -466,11 +466,11 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
           <span className="h-px flex-1" style={{ background: C.border }} />
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <Sortie label={trad('partage.imagePng')} quoi={trad('partage.ceTemps')} disabled={occupe} onClick={sortie('L’image', () => fabriquerPng(schema, schema.temps[tempsIndex] ?? schema.temps[0]), 'png', 'image/png')} />
-          <Sortie label={trad('partage.pdf')} quoi={trad('partage.tousLesTemps')} disabled={occupe} onClick={sortie('Le PDF', () => fabriquerPdf(schema), 'pdf', 'application/pdf')} />
+          <Sortie label={trad('partage.imagePng')} quoi={trad('partage.ceTemps')} disabled={occupe} onClick={sortie(trad('partage.lImage'), () => fabriquerPng(schema, schema.temps[tempsIndex] ?? schema.temps[0]), 'png', 'image/png')} />
+          <Sortie label={trad('partage.pdf')} quoi={trad('partage.tousLesTemps')} disabled={occupe} onClick={sortie(trad('partage.lePdf'), () => fabriquerPdf(schema), 'pdf', 'application/pdf')} />
           <Sortie
             label={trad('partage.gif')} quoi={trad('partage.animation')} disabled={occupe}
-            onClick={sortie('Le GIF', () => fabriquerGif(schema, (fait, total) => setEtat(`Le GIF en préparation… ${fait} / ${total}`)), 'gif', 'image/gif')}
+            onClick={sortie(trad('partage.leGif'), () => fabriquerGif(schema, (fait, total) => setEtat(trad('partage.gifProgression', { fait, total }))), 'gif', 'image/gif')}
           />
         </div>
 

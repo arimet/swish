@@ -62,7 +62,7 @@ export function PlayerActionDialog({
   const pick = (spot: ShotSpot) => {
     const kind = kindAt(spot.x, spot.y)
     if (made) onScore(kind, spot); else onMiss(kind, spot)
-    setConfirmation({ spot, made, label: `${made ? POINTS_LABEL[kind] : trad('action.manqueMaj')} · ${ZONE_LABELS[zoneAt(spot.x, spot.y)]}` })
+    setConfirmation({ spot, made, label: `${made ? POINTS_LABEL[kind] : trad('action.manqueMaj')} · ${trad(ZONE_LABELS[zoneAt(spot.x, spot.y)])}` })
     closeTimer.current = setTimeout(close, SHOT_FEEDBACK_MS)
   }
 

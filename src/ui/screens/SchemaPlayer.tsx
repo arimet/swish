@@ -160,8 +160,8 @@ export function SchemaPlayer() {
           <div className="h-full w-full select-none" style={{ maxWidth: large }}>
             <PlayBoard schema={schema} tempsIndex={0} temps={temps} remplit />
           </div>
-          <Zone cote="left" label="Temps précédent" fleche="‹" onClick={() => aller(-1)} disabled={courant === 0} />
-          <Zone cote="right" label="Temps suivant" fleche="›" onClick={() => aller(1)} disabled={courant === dernier} />
+          <Zone cote="left" label={trad('lecteur.precedent')} fleche="‹" onClick={() => aller(-1)} disabled={courant === 0} />
+          <Zone cote="right" label={trad('lecteur.suivant')} fleche="›" onClick={() => aller(1)} disabled={courant === dernier} />
         </div>
 
         <div className="mx-auto flex w-full shrink-0 flex-col gap-2" style={{ maxWidth: large }}>
@@ -183,7 +183,7 @@ export function SchemaPlayer() {
               jour, ne cassera rien. */}
           <button
             onClick={() => (enLecture ? setEnLecture(false) : jouer())} disabled={dernier === 0}
-            aria-label={enLecture ? 'Pause' : 'Lecture'}
+            aria-label={trad(enLecture ? 'sch.pause' : 'sch.lecture')}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-[var(--c-on-brand)] disabled:opacity-40"
             style={{ background: C.brand }}
           >

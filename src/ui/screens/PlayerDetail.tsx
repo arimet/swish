@@ -9,7 +9,7 @@ import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { ShotChart } from '../components/ShotCourt'
 import { fmt } from '../components/GameClock'
 import { useT } from '../../i18n'
-import { C, NumBadge, Panel, TeamBadge, bd, champLabel, fmtDate } from '../olive/kit'
+import { C, NumBadge, Panel, TeamBadge, bd, fmtDate , useChampLabel } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import type { Match, Player, Team } from '../../domain/types'
 
@@ -19,10 +19,10 @@ const parMatch = (total: number, games: number) =>
   games ? (total / games).toFixed(1).replace('.', ',') : '—'
 
 /** Accord au pluriel pour les petits décomptes affichés en toutes lettres. */
-const plur = (n: number) => (n > 1 ? 's' : '')
 
 export function PlayerDetail() {
   const trad = useT()
+  const champ = useChampLabel()
   const { id } = useParams<{ id: string }>()
   const { playerId } = useAuth()
   const [player, setPlayer] = useState<Player | null | undefined>(undefined)
@@ -69,7 +69,7 @@ export function PlayerDetail() {
   return (
     <div className="p-6">
       <Link to={team ? `/teams/${team.id}` : '/teams'} className="inline-block rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>
-        ← {team?.name ?? 'Équipes'}
+        ← {team?.name ?? trad('nav.equipes')}
       </Link>
 
       <div className="mb-6 mt-4 flex items-center gap-3">
@@ -95,11 +95,11 @@ export function PlayerDetail() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatCard label="Rencontres" value={String(played)} hint="jouées" />
-        <StatCard label="Points / match" value={parMatch(career.points, played)} hint={`${career.points} au total`} />
-        <StatCard label="Réussite aux tirs" value={pct.fg === null ? '—' : `${pct.fg} %`} hint={`${shotsCareer.length} tir${plur(shotsCareer.length)} localisé${plur(shotsCareer.length)}`} accent={C.accent} />
-        <StatCard label="Réussite à 3 pts" value={pct.three === null ? '—' : `${pct.three} %`} hint="sur la carrière" />
-        <StatCard label="Temps de jeu moyen" value={played ? fmt(Math.round(career.seconds / played)) : '—'} hint="par match" />
+        <StatCard label={trad('equipe.rencontres')} value={String(played)} hint={trad('equipe.jouees')} />
+        <StatCard label={trad('joueur.pointsParMatch')} value={parMatch(career.points, played)} hint={trad('equipe.auTotal', { n: career.points })} />
+        <StatCard label={trad('joueur.reussiteTirs')} value={pct.fg === null ? '—' : `${pct.fg} %`} hint={trad('compte.tirLocalise', { count: shotsCareer.length })} accent={C.accent} />
+        <StatCard label={trad('joueur.reussite3pts')} value={pct.three === null ? '—' : `${pct.three} %`} hint={trad('joueur.surLaCarriere')} />
+        <StatCard label={trad('joueur.tempsJeuMoyen')} value={played ? fmt(Math.round(career.seconds / played)) : '—'} hint={trad('joueur.parMatchHint')} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[420px_1fr] [&>*]:min-w-0">
@@ -117,16 +117,16 @@ export function PlayerDetail() {
               <span>{trad('joueur.parMatch')}</span>
               <span className="flex gap-4"><span className="w-8 text-right">{trad('joueur.cumul')}</span><span className="w-14 text-right">{trad('joueur.moyenne')}</span></span>
             </div>
-            <StatRow label="Passes décisives" total={career.assists} games={played} />
-            <StatRow label="Rebonds offensifs" total={career.offRebounds} games={played} />
-            <StatRow label="Rebonds défensifs" total={career.defRebounds} games={played} />
-            <StatRow label="Contres" total={career.blocks} games={played} />
-            <StatRow label="Fautes" total={career.fouls} games={played} />
+            <StatRow label={trad('joueur.passesDecisives')} total={career.assists} games={played} />
+            <StatRow label={trad('joueur.rebondsOffensifs')} total={career.offRebounds} games={played} />
+            <StatRow label={trad('joueur.rebondsDefensifs')} total={career.defRebounds} games={played} />
+            <StatRow label={trad('joueur.contres')} total={career.blocks} games={played} />
+            <StatRow label={trad('joueur.fautes')} total={career.fouls} games={played} />
             <p className="mb-1 mt-4 text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('joueur.repartition')}</p>
-            <StatRow label="2 pts intérieurs" total={career.twoInside} games={played} />
-            <StatRow label="2 pts extérieurs" total={career.twoOutside} games={played} />
-            <StatRow label="3 pts" total={career.threes} games={played} />
-            <StatRow label="Lancers francs" total={career.freeThrows} games={played} />
+            <StatRow label={trad('joueur.deuxInterieurs')} total={career.twoInside} games={played} />
+            <StatRow label={trad('joueur.deuxExterieurs')} total={career.twoOutside} games={played} />
+            <StatRow label={trad('joueur.troisPts')} total={career.threes} games={played} />
+            <StatRow label={trad('joueur.lancersFrancs')} total={career.freeThrows} games={played} />
           </Panel>
         </div>
 
@@ -142,7 +142,7 @@ export function PlayerDetail() {
                 return (
                   <li key={m.id} className="rounded-xl" style={{ background: C.panel }}>
                     <button onClick={() => setOpenMatch(isOpen ? null : m.id)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
-                      <span className="min-w-0 flex-1 truncate text-sm font-bold">{champLabel(m.meta)}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-bold">{champ(m.meta)}</span>
                       <span className="shrink-0 text-[12px] font-semibold" style={{ color: C.faint }}>{fmtDate(m.meta.date).long || '—'}</span>
                       <span className="nums w-14 shrink-0 text-right text-sm font-black">{s?.points ?? 0} pts</span>
                       <span style={{ color: C.faint }}>{isOpen ? '▾' : '▸'}</span>
@@ -151,14 +151,14 @@ export function PlayerDetail() {
                       <div className="border-t px-3 py-3" style={{ borderColor: C.border }}>
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                           <ul className="grid flex-1 grid-cols-2 gap-x-4 gap-y-1 text-[12px] font-semibold" style={{ color: C.muted }}>
-                            <li className="col-span-2 font-bold" style={{ color: C.text }}>{s?.points ?? 0} pt{plur(s?.points ?? 0)}</li>
-                            <li>{s?.fieldGoalsMade ?? 0} tir{plur(s?.fieldGoalsMade ?? 0)} réussi{plur(s?.fieldGoalsMade ?? 0)}</li>
-                            <li>{s?.misses ?? 0} manqué{plur(s?.misses ?? 0)}</li>
-                            <li>{s?.assists ?? 0} passe{plur(s?.assists ?? 0)} décisive{plur(s?.assists ?? 0)}</li>
-                            <li>{s?.blocks ?? 0} contre{plur(s?.blocks ?? 0)}</li>
-                            <li>{s?.offRebounds ?? 0} rebond{plur(s?.offRebounds ?? 0)} off.</li>
-                            <li>{s?.defRebounds ?? 0} rebond{plur(s?.defRebounds ?? 0)} déf.</li>
-                            <li>{s?.fouls ?? 0} faute{plur(s?.fouls ?? 0)}</li>
+                            <li className="col-span-2 font-bold" style={{ color: C.text }}>{trad('compte.pt', { count: s?.points ?? 0 })}</li>
+                            <li>{trad('compte.tirReussi', { count: s?.fieldGoalsMade ?? 0 })}</li>
+                            <li>{trad('compte.manque', { count: s?.misses ?? 0 })}</li>
+                            <li>{trad('compte.passeDecisive', { count: s?.assists ?? 0 })}</li>
+                            <li>{trad('compte.contre', { count: s?.blocks ?? 0 })}</li>
+                            <li>{trad('compte.rebondOff', { count: s?.offRebounds ?? 0 })}</li>
+                            <li>{trad('compte.rebondDef', { count: s?.defRebounds ?? 0 })}</li>
+                            <li>{trad('compte.faute', { count: s?.fouls ?? 0 })}</li>
                             <li>{fmt(playingTimes(m).get(id) ?? 0)} de jeu</li>
                           </ul>
                           <div className="shrink-0 sm:w-44">

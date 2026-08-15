@@ -3,6 +3,7 @@ import { zoneSummary, type Shot } from '../../domain/shotchart'
 import { zoneAt, ZONE_CENTROID, ZONE_LABELS, ZONES, type ShotZone } from '../../domain/shotzones'
 import type { ShotSpot } from '../../domain/types'
 import { C, T } from '../olive/kit'
+import { useT } from '../../i18n'
 
 // viewBox en centimètres, ligne de fond en haut. Voir les repères du plan.
 // Exportés parce que le tableau tactique dessine sur le même demi-terrain — et,
@@ -147,6 +148,7 @@ export function ShotPicker({ onPick, confirmation, shots }: {
   confirmation?: { spot: ShotSpot; label: string; made: boolean } | null
   shots?: Shot[]
 }) {
+  const trad = useT()
   const locked = !!confirmation
   const commit = (spot: ShotSpot) => {
     if (locked) return
@@ -206,7 +208,7 @@ export function ShotPicker({ onPick, confirmation, shots }: {
             className="rounded-lg px-2 py-1 text-[12px] font-semibold transition hover:brightness-125 disabled:opacity-40"
             style={{ background: C.card2, color: C.muted, border: `1px solid ${C.border}` }}
           >
-            {ZONE_LABELS[z]}
+            {trad(ZONE_LABELS[z])}
           </button>
         ))}
       </div>
@@ -247,9 +249,10 @@ function Confirmation({ spot, made }: { spot: ShotSpot; made: boolean }) {
  * afficher « 100 % » sur un seul tir donnerait une lecture fausse.
  */
 export function ShotChart({ shots, minAttempts = 3 }: { shots: Shot[]; minAttempts?: number }) {
+  const trad = useT()
   const sum = zoneSummary(shots)
   return (
-    <Court label="Carte des tirs">
+    <Court label={trad('bord.carteDesTirs')}>
       <ZonesDecoupees>
         {ZONES.map((z) => {
           const { made, attempts } = sum[z]

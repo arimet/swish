@@ -19,4 +19,12 @@ export function seedSeconds(match: Match, period: Period): number {
   return periodLength(period)
 }
 /** Libellé de championnat avec repli quand la rencontre n'en a pas. */
-export const champLabel = (meta: MatchMeta) => meta.championshipLabel?.trim() || 'Match amical'
+/** Le libellé du championnat quand la rencontre n'en porte aucun.
+ *
+ * C'est une **valeur de données**, pas un libellé d'écran : elle sert de clef de
+ * regroupement au ménage, au classement et aux confrontations, et elle finit stockée
+ * dans les résultats saisis à la main. La traduire ici scinderait un même championnat
+ * en deux selon la langue de qui l'a saisi. L'affichage la remplace au dernier moment,
+ * par `useChampLabel` (voir `ui/olive/kit`). */
+export const AMICAL = 'Match amical'
+export const champLabel = (meta: MatchMeta) => meta.championshipLabel?.trim() || AMICAL

@@ -99,7 +99,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
       <div className="space-y-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="champ" label={trad('match.championnat')} value={championshipLabel} onChange={setChampionship} placeholder={trad('match.champPlaceholder')} />
-          <Field id="num" label={trad('match.numero')} value={matchNumber} onChange={setNum} placeholder="ex. 78" />
+          <Field id="num" label={trad('match.numero')} value={matchNumber} onChange={setNum} placeholder={trad('match.numeroPlaceholder')} />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="date" label={trad('match.date')} type="date" value={date} onChange={setDate} />

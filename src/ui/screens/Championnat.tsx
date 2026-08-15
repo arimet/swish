@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { newId } from '../../domain/ids'
 import { standings, clefConfrontation } from '../../domain/standings'
+import { AMICAL } from '../../domain/ids'
 import { listMatches, listResults, saveResult, deleteResult } from '../../persistence/repositories'
 import type { Match, ReportedResult } from '../../domain/types'
 import { C, bd, champLabel, SectionTitle, TeamBadge } from '../olive/kit'
@@ -80,7 +81,7 @@ export function Championnat() {
   const resultatsParChampionnat = useMemo(() => {
     const map = new Map<string, ReportedResult[]>()
     for (const r of results ?? []) {
-      const clef = r.championshipLabel || 'Sans championnat'
+      const clef = r.championshipLabel || ''
       if (!map.has(clef)) map.set(clef, [])
       map.get(clef)!.push(r)
     }
@@ -137,7 +138,7 @@ export function Championnat() {
   // de saisie correspond déjà à une de nos rencontres terminées, le classement l'ignorera.
   const dejaNotreRencontre = useMemo(() => {
     if (!homeId || !awayId || homeId === awayId) return false
-    const clé = clefConfrontation(champ.trim() || 'Match amical', homeId, awayId, date || undefined)
+    const clé = clefConfrontation(champ.trim() || AMICAL, homeId, awayId, date || undefined)
     return (matches ?? []).some((m) => m.status === 'finished' && clefConfrontation(champLabel(m.meta), m.meta.clubId, m.meta.opponentId, m.meta.date) === clé)
   }, [matches, champ, homeId, awayId, date])
 
@@ -154,7 +155,7 @@ export function Championnat() {
       setErreur(trad('champ.nulImpossible'))
       return
     }
-    const champLbl = champ.trim() || 'Match amical'
+    const champLbl = champ.trim() || AMICAL
     const clé = clefConfrontation(champLbl, homeId, awayId, date)
     // Deux saisies de la même confrontation — même dans l'ordre inverse — compteraient
     // deux fois au classement : rien côté domaine ne s'en protège, c'est ici qu'il faut l'empêcher.
@@ -313,7 +314,7 @@ export function Championnat() {
             {resultatsParChampionnat.map(([champ, lignes]) => (
               <div key={champ}>
                 {resultatsParChampionnat.length > 1 && (
-                  <p className="mb-1 text-[12px] font-bold" style={{ color: C.faint }}>{champ}</p>
+                  <p className="mb-1 text-[12px] font-bold" style={{ color: C.faint }}>{champ || trad('commun.sansChampionnat')}</p>
                 )}
                 {/* Des filets, pas des cartes. Chaque ligne était une carte posée
                     dans la carte de la section : deux cadres emboîtés pour une

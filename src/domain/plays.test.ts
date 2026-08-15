@@ -72,7 +72,7 @@ describe('versTerrain', () => {
   it('remappe demi → complet dans la moitié avant, sans perte', () => {
     const s: Schema = { id: 'x', ...nouveauSchema('c1', 'demi', false) }
     const r = versTerrain(s, 'complet')
-    if ('refus' in r) throw new Error(r.refus)
+    if ('refus' in r) throw new Error(r.refus.cle)
     expect(r.ok.terrain).toBe('complet')
     expect(r.ok.temps[0].pions.every((p) => p.at.y <= 0.5)).toBe(true)
   })
@@ -81,13 +81,13 @@ describe('versTerrain', () => {
     const s: Schema = { id: 'x', ...nouveauSchema('c1', 'complet', false) }
     s.temps[0].pions[2].at = { x: 0.5, y: 0.8 }   // le poste 3 dans la moitié arrière
     const r = versTerrain(s, 'demi')
-    expect('refus' in r && /3/.test(r.refus)).toBe(true)
+    expect('refus' in r && r.refus).toEqual({ cle: 'sch.occPoste', n: 3 })
   })
 
   it('accepte complet → demi quand tout tient dans la moitié avant', () => {
     const s: Schema = { id: 'x', ...nouveauSchema('c1', 'complet', false) }
     const r = versTerrain(s, 'demi')
-    if ('refus' in r) throw new Error(r.refus)
+    if ('refus' in r) throw new Error(r.refus.cle)
     expect(r.ok.terrain).toBe('demi')
     // aller-retour : on retombe (à l’arrondi près) sur le 1-2-2 du demi-terrain
     const attendu = nouveauSchema('c1', 'demi', false)

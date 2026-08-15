@@ -2,10 +2,10 @@
 import { Link } from 'react-router-dom'
 import type { CSSProperties, ReactNode } from 'react'
 import { liveState } from '../../rules/ffbb'
-import { champLabel, periodLength } from '../../domain/ids'
+import { AMICAL, champLabel, periodLength } from '../../domain/ids'
 import { fmt } from '../components/GameClock'
-import type { Match, Team } from '../../domain/types'
-import { useT } from '../../i18n'
+import type { Match, MatchMeta, Team } from '../../domain/types'
+import { langueCourante, useT } from '../../i18n'
 
 export { champLabel }
 
@@ -73,14 +73,35 @@ export const bd = `1px solid var(--c-border)`
 const TEAM_COLORS = ['#552583', '#0072CE', '#98002E', '#007A33', '#b4491a', '#1D1160', '#0C2340', '#C8102E']
 export const teamColor = (id?: string) => TEAM_COLORS[[...String(id ?? '')].reduce((a, c) => a + c.charCodeAt(0), 0) % TEAM_COLORS.length]
 export const initials = (n?: string) => String(n ?? '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '—'
-const WD = ['DIM', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM']
-const MO = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc']
+/* Jours et mois abrégés : `Intl` les tient dans les deux langues, deux tableaux écrits
+   à la main n'en tenaient qu'une. La locale vient de l'application et non du navigateur
+   — un club français lit « SAM 12 avr. » sur une machine réglée en anglais.
+   Le point final des abréviations françaises (« sam. », « avr. ») saute : le cartouche
+   de date est en capitales serrées, la ponctuation y fait du bruit. */
+const sansPoint = (s: string) => s.replace(/\.$/, '')
+const jourCourt = (d: Date) =>
+  sansPoint(new Intl.DateTimeFormat(langueCourante(), { weekday: 'short' }).format(d)).toUpperCase()
+const moisCourt = (d: Date) =>
+  sansPoint(new Intl.DateTimeFormat(langueCourante(), { month: 'short' }).format(d))
 
 export function fmtDate(iso?: string) {
   if (!iso) return { day: '—', wd: '', long: '' }
   const d = new Date(iso + 'T00:00:00')
   if (Number.isNaN(d.getTime())) return { day: '—', wd: '', long: iso }
-  return { day: String(d.getDate()), wd: WD[d.getDay()], long: `${WD[d.getDay()]} ${d.getDate()} ${MO[d.getMonth()]}` }
+  return { day: String(d.getDate()), wd: jourCourt(d), long: `${jourCourt(d)} ${d.getDate()} ${moisCourt(d)}` }
+}
+
+/**
+ * Le libellé du championnat tel qu'on l'écrit à l'écran : le nom saisi, ou « Match
+ * amical » traduit. La sentinelle reste intacte dans les données (voir `AMICAL`),
+ * elle ne devient une phrase qu'ici.
+ */
+export function useChampLabel() {
+  const trad = useT()
+  return (v: MatchMeta | string) => {
+    const l = typeof v === 'string' ? v : champLabel(v)
+    return l === AMICAL ? trad('commun.matchAmical') : l
+  }
 }
 export function displayClock(m: Match) {
   const { period } = liveState(m)
@@ -132,7 +153,9 @@ export function TeamBadge({ id, name, size = 'h-8 w-8 text-[12px]' }: { id: stri
 
 /** Carte de match façon 'Live Score' Olive. */
 export function MatchCard({ m, teams }: { m: Match; teams: Record<string, Team> }) {
-  const a = teams[m.meta.clubId]?.name ?? 'Équipe A', b = teams[m.meta.opponentId]?.name ?? 'Équipe B'
+  const trad = useT()
+  const champ = useChampLabel()
+  const a = teams[m.meta.clubId]?.name ?? trad('commun.equipeA'), b = teams[m.meta.opponentId]?.name ?? trad('commun.equipeB')
   const { score } = liveState(m); const dc = displayClock(m)
   const to = m.status === 'finished' ? `/match/${m.id}/summary` : m.status === 'live' ? `/match/${m.id}/live` : `/match/${m.id}`
   const leadA = score.a > score.b, leadB = score.b > score.a, setup = m.status === 'setup'
@@ -145,7 +168,7 @@ export function MatchCard({ m, teams }: { m: Match; teams: Record<string, Team> 
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="truncate text-[12px] font-bold" style={{ color: C.muted }}>{champLabel(m.meta)}</span>
+          <span className="truncate text-[12px] font-bold" style={{ color: C.muted }}>{champ(m.meta)}</span>
           <span className="ml-auto rounded-md px-1.5 py-0.5 text-[12px] font-black"
             style={m.status === 'live' ? { background: C.greenFill, color: C.onGreen } : setup ? { background: C.goldFill, color: C.onGold } : { background: C.neutralBg, color: C.muted }}>
             {m.status === 'live' ? `${dc.label} · ${dc.clock}` : setup ? m.meta.time : 'FINAL'}

@@ -118,7 +118,7 @@ export function TeamDetail() {
         <TeamBadge id={id} name={team.name} size="h-12 w-12 text-base" />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{team.name}</h1>
-          <p className="text-sm" style={{ color: C.muted }}>{players.length} joueur{players.length > 1 ? 's' : ''}{team.coach ? ` · Coach ${team.coach}` : ''}</p>
+          <p className="text-sm" style={{ color: C.muted }}>{trad('commun.joueur', { count: players.length })}{team.coach ? ` · Coach ${team.coach}` : ''}</p>
         </div>
         {/* Comme sur le résumé et la fiche de rencontre : le droit est vérifié à l'ouverture
             du dialogue, pas redérivé ensuite. Assumé — se verrouiller entre l'ouverture et la
@@ -236,9 +236,9 @@ export function TeamDetail() {
                         sort du libellé visible, qui chevauchait le nom sur un téléphone. */}
                     {gere && (
                       <>
-                        <button aria-label={editingId === p.id ? `fermer ${p.lastName}` : `modifier ${p.lastName}`}
+                        <button aria-label={trad(editingId === p.id ? 'equipe.fermerJoueur' : 'equipe.modifierJoueur', { nom: p.lastName })}
                           onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold" style={{ color: C.muted }}>
-                          {editingId === p.id ? 'fermer' : 'modifier'}
+                          {trad(editingId === p.id ? 'commun.fermer' : 'commun.modifier')}
                         </button>
                         {/* Le retrait reste hors de la zone dépliée : c'est une action destructrice,
                             elle ne doit pas se retrouver mêlée aux champs d'édition.
@@ -246,7 +246,7 @@ export function TeamDetail() {
                             gris, et faisait vingt-quatre pixels de haut. Une destruction ne se
                             signale pas avec la couleur des boutons ordinaires, et ne se vise pas au
                             minimum tolérable. */}
-                        <button onClick={() => setARetirer(p)} aria-label={`Retirer ${p.lastName} ${p.firstName}`}
+                        <button onClick={() => setARetirer(p)} aria-label={trad('equipe.retirerJoueur', { nom: `${p.lastName} ${p.firstName}` })}
                           className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold transition hover:bg-[var(--c-danger-bg)]" style={{ color: C.danger }}>{trad('equipe.retirer')}</button>
                       </>
                     )}
@@ -266,7 +266,7 @@ export function TeamDetail() {
                   )}
                 </li>
               ))}
-              {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>{gere ? 'Aucun joueur. Ajoutez-en ci-dessous.' : 'Aucun joueur dans l’effectif.'}</li>}
+              {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>{gere ? trad('equipe.aucunJoueurAjoutez') : trad('equipe.aucunJoueurEffectif')}</li>}
             </ul>
             {/* Recruter est administratif : le bouton ne s'affiche pas sans le
                 droit. Ouvrir le formulaire est déjà une écriture, la garde reste

@@ -13,6 +13,7 @@ import { MatchPreview } from './ui/screens/MatchPreview'
 import { AuthProvider } from './app/auth'
 import { ClubProvider, useClub } from './app/club'
 import { Welcome } from './ui/screens/Welcome'
+import { useT } from './i18n'
 
 /* Les écrans chargés à la demande. Le paquet était d'un seul morceau : ouvrir le
  * tableau de bord téléchargeait aussi l'éditeur de schémas, le lecteur de
@@ -68,7 +69,8 @@ function SpectatorRoute() {
 /** Le repli d'attente, en un seul endroit : la garde club et le découpage des
  *  routes l'utilisent tous les deux. */
 function Chargement() {
-  return <div className="grid min-h-dvh place-items-center text-muted-foreground" role="status" aria-live="polite">Chargement…</div>
+  const trad = useT()
+  return <div className="grid min-h-dvh place-items-center text-muted-foreground" role="status" aria-live="polite">{trad('commun.chargement')}</div>
 }
 
 function ClubGate() {
