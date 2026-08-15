@@ -41,7 +41,7 @@ describe('table des droits', () => {
     renderProbe()
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('marque')
-    expect(await screen.findByText('rôle : marque')).toBeInTheDocument()
+    expect(await screen.findByText('rôle : scorer')).toBeInTheDocument()
     expect(screen.getByText('score : oui')).toBeInTheDocument()
     expect(screen.getByText('manage : non')).toBeInTheDocument()
   })
@@ -63,7 +63,7 @@ describe('code inconnu', () => {
     await saisirCode('n-importe-quoi')
     // Le dialogue reste ouvert, avec un message nommant l'accès requis.
     expect(await screen.findByText(/Code Administrateur requis/)).toBeInTheDocument()
-    expect(screen.getByText('rôle : visiteur')).toBeInTheDocument()
+    expect(screen.getByText('rôle : visitor')).toBeInTheDocument()
   })
 })
 
@@ -73,7 +73,7 @@ describe('code joueur', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('joueur')
     // Le rôle reste visiteur : le code joueur n'accorde aucun droit d'écriture.
-    expect(await screen.findByText('rôle : visiteur')).toBeInTheDocument()
+    expect(await screen.findByText('rôle : visitor')).toBeInTheDocument()
     expect(screen.getByText('score : non')).toBeInTheDocument()
     expect(screen.getByText('manage : non')).toBeInTheDocument()
   })
@@ -94,7 +94,7 @@ describe('identité de joueur', () => {
     sessionStorage.clear()
     renderProbe()
     expect(await screen.findByText('joueur : p1')).toBeInTheDocument()
-    expect(screen.getByText('rôle : visiteur')).toBeInTheDocument()
+    expect(screen.getByText('rôle : visitor')).toBeInTheDocument()
   })
 })
 

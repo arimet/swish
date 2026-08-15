@@ -61,7 +61,7 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
   })
 
   it('créer un schéma est administratif : la table de marque ne voit aucun bouton de création', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderList()
     await screen.findByText(/la bibliothèque est vide/i)
 
@@ -96,7 +96,7 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
   })
 
   it('dupliquer et supprimer sont administratifs : la table de marque n’a que « Jouer », et rien n’est écrit', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     await savePlay(schema('s1', 'Pick and roll haut'))
     renderList()
     const carte = (await screen.findAllByRole('article'))[0]
@@ -213,7 +213,7 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
   })
 
   it('changer le dossier est administratif : la table de marque le lit sans pouvoir le changer', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     renderList()
     const carte = (await screen.findAllByRole('article'))[0]

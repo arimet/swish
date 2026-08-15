@@ -74,7 +74,7 @@ describe('catalogue de traduction', () => {
   it('les familles calculées sont complètes', () => {
     // Ces clefs se construisent à l'exécution (`t(\`role.${role}\`)`) : le test ne peut
     // pas les lire dans les sources, donc il énumère les valeurs possibles du domaine.
-    for (const role of ['visiteur', 'marque', 'admin']) expect(fr).toHaveProperty(`role.${role}`)
+    for (const role of ['visitor', 'scorer', 'admin']) expect(fr).toHaveProperty(`role.${role}`)
   })
 
   it('l’anglais ne retombe jamais sur la clef elle-même', () => {

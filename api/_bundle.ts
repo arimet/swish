@@ -1,18 +1,17 @@
 import { pool } from './_db.js'
 
 /**
- * Le paquet du suivi spectateur : la rencontre, l'effectif et les deux noms
- * d'équipe — tout ce dont la page distante a besoin, puisqu'elle n'a pas de base
- * locale.
+ * The spectator bundle: the game, the roster and the two team names — everything
+ * the remote page needs, since it has no local database.
  *
- * Il est **dérivé** de la table, et non plus publié à part par la table de
- * marque. C'est une simplification franche : la rencontre arrive déjà par la file
- * d'attente, donc la publier une seconde fois était deux chemins d'écriture pour
- * une même donnée, avec deux façons de se contredire — et une durée de vie de
- * douze heures au bout de laquelle le suivi d'un match du matin s'éteignait.
+ * It is **derived** from the table, no longer published separately by the scorer's
+ * table. That is a plain simplification: the game already arrives through the
+ * queue, so publishing it a second time meant two write paths for the same data,
+ * with two ways to contradict each other — and a twelve-hour lifetime after which
+ * the live view of a morning game went dark.
  *
- * `rev` est le plus grand numéro d'écriture des lignes qui composent le paquet :
- * le flux SSE s'en sert pour n'émettre que sur changement réel.
+ * `rev` is the highest write number among the rows that make up the bundle: the SSE
+ * stream uses it to emit only on a real change.
  */
 export interface Bundle {
   match: unknown
@@ -42,7 +41,7 @@ export async function bundle(id: string): Promise<Bundle | null> {
       "select doc, rev from documents where kind = 'team' and id = any($1::text[])", [[clubId, opponentId]]),
   ])
 
-  const nom = (tid: string) =>
+  const name = (tid: string) =>
     (teams.rows.find((r) => r.doc.id === tid)?.doc.name as string | undefined) ?? ''
 
   const rev = Math.max(
@@ -52,22 +51,23 @@ export async function bundle(id: string): Promise<Bundle | null> {
   return {
     match,
     players: roster.rows.map((r) => publicPlayer(r.doc)),
-    teamNames: { A: nom(clubId), B: nom(opponentId) },
+    teamNames: { A: name(clubId), B: name(opponentId) },
     rev,
   }
 }
 
 /**
- * Ce que la page spectateur a le droit de savoir d'un joueur : son numéro et son
- * nom, de quoi lire une feuille de match.
+ * What the spectator page is entitled to know about a player: their number and
+ * their name, enough to read a match sheet.
  *
- * Le lien de suivi est **public** — on l'envoie à des parents, on le projette dans
- * la salle — et il transportait jusqu'ici la fiche entière : licence, date de
- * naissance et taille comprises, pour des joueurs parfois mineurs. Rien à l'écran
- * ne s'en servait ; c'était une fuite par recopie, pas par intention.
+ * The live link is **public** — it is sent to parents, projected in the hall — and
+ * until now it carried the whole record: licence, birth date and height included,
+ * for players who are sometimes minors. Nothing on screen used any of it; it was a
+ * leak by copy-paste, not by intent.
  *
- * La liste est **positive** : on énumère ce qui sort, et non ce qu'on retire. Un
- * champ ajouté un jour à `Player` ne se retrouvera donc pas publié par défaut.
+ * The list is **positive**: it enumerates what goes out, not what is stripped. A
+ * field added to `Player` some day will therefore not find itself published by
+ * default.
  */
 function publicPlayer(p: Record<string, unknown>) {
   return { id: p.id, teamId: p.teamId, number: p.number, lastName: p.lastName, firstName: p.firstName }

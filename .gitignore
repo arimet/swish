@@ -4,9 +4,9 @@ dist-ssr/
 *.local
 .DS_Store
 
-# Les secrets du développement local : `DATABASE_URL` et surtout
-# `SYNC_WRITE_TOKEN`, qui garde l'écriture sur la base du club. `.env.example`
-# documente les variables, il ne les contient pas.
+# Local development secrets: `DATABASE_URL` and above all `SYNC_WRITE_TOKEN`,
+# which guards writes to the club's database. `.env.example` documents the
+# variables, it does not contain them.
 .env
 .env.*
 !.env.example
@@ -33,15 +33,15 @@ lerna-debug.log*
 # Superpowers planning docs (kept out of the repo)
 docs/superpowers/
 
-# Réglages locaux de l'outil de revue de design. `*.local` ci-dessus ne les
-# attrape pas : le fichier s'appelle `config.local.json`, le motif veut un nom qui
-# *finisse* par « .local ».
+# Local settings for the design review tool. `*.local` above does not catch them:
+# the file is named `config.local.json`, and the pattern wants a name that *ends*
+# in ".local".
 #
-# Le contenu du dossier, et non le dossier lui-même (`.impeccable/` avec la barre
-# finale) : git ne descend pas dans un répertoire exclu, si bien qu'aucune négation
-# ne pourrait ensuite y réinclure un fichier.
+# The folder's contents, not the folder itself (`.impeccable/` with the trailing
+# slash): git does not descend into an excluded directory, so no negation could
+# then re-include a file inside it.
 .impeccable/*
-# Car le sidecar de la charte, lui, est un artefact **partagé** — comme le DESIGN.md
-# qu'il prolonge (rampes tonales, jetons de mouvement, extraits de composants).
-# Le reste du dossier est du cache et de la préférence de machine.
+# Because the charter's sidecar is a **shared** artifact — like the DESIGN.md it
+# extends (tonal ramps, motion tokens, component excerpts). The rest of the folder
+# is cache and machine preference.
 !.impeccable/design.json

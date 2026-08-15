@@ -40,7 +40,7 @@ describe('TeamCreate — droits', () => {
     // s'applique qu'à partir du moment où il y en a. Sur une base vide, la création
     // est la fondation du club et ne demande rien — voir le test juste en dessous.
     await saveTeam({ id: 'deja', name: 'DÉJÀ LÀ' })
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     render(<MemoryRouter><ClubProvider><AuthProvider><TeamCreate /></AuthProvider></ClubProvider></MemoryRouter>)
 
     await userEvent.type(screen.getByLabelText(/nom de l.équipe/i), 'VIGNOT')

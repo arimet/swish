@@ -58,8 +58,8 @@ export const en: Record<string, string> = {
   'acces.requis': '{role} access required',
   'acces.necessiteCode': 'This action requires that access code.',
   'acces.codeIncorrect': '{role} code required.',
-  'role.visiteur': 'Visitor',
-  'role.marque': 'Scorer’s table',
+  'role.visitor': 'Visitor',
+  'role.scorer': 'Scorer’s table',
   'role.admin': 'Administrator',
 
   // ── Language ──────────────────────────────────────────────────────────────

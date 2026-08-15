@@ -1,13 +1,13 @@
 {
-  // Les fonctions serverless d'`api/`.
+  // The serverless functions in `api/`.
   //
-  // Elles n'étaient dans AUCUN projet : `tsconfig.app` ne prend que `src`,
-  // `tsconfig.node` que `vite.config.ts`. Elles n'ont donc jamais été typées,
-  // et une erreur ne se serait manifestée qu'au déploiement — c'est-à-dire sur
-  // la seule partie du code qui touche la source de vérité.
+  // They belonged to NO project: `tsconfig.app` only takes `src`, `tsconfig.node`
+  // only `vite.config.ts`. They were therefore never type-checked, and an error
+  // would only have shown at deploy time — that is, on the one part of the code
+  // that touches the source of truth.
   //
-  // Réglages de Vercel, pas ceux du navigateur : pas de `lib` DOM, résolution
-  // `nodenext` (d'où les imports en `.js`), et les types de Node.
+  // Vercel's settings, not the browser's: no DOM `lib`, `nodenext` resolution
+  // (hence the `.js` imports), and Node's types.
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.api.tsbuildinfo",
     "target": "es2023",

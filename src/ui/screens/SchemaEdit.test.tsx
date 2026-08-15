@@ -205,7 +205,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
   })
 
   it('la table de marque n’ouvre pas l’éditeur : elle est renvoyée à la consultation, sans rien écrire', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     const { container } = render(
       <MemoryRouter initialEntries={['/schemas/s1/edit']}>
         <AuthProvider>

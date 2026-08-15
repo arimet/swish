@@ -57,8 +57,8 @@ export const fr: Record<string, string> = {
   'acces.requis': 'Accès {role} requis',
   'acces.necessiteCode': 'Cette action nécessite ce code d’accès.',
   'acces.codeIncorrect': 'Code {role} requis.',
-  'role.visiteur': 'Visiteur',
-  'role.marque': 'Table de marque',
+  'role.visitor': 'Visiteur',
+  'role.scorer': 'Table de marque',
   'role.admin': 'Administrateur',
 
   // ── Langue ────────────────────────────────────────────────────────────────

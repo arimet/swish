@@ -5,48 +5,47 @@ import type { Team, Player, Match, ReportedResult, Convocation, Training, TeamMe
 import type { Play } from '../domain/plays'
 
 /*
- * Écritures : miroir local d'abord (immédiat, hors-ligne d'accord), puis mise en
- * file pour la base — qui est la source de vérité.
+ * Writes: local mirror first (immediate, fine offline), then queued for the
+ * database — which is the source of truth.
  *
- * LA RÈGLE, ET ELLE N'A PAS D'EXCEPTION : toute écriture dans une table de `db`
- * met en file l'opération correspondante, **cascades comprises**. En oublier une
- * ne laisse pas simplement le serveur en retard : à l'hydratation suivante, le
- * manifeste rendra le document que l'on croyait supprimé, et le ménage sera
- * défait sous les yeux de l'utilisateur.
+ * THE RULE, AND IT HAS NO EXCEPTION: every write to a `db` table queues the
+ * matching operation, **cascades included**. Forgetting one does not merely leave
+ * the server behind: at the next hydration the manifest brings back the document
+ * you thought deleted, and the cleanup is undone before the user's eyes.
  *
- * C'est le piège de ce fichier, parce que les suppressions y sont en cascade :
- * retirer une équipe emporte ses joueurs, ses résultats, ses séances, ses schémas
- * et son message ; retirer un joueur touche les convocations ; retirer un schéma
- * touche les séances qui le citaient. `repositories.test.ts` vérifie la file après
- * chacune de ces opérations, précisément pour que l'oubli se voie.
+ * That is this file's trap, because deletions here cascade: removing a team takes
+ * its players, its results, its sessions, its plays and its message; removing a
+ * player touches the call-ups; removing a play touches the sessions that cited it.
+ * `repositories.test.ts` checks the queue after each of these operations,
+ * precisely so that an omission shows.
  */
 export const saveTeam = async (t: Team) => { await db.teams.put(t); await enqueuePut('team', t.id, t) }
 export const getTeam = (id: string) => db.teams.get(id)
 export const getPlayer = (id: string) => db.players.get(id)
 export const listTeams = () => db.teams.toArray()
-/** Supprime une équipe, ses joueurs, et les résultats saisis à la main qui la
- *  mentionnent (d'un côté comme de l'autre) : un résultat dont une équipe n'existe
- *  plus n'a plus de sens, on le supprime plutôt que de le laisser hanter le
- *  classement sous son identifiant brut. La table des résultats reste petite ; un
- *  filtrage sur `toArray()` évite d'ajouter un index Dexie pour si peu. */
+/** Deletes a team, its players, and the hand-entered results that mention it (on
+ *  either side): a result whose team no longer exists has no meaning left, so we
+ *  delete it rather than let it haunt the standings under its raw id. The results
+ *  table stays small; filtering `toArray()` avoids adding a Dexie index for so
+ *  little. */
 export const deleteTeam = async (id: string) => {
   const players = await db.players.where('teamId').equals(id).toArray()
   const results = (await db.results.toArray()).filter((r) => r.homeId === id || r.awayId === id)
-  // Les entraînements sont propres au club (jamais partagés) : sans cette purge, ils
-  // resteraient en base sous un `clubId` qui ne reviendra jamais, donc invisibles sur
-  // tous les écrans et impossibles à supprimer — même sort que les résultats ci-dessus.
+  // Trainings belong to the club (never shared): without this purge they would stay
+  // in the database under a `clubId` that will never come back, hence invisible on
+  // every screen and impossible to delete — same fate as the results above.
   const trainings = (await db.trainings.toArray()).filter((t) => t.clubId === id)
   const plays = await db.plays.where('clubId').equals(id).toArray()
   await db.transaction('rw', [db.teams, db.players, db.results, db.trainings, db.plays, db.messages], async () => {
     await db.players.where('teamId').equals(id).delete()
     await db.teams.delete(id)
-    // Le message est celui du club : sans cette purge il survivrait à l'équipe,
-    // invisible (plus aucun écran ne porte ce `clubId`) et impossible à effacer.
+    // The message is the club's: without this purge it would outlive the team,
+    // invisible (no screen carries that `clubId` any more) and impossible to erase.
     await db.messages.delete(id)
     await db.results.bulkDelete(results.map((r) => r.id))
     await db.trainings.bulkDelete(trainings.map((t) => t.id))
-    // Les schémas sont propres au club, comme les entraînements : même purge, mais
-    // via l'index `clubId` de la table, qui évite de relire tout le tableau tactique.
+    // Plays belong to the club, like trainings: same purge, but through the table's
+    // `clubId` index, which spares re-reading the whole playbook.
     await db.plays.where('clubId').equals(id).delete()
   })
   for (const p of players) await enqueueDel('player', p.id)
@@ -59,10 +58,10 @@ export const deleteTeam = async (id: string) => {
 
 export const savePlayer = async (p: Player) => { await db.players.put(p); await enqueuePut('player', p.id, p) }
 export const listPlayers = (teamId: string) => db.players.where('teamId').equals(teamId).toArray()
-/** Supprime un joueur et le retire de toutes les convocations qui le mentionnent :
- *  sans cette cascade, une convocation garderait un joueur qui n'existe plus,
- *  indécochable, et fausserait le compte affiché sur la fiche de rencontre. Table
- *  des convocations petite, un filtrage sur `toArray()` suffit (cf. `deleteTeam`). */
+/** Deletes a player and removes them from every call-up that mentions them: without
+ *  this cascade a call-up would keep a player who no longer exists, impossible to
+ *  untick, and would skew the count shown on the game sheet. The call-ups table is
+ *  small, filtering `toArray()` is enough (cf. `deleteTeam`). */
 export const deletePlayer = async (id: string) => {
   const convocations = (await db.convocations.toArray()).filter((c) => c.playerIds.includes(id))
   const pruned = convocations.map((c) => ({ ...c, playerIds: c.playerIds.filter((pid) => pid !== id) }))
@@ -71,21 +70,21 @@ export const deletePlayer = async (id: string) => {
     await db.convocations.bulkPut(pruned)
   })
   await enqueueDel('player', id)
-  // Les convocations élaguées sont des écritures comme les autres : sans elles,
-  // le joueur retiré reviendrait dans la liste des convoqués à l'hydratation.
+  // The pruned call-ups are writes like any other: without them the removed player
+  // would come back into the called-up list at the next hydration.
   for (const c of pruned) await enqueuePut('convocation', c.matchId, c)
 }
 
 export const saveMatch = async (m: Match) => { await db.matches.put(m); await enqueuePut('match', m.id, m) }
-/** Match local ; à défaut, tente une hydratation depuis le serveur (autre machine). */
+/** The local game; failing that, tries a hydration from the server (another device). */
 export const getMatch = async (id: string): Promise<Match | undefined> => {
   let m = await db.matches.get(id)
   if (!m && remoteEnabled()) { await hydrate(); m = await db.matches.get(id) }
   return m
 }
 export const listMatches = () => db.matches.toArray()
-/** Supprime la rencontre et sa convocation : une convocation sans rencontre n'a
- *  aucun sens, et resterait sinon invisible et indéboulonnable. */
+/** Deletes the game and its call-up: a call-up without a game makes no sense, and
+ *  would otherwise stay invisible and immovable. */
 export const deleteMatch = async (id: string) => {
   await db.transaction('rw', db.matches, db.convocations, async () => {
     await db.matches.delete(id)
@@ -99,69 +98,69 @@ export const listResults = () => db.results.toArray()
 export const saveResult = async (r: ReportedResult) => { await db.results.put(r); await enqueuePut('result', r.id, r) }
 export const deleteResult = async (id: string) => { await db.results.delete(id); await enqueueDel('result', id) }
 
-/** La convocation est rangée sous **la rencontre** et non sous un identifiant à
- *  elle : il y en a une par rencontre, et le `put` sur cette clef rend le
- *  remplacement gratuit. Le genre partagé porte donc `matchId` comme clef. */
+/** The call-up is filed under **the game** rather than under an id of its own:
+ *  there is one per game, and the `put` on that key makes replacement free. The
+ *  shared kind therefore carries `matchId` as its key. */
 export const getConvocation = (matchId: string) => db.convocations.get(matchId)
 export const saveConvocation = async (c: Convocation) => { await db.convocations.put(c); await enqueuePut('convocation', c.matchId, c) }
 export const listTrainings = () => db.trainings.toArray()
 export const saveTraining = async (t: Training) => { await db.trainings.put(t); await enqueuePut('training', t.id, t) }
 export const deleteTraining = async (id: string) => { await db.trainings.delete(id); await enqueueDel('training', id) }
 
-/** Le message du coach à son équipe : un seul par club, rangé **sous le club**,
- *  qui lui sert donc de clef partagée. En écrire un nouveau remplace le précédent :
- *  c'est le `put` sur cette clef qui le garantit, aucun ménage n'est nécessaire.
- *  Supprimer l'équipe emporte son message (cf. `deleteTeam`).
+/** The coach's message to the team: one per club, filed **under the club**, which
+ *  therefore serves as its shared key. Writing a new one replaces the previous:
+ *  the `put` on that key guarantees it, no cleanup is needed. Deleting the team
+ *  takes its message along (cf. `deleteTeam`).
  *
- *  C'est le document qui justifie à lui seul cette étape : un joueur ne pouvait
- *  pas le lire, puisqu'il ne quittait jamais le téléphone du coach. */
+ *  This is the document that justifies the sync step on its own: a player could
+ *  not read it, since it never left the coach's phone. */
 export const getMessage = (clubId: string) => db.messages.get(clubId)
 export const saveMessage = async (m: TeamMessage) => { await db.messages.put(m); await enqueuePut('message', m.clubId, m) }
 export const deleteMessage = async (clubId: string) => { await db.messages.delete(clubId); await enqueueDel('message', clubId) }
 
-/** Attache un schéma à un entraînement, ou l'en retire. Le va-et-vient se fait dans
- *  une transaction, à partir de la séance relue : deux cases cochées coup sur coup
- *  partiraient sinon toutes deux de la même séance périmée, et la seconde écriture
- *  effacerait la première. Les identifiants qui ne désignent plus aucun schéma
- *  tombent au passage — même garde que la lecture, appliquée ici à l'écriture. */
+/** Attaches a play to a training session, or detaches it. The toggle happens inside
+ *  a transaction, from the session re-read there: two boxes ticked in quick
+ *  succession would otherwise both start from the same stale session, and the second
+ *  write would erase the first. Ids that no longer name any play are dropped along
+ *  the way — the same guard as the read, applied here to the write. */
 export const toggleTrainingPlay = async (trainingId: string, playId: string) => {
   let written: Training | null = null
   await db.transaction('rw', db.trainings, db.plays, async () => {
     const t = await db.trainings.get(trainingId)
     if (!t) return
     const ids = t.playIds ?? []
-    const suivants = ids.includes(playId) ? ids.filter((id) => id !== playId) : [...ids, playId]
-    const existants = await db.plays.bulkGet(suivants)
-    written = { ...t, playIds: suivants.filter((_, i) => !!existants[i]) }
+    const next = ids.includes(playId) ? ids.filter((id) => id !== playId) : [...ids, playId]
+    const existing = await db.plays.bulkGet(next)
+    written = { ...t, playIds: next.filter((_, i) => !!existing[i]) }
     await db.trainings.put(written)
   })
   if (written) await enqueuePut('training', (written as Training).id, written)
 }
 
-/** Les schémas du tableau tactique restent locaux à l'appareil, comme les résultats,
- *  les convocations et les entraînements : la file de synchronisation ne transporte
- *  qu'équipes, joueurs et rencontres. Supprimer une équipe emporte ses schémas
- *  (cf. `deleteTeam`). */
+/** The playbook belongs to the club, and travels like everything else: `savePlay`
+ *  queues it, so a play drawn on the coach's phone reaches the players'. Deleting a
+ *  team takes its plays along (cf. `deleteTeam`). */
 export const listPlays = (clubId: string) => db.plays.where('clubId').equals(clubId).toArray()
 export const getPlay = (id: string) => db.plays.get(id)
-/** Horodate à l'enregistrement : sans `majLe`, la bibliothèque n'aurait que l'ordre
- *  de la base, c'est-à-dire aucun, et paraîtrait mélangée à chaque ouverture. */
+/** Stamps the time on save: without `updatedAt` the library would only have the
+ *  database's order, which is to say none, and would look shuffled at every
+ *  opening. */
 export const savePlay = async (s: Play) => {
-  // L'horodatage fait partie du document rangé : mettre en file `s` plutôt que
-  // l'objet écrit enverrait au serveur une version sans `majLe`, et la
-  // bibliothèque se retrouverait mélangée sur les autres appareils.
+  // The timestamp is part of the stored document: queueing `s` rather than the
+  // written object would send the server a version without `updatedAt`, and the
+  // library would end up shuffled on the other devices.
   const written = { ...s, updatedAt: new Date().toISOString() }
   await db.plays.put(written)
   await enqueuePut('play', written.id, written)
 }
-/** Supprime un schéma et le retire des entraînements qui le citaient, dans la même
- *  transaction : même cascade que `deletePlayer` sur les convocations, et pour la
- *  même raison — un identifiant orphelin fausserait le compte affiché sur la séance.
+/** Deletes a play and removes it from the trainings that cited it, in the same
+ *  transaction: the same cascade as `deletePlayer` on call-ups, and for the same
+ *  reason — an orphan id would skew the count shown on the session.
  *
- *  Les séances se relisent **dans** la transaction. Les lire avant, c'est prendre un
- *  instantané : deux suppressions coup sur coup partiraient toutes deux du même état,
- *  et la seconde écriture réinstallerait l'identifiant que la première venait de
- *  retirer. Le déchet resterait ensuite indéfiniment. */
+ *  The sessions are re-read **inside** the transaction. Reading them before is
+ *  taking a snapshot: two deletions in quick succession would both start from the
+ *  same state, and the second write would reinstate the id the first had just
+ *  removed. The debris would then stay forever. */
 export const deletePlay = async (id: string) => {
   let pruned: Training[] = []
   await db.transaction('rw', db.plays, db.trainings, async () => {
@@ -174,19 +173,19 @@ export const deletePlay = async (id: string) => {
   for (const t of pruned) await enqueuePut('training', t.id, t)
 }
 
-// ── Ménage d'administration ─────────────────────────────────────────────────
-// Suppressions groupées, irréversibles : ni corbeille ici, ni copie ailleurs pour
-// tout ce qui ne passe pas par la file de synchronisation. Chacune se cadre sur un
-// périmètre relu **dans** sa transaction, comme `deletePlay` : lire avant, c'est
-// prendre un instantané, et deux ménages coup sur coup partiraient du même état.
+// ── Administrative cleanup ──────────────────────────────────────────────────
+// Bulk, irreversible deletions: no bin here, and no copy elsewhere for anything
+// that does not go through the sync queue. Each one frames itself on a scope
+// re-read **inside** its transaction, like `deletePlay`: reading before is taking a
+// snapshot, and two cleanups in quick succession would start from the same state.
 
-/** Supprime les rencontres qui répondent au filtre et leurs convocations — même
- *  cascade que `deleteMatch`, appliquée en bloc. Renvoie les identifiants supprimés,
- *  de quoi rendre compte de ce qui a réellement disparu. */
-export const deleteMatchesWhere = async (filtre: (m: Match) => boolean): Promise<string[]> => {
+/** Deletes the games matching the filter and their call-ups — the same cascade as
+ *  `deleteMatch`, applied in bulk. Returns the deleted ids, enough to report what
+ *  actually disappeared. */
+export const deleteMatchesWhere = async (filter: (m: Match) => boolean): Promise<string[]> => {
   const ids: string[] = []
   await db.transaction('rw', db.matches, db.convocations, async () => {
-    ids.push(...(await db.matches.toArray()).filter(filtre).map((m) => m.id))
+    ids.push(...(await db.matches.toArray()).filter(filter).map((m) => m.id))
     await db.matches.bulkDelete(ids)
     await db.convocations.bulkDelete(ids)
   })
@@ -194,10 +193,10 @@ export const deleteMatchesWhere = async (filtre: (m: Match) => boolean): Promise
   return ids
 }
 
-/** Vide les feuilles d'un club : les évènements enregistrés partent, la rencontre,
- *  sa date et sa convocation restent. Le statut redescend à « à venir » — une
- *  rencontre « terminée » sans le moindre évènement s'afficherait 0–0 partout, comme
- *  un score réellement observé. Renvoie le nombre de feuilles vidées. */
+/** Empties a club's game sheets: the recorded events go, the game, its date and its
+ *  call-up stay. The status drops back to "upcoming" — a "finished" game without a
+ *  single event would show 0–0 everywhere, like a score actually observed. Returns
+ *  the number of sheets emptied. */
 export const clearClubStats = async (clubId: string): Promise<number> => {
   let cleared: Match[] = []
   await db.transaction('rw', db.matches, async () => {
@@ -208,24 +207,24 @@ export const clearClubStats = async (clubId: string): Promise<number> => {
   return cleared.length
 }
 
-/** Les résultats saisis à la main, en bloc. Aucune cascade : rien ne les référence. */
+/** The hand-entered results, in bulk. No cascade: nothing references them. */
 export const deleteAllResults = async () => {
   const ids = (await db.results.toArray()).map((r) => r.id)
   await db.results.clear()
   for (const id of ids) await enqueueDel('result', id)
 }
 
-/** Les entraînements d'un club, en bloc. Leurs `playIds` partent avec eux : ce sont
- *  les séances qui citent les schémas, jamais l'inverse. */
+/** A club's trainings, in bulk. Their `playIds` go with them: sessions cite plays,
+ *  never the other way round. */
 export const deleteTrainingsOfClub = async (clubId: string) => {
   const ids = (await db.trainings.toArray()).filter((t) => t.clubId === clubId).map((t) => t.id)
   await db.trainings.bulkDelete(ids)
   for (const id of ids) await enqueueDel('training', id)
 }
 
-/** Les schémas d'un club, en bloc, et leurs identifiants retirés des séances qui les
- *  citaient — même cascade que `deletePlay`, sinon le ménage laisserait derrière lui
- *  des identifiants orphelins dans les entraînements conservés. */
+/** A club's plays, in bulk, and their ids removed from the sessions that cited them
+ *  — the same cascade as `deletePlay`, otherwise the cleanup would leave orphan ids
+ *  behind in the trainings it kept. */
 export const deletePlaysOfClub = async (clubId: string) => {
   let removed: string[] = []
   let pruned: Training[] = []
@@ -240,11 +239,11 @@ export const deletePlaysOfClub = async (clubId: string) => {
   for (const t of pruned) await enqueuePut('training', t.id, t)
 }
 
-/** Remise à zéro complète de l'appareil : toutes les tables, file de synchronisation
- *  comprise. La file part sans être poussée, volontairement — un effacement local ne
- *  doit pas se propager au serveur et vider du même coup les autres appareils. */
+/** A full device reset: every table, sync queue included. The queue goes without
+ *  being pushed, deliberately — a local wipe must not propagate to the server and
+ *  empty the other devices in the same breath. */
 export const wipeAll = () =>
-  // Les tables passent par un tableau : au-delà de cinq, Dexie ne les prend plus une à une.
+  // The tables go through an array: beyond five, Dexie no longer takes them one by one.
   db.transaction('rw', [db.teams, db.players, db.matches, db.results, db.convocations, db.trainings, db.plays, db.messages, db.outbox], async () => {
     await Promise.all([
       db.teams.clear(), db.players.clear(), db.matches.clear(), db.results.clear(),

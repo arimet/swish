@@ -137,7 +137,7 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
   const [erreur, setErreur] = useState('')
   const [choix, setChoix] = useState(false)
   const moi = players.find((p) => p.id === playerId) ?? null
-  const verrouille = role === 'visiteur'
+  const verrouille = role === 'visitor'
 
   const ouvrir = () => { setCode(''); setErreur(''); setChoix(false); setOpen(true) }
   const valider = () => {
@@ -147,7 +147,7 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
     setErreur('')
     // Seul le code joueur ouvre le choix du nom ; les autres changent le rôle,
     // que le dialogue affiche aussitôt en guise de confirmation.
-    setChoix(obtenu === 'joueur')
+    setChoix(obtenu === 'player')
   }
 
   return (

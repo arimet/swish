@@ -46,7 +46,7 @@ describe('MatchSetup', () => {
 
 describe('MatchSetup — droits', () => {
   it('planifier une rencontre est administratif : la table de marque ne voit pas le formulaire, et rien n’est enregistré', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     const onCreated = vi.fn()
     render(
       <MemoryRouter initialEntries={['/match/new']}>

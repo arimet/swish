@@ -2,9 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { listTeams } from '../persistence/repositories'
 import type { Team } from '../domain/types'
 
-/** Club suivi par cet appareil. Préférence locale, jamais synchronisée : deux
- *  personnes du même club ne partagent pas forcément le même appareil, et une
- *  tablette prêtée à l'adversaire n'a pas à lui pousser ce réglage. */
+/** The club this device follows. A local preference, never synchronised: two
+ *  people from the same club do not necessarily share a device, and a tablet lent
+ *  to the opposition has no business pushing this setting onto them. */
 export const CLUB_ID_KEY = 'swish-club-id'
 const KEY = CLUB_ID_KEY
 
@@ -12,8 +12,8 @@ interface ClubCtx {
   clubId: string | null
   club: Team | null
   teams: Team[]
-  /** `false` tant que les équipes ne sont pas chargées : sans cela, l'écran de
-   *  bienvenue clignoterait à chaque démarrage avant que le club soit résolu. */
+  /** `false` until the teams are loaded: without it the welcome screen would flash
+   *  at every start before the club is resolved. */
   ready: boolean
   setClub: (id: string) => void
   clear: () => void
@@ -24,9 +24,9 @@ export function ClubProvider({ children }: { children: ReactNode }) {
   const [clubId, setClubId] = useState<string | null>(() => localStorage.getItem(KEY))
   const [teams, setTeams] = useState<Team[]>([])
   const [ready, setReady] = useState(false)
-  // Incrémenté à chaque changement de club : force une relecture de la liste
-  // d'équipes. Sans lui, l'effet ne tourne qu'au montage — une équipe créée ou
-  // supprimée après coup n'est jamais revue tant que la page n'est pas rechargée.
+  // Incremented on every club change: forces a re-read of the team list. Without
+  // it the effect only runs on mount — a team created or deleted afterwards is
+  // never seen again until the page is reloaded.
   const [gen, setGen] = useState(0)
 
   useEffect(() => {
@@ -34,8 +34,8 @@ export function ClubProvider({ children }: { children: ReactNode }) {
     listTeams().then((ts) => {
       if (cancelled) return
       setTeams(ts)
-      // Équipe supprimée depuis un autre appareil : on oublie le réglage plutôt
-      // que de laisser l'application sur un tableau de bord vide sans issue.
+      // Team deleted from another device: we forget the setting rather than leave
+      // the application on an empty dashboard with no way out.
       setClubId((id) => (id && ts.some((t) => t.id === id) ? id : null))
       setReady(true)
     })
@@ -51,6 +51,6 @@ export function ClubProvider({ children }: { children: ReactNode }) {
 
 export function useClub(): ClubCtx {
   const ctx = useContext(Ctx)
-  if (!ctx) throw new Error('useClub doit être utilisé dans un ClubProvider')
+  if (!ctx) throw new Error('useClub must be used inside a ClubProvider')
   return ctx
 }

@@ -3,78 +3,78 @@ import { timingSafeEqual } from 'node:crypto'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 /**
- * La source de vérité. `null` quand `DATABASE_URL` est absente, ce qui permet aux
- * routes de répondre proprement « synchronisation non configurée » — et c'est le
- * cas par défaut : sans base, l'application reste 100 % locale.
+ * The source of truth. `null` when `DATABASE_URL` is absent, which lets the routes
+ * answer a clean "sync not configured" — and that is the default: without a
+ * database the application stays 100% local.
  *
- * `max: 1` : une fonction serverless n'a pas de connexion à garder entre deux
- * invocations, et Neon fait le vrai regroupement de son côté (utiliser son point
- * d'entrée mutualisé, celui dont l'hôte porte `-pooler`).
+ * `max: 1`: a serverless function has no connection to keep between two
+ * invocations, and Neon does the real pooling on its side (use its shared entry
+ * point, the one whose host carries `-pooler`).
  */
 const url = process.env.DATABASE_URL
 export const pool = url ? new Pool({ connectionString: url, max: 1 }) : null
 
 /**
- * Sans cet écouteur, une base qui redémarre **fait tomber le processus**.
+ * Without this listener, a database that restarts **takes the process down**.
  *
- * `pg.Pool` émet `error` quand une connexion inactive se rompt — coupure réseau,
- * redémarrage de la base, veille de Neon. En Node, un évènement `error` sans
- * écouteur devient une exception non rattrapée, donc un arrêt. Ce n'est pas
- * théorique : couper Postgres pendant une saisie a tué le serveur de
- * développement d'un coup, et une fonction Vercel mourrait pareil.
+ * `pg.Pool` emits `error` when an idle connection breaks — network cut, database
+ * restart, Neon going to sleep. In Node, an `error` event with no listener becomes
+ * an uncaught exception, hence a shutdown. This is not theoretical: stopping
+ * Postgres during data entry killed the dev server outright, and a Vercel function
+ * would die the same way.
  *
- * Il n'y a rien à faire de cette erreur : la connexion est déjà retirée du groupe,
- * et la requête suivante en ouvrira une neuve. Ce qu'il faut, c'est qu'elle ne
- * soit pas fatale.
+ * There is nothing to do about this error: the connection is already out of the
+ * pool, and the next query will open a fresh one. What matters is that it is not
+ * fatal.
  */
-pool?.on('error', (e) => { console.error('[swish] connexion Postgres perdue :', e.message) })
+pool?.on('error', (e) => { console.error('[swish] Postgres connection lost:', e.message) })
 
-/** Le jeton d'écriture. **Pas** de préfixe `VITE_` : il ne doit jamais entrer
- *  dans le bundle, contrairement aux trois codes d'accès qui, eux, sont lisibles
- *  dans les outils du navigateur. C'est toute la différence entre une porte que
- *  le client s'ouvre lui-même et une porte gardée par le serveur. */
+/** The write token. **No** `VITE_` prefix: it must never enter the bundle, unlike
+ *  the three access codes, which are readable in the browser's tools. That is the
+ *  whole difference between a door the client opens for itself and a door guarded
+ *  by the server. */
 const TOKEN = process.env.SYNC_WRITE_TOKEN ?? ''
 
-/** Comparaison à durée constante : une comparaison naïve fuit la longueur du
- *  préfixe correct, donc le jeton, un caractère à la fois. */
+/** Constant-time comparison: a naive one leaks the length of the correct prefix,
+ *  hence the token, one character at a time. */
 function sameSecret(a: string, b: string): boolean {
   const x = Buffer.from(a), y = Buffer.from(b)
   return x.length === y.length && timingSafeEqual(x, y)
 }
 
 /**
- * Garde les routes qui touchent aux données du club — l'écriture, mais aussi
- * l'hydratation : l'effectif porte des noms, des dates de naissance et des
- * tailles de joueurs parfois mineurs, et ça n'a pas à être public.
+ * Guards the routes that touch club data — writing, but hydration too: the roster
+ * carries names, birth dates and heights of players who are sometimes minors, and
+ * that has no business being public.
  *
- * Renvoie `true` quand la requête peut continuer ; sinon la réponse est déjà
- * écrite et l'appelant n'a plus qu'à sortir.
+ * Returns `true` when the request may continue; otherwise the response is already
+ * written and the caller only has to return.
  */
 export function unauthorized(req: VercelRequest, res: VercelResponse): boolean {
   if (!TOKEN) {
-    // Une base configurée sans jeton serait ouverte à qui connaît l'URL. On
-    // refuse de démarrer dans cet état plutôt que de le laisser passer en silence.
-    res.status(503).json({ error: 'SYNC_WRITE_TOKEN manquant côté serveur' })
+    // A database configured without a token would be open to anyone who knows the
+    // URL. We refuse to start in that state rather than let it pass in silence.
+    res.status(503).json({ error: 'SYNC_WRITE_TOKEN missing server-side' })
     return true
   }
-  const fourni = req.headers['x-swish-token']
-  if (typeof fourni !== 'string' || !sameSecret(fourni, TOKEN)) {
-    res.status(401).json({ error: 'Jeton invalide' })
+  const supplied = req.headers['x-swish-token']
+  if (typeof supplied !== 'string' || !sameSecret(supplied, TOKEN)) {
+    res.status(401).json({ error: 'Invalid token' })
     return true
   }
   return false
 }
 
-/** Le préambule commun : CORS, pré-vol, base configurée. Renvoie `true` quand la
- *  réponse est déjà écrite. */
-export function preamble(req: VercelRequest, res: VercelResponse, methodes: string): boolean {
+/** The common preamble: CORS, preflight, database configured. Returns `true` when
+ *  the response is already written. */
+export function preamble(req: VercelRequest, res: VercelResponse, methods: string): boolean {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', `${methodes}, OPTIONS`)
+  res.setHeader('Access-Control-Allow-Methods', `${methods}, OPTIONS`)
   res.setHeader('Access-Control-Allow-Headers', 'content-type, x-swish-token')
   if (req.method === 'OPTIONS') { res.status(204).end(); return true }
-  if (!pool) { res.status(501).json({ error: 'Synchronisation non configurée' }); return true }
-  if (!methodes.split(', ').includes(req.method ?? '')) {
-    res.setHeader('Allow', `${methodes}, OPTIONS`)
+  if (!pool) { res.status(501).json({ error: 'Sync not configured' }); return true }
+  if (!methods.split(', ').includes(req.method ?? '')) {
+    res.setHeader('Allow', `${methods}, OPTIONS`)
     res.status(405).end()
     return true
   }

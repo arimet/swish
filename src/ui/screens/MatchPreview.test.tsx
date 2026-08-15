@@ -160,7 +160,7 @@ describe('MatchPreview — droits', () => {
   it('la table de marque démarre la rencontre sans qu’aucun code lui soit demandé', async () => {
     // Le bénévole du samedi doit pouvoir lancer le match qu'il va tenir : démarrer
     // relève de la table de marque, pas de l'administration du club.
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderAvecSaisie()
     await userEvent.click(await screen.findByRole('button', { name: /démarrer la rencontre/i }))
 
@@ -169,7 +169,7 @@ describe('MatchPreview — droits', () => {
   })
 
   it('la convocation reste administrative : la table de marque n’a ni cases ni bouton, et rien n’est enregistré', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderPreview()
     await screen.findByText(/convocation/i)
 
@@ -184,7 +184,7 @@ describe('MatchPreview — droits', () => {
 
   it('la table de marque lit les convoqués sans pouvoir les changer', async () => {
     // Savoir qui est convoqué n'est pas écrire : la liste reste, en toutes lettres.
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveConvocation({ matchId: 'm1', playerIds: ['p1'], meetTime: '18:00', meetPlace: 'Gymnase' })
     renderPreview()
 
@@ -194,7 +194,7 @@ describe('MatchPreview — droits', () => {
   })
 
   it('supprimer la rencontre est administratif : la table de marque ne voit pas le bouton', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderPreview()
     await screen.findByText(/convocation/i)
 

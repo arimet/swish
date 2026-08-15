@@ -171,7 +171,7 @@ describe('Administration — tout effacer', () => {
 
 describe('Administration — droits', () => {
   it('ne montre aucune opération à la table de marque, et ne touche à rien', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'marque')
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderAdmin()
 
     // L'écran n'est qu'une planche de boutons destructeurs : sans le droit, il ne

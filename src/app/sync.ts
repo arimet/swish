@@ -1,21 +1,21 @@
 import type { Match, Player, TeamSide } from '../domain/types'
 
-/** Bundle publié pour le suivi spectateur : tout ce dont la page a besoin,
- * y compris les joueurs (un appareil distant n'a pas la base locale). */
+/** Bundle published for the spectator view: everything the page needs, players
+ * included (a remote device has no local database). */
 export interface SyncBundle {
   match: Match
   players: Player[]
   teamNames: Record<TeamSide, string>
 }
 
-/* Il n'y a plus rien à publier : le paquet est **dérivé** de la base par
-   `api/_bundle`, et la rencontre y arrive déjà par la file d'attente de la table
-   de marque. Publier une seconde fois, c'était deux chemins d'écriture pour une
-   même donnée — avec deux façons de se contredire — et une durée de vie de douze
-   heures au bout de laquelle le suivi d'un match du matin s'éteignait. */
+/* There is nothing left to publish: the bundle is **derived** from the database by
+   `api/_bundle`, and the game already arrives there through the scorer's table
+   queue. Publishing a second time meant two write paths for the same data — with
+   two ways to contradict each other — and a twelve-hour lifetime after which the
+   live view of a morning game went dark. */
 
-// Activé uniquement si VITE_SYNC_URL est défini (ex. "/api" sur Vercel).
-// Sinon l'app reste 100 % locale (aucun appel réseau).
+// Enabled only if VITE_SYNC_URL is set (e.g. "/api" on Vercel). Otherwise the app
+// stays 100% local (no network call).
 const BASE = (import.meta.env.VITE_SYNC_URL as string | undefined)?.replace(/\/+$/, '') || ''
 
 export const syncEnabled = (): boolean => BASE !== ''
@@ -29,8 +29,8 @@ export async function fetchBundle(id: string): Promise<SyncBundle | null> {
   } catch { return null }
 }
 
-/** S'abonne au flux temps réel (SSE) d'une rencontre ; repli sur polling si indisponible.
- * Renvoie une fonction de désabonnement. */
+/** Subscribes to a game's real-time (SSE) stream; falls back to polling when
+ * unavailable. Returns an unsubscribe function. */
 export function subscribeBundle(id: string, onData: (b: SyncBundle) => void): () => void {
   if (!BASE) return () => {}
   let es: EventSource | null = null
@@ -43,7 +43,7 @@ export function subscribeBundle(id: string, onData: (b: SyncBundle) => void): ()
   if (typeof EventSource !== 'undefined') {
     es = new EventSource(`${BASE}/match/${id}/stream`)
     es.onmessage = (e) => { try { onData(JSON.parse(e.data) as SyncBundle) } catch { /* ignore */ } }
-    es.onerror = () => { startPoll() } // EventSource retente seul ; polling en filet de sécurité
+    es.onerror = () => { startPoll() } // EventSource retries on its own; polling is the safety net
   } else {
     startPoll()
   }
