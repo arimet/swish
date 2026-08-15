@@ -609,4 +609,10 @@ export const fr: Record<string, string> = {
   'admin.jetonReseau': 'Le serveur ne répond pas. Les modifications attendent dans la file.',
   'admin.jetonInconnu': 'Pas encore vérifié sur cet appareil.',
   'admin.avertissementPartage': 'Ces suppressions sont définitives : il n’y a pas de corbeille, et elles partent vers la base partagée — ce qui est effacé ici disparaît aussi des autres appareils.',
+  'sync.compte_un': '{count} action en attente d’envoi',
+  'sync.compte_autre': '{count} actions en attente d’envoi',
+  'sync.horsReseau': 'en attente',
+  'sync.horsReseauDetail': 'Le partage est interrompu. Votre saisie est enregistrée sur cet appareil et repartira toute seule au retour du réseau — rien n’est perdu.',
+  'sync.refuse': 'partage refusé',
+  'sync.refuseDetail': 'Le serveur refuse cet appareil. Votre saisie est enregistrée ici et rien n’est perdu, mais elle n’atteint plus les autres appareils : vérifiez le jeton dans l’administration.',
 }

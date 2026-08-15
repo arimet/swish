@@ -51,8 +51,24 @@ export async function paquet(id: string): Promise<Paquet | null> {
 
   return {
     match,
-    players: effectif.rows.map((r) => r.doc),
+    players: effectif.rows.map((r) => reduit(r.doc)),
     teamNames: { A: nom(clubId), B: nom(opponentId) },
     rev,
   }
+}
+
+/**
+ * Ce que la page spectateur a le droit de savoir d'un joueur : son numéro et son
+ * nom, de quoi lire une feuille de match.
+ *
+ * Le lien de suivi est **public** — on l'envoie à des parents, on le projette dans
+ * la salle — et il transportait jusqu'ici la fiche entière : licence, date de
+ * naissance et taille comprises, pour des joueurs parfois mineurs. Rien à l'écran
+ * ne s'en servait ; c'était une fuite par recopie, pas par intention.
+ *
+ * La liste est **positive** : on énumère ce qui sort, et non ce qu'on retire. Un
+ * champ ajouté un jour à `Player` ne se retrouvera donc pas publié par défaut.
+ */
+function reduit(p: Record<string, unknown>) {
+  return { id: p.id, teamId: p.teamId, number: p.number, lastName: p.lastName, firstName: p.firstName }
 }

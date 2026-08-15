@@ -104,16 +104,25 @@ owns travels — teams, players, matches, call-ups, trainings, plays, entered re
 the coach's message — which is what lets a player read their call-up on their own phone
 instead of only on the coach's.
 
-Two rules follow, and they are the ones to keep in mind when changing this area. The
+Three rules follow, and they are the ones to keep in mind when changing this area. The
 server wins **without exception**, including when it holds nothing: turning sync on
-replaces a device's local data. And conflicts are settled by **when a change was made**,
-not when it arrived, so a queue unblocking two hours late cannot overwrite a newer edit.
+replaces a device's local data. Conflicts are settled by **when a change was made**, not
+when it arrived, so a queue unblocking two hours late cannot overwrite a newer edit. And
+**the match sheet is the exception to that arbitration**: it merges rather than
+overwrites, because the losing device is not wrong — it simply recorded other events,
+and dropping them would make baskets disappear.
 
-**Known gap, narrowed but not closed:** a failed push is still silent where it happens.
-Administration now reports whether the server accepts this device, which covers the
-common cause — a wrong or missing token — but a scorer mid-match sees nothing if
-delivery stops. Because remote following is an intended capability and not a bonus, that
-remaining silence is a defect.
+The shareable spectator link is public by design and carries only shirt numbers and
+names; licence numbers, birth dates and heights never leave the database.
+
+**Failures announce themselves.** When the queue cannot go out, every screen — including
+the scoring table, which lives outside the app shell and needed its own copy — shows how
+many changes are waiting and why. It is deliberately not an alert: nothing is lost when a
+push fails, the entries are in the local mirror and the queue resumes on its own, and
+telling a volunteer otherwise mid-match would be both alarming and untrue. It is
+deliberately not a toast either: a gym with no signal lasts two hours, so the indicator
+stays while the condition holds and disappears when the queue drains. The count is what
+distinguishes a hiccup from a breakdown.
 
 **Single-team by design.** An opponent never has a roster. Any feature that would
 require entering the other side's players contradicts the positioning above.

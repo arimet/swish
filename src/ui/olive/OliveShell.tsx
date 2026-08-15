@@ -8,6 +8,7 @@ import { C, bd, Ic, ICON } from './kit'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { LangSwitcher } from '../../i18n/LangSwitcher'
 import { useT } from '../../i18n'
+import { EtatSynchro } from '../components/EtatSynchro'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 
@@ -93,6 +94,10 @@ export function OliveShell() {
                 « Nouvelle rencontre » est parti au calendrier, où vivent les
                 choses datées. */}
             <div className="ml-auto flex items-center gap-2">
+              {/* Avant la langue et le thème : c'est le seul de ces trois éléments
+                  qui apparaisse pour dire quelque chose, et il ne doit pas déplacer
+                  les deux autres en apparaissant. */}
+              <EtatSynchro compact />
               <LangSwitcher />
               <ThemeSwitcher />
               <AccesMenu players={effectif} compact />

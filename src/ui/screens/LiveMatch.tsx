@@ -11,6 +11,7 @@ import { SubstitutionDialog } from '../components/SubstitutionDialog'
 import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
+import { EtatSynchro } from '../components/EtatSynchro'
 import { useAuth } from '../../app/auth'
 import { useMatch } from '../../app/useMatch'
 import { liveState } from '../../rules/ffbb'
@@ -174,6 +175,10 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
               place que celle des boutons n'a plus. Le match n'est pas terminé pour
               autant — on revient à sa fiche, et « Reprendre » ramène ici. */}
           <div className="flex items-center gap-2">
+            {/* La table de marque vit hors de la coquille : sans cette copie, le seul
+                écran où l'on saisit pendant deux heures serait le seul à ne rien dire
+                d'un partage interrompu. */}
+            <EtatSynchro compact />
             <Link to={`/match/${match.id}`} aria-label={trad('live.quitter')} title={trad('live.quitter')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><X className="h-5 w-5" strokeWidth={2.5} /></Link>
             <PeriodStrip current={ls.period} />

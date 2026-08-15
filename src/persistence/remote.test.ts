@@ -99,6 +99,49 @@ describe('hydrate — le serveur fait foi', () => {
   })
 })
 
+describe('la santé de la synchronisation', () => {
+  it('annonce le nombre d’actions en attente et l’état du dernier envoi', async () => {
+    // Le compte est la mesure honnête : « en attente » ne dit pas si ça avance,
+    // un nombre qui grossit, si.
+    const { enqueuePut, flushNow, surSante } = await moduleDistant()
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 401 })))
+    const vus: { etat: string; enAttente: number }[] = []
+    const stop = surSante((s) => vus.push(s))
+
+    await enqueuePut('team', 'ta', { id: 'ta' })
+    await enqueuePut('team', 'tb', { id: 'tb' })
+    await flushNow()
+    stop()
+
+    expect(vus.at(-1)).toEqual({ etat: 'jeton', enAttente: 2 })
+  })
+
+  it('retombe à zéro quand la file part', async () => {
+    // C'est ce qui fait disparaître la pastille toute seule : elle ne s'efface pas
+    // au bout d'un délai, elle s'efface quand la condition cesse d'être vraie.
+    const { enqueuePut, flushNow, surSante } = await moduleDistant()
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 204 })))
+    const vus: { etat: string; enAttente: number }[] = []
+    const stop = surSante((s) => vus.push(s))
+
+    await enqueuePut('team', 'ta', { id: 'ta' })
+    await flushNow()
+    stop()
+
+    expect(vus.at(-1)).toEqual({ etat: 'ok', enAttente: 0 })
+  })
+
+  it('cesse d’annoncer une fois désabonné', async () => {
+    const { enqueuePut, surSante } = await moduleDistant()
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 204 })))
+    let appels = 0
+    surSante(() => { appels++ })()
+
+    await enqueuePut('team', 'ta', { id: 'ta' })
+    expect(appels).toBe(0)
+  })
+})
+
 describe('la file d’attente', () => {
   it('date chaque opération au moment du geste, pas de l’envoi', async () => {
     // L'arbitrage des conflits repose entièrement là-dessus : une file bloquée

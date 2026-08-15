@@ -610,4 +610,10 @@ export const en: Record<string, string> = {
   'admin.jetonReseau': 'The server is not answering. Your changes wait in the queue.',
   'admin.jetonInconnu': 'Not checked on this device yet.',
   'admin.avertissementPartage': 'These deletions are final: there is no bin, and they go out to the shared database — what you erase here also disappears from the other devices.',
+  'sync.compte_un': '{count} change waiting to be sent',
+  'sync.compte_autre': '{count} changes waiting to be sent',
+  'sync.horsReseau': 'waiting',
+  'sync.horsReseauDetail': 'Sharing is paused. Your entries are saved on this device and will go out on their own when the network returns — nothing is lost.',
+  'sync.refuse': 'sharing refused',
+  'sync.refuseDetail': 'The server is refusing this device. Your entries are saved here and nothing is lost, but they no longer reach the other devices: check the token under Administration.',
 }

@@ -59,6 +59,22 @@ export interface Match {
   roster: string[]
   events: GameEvent[]
   status: 'setup' | 'live' | 'finished'
+  /**
+   * Les ratures : identifiants d'évènements retirés du journal.
+   *
+   * Une feuille de match se fusionne entre appareils par **union** des
+   * évènements, chacun portant un identifiant stable. Une union seule ne saurait
+   * pas distinguer « cet évènement n'est jamais arrivé chez l'autre » de « l'autre
+   * l'a annulé » : le panier annulé par le coach reviendrait dès que le marqueur,
+   * qui l'a encore, repousse sa copie.
+   *
+   * L'évènement sort donc du journal — les écrans et les statistiques ne changent
+   * pas d'un iota — mais son identifiant reste ici. Un journal note ses ratures.
+   *
+   * Optionnel, et pas seulement par prudence : Dexie range des objets entiers et
+   * n'indexe pas ce champ, donc aucune version de base locale à ajouter.
+   */
+  retires?: string[]
 }
 
 /**

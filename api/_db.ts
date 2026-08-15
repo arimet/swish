@@ -14,6 +14,21 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 const url = process.env.DATABASE_URL
 export const pool = url ? new Pool({ connectionString: url, max: 1 }) : null
 
+/**
+ * Sans cet écouteur, une base qui redémarre **fait tomber le processus**.
+ *
+ * `pg.Pool` émet `error` quand une connexion inactive se rompt — coupure réseau,
+ * redémarrage de la base, veille de Neon. En Node, un évènement `error` sans
+ * écouteur devient une exception non rattrapée, donc un arrêt. Ce n'est pas
+ * théorique : couper Postgres pendant une saisie a tué le serveur de
+ * développement d'un coup, et une fonction Vercel mourrait pareil.
+ *
+ * Il n'y a rien à faire de cette erreur : la connexion est déjà retirée du groupe,
+ * et la requête suivante en ouvrira une neuve. Ce qu'il faut, c'est qu'elle ne
+ * soit pas fatale.
+ */
+pool?.on('error', (e) => { console.error('[swish] connexion Postgres perdue :', e.message) })
+
 /** Le jeton d'écriture. **Pas** de préfixe `VITE_` : il ne doit jamais entrer
  *  dans le bundle, contrairement aux trois codes d'accès qui, eux, sont lisibles
  *  dans les outils du navigateur. C'est toute la différence entre une porte que
