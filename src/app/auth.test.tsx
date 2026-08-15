@@ -61,7 +61,7 @@ describe('an unknown code', () => {
     renderProbe()
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('n-importe-quoi')
-    // Le dialogue reste ouvert, avec un message nommant l'accès requis.
+    // The dialog stays open, with a message naming the access required.
     expect(await screen.findByText(/Code Administrateur requis/)).toBeInTheDocument()
     expect(screen.getByText('rôle : visitor')).toBeInTheDocument()
   })
@@ -72,7 +72,7 @@ describe('the player code', () => {
     renderProbe()
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('joueur')
-    // Le rôle reste visiteur : le code joueur n'accorde aucun droit d'écriture.
+    // The role stays visitor: the player code grants no write right.
     expect(await screen.findByText('rôle : visitor')).toBeInTheDocument()
     expect(screen.getByText('score : non')).toBeInTheDocument()
     expect(screen.getByText('manage : non')).toBeInTheDocument()
@@ -89,8 +89,8 @@ describe('player identity', () => {
     expect(await screen.findByText('joueur : p1')).toBeInTheDocument()
 
     unmount()
-    // Un nouvel onglet vide sessionStorage (le rôle expire avec lui) mais pas
-    // localStorage (l'identité de joueur reste posée sur l'appareil).
+    // A new tab empties sessionStorage (the role expires with it) but not localStorage
+    // (the player identity stays set on the device).
     sessionStorage.clear()
     renderProbe()
     expect(await screen.findByText('joueur : p1')).toBeInTheDocument()
@@ -108,7 +108,7 @@ describe('guard', () => {
     await saisirCode('admin')
     expect(onGuardedManage).toHaveBeenCalledTimes(1)
 
-    // Le droit est désormais acquis : un nouvel appel exécute directement.
+    // The right is now held: a further call runs straight away.
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     expect(onGuardedManage).toHaveBeenCalledTimes(2)
   })

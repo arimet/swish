@@ -68,12 +68,12 @@ describe("liveState", () => {
       { type: 'PERIOD_START' as const, period: 1 },
       { type: 'SUBSTITUTION' as const, team: 'A' as const, playerOutId: 'p2', playerInId: 'p9' },
     ]))
-    // p9 remplace p2 à l'index 1, les autres ne bougent pas.
+    // p9 replaces p2 at index 1, the others do not move.
     expect(s.onCourt.A).toEqual(['p1', 'p9', 'p3', 'p4', 'p5'])
   })
   it('the opposition has no roster: never fouled out, even at 5 fouls on a roster player', () => {
-    // 'p1' est dans le roster (côté A) : si fouledOutOf lisait match.roster des
-    // deux côtés sans garde, il apparaîtrait à tort dans fouledOut.B.
+    // 'p1' is on the roster (side A): if fouledOutOf read match.roster on both sides
+    // without a guard, they would wrongly appear in fouledOut.B.
     const events: Partial<GameEvent>[] = Array(5).fill(null).map(() => ({
       type: 'FOUL' as const, team: 'B' as const, target: { kind: 'player' as const, playerId: 'p1' }, foulType: 'personal' as const, period: 1,
     }))

@@ -30,7 +30,7 @@ describe('PrintableSummary', () => {
     render(<PrintableSummary match={soloMatch} players={{}} teamNames={{ A: 'VIGNOT', B: 'VERDUN' }} />)
     expect(screen.getByText(/Score saisi globalement/)).toBeInTheDocument()
     expect(screen.getByText(/VERDUN.*6 points/)).toBeInTheDocument()
-    // Une seule ligne « Total Équipe » (celle des locaux) : pas de tableau visiteurs à 0.
+    // A single "Total Équipe" row (the home side's): no visitors' table at 0.
     expect(screen.getAllByText('Total Équipe')).toHaveLength(1)
   })
 })

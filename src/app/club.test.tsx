@@ -36,7 +36,7 @@ describe('useClub', () => {
   it('forgets a club whose team no longer exists', async () => {
     localStorage.setItem('swish-club-id', 'supprimee')
     renderProbe()
-    // Sans ce garde, l'application resterait bloquée sur un tableau de bord vide.
+    // Without this guard, the application would stay stuck on an empty dashboard.
     expect(await screen.findByText(/club: aucun/)).toBeInTheDocument()
   })
 })

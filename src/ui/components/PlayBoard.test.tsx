@@ -8,9 +8,9 @@ const half = { id: 'x', ...newPlay('c1', 'half', true) }
 describe('PlayBoard', () => {
   it('renders the ten markers and the ball of the step asked for', () => {
     const { container } = render(<PlayBoard schema={half} stepIndex={0} />)
-    // Cinq attaquants, cinq défenseurs, mêmes chiffres de part et d'autre : c'est
-    // le marqueur de camp qui les sépare. Les deux ont un disque de même rayon —
-    // plein pour l'attaque, ouvert pour la défense —, ce qui les distingue aussi
+    // Five attackers, five defenders, the same digits on either side: it is the side
+    // marker that separates them. Both have a disc of the same radius — filled for the
+    // attack, open for the defence — which also tells them apart
     // en noir et blanc.
     const numeros = (camp: string) => [...container.querySelectorAll(`[data-marker="${camp}"] text`)].map((t) => t.textContent).sort()
     expect(numeros('offense')).toEqual(['1', '2', '3', '4', '5'])
@@ -18,7 +18,7 @@ describe('PlayBoard', () => {
     const disque = (camp: string) => [...container.querySelectorAll(`[data-marker="${camp}"] circle`)]
     expect(disque('defense')).toHaveLength(5)
     expect(disque('defense').every((c) => c.getAttribute('r') === disque('offense')[0].getAttribute('r'))).toBe(true)
-    // Ouvert contre plein : la défense a un contour, l'attaque n'en a pas.
+    // Open against filled: the defence has a stroke, the attack has none.
     expect(disque('defense').every((c) => !!c.getAttribute('stroke'))).toBe(true)
     expect(disque('offense').every((c) => !c.getAttribute('stroke'))).toBe(true)
     expect(screen.getByLabelText('ballon')).toBeInTheDocument()
@@ -45,10 +45,10 @@ describe('PlayBoard', () => {
 
 describe('courtWidth — the board\'s bound', () => {
   it('bounds by the width available first, in all four cases', () => {
-    // La faute mesurée : en édition, 52 % de 812 px de haut valent 422 px. Sans
-    // `100%`, un téléphone de 375 px se voyait imposer un terrain plus large que
-    // sa colonne, qui se faisait couper à droite. Une hauteur d'écran ne dit rien
-    // de la largeur disponible ; il faut les deux, et le plafond en pixels.
+    // The measured fault: in editing, 52% of 812 px of height is 422 px. Without
+    // `100%`, a 375 px phone was handed a court wider than its column, which got
+    // clipped on the right. A screen's height says nothing about the width available;
+    // both are needed, plus the pixel ceiling.
     for (const place of ['lecture', 'edition'] as const)
       for (const terrain of ['half', 'full'] as const)
         expect(courtWidth(terrain, place)).toMatch(/^min\(100%, /)

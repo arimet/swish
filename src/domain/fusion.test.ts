@@ -15,7 +15,7 @@ const journal = (m: Match) => m.events.map((e) => e.id)
 describe('mergeMatches', () => {
   it('loses no basket when two devices score at the same time', () => {
     // The founding property: the loser of the arbitration is not wrong, it recorded
-    // autre chose. L'écraser ferait disparaître des paniers.
+    // something else. Overwriting it would make baskets disappear.
     const scorer = match([basket('a', 10), basket('b', 20)])
     const coach = match([basket('a', 10), basket('c', 15)])
 

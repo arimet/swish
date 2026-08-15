@@ -3,14 +3,14 @@ import { describe, expect, it } from 'vitest'
 import { ScoreSide } from './Scoreboard'
 
 /**
- * Le seul mouvement authorial du produit : le score accuse réception du geste qui
- * l'a changé, et il dit *dans quel sens*.
+ * The product's only authored motion: the score acknowledges the gesture that changed
+ * it, and it says *in which direction*.
  *
- * Ce qui se teste ici n'est pas l'animation — un navigateur la joue, jsdom non —
- * mais la **décision** : quelle classe est posée, quand, et surtout quand elle ne
- * l'est pas. C'est ce dernier point qui compte le plus : l'écran de la table de
- * marque se rerend une fois par seconde à cause du chrono, et un mouvement qui se
- * redéclencherait au tic serait un clignotement permanent à côté du nombre que
+ * What is tested here is not the animation — a browser plays it, jsdom does not — but
+ * the **decision**: which class is applied, when, and above all when it is not. That
+ * last point matters most: the scorer's table re-renders once a second because of the
+ * clock, and a motion that re-triggered on the tick would be a permanent flicker next
+ * to the number that
  * cinq personnes regardent.
  */
 const mount = (score: number) =>
@@ -20,8 +20,8 @@ const nombre = (value: number) => screen.getByText(String(value))
 
 describe('ScoreSide — the score\'s acknowledgement', () => {
   it('does not move on the first render', () => {
-    // À l'ouverture, le score n'a pas changé : il était déjà là. Une chorégraphie
-    // de chargement n'a rien à faire sur un écran de saisie.
+    // At opening, the score has not changed: it was already there. A loading
+    // choreography has no business on a recording screen.
     mount(38)
     expect(nombre(38).className).not.toMatch(/score-(up|down)/)
   })
@@ -33,15 +33,15 @@ describe('ScoreSide — the score\'s acknowledgement', () => {
   })
 
   it('falls when someone undoes', () => {
-    // Une annulation qui se lirait comme un panier serait pire que pas de mouvement.
+    // An undo that read as a basket would be worse than no motion at all.
     const { rerender } = mount(40)
     rerender(<ScoreSide align="right" color="#fff" name="VIGNOT" score={38} lead />)
     expect(nombre(38)).toHaveClass('score-down')
   })
 
   it('does not re-trigger when the score does not change', () => {
-    // Le cas du tic de chrono : le parent rerend, le score est le même. Le nœud
-    // doit être le *même* nœud — sinon le navigateur rejouerait le keyframe.
+    // The clock-tick case: the parent re-renders, the score is the same. The node must
+    // be the *same* node — otherwise the browser would replay the keyframe.
     const { rerender } = mount(38)
     const avant = nombre(38)
     rerender(<ScoreSide align="right" color="#fff" name="VIGNOT" score={38} lead={false} />)
@@ -49,7 +49,7 @@ describe('ScoreSide — the score\'s acknowledgement', () => {
   })
 
   it('replays the motion on every basket, even of the same value', () => {
-    // Deux lancers francs de suite : le nœud doit être remplacé les deux fois,
+    // Two free throws in a row: the node must be replaced both times,
     // sinon le second panier passerait inaperçu.
     const { rerender } = mount(38)
     rerender(<ScoreSide align="right" color="#fff" name="VIGNOT" score={39} lead />)

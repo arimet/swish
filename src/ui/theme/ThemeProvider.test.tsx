@@ -12,18 +12,18 @@ beforeEach(() => {
 
 describe('ThemeProvider', () => {
   it('starts dark when nothing is saved', () => {
-    // Le sombre est l'identité du produit et non un mode d'économie : un premier
-    // lancement doit montrer le canevas encre et l'accent citron, qui est ce que le
-    // monde visuel est. La préférence système n'est délibérément pas consultée —
-    // voir `initialTheme`. Le clair existe et s'obtient d'un clic.
+    // Dark is the product's identity and not an economy mode: a first launch must show
+    // the ink canvas and the lemon accent, which is what the visual world is. The system
+    // preference is deliberately not consulted — see `initialTheme`. Light exists and is
+    // one click away.
     render(<ThemeProvider><div>x</div></ThemeProvider>)
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 
   it('a saved "light" choice is honoured, despite the dark default', () => {
-    // C'est ce qui rend acceptable d'ignorer la préférence système : le choix
-    // explicite, lui, ne se discute pas.
+    // This is what makes ignoring the system preference acceptable: an explicit choice,
+    // by contrast, is not up for debate.
     localStorage.setItem(THEME_KEY, 'light')
     render(<ThemeProvider><div>x</div></ThemeProvider>)
     expect(document.documentElement.getAttribute('data-theme')).toBe('light')
@@ -40,7 +40,7 @@ describe('ThemeProvider', () => {
   })
 
   it('switches to light mode through the switcher, and saves it', async () => {
-    // On part du sombre, donc la bascule offerte est « Jour ».
+    // We start from dark, so the toggle on offer is the light one.
     render(<ThemeProvider><ThemeSwitcher /></ThemeProvider>)
     await act(async () => {
       await userEvent.click(screen.getByRole('button', { name: /jour/i }))

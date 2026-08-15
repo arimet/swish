@@ -31,7 +31,7 @@ describe('refit', () => {
   })
 
   it('falls back to the straight line when the stroke is degenerate', () => {
-    // Extrémités confondues : aucune fitTo n’est définie.
+    // Coincident endpoints: no similarity is defined.
     const trace = [{ x: 0.3, y: 0.3 }, { x: 0.4, y: 0.5 }, { x: 0.3, y: 0.3 }]
     const r = recaler(trace, { x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 })
     expect(r).toEqual([{ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 }])

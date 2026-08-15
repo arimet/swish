@@ -23,7 +23,7 @@ beforeEach(async () => {
     events: [
       { id: 'e0', wallClock: 0, period: 1, gameClock: 600, type: 'STARTING_FIVE', team: 'A', playerIds: ['p1'] },
       { id: 'e1', wallClock: 1, period: 1, gameClock: 590, type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' },
-      // Panier adverse saisi globalement : pas de playerId, l'adversaire n'a pas d'effectif.
+      // An opposition basket entered as a total: no playerId, they have no roster.
       { id: 'e2', wallClock: 2, period: 1, gameClock: 580, type: 'SCORE', team: 'B', kind: '3' },
       { id: 'e3', wallClock: 3, period: 1, gameClock: 570, type: 'SCORE', team: 'B', kind: '3' },
     ],
@@ -39,12 +39,12 @@ describe('SpectatorMatch', () => {
       </MemoryRouter>,
     )
 
-    // Encart adverse : score réel (6 pts) et mention de la saisie globale.
+    // The opposition panel: the real score (6 pts) and the entered-as-a-total note.
     expect(await screen.findByText('Score saisi globalement')).toBeInTheDocument()
     const scoreEls = await screen.findAllByText('6')
     expect(scoreEls.length).toBeGreaterThan(0)
 
-    // Aucun bandeau fautes/TM pour le côté B (l'adversaire n'a rien de saisissable).
+    // No fouls/timeouts bar for side B (nothing about the opposition can be recorded).
     expect(screen.queryAllByText(/TM/)).toHaveLength(1)
   })
 })
@@ -99,7 +99,7 @@ describe('SpectatorMatch — per-player shot chart', () => {
     expect(await screen.findAllByLabelText('Carte des tirs')).toHaveLength(1)
 
     await userEvent.click(rowB)
-    // Une seule carte affichée à la fois, projection oblige : un état par ligne
+    // One chart shown at a time, as projection demands: per-row state
     // laisserait les deux ouvertes ici.
     expect(await screen.findAllByLabelText('Carte des tirs')).toHaveLength(1)
   })

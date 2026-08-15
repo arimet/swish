@@ -7,7 +7,7 @@ const ev = (e: Partial<GameEvent> & Pick<GameEvent, 'type'>): GameEvent =>
   ({ id: `e${seq++}`, wallClock: seq, period: 1, gameClock: 600, ...e } as GameEvent)
 
 // A finished game where our club (`clubId`) faces `opponentId`: `sa` is our
-// score, `sb` celui de l'adversaire (panier d'équipe, sans joueur identifié).
+// score, `sb` the opposition's (a team basket, with no player named).
 const finished = (id: string, clubId: string, opponentId: string, sa: number, sb: number, date: string): Match => ({
   id, meta: { championshipLabel: 'PRM', clubId, opponentId, date },
   roster: ['h1'],
