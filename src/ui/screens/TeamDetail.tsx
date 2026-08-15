@@ -14,8 +14,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
 const miniLabel: CSSProperties = { color: C.faint }
 
-// Une chaîne vide devient `undefined`, jamais une chaîne vide ni un `NaN` :
-// un joueur dont on ne connaît pas la taille n'a pas une taille nulle, il n'a pas de taille.
+// An empty string becomes `undefined`, never an empty string and never a `NaN`: a
+// player whose height is unknown does not have a height of zero, they have no height.
 const toUndef = (s: string) => s.trim() || undefined
 const toHeight = (s: string): number | undefined => {
   const n = Number(s)
@@ -27,25 +27,25 @@ export function TeamDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { can, guard } = useAuth()
-  // Tenir l'effectif relève du club : rien de ce qui l'écrit ne s'affiche à qui
-  // ne le gère pas. La fiche, elle, se lit entièrement.
-  const gere = can('manage')
+  // Keeping the roster belongs to the club: nothing that writes it shows to anyone
+  // who does not manage it. The record itself reads in full.
+  const manages = can('manage')
   const { clubId, clear } = useClub()
   const [askDelete, setAskDelete] = useState(false)
-  // Le joueur lui-même et non un booléen : le dialogue doit pouvoir le nommer, sinon
-  // « Retirer ce joueur ? » ne dit pas lequel dans une liste de onze.
+  // The player themselves and not a boolean: the dialog must be able to name them,
+  // otherwise "Remove this player?" does not say which one out of eleven.
   const [toRemove, setToRemove] = useState<Player | null>(null)
   const [team, setTeam] = useState<Team | null | undefined>(undefined)
   const [players, setPlayers] = useState<Player[]>([])
   const [matches, setMatches] = useState<Match[]>([])
   const [teamsById, setTeamsById] = useState<Record<string, Team>>({})
   const [coach, setCoach] = useState('')
-  // Un formulaire de saisie apparaît sur un clic, jamais d'emblée : l'effectif est
-  // ce qu'on vient lire, recruter est l'exception.
-  const [ajoutOuvert, setAjoutOuvert] = useState(false)
+  // An entry form appears on a click, never up front: the roster is what people come
+  // to read, recruiting is the exception.
+  const [addingPlayer, setAddingPlayer] = useState(false)
   const [num, setNum] = useState(''); const [ln, setLn] = useState(''); const [fn, setFn] = useState('')
   const [birth, setBirth] = useState(''); const [height, setHeight] = useState('')
-  // Un seul joueur dépliable à la fois : pas d'état par ligne à faire vivre.
+  // One player expandable at a time: no per-row state to keep alive.
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editBirth, setEditBirth] = useState(''); const [editHeight, setEditHeight] = useState('')
 
@@ -76,30 +76,30 @@ export function TeamDetail() {
     setNum(''); setLn(''); setFn(''); setBirth(''); setHeight(''); refresh()
   })
   /**
-   * Retirer un joueur passe par une confirmation, comme supprimer l'équipe juste
-   * au-dessus et comme supprimer une rencontre ou un schéma ailleurs.
+   * Removing a player goes through a confirmation, like deleting the team just above
+   * and like deleting a game or a play elsewhere.
    *
-   * Ça manquait, et c'était le seul défaut de cette revue qu'aucune mesure ne pouvait
-   * trouver : un clic unique, sur un bouton de vingt-quatre pixels collé à
-   * « modifier », supprimait le joueur sans rien demander. La conséquence annoncée est
-   * celle que fait réellement `deletePlayer` — il quitte l'effectif et les
-   * convocations, mais ses actions déjà saisies restent dans les rencontres jouées, où
-   * elles perdent son nom. C'est vérifié dans le dépôt, pas supposé.
+   * It was missing, and it was the one defect in that review no measurement could
+   * find: a single click, on a twenty-four-pixel button flush against "edit", deleted
+   * the player without asking anything. The consequence announced is the one
+   * `deletePlayer` actually produces — they leave the roster and the call-ups, but the
+   * actions already recorded stay in the games played, where they lose their name.
+   * That is checked in the repository, not assumed.
    */
   const removePlayer = () => { const p = toRemove; if (!p) return
     guard('manage', async () => { await deletePlayer(p.id); setToRemove(null); refresh() }) }
   const startEdit = (p: Player) => { setEditingId(p.id); setEditBirth(p.birthDate ?? ''); setEditHeight(p.height ? String(p.height) : '') }
-  // L'identifiant du joueur survit à la modification : c'est lui qui porte tout
-  // son historique de tirs et de statistiques, le recréer le lui ferait perdre.
+  // The player's id survives an edit: it is what carries their whole history of shots
+  // and statistics, and recreating them would lose it.
   const saveEdit = (p: Player) => guard('manage', async () => {
     await savePlayer({ ...p, birthDate: toUndef(editBirth), height: toHeight(editHeight) })
     setEditingId(null); refresh()
   })
   const removeTeam = async () => {
     await deleteTeam(id)
-    // Le club suivi disparaît avec sa propre équipe : sans ce `clear()`, le
-    // tableau de bord resterait épinglé sur un club fantôme (ClubProvider ne
-    // revalide sa liste qu'à un changement de club, pas à une suppression brute).
+    // The followed club goes with its own team: without this `clear()`, the dashboard
+    // would stay pinned to a ghost club (ClubProvider only revalidates its list on a
+    // club change, not on a raw deletion).
     if (id === clubId) clear()
     navigate('/teams')
   }
@@ -118,12 +118,13 @@ export function TeamDetail() {
         <TeamBadge id={id} name={team.name} size="h-12 w-12 text-base" />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{team.name}</h1>
-          <p className="text-sm" style={{ color: C.muted }}>{translate('commun.joueur', { count: players.length })}{team.coach ? ` · Coach ${team.coach}` : ''}</p>
+          <p className="text-sm" style={{ color: C.muted }}>{translate('commun.joueur', { count: players.length })}{team.coach ? ` · ${translate('equipe.coachSuffixe', { name: team.coach })}` : ''}</p>
         </div>
-        {/* Comme sur le résumé et la fiche de rencontre : le droit est vérifié à l'ouverture
-            du dialogue, pas redérivé ensuite. Assumé — se verrouiller entre l'ouverture et la
-            confirmation n'arrive qu'en rendant l'appareil en pleine action. */}
-        {gere && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}>{translate('commun.supprimer')}</button>}
+        {/* As on the summary and the game record: the right is checked when the dialog
+            opens, not re-derived afterwards. Accepted — locking yourself out between
+            the opening and the confirmation only happens by handing the device over
+            mid-action. */}
+        {manages && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}>{translate('commun.supprimer')}</button>}
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
         title={translate('equipe.supprimerTitre')} message={translate('equipe.supprimerTexte', { name: team.name })} confirmLabel={translate('commun.supprimer')} danger />
@@ -132,12 +133,12 @@ export function TeamDetail() {
         message={translate('equipe.retirerTexte')}
         confirmLabel={translate('commun.retirer')} danger />
 
-      {/* Les chiffres de saison ne s'affichent qu'à partir d'une rencontre jouée. Sinon
-          c'était quatre tuiles à « 0 » et « — », et deux panneaux annonçant l'absence
-          de match et de marqueur : six blocs pour dire six fois que la saison n'a pas
-          commencé — sur l'écran même où le bénévole vient de saisir son effectif, donc
-          le premier qu'il voit après avoir fondé son club. Ce qui reste, l'effectif,
-          est justement ce qu'il vient d'accomplir. */}
+      {/* The season's figures only appear from one game played onwards. Otherwise it
+          was four tiles reading "0" and "—", and two panels announcing the absence of
+          games and of scorers: six blocks to say six times that the season has not
+          started — on the very screen where the volunteer has just entered their
+          roster, hence the first they see after founding their club. What is left, the
+          roster, is precisely what they have just accomplished. */}
       {rec.played > 0 && <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label={translate('equipe.rencontres')} value={String(rec.played)} hint={upcoming.length ? translate('equipe.aVenir', { n: upcoming.length }) : translate('equipe.jouees')} />
         <StatCard label={translate('bord.bilan')} value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? translate('equipe.pourcentVictoires', { n: Math.round((rec.wins / rec.played) * 100) }) : '—'} accent={rec.wins >= rec.losses ? C.green : C.accent} />
@@ -153,7 +154,7 @@ export function TeamDetail() {
             ) : (
               <ul className="space-y-1.5">
                 {lines.slice(0, 8).map((l) => {
-                  const opp = teamsById[l.opponentId]?.name ?? 'Adversaire'
+                  const opp = teamsById[l.opponentId]?.name ?? translate('match.adversaire')
                   const f = fmtDate(l.match.meta.date)
                   const to = l.match.status === 'finished' ? `/match/${l.match.id}/summary` : l.match.status === 'live' ? `/match/${l.match.id}/live` : `/match/${l.match.id}`
                   return (
@@ -178,11 +179,11 @@ export function TeamDetail() {
               <Empty>{translate('bord.pasDePoints')}</Empty>
             ) : (
               <ul className="space-y-1.5">
-                {/* Chaque ligne mène à la fiche du joueur, comme au tableau de bord :
-                    c'est le même classement, et il n'y a pas de raison qu'il soit
-                    cliquable là et inerte ici. On y arrivait pourtant par l'effectif
-                    juste au-dessus, ce qui obligeait à retrouver dans une liste de onze
-                    le nom qu'on avait sous le doigt. */}
+                {/* Every row leads to the player's record, as on the dashboard: it is
+                    the same ranking, and there is no reason for it to be clickable there
+                    and inert here. People got there through the roster just above, which
+                    forced them to find in a list of eleven the name they had under their
+                    finger. */}
                 {scorers.map(([pid, pts], i) => {
                   const p = playerById[pid]
                   return (
@@ -194,7 +195,7 @@ export function TeamDetail() {
                       >
                         <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.accent : C.faint }}>{i + 1}</span>
                         <NumBadge n={p?.number ?? '?'} />
-                        <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : 'Joueur'}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : translate('commun.joueurMot')}</span>
                         <span className="text-sm font-black tabular-nums" style={{ color: C.text }}>{pts} <span className="text-[12px] font-semibold" style={{ color: C.muted }}>pts</span></span>
                       </Link>
                     </li>
@@ -207,9 +208,9 @@ export function TeamDetail() {
 
         <div className="space-y-6">
           <Panel title={translate('equipe.effectif')}>
-            {/* Le champ de l'entraîneur écrit : sans le droit il ne s'affiche pas.
-                Le nom reste lisible en tête de fiche, à côté du nombre de joueurs. */}
-            {gere && (
+            {/* The coach field writes: without the right it does not show. The name
+                stays readable at the top of the record, next to the player count. */}
+            {manages && (
               <>
                 <label htmlFor="coach" className="mb-1.5 block text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('equipe.entraineur')}</label>
                 <input id="coach" value={coach} onChange={(e) => setCoach(e.target.value)} onBlur={saveCoach} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
@@ -222,30 +223,30 @@ export function TeamDetail() {
                   <div className="flex items-center gap-3">
                     <Link to={`/players/${p.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                       <NumBadge n={p.number} />
-                      {/* Nom et prénom coupés d'un seul tenant, pas chacun de son côté :
-                          deux troncatures indépendantes rognaient le nom de famille
-                          alors que le prénom, seul à devoir céder, gardait sa place. */}
+                      {/* Surname and first name clipped as one, not each on its own: two
+                          independent truncations shaved the surname while the first name,
+                          the only one that should give way, kept its room. */}
                       <span className="min-w-0 flex-1 truncate">
                         <span className="font-semibold">{p.lastName}</span> <span style={{ color: C.muted }}>{p.firstName}</span>
                       </span>
                     </Link>
-                    {/* Modifier et retirer écrivent : la ligne se réduit au joueur et à
-                        son lien de fiche pour qui ne gère pas l'effectif.
-                        Le nom du joueur reste dans le nom accessible du bouton — sans lui,
-                        dix boutons « modifier » identiques dans la même liste — mais il
-                        sort du libellé visible, qui chevauchait le nom sur un téléphone. */}
-                    {gere && (
+                    {/* Edit and remove write: the row comes down to the player and their
+                        record link for anyone who does not manage the roster.
+                        The player's name stays in the button's accessible name — without
+                        it, ten identical "edit" buttons in the same list — but it leaves
+                        the visible label, which overlapped the name on a phone. */}
+                    {manages && (
                       <>
                         <button aria-label={translate(editingId === p.id ? 'equipe.fermerJoueur' : 'equipe.modifierJoueur', { name: p.lastName })}
                           onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold" style={{ color: C.muted }}>
                           {translate(editingId === p.id ? 'commun.fermer' : 'commun.modifier')}
                         </button>
-                        {/* Le retrait reste hors de la zone dépliée : c'est une action destructrice,
-                            elle ne doit pas se retrouver mêlée aux champs d'édition.
-                            Il portait l'accent — la couleur de la marque — à côté d'un « modifier »
-                            gris, et faisait vingt-quatre pixels de haut. Une destruction ne se
-                            signale pas avec la couleur des boutons ordinaires, et ne se vise pas au
-                            minimum tolérable. */}
+                        {/* Removal stays outside the expanded area: it is a destructive
+                            action, it must not end up mixed in with the edit fields.
+                            It carried the accent — the brand's colour — next to a grey
+                            "edit", and stood twenty-four pixels tall. A destruction is not
+                            signalled with the colour of ordinary buttons, and is not aimed
+                            at with the barely tolerable minimum. */}
                         <button onClick={() => setToRemove(p)} aria-label={translate('equipe.retirerJoueur', { name: `${p.lastName} ${p.firstName}` })}
                           className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold transition hover:bg-[var(--c-danger-bg)]" style={{ color: C.danger }}>{translate('equipe.retirer')}</button>
                       </>
@@ -266,20 +267,20 @@ export function TeamDetail() {
                   )}
                 </li>
               ))}
-              {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>{gere ? translate('equipe.aucunJoueurAjoutez') : translate('equipe.aucunJoueurEffectif')}</li>}
+              {players.length === 0 && <li className="text-sm" style={{ color: C.muted }}>{manages ? translate('equipe.aucunJoueurAjoutez') : translate('equipe.aucunJoueurEffectif')}</li>}
             </ul>
-            {/* Recruter est administratif : le bouton ne s'affiche pas sans le
-                droit. Ouvrir le formulaire est déjà une écriture, la garde reste
-                donc ici et pas seulement à l'enregistrement. */}
-            {!gere ? null : !ajoutOuvert ? (
-              <button onClick={() => guard('manage', () => setAjoutOuvert(true))} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+            {/* Recruiting is administrative: the button does not show without the
+                right. Opening the form is already a write, so the guard stays here and
+                not only at save time. */}
+            {!manages ? null : !addingPlayer ? (
+              <button onClick={() => guard('manage', () => setAddingPlayer(true))} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
                 {translate('equipe.ajouterJoueur')}
               </button>
             ) : (
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('equipe.nouveauJoueur')}</p>
-                <button onClick={() => setAjoutOuvert(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
+                <button onClick={() => setAddingPlayer(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
               </div>
               <div className="grid grid-cols-[56px_1fr] gap-2">
                 <input placeholder={translate('equipe.numero')} value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center' }} />

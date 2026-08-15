@@ -14,31 +14,32 @@ import { X } from 'lucide-react'
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
 /**
- * Une équipe d'un résultat saisi : écusson, nom, score à droite.
+ * One team of an entered result: crest, name, score on the right.
  *
- * Le score est un champ pour qui corrige, un nombre pour les autres, et il occupe
- * la même largeur dans les deux cas — sinon la colonne des scores danserait selon
- * le rôle de qui regarde. Le gagnant est en encre pleine, le perdant en gris :
- * c'est ce que la carte de match du kit fait déjà, et ça se lit sans compter.
+ * The score is a field for whoever corrects, a number for everyone else, and it takes
+ * the same width in both cases — otherwise the score column would dance according to
+ * the role of whoever is looking. The winner is in full ink, the loser in grey: that
+ * is what the kit's game card already does, and it reads without counting.
  */
-function LigneEquipe({ id, name, score, gagne, champId, modifiable, onScore }: {
-  id: string; name: string; score: number; gagne: boolean
-  champId: string; modifiable: boolean; onScore: (n: number) => void
+function TeamRow({ id, name, score, won, fieldId, editable, onScore }: {
+  id: string; name: string; score: number; won: boolean
+  fieldId: string; editable: boolean; onScore: (n: number) => void
 }) {
+  const translate = useT()
   return (
     <div className="flex items-center gap-2">
       <TeamBadge id={id} name={name} size="h-6 w-6 text-[12px]" />
-      <span className="min-w-0 flex-1 truncate text-sm" style={{ color: gagne ? C.text : C.muted, fontWeight: gagne ? 800 : 600 }}>{name}</span>
-      {modifiable ? (
+      <span className="min-w-0 flex-1 truncate text-sm" style={{ color: won ? C.text : C.muted, fontWeight: won ? 800 : 600 }}>{name}</span>
+      {editable ? (
         <>
-          <label htmlFor={champId} className="sr-only">Score {name}</label>
+          <label htmlFor={fieldId} className="sr-only">{translate('champ.scoreDe', { name })}</label>
           <input
-            id={champId} type="number" min={0} defaultValue={score}
+            id={fieldId} type="number" min={0} defaultValue={score}
             style={{ ...field, width: 64, height: 34 }} className="nums shrink-0 text-center text-sm"
             onBlur={(e) => {
-              // Un champ vidé n'est pas une saisie de 0 : c'est le premier geste de qui
-              // corrige une faute de frappe. `Number('')` vaut 0, pas NaN — sans ce garde
-              // explicite, un clic ailleurs enregistrerait 0 en silence.
+              // A cleared field is not an entry of 0: it is the first gesture of someone
+              // correcting a typo. `Number('')` is 0, not NaN — without this explicit
+              // guard, a click elsewhere would silently record 0.
               if (e.target.value === '') { e.target.value = String(score); return }
               const n = Number(e.target.value)
               if (!Number.isNaN(n) && n >= 0 && n !== score) onScore(n)
@@ -47,7 +48,7 @@ function LigneEquipe({ id, name, score, gagne, champId, modifiable, onScore }: {
         </>
       ) : (
         <span className="nums w-16 shrink-0 text-right text-sm font-black tabular-nums"
-          style={{ color: gagne ? C.text : C.muted }}>{score}</span>
+          style={{ color: won ? C.text : C.muted }}>{score}</span>
       )}
     </div>
   )
@@ -57,29 +58,28 @@ export function Championnat() {
   const translate = useT()
   const { clubId, teams } = useClub()
   const { can, guard } = useAuth()
-  /* `null` tant que la lecture n'a pas répondu, et non `[]`.
+  /* `null` until the read has answered, and not `[]`.
    *
-   * Avec un tableau vide comme valeur initiale, l'écran ne distingue pas « je n'ai
-   * pas encore lu » de « il n'y a rien » : il affichait donc « Aucun classement à
-   * afficher » pendant une image avant de le remplacer par la table. Quinze
-   * millisecondes sur cette machine — mais cette durée est celle de la lecture
-   * IndexedDB, donc elle suit la lenteur de l'appareil, et le téléphone d'un club
-   * n'est pas une machine de développement.
+   * With an empty array as the initial value the screen cannot tell "I have not read
+   * yet" from "there is nothing": it therefore showed "No standings to display" for a
+   * frame before replacing it with the table. Fifteen milliseconds on this machine —
+   * but that duration is the IndexedDB read, so it follows how slow the device is, and
+   * a club's phone is not a development machine.
    *
-   * La convention existait déjà dans le dépôt (`MatchSetup`, `TeamsList`,
-   * `SchemaList`, `Calendrier`, et `Dashboard` pour ses rencontres) ; elle manquait
-   * ici. */
+   * The convention already existed in the repo (`MatchSetup`, `TeamsList`,
+   * `SchemaList`, `Calendrier`, and `Dashboard` for its games); it was missing
+   * here. */
   const [matches, setMatches] = useState<Match[] | null>(null)
   const [results, setResults] = useState<ReportedResult[] | null>(null)
   const [error, setError] = useState('')
 
   const teamsById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams])
 
-  /** Les résultats saisis, groupés par championnat et triés comme le classement
-   *  l'est — à la française, pour qu'« Écran » précède « Remise ». Le nom du
-   *  championnat n'apparaît alors qu'une fois par groupe au lieu d'une fois par
-   *  ligne, où il était constant dans le cas courant : une seule poule. */
-  const resultatsParChampionnat = useMemo(() => {
+  /** The entered results, grouped by league and sorted the way the standings are —
+   *  the French way, so that "Écran" precedes "Remise". The league's name then appears
+   *  once per group instead of once per row, where it was constant in the common case:
+   *  a single pool. */
+  const resultsByLeague = useMemo(() => {
     const map = new Map<string, ReportedResult[]>()
     for (const r of results ?? []) {
       const key = r.championshipLabel || ''
@@ -88,12 +88,12 @@ export function Championnat() {
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b, 'fr'))
   }, [results])
-  // Le championnat de nos rencontres sert de valeur par défaut au formulaire : la
-  // plupart des résultats saisis à la main concernent la même poule que la nôtre.
-  // Sans rencontre enregistrée, on se replie sur le championnat du premier résultat
-  // déjà saisi plutôt que de partir vide — sinon la saisie ouvrirait sous « Match
-  // amical » une seconde table de classement à côté de celle déjà là.
-  const notreChamp = useMemo(() => {
+  // The league of our games is the form's default: most hand-entered results concern
+  // the same pool as ours. With no game recorded, we fall back to the league of the
+  // first result already entered rather than starting empty — otherwise entry would
+  // open a second standings table under "Match amical" next to the one already
+  // there.
+  const ourLeague = useMemo(() => {
     const m = (matches ?? []).find((mm) => mm.meta.clubId === clubId)
     if (m) return leagueLabel(m.meta)
     return (results ?? [])[0]?.championshipLabel ?? ''
@@ -104,70 +104,71 @@ export function Championnat() {
 
   const groups = useMemo(() => standings(matches ?? [], results ?? [], teamsById), [matches, results, teamsById])
 
-  // Un formulaire de saisie apparaît sur un clic, jamais d'emblée : le classement
-  // est ce qu'on vient lire, la saisie d'un résultat extérieur est l'exception.
-  const [saisieOuverte, setSaisieOuverte] = useState(false)
-  const [champ, setChamp] = useState('')
+  // An entry form appears on a click, never up front: the standings are what people
+  // come to read, entering an outside result is the exception.
+  const [formOpen, setFormOpen] = useState(false)
+  const [league, setLeague] = useState('')
   const [fieldTouched, setFieldTouched] = useState(false)
   const [homeId, setHomeId] = useState('')
   const [awayId, setAwayId] = useState('')
   const [homeScore, setHomeScore] = useState('')
   const [awayScore, setAwayScore] = useState('')
   const [date, setDate] = useState('')
-  // Le formulaire suit le championnat de nos rencontres tant que l'utilisateur ne l'a
-  // pas modifié à la main — un `useState` figé au montage manquerait les matchs chargés
-  // après le premier rendu (ils arrivent de façon asynchrone). Un drapeau explicite est
-  // nécessaire ici : depuis que la valeur par défaut peut elle-même être non vide (repli
-  // sur le championnat du premier résultat saisi), se fier au champ vide comme indice
-  // « pas encore touché » réinstallerait le défaut au milieu d'un effacement volontaire.
-  useEffect(() => { if (!fieldTouched) setChamp(notreChamp) }, [notreChamp, fieldTouched])
+  // The form follows the league of our games as long as the user has not changed it by
+  // hand — a `useState` frozen at mount would miss the games loaded after the first
+  // render (they arrive asynchronously). An explicit flag is needed here: now that the
+  // default can itself be non-empty (falling back to the league of the first result
+  // entered), trusting an empty field as a "not yet touched" signal would reinstate the
+  // default in the middle of a deliberate clearing.
+  useEffect(() => { if (!fieldTouched) setLeague(ourLeague) }, [ourLeague, fieldTouched])
   useEffect(() => {
     if (!homeId && teams[0]) setHomeId(teams[0].id)
     if (!awayId && teams[1]) setAwayId(teams[1].id)
   }, [teams, homeId, awayId])
 
-  // Un message d'erreur qui survit à la correction du formulaire accuserait à tort une
-  // saisie qui ne pose plus problème : il s'efface dès que l'un des champs change.
-  const changeChamp = (v: string) => { setError(''); setChamp(v); setFieldTouched(true) }
+  // An error message that outlives the correction of the form would wrongly accuse an
+  // entry that no longer poses a problem: it clears as soon as any field changes.
+  const changeLeague = (v: string) => { setError(''); setLeague(v); setFieldTouched(true) }
   const changeHomeId = (v: string) => { setError(''); setHomeId(v) }
   const changeAwayId = (v: string) => { setError(''); setAwayId(v) }
   const changeHomeScore = (v: string) => { setError(''); setHomeScore(v) }
   const changeAwayScore = (v: string) => { setError(''); setAwayScore(v) }
   const changeDate = (v: string) => { setError(''); setDate(v) }
 
-  // Signal informatif, calculé en direct pendant la saisie : la confrontation en cours
-  // de saisie correspond déjà à une de nos rencontres terminées, le classement l'ignorera.
-  const dejaNotreRencontre = useMemo(() => {
+  // An informational signal, computed live during entry: the fixture being typed
+  // already matches one of our finished games, and the standings will ignore it.
+  const alreadyOurGame = useMemo(() => {
     if (!homeId || !awayId || homeId === awayId) return false
-    const clé = fixtureKey(champ.trim() || FRIENDLY, homeId, awayId, date || undefined)
-    return (matches ?? []).some((m) => m.status === 'finished' && fixtureKey(leagueLabel(m.meta), m.meta.clubId, m.meta.opponentId, m.meta.date) === clé)
-  }, [matches, champ, homeId, awayId, date])
+    const key = fixtureKey(league.trim() || FRIENDLY, homeId, awayId, date || undefined)
+    return (matches ?? []).some((m) => m.status === 'finished' && fixtureKey(leagueLabel(m.meta), m.meta.clubId, m.meta.opponentId, m.meta.date) === key)
+  }, [matches, league, homeId, awayId, date])
 
-  const scoresValides = homeScore !== '' && awayScore !== '' && Number(homeScore) >= 0 && Number(awayScore) >= 0
-  // La date entre dans la clé de confrontation (aller/retour) : sans elle, une même
-  // rencontre saisie deux fois — une fois datée, une fois vide — produirait deux clés
-  // distinctes et compterait double au classement. On l'exige donc dès la saisie.
-  const canAdd = !!homeId && !!awayId && homeId !== awayId && scoresValides && !!date
+  const scoresValid = homeScore !== '' && awayScore !== '' && Number(homeScore) >= 0 && Number(awayScore) >= 0
+  // The date is part of the fixture key (home/away): without it, the same game entered
+  // twice — once dated, once blank — would produce two distinct keys and count twice in
+  // the standings. So it is required from entry onwards.
+  const canAdd = !!homeId && !!awayId && homeId !== awayId && scoresValid && !!date
 
-  const ajouter = () => {
+  const add = () => {
     if (!canAdd) return
-    // Au basket, il y a prolongation : un match nul n'existe pas.
+    // In basketball there is overtime: a draw does not exist.
     if (Number(homeScore) === Number(awayScore)) {
       setError(translate('champ.nulImpossible'))
       return
     }
-    const champLbl = champ.trim() || FRIENDLY
-    const clé = fixtureKey(champLbl, homeId, awayId, date)
-    // Deux saisies de la même confrontation — même dans l'ordre inverse — compteraient
-    // deux fois au classement : rien côté domaine ne s'en protège, c'est ici qu'il faut l'empêcher.
-    if ((results ?? []).some((r) => fixtureKey(r.championshipLabel, r.homeId, r.awayId, r.date) === clé)) {
+    const leagueLabelValue = league.trim() || FRIENDLY
+    const key = fixtureKey(leagueLabelValue, homeId, awayId, date)
+    // Two entries of the same fixture — even in reverse order — would count twice in
+    // the standings: nothing in the domain guards against it, so it must be prevented
+    // here.
+    if ((results ?? []).some((r) => fixtureKey(r.championshipLabel, r.homeId, r.awayId, r.date) === key)) {
       setError(translate('champ.dejaSaisi'))
       return
     }
     setError('')
     guard('manage', async () => {
       await saveResult({
-        id: newId(), championshipLabel: champLbl, date,
+        id: newId(), championshipLabel: leagueLabelValue, date,
         homeId, awayId, homeScore: Number(homeScore), awayScore: Number(awayScore),
       })
       setHomeScore(''); setAwayScore('')
@@ -179,17 +180,17 @@ export function Championnat() {
     await saveResult({ ...r, ...patch })
     refresh()
   })
-  // Corriger un score est administratif : sans le droit, le résultat s'affiche en
-  // toutes lettres plutôt que dans un champ. Un champ ouvert à la frappe puis
-  // refusé à l'envoi laisserait à l'écran une valeur que la base n'a pas (les
-  // champs ne sont pas contrôlés, React ne réinitialise pas un `defaultValue`),
-  // sous un classement qui continue de compter l'ancienne.
+  // Correcting a score is administrative: without the right, the result shows as plain
+  // text rather than in a field. A field open to typing and then refused on submit
+  // would leave on screen a value the database does not have (the fields are
+  // uncontrolled, React does not reset a `defaultValue`), under standings that keep
+  // counting the old one.
   const canCorrect = can('manage')
-  const supprimer = (id: string) => guard('manage', async () => { await deleteResult(id); refresh() })
+  const remove = (id: string) => guard('manage', async () => { await deleteResult(id); refresh() })
 
   return (
     <div className="p-6">
-      {/* 1. Le classement d'abord : c'est ce qu'on ouvre l'écran pour voir. */}
+      {/* 1. The standings first: that is what the screen is opened to see. */}
       <div className="space-y-6">
         {results?.length === 0 && (
           <p className="max-w-[75ch] rounded-2xl border border-dashed px-4 py-3 text-sm" style={{ borderColor: C.border, color: C.muted }}>
@@ -200,7 +201,7 @@ export function Championnat() {
           <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
         ) : groups.length === 0 ? (
           <p className="rounded-2xl border border-dashed py-10 text-center text-sm" style={{ borderColor: C.border, color: C.muted }}>{translate('champ.aucunClassement')}</p>
-        ) : groups.map(({ champ: c, lines }) => (
+        ) : groups.map(({ league: c, lines }) => (
           <section key={c} className="overflow-x-auto rounded-2xl p-4" style={{ background: C.card, border: bd }}>
             <SectionTitle className="mb-3">{c}</SectionTitle>
             <table className="w-full text-sm sm:min-w-[520px]">
@@ -226,10 +227,10 @@ export function Championnat() {
                     <td className="px-2 text-center tabular-nums">{l.d}</td>
                     <td className="hidden px-2 text-center tabular-nums sm:table-cell">{l.pf}</td>
                     <td className="hidden px-2 text-center tabular-nums sm:table-cell">{l.pa}</td>
-                    {/* La seule colonne teintée du tableau, en plus des points :
-                        le signe du différentiel est ce qu'on cherche en balayant
-                        la grille, et une colonne colorée sur neuf se repère —
-                        neuf colonnes colorées ne se repèrent plus. */}
+                    {/* The table's only tinted column, besides the points: the sign of
+                        the differential is what the eye hunts for when scanning the
+                        grid, and one coloured column out of nine stands out — nine
+                        coloured columns stand out no longer. */}
                     <td className="px-2 text-center font-semibold tabular-nums"
                       style={{ color: l.pf - l.pa > 0 ? C.green : l.pf - l.pa < 0 ? C.danger : C.faint }}>
                       {l.pf - l.pa > 0 ? `+${l.pf - l.pa}` : l.pf - l.pa}
@@ -243,25 +244,25 @@ export function Championnat() {
         ))}
       </div>
 
-      {/* 2. La saisie, réservée à l'admin, repliée derrière son bouton — et le
-          bloc entier disparaît pour qui n'a pas le droit d'écrire : une carte
-          vide, sans bouton, ne dirait rien. La garde reste à l'ouverture du
-          formulaire comme à l'enregistrement. */}
-      {/* Replié, le bouton se pose à nu : une carte pleine largeur avec cinq
-          rems de marge autour d'un seul bouton n'élevait rien, elle occupait
-          juste le tiers de l'écran resté libre sous le classement. Elle
-          réapparaît dès que le formulaire s'ouvre, où elle groupe six champs. */}
+      {/* 2. Entry, admin only, folded away behind its button — and the whole block
+          disappears for anyone without the write right: an empty card with no button
+          would say nothing. The guard stays both at the opening of the form and at
+          save time.
+          Folded, the button sits bare: a full-width card with five rems of padding
+          around a single button elevated nothing, it just took the third of the screen
+          left free under the standings. It comes back as soon as the form opens, where
+          it groups six fields. */}
       {canCorrect && (
-      <section className={saisieOuverte ? 'mt-8 rounded-2xl p-5' : 'mt-6'} style={saisieOuverte ? { background: C.card, border: bd } : undefined}>
-        {!saisieOuverte ? (
-          <button onClick={() => guard('manage', () => setSaisieOuverte(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+      <section className={formOpen ? 'mt-8 rounded-2xl p-5' : 'mt-6'} style={formOpen ? { background: C.card, border: bd } : undefined}>
+        {!formOpen ? (
+          <button onClick={() => guard('manage', () => setFormOpen(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
             {translate('champ.saisirResultat')}
           </button>
         ) : (
         <>
         <div className="mb-4 flex items-center gap-3">
           <SectionTitle>{translate('champ.saisirTitre')}</SectionTitle>
-          <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
+          <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Picker id="champ-home" label={translate('champ.equipeRecue')} value={homeId} onChange={changeHomeId} teams={teams} />
@@ -269,21 +270,21 @@ export function Championnat() {
           <Field id="champ-home-score" label={translate('champ.scoreRecue')} type="number" min={0} value={homeScore} onChange={changeHomeScore} />
           <Field id="champ-away-score" label={translate('champ.scoreVisiteuse')} type="number" min={0} value={awayScore} onChange={changeAwayScore} />
           <Field id="champ-date" label={translate('champ.dateRencontre')} type="date" value={date} onChange={changeDate} />
-          <Field id="champ-label" label={translate('champ.championnat')} value={champ} onChange={changeChamp} />
+          <Field id="champ-label" label={translate('champ.championnat')} value={league} onChange={changeLeague} />
         </div>
 
-        {dejaNotreRencontre && (
+        {alreadyOurGame && (
           <p className="mt-3 rounded-xl px-3 py-2 text-sm" style={{ background: C.amberBg, color: C.amber }}>
             {translate('champ.dejaConnue')}
           </p>
         )}
-        {/* Un refus se dit en danger, pas en couleur de marque : sur un fond
-            d'accent, le message ressemblait à une mise en avant. */}
+        {/* A refusal speaks in danger, not in the brand's colour: on an accent
+            background the message looked like a highlight. */}
         {error && (
           <p className="mt-3 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: C.dangerBg, color: C.danger }}>{error}</p>
         )}
 
-        <button onClick={ajouter} disabled={!canAdd} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
+        <button onClick={add} disabled={!canAdd} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
           {translate('champ.ajouterResultat')}
         </button>
         </>
@@ -291,8 +292,8 @@ export function Championnat() {
       </section>
       )}
 
-      {/* 3. La liste des résultats saisis. Elle se lit par tout le monde ; la
-          correction et la suppression restent à l'administration. */}
+      {/* 3. The list of entered results. Everyone reads it; correcting and deleting
+          stay with administration. */}
       <section className="mt-6 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <SectionTitle className="mb-3">{translate('champ.resultatsSaisis')}</SectionTitle>
         {results === null ? (
@@ -300,51 +301,49 @@ export function Championnat() {
         ) : results.length === 0 ? (
           <p className="py-4 text-center text-sm" style={{ color: C.muted }}>{translate('champ.rienAAfficher')}</p>
         ) : (
-          /* Les résultats groupés par championnat, et le nom du championnat écrit
-             une fois par groupe — pas une fois par ligne.
-             Il l'était : six lignes portaient six fois « Pré régionale masculine ·
-             Poule A », le cas courant étant qu'un club saisit les résultats de sa
-             seule poule. C'était le plus gros bloc de texte de chaque ligne, pour
-             une information constante, et il occupait une seconde rangée qui
-             emportait la suppression avec elle — d'où un ✕ flottant sous la
-             rencontre qu'il efface. Le groupe absorbe les deux problèmes : le nom
-             remonte en tête, la ligne redevient une ligne.
-             Un seul groupe ne mérite pas d'en-tête : le titre de la section le dit
-             déjà, et le classement juste au-dessus le répète. */
+          /* The results grouped by league, and the league's name written once per
+             group — not once per row.
+             It used to be: six rows carried "Pré régionale masculine · Poule A" six
+             times, the common case being that a club enters the results of its single
+             pool. It was the largest block of text on each row, for a constant piece of
+             information, and it took a second row that carried the delete button with
+             it — hence a ✕ floating under the game it erases. The group absorbs both
+             problems: the name moves to the top, the row becomes a row again.
+             A single group does not deserve a header: the section's title already says
+             it, and the standings just above repeat it. */
           <div className="space-y-5">
-            {resultatsParChampionnat.map(([champ, lignes]) => (
-              <div key={champ}>
-                {resultatsParChampionnat.length > 1 && (
-                  <p className="mb-1 text-[12px] font-bold" style={{ color: C.faint }}>{champ || translate('commun.sansChampionnat')}</p>
+            {resultsByLeague.map(([league, rows]) => (
+              <div key={league}>
+                {resultsByLeague.length > 1 && (
+                  <p className="mb-1 text-[12px] font-bold" style={{ color: C.faint }}>{league || translate('commun.sansChampionnat')}</p>
                 )}
-                {/* Des filets, pas des cartes. Chaque ligne était une carte posée
-                    dans la carte de la section : deux cadres emboîtés pour une
-                    hiérarchie qui n'en compte qu'une, et six bordures de bruit. */}
+                {/* Rules, not cards. Each row used to be a card laid inside the
+                    section's card: two nested frames for a hierarchy that has only one
+                    level, and six borders of noise. */}
                 <ul className="divide-y" style={{ borderColor: C.border }}>
-            {lignes.map((r) => (
-              /* Une équipe par ligne, son score à droite — l'idiome que la carte de
-                 match du kit emploie déjà, et le seul qui tienne à toutes les
-                 largeurs. La rencontre était en une seule ligne, les deux noms de
-                 part et d'autre des scores : sur un téléphone, les deux colonnes
-                 souples n'avaient plus que trente pixels, et `truncate` réduisait
-                 « BC BAR-LE-DUC » à « B ». On ne savait plus qui avait joué contre
-                 qui — le contraire de ce que la liste sert à lire. Empilé, chaque
-                 nom dispose de toute la largeur moins son écusson et son score. */
+            {rows.map((r) => (
+              /* One team per row, its score on the right — the idiom the kit's game
+                 card already uses, and the only one that holds at every width. The game
+                 used to be on a single row, the two names either side of the scores: on
+                 a phone the two flexible columns had thirty pixels left, and `truncate`
+                 reduced "BC BAR-LE-DUC" to "B". You could no longer tell who had played
+                 whom — the opposite of what the list is there to read. Stacked, each
+                 name has the full width minus its crest and its score. */
               <li key={r.id} className="flex items-center gap-3 py-2.5">
                 <div className="min-w-0 flex-1 space-y-1.5">
-                  <LigneEquipe
+                  <TeamRow
                     id={r.homeId} name={teamsById[r.homeId]?.name ?? '—'} score={r.homeScore}
-                    gagne={r.homeScore > r.awayScore} champId={`score-home-${r.id}`}
-                    modifiable={canCorrect} onScore={(n) => setScore(r, { homeScore: n })}
+                    won={r.homeScore > r.awayScore} fieldId={`score-home-${r.id}`}
+                    editable={canCorrect} onScore={(n) => setScore(r, { homeScore: n })}
                   />
-                  <LigneEquipe
+                  <TeamRow
                     id={r.awayId} name={teamsById[r.awayId]?.name ?? '—'} score={r.awayScore}
-                    gagne={r.awayScore > r.homeScore} champId={`score-away-${r.id}`}
-                    modifiable={canCorrect} onScore={(n) => setScore(r, { awayScore: n })}
+                    won={r.awayScore > r.homeScore} fieldId={`score-away-${r.id}`}
+                    editable={canCorrect} onScore={(n) => setScore(r, { awayScore: n })}
                   />
                 </div>
                 {canCorrect && (
-                  <button onClick={() => supprimer(r.id)} aria-label={translate('champ.supprimerResultat')}
+                  <button onClick={() => remove(r.id)} aria-label={translate('champ.supprimerResultat')}
                     className="shrink-0 rounded-lg p-1.5" style={{ color: C.danger }}>
                     <X className="h-4 w-4" strokeWidth={2.5} />
                   </button>
@@ -356,9 +355,9 @@ export function Championnat() {
             ))}
           </div>
         )}
-        {/* Les résultats saisis à la main ne passent pas par la synchronisation : sans
-            cette mention, un utilisateur qui ouvre l'app sur un autre appareil trouverait
-            un classement vide sans comprendre pourquoi. */}
+        {/* Hand-entered results do not go through the synchronisation: without this
+            note, someone opening the app on another device would find empty standings
+            without understanding why. */}
         {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('champ.resultatsLocaux')}</p>}
       </section>
     </div>
