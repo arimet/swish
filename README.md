@@ -6,7 +6,7 @@ without anyone re-typing a thing.
 
 Swish runs **offline, with no account and no configuration**. Data lives on the device.
 Sharing between devices and live spectator following are optional, and turn on with a
-Redis store.
+Postgres database.
 
 > 🇫🇷 **The product itself ships in French by default** — that is deliberate, it was
 > built for a French club and its vocabulary follows the French federation's rules.
@@ -112,7 +112,31 @@ pnpm dev
 ```
 
 The app opens on `http://localhost:5173` with demo data. It works entirely offline, with
-no server.
+no server — **no database needed to develop the app itself**.
+
+### Working on the sync
+
+Only if you are changing how devices share data. Everything under `api/` then runs
+inside the Vite dev server, so `/api/*` behaves exactly as it does on Vercel — no
+Vercel CLI, no linked project.
+
+```bash
+docker compose up -d
+```
+
+```bash
+psql "postgres://swish:swish@localhost:5433/swish" -f db/schema.sql
+```
+
+Then put this in a `.env` (see `.env.example`) and restart `pnpm dev`:
+
+```bash
+printf 'DATABASE_URL=postgres://swish:swish@localhost:5433/swish\nSYNC_WRITE_TOKEN=dev\nVITE_SYNC_URL=/api\n' >> .env
+```
+
+The dev server prints which mode it started in. Enter the token once under
+**Administration → Synchronisation**. Without `DATABASE_URL`, none of this is
+mounted and `pnpm dev` behaves exactly as above.
 
 Other useful commands:
 
@@ -143,9 +167,15 @@ That is a complete, usable deployment. A scorer's table needs nothing more.
 
 Sync shares data between devices **and** powers remote spectator following. Three steps:
 
-1. In the Vercel project: **Storage → create a KV database** (Upstash Redis). Vercel
-   then injects `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
-2. Add the environment variable **`VITE_SYNC_URL=/api`** in production.
+1. In the Vercel project: **Storage → create a Postgres database** (Neon). Vercel
+   then injects `DATABASE_URL` — use the pooled connection string.
+2. Create the table: `psql "$DATABASE_URL" -f db/schema.sql`.
+3. Set **`SYNC_WRITE_TOKEN`** to a long random string, add **`VITE_SYNC_URL=/api`**,
+   and redeploy. Each device enters the token once, under Administration.
+
+Once sharing is on, the database is the source of truth and each device keeps a
+mirror so the app still works in a gym with no signal. Read `DEPLOY.md` first:
+turning sync on replaces a device's local data with the server's.
 3. Redeploy.
 
 Teams, players and the schedule created on one device now show up on the others. The app
@@ -180,7 +210,8 @@ admin code leaves the scorer's table open on the French word `marque`.
 | Variable | Purpose | Required |
 |---|---|---|
 | `VITE_SYNC_URL=/api` | Shared data + live following | Optional |
-| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Redis store | Auto (Vercel KV) |
+| `DATABASE_URL` | Postgres (pooled host) | Auto (Vercel/Neon) |
+| `SYNC_WRITE_TOKEN` | Guards club data | With `VITE_SYNC_URL` |
 | `VITE_SEED=1` | Demo data | Demo only |
 | `VITE_ADMIN_PASSWORD` | Administrator code (fallback `admin`) | Recommended |
 | `VITE_SCORER_PASSWORD` | Scorer's table code (fallback `marque`) | Recommended |

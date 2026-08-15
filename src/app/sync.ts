@@ -8,24 +8,17 @@ export interface SyncBundle {
   teamNames: Record<TeamSide, string>
 }
 
+/* Il n'y a plus rien à publier : le paquet est **dérivé** de la base par
+   `api/_bundle`, et la rencontre y arrive déjà par la file d'attente de la table
+   de marque. Publier une seconde fois, c'était deux chemins d'écriture pour une
+   même donnée — avec deux façons de se contredire — et une durée de vie de douze
+   heures au bout de laquelle le suivi d'un match du matin s'éteignait. */
+
 // Activé uniquement si VITE_SYNC_URL est défini (ex. "/api" sur Vercel).
 // Sinon l'app reste 100 % locale (aucun appel réseau).
 const BASE = (import.meta.env.VITE_SYNC_URL as string | undefined)?.replace(/\/+$/, '') || ''
 
 export const syncEnabled = (): boolean => BASE !== ''
-
-/** Publie l'état courant (best-effort : un échec réseau n'interrompt jamais la saisie). */
-export async function publishBundle(bundle: SyncBundle): Promise<void> {
-  if (!BASE) return
-  try {
-    await fetch(`${BASE}/match/${bundle.match.id}`, {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(bundle),
-      keepalive: true,
-    })
-  } catch { /* offline : la base locale reste la source de vérité, resync au prochain event */ }
-}
 
 export async function fetchBundle(id: string): Promise<SyncBundle | null> {
   if (!BASE) return null

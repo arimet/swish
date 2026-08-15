@@ -11,6 +11,7 @@ import {
   type Camp, type Fleche, type ObjetPose, type Pion, type Point, type Poste, type Schema, type Temps, type Terrain, type Trait,
 } from '../../domain/plays'
 import { getPlay, savePlay } from '../../persistence/repositories'
+import { remoteEnabled } from '../../persistence/remote'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { largeurTerrain, PlayBoard, versSvg } from '../components/PlayBoard'
@@ -507,7 +508,7 @@ export function SchemaEdit() {
               onBlur={enregistrerNote}
               placeholder={trad('edit.notePlaceholder')} style={{ ...champ, width: '100%' }}
             />
-            <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('sch.schemasLocaux')}</p>
+            {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('sch.schemasLocaux')}</p>}
           </section>
         </aside>
       </div>

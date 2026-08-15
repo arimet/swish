@@ -10,6 +10,7 @@ import { C, bd, Ic, ICON, MatchCard, PageTitle, fmtDate } from '../olive/kit'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useClub } from '../../app/club'
 import { langueCourante, useT } from '../../i18n'
+import { remoteEnabled } from '../../persistence/remote'
 import { useAuth } from '../../app/auth'
 import { X } from 'lucide-react'
 
@@ -255,7 +256,7 @@ export function Calendrier() {
       {/* Comme les convocations et les résultats extérieurs : même formulation que sur
           les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux
           limites différentes — la décision couvrait aussi bien les entraînements. */}
-      <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('cal.entrainementsLocaux')}</p>
+      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('cal.entrainementsLocaux')}</p>}
 
       <ConfirmDialog open={!!aSupprimer} onClose={() => setASupprimer(null)} onConfirm={supprimer}
         title={trad('cal.supprimerSeanceTitre')}

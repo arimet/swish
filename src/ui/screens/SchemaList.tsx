@@ -13,6 +13,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { dossiers, nouveauSchema, type Schema } from '../../domain/plays'
 import { deletePlay, listPlays, savePlay } from '../../persistence/repositories'
+import { remoteEnabled } from '../../persistence/remote'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
@@ -278,7 +279,7 @@ export function SchemaList() {
 
       {/* Même formulation que les entraînements et les résultats extérieurs :
           une seule limite à retenir, pas une par écran. */}
-      <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('sch.schemasLocaux')}</p>
+      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('sch.schemasLocaux')}</p>}
 
       <ConfirmDialog
         open={!!aSupprimer} danger

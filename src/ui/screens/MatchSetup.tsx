@@ -8,7 +8,6 @@ import { C, bd, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { useClub } from '../../app/club'
-import { publishBundle } from '../../app/sync'
 
 const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
@@ -46,7 +45,6 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
       roster: roster.map((p) => p.id), events: [], status: 'setup',
     }
     await saveMatch(match)
-    publishBundle({ match, players: roster, teamNames: { A: club?.name ?? nameOf(clubId), B: nameOf(opponentId) } })
     onCreated(match.id)
   }
   const canCreate = !!clubId && !!opponentId

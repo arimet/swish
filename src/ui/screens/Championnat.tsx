@@ -3,6 +3,7 @@ import { newId } from '../../domain/ids'
 import { standings, clefConfrontation } from '../../domain/standings'
 import { AMICAL } from '../../domain/ids'
 import { listMatches, listResults, saveResult, deleteResult } from '../../persistence/repositories'
+import { remoteEnabled } from '../../persistence/remote'
 import type { Match, ReportedResult } from '../../domain/types'
 import { C, bd, champLabel, SectionTitle, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
@@ -358,7 +359,7 @@ export function Championnat() {
         {/* Les résultats saisis à la main ne passent pas par la synchronisation : sans
             cette mention, un utilisateur qui ouvre l'app sur un autre appareil trouverait
             un classement vide sans comprendre pourquoi. */}
-        <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('champ.resultatsLocaux')}</p>
+        {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('champ.resultatsLocaux')}</p>}
       </section>
     </div>
   )

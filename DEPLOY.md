@@ -2,29 +2,49 @@
 
 Swish runs **fully offline** (IndexedDB) with zero configuration. Sharing data
 across machines and **realtime spectator following** are optional and turn on
-with a Redis store.
+with a Postgres database.
+
+Once sharing is on, **the database is the source of truth** and each device
+keeps a mirror of it so the app still works in a gym with no signal.
 
 ## 1. Deploy the frontend to Vercel
 
 - Import the repo into Vercel (the **Vite** preset is auto-detected).
 - Build: `pnpm build`, output: `dist/`.
 - The `api/` folder is deployed as **serverless functions** (including the SSE
-  stream on the Edge runtime) — nothing to configure.
+  stream) — nothing to configure.
 
 With no extra environment variable, the app runs in local mode (data stays on
 each device; spectator following is same-device only).
 
 ## 2. Enable sharing + realtime (multi-device)
 
-1. In the Vercel project: **Storage → create a KV database** (Upstash Redis).
-   Vercel then injects `KV_REST_API_URL` and `KV_REST_API_TOKEN`.
-2. Add the environment variable **`VITE_SYNC_URL=/api`** (Production).
-3. Redeploy.
+1. In the Vercel project: **Storage → create a Postgres database** (Neon).
+   Vercel then injects `DATABASE_URL`. Use the **pooled** connection string —
+   its host ends in `-pooler` — because serverless functions hold no connection.
+2. Create the table: `psql "$DATABASE_URL" -f db/schema.sql`.
+3. Add **`SYNC_WRITE_TOKEN`** — any long random string. It guards every read and
+   write of club data. Without it the API refuses to serve at all, on purpose:
+   an open database is worse than a broken one.
+4. Add **`VITE_SYNC_URL=/api`** (Production) and redeploy.
+5. On each device: **Administration → Synchronisation**, paste the token, and
+   press *Save and check*. The device says whether the server accepted it.
 
 Now **data is shared across every machine**: teams, players and the schedule
-created on one device show up on the others. The app stays **local-first**
-(IndexedDB cache): it keeps working offline and re-syncs when the network is
-back. Without `VITE_SYNC_URL`, everything stays purely local per device.
+created on one device show up on the others. The app stays **local-first**: it
+keeps working offline and re-syncs when the network is back. Without
+`VITE_SYNC_URL`, everything stays purely local per device.
+
+> ### ⚠️ Turning sync on is a one-way door for a device's local data
+>
+> The database is the source of truth, **without exception**: a device adopts
+> what the server holds, including when the server holds nothing. The first time
+> a device syncs against a fresh database, its own local data is replaced by the
+> server's — plays, team message and trainings included.
+>
+> This is not a failure of sync. Data that was never synced was never in the
+> system of record, and a mirror that has never reflected anything is not a
+> backup. Set sync up **before** a club starts entering a season, not after.
 
 ## 3. Set the three access codes
 
@@ -57,22 +77,32 @@ overwrites shared data. Remove the variable for real use.
 
 ## How it works
 
-- **Shared entities** (teams, players, matches): each write goes to the local
-  cache immediately and is queued to the server (`POST /api/mutate`,
-  best-effort). On startup the app hydrates from `GET /api/state`; list pages
-  refresh from it. Offline writes are flushed when the connection returns.
-- **Live following**: the scorer's table publishes the full match state
-  (`PUT /api/match/:id`) on every action. Spectators open `…/match/:id/watch`
-  and receive live updates over **SSE** (`GET /api/match/:id/stream`), falling
-  back to polling if the stream is unavailable.
-- Live match snapshots are kept for **12 h** (TTL); shared entities persist.
+- **Everything a club owns is shared**: teams, players, matches, call-ups,
+  trainings, plays, entered results and the coach's message — eight kinds, all of
+  them. Each write goes to the local
+  mirror immediately and is queued to the server (`POST /api/mutate`). On
+  startup the app hydrates from `GET /api/state`; list pages refresh from it.
+  Offline writes are flushed when the connection returns.
+- **Conflicts are settled by when the change was *made*, not when it arrived.**
+  Each queued write carries the moment the person made it, and an older change
+  arriving late cannot overwrite a newer one — which is what happens when a
+  device spends a game offline and empties its queue two hours later.
+- **Deletions really delete the row.** Other devices learn about them because
+  `GET /api/state` also returns the list of ids the database still holds;
+  anything missing from it is dropped locally.
+- **Live following**: spectators open `…/match/:id/watch` and receive updates
+  over **SSE** (`GET /api/match/:id/stream`), falling back to polling if the
+  stream is unavailable. The payload is derived from the database — nothing is
+  published separately, and nothing expires.
+- Everything persists. There is no TTL.
 
 ## Environment variables
 
 | Variable | Purpose | Required |
 |---|---|---|
 | `VITE_SYNC_URL=/api` | Enable shared data + realtime following | Optional |
-| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Redis store | Auto (Vercel KV) |
+| `DATABASE_URL` | Postgres (use the pooled host) | Auto (Vercel/Neon) |
+| `SYNC_WRITE_TOKEN` | Guards club data; entered once per device | With `VITE_SYNC_URL` |
 | `VITE_SEED=1` | Seed demo data | Demo only |
 | `VITE_ADMIN_PASSWORD` | Admin access code (fallback `admin`) | Recommended |
 | `VITE_SCORER_PASSWORD` | Scorer's table access code (fallback `marque`) | Recommended |
@@ -84,8 +114,7 @@ overwrites shared data. Remove the variable for real use.
 
 | Method | Route | Purpose |
 |--------|-------|---------|
-| `GET`  | `/api/state` | All shared entities (teams, players, matches) |
-| `POST` | `/api/mutate` | Apply a batch of upserts/deletes |
-| `GET`  | `/api/match/:id` | Current match snapshot (JSON) |
-| `PUT`  | `/api/match/:id` | Publish match state (scorer's table) |
+| `GET`  | `/api/state?since=<rev>` | Changed documents + the ids still alive. **Token required.** |
+| `POST` | `/api/mutate` | Apply a batch of upserts/deletes. **Token required.** |
+| `GET`  | `/api/match/:id` | Spectator payload, derived from the database. Public. |
 | `GET`  | `/api/match/:id/stream` | Realtime SSE stream (Edge) |

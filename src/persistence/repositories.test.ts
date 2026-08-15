@@ -287,7 +287,7 @@ describe('ménage groupé', () => {
     await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
     await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: '2026-08-10T18:00:00.000Z' })
     // Une mutation en attente d'envoi : elle ne doit pas survivre à la remise à zéro.
-    await db.outbox.add({ kind: 'match', op: 'put', id: 'm1', ts: Date.now() })
+    await db.outbox.add({ kind: 'match', op: 'put', id: 'm1', ts: Date.now(), modifiedAt: new Date().toISOString() })
 
     await wipeAll()
 
