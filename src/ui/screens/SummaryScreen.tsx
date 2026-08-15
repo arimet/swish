@@ -18,7 +18,7 @@ import { playingTimes } from '../../domain/playingtime'
 import { teamTotals } from '../../domain/totals'
 import { matchRatios, scoreProgression } from '../../domain/progression'
 import { fmt } from '../components/GameClock'
-import { C, bd, TeamBadge, teamColor, fmtDate, champLabel } from '../olive/kit'
+import { C, bd, TeamBadge, fmtDate, champLabel } from '../olive/kit'
 import type { GameEvent, Match, Player, ScoreKind, ShotSpot, StatKind, TeamSide } from '../../domain/types'
 import { Check, Download, Eye, Pencil } from 'lucide-react'
 
@@ -139,7 +139,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       )}
       <MatchMetaDialog open={showEdit} meta={match.meta} onClose={() => setShowEdit(false)} onSave={saveMeta} />
       <PlayerActionDialog
-        open={!!pick} playerName={pick?.name ?? ''} color={teamColor(meta.clubId)}
+        open={!!pick} playerName={pick?.name ?? ''} color={C.brand}
         scoreCounts={pick ? scoreCountsOf(pick.id) : undefined}
         statCounts={pick ? statCountsOf(pick.id) : undefined}
         fouls={pick ? foulsOf(pick.id) : 0}
@@ -177,7 +177,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
 
       {/* TABLEAUX PAR ÉQUIPE */}
       <div className="mt-6 space-y-6">
-        <TeamTable match={match} players={players} name={teamNames.A} teamId={meta.clubId}
+        <TeamTable match={match} players={players} name={teamNames.A}
           onPick={editStats ? (id, label) => setPick({ id, name: label }) : undefined} />
         <OpponentCard teamId={meta.opponentId} name={teamNames.B} score={score.b} />
       </div>
@@ -199,12 +199,17 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>Progression du score</p>
           <span className="flex items-center gap-4 text-xs font-bold">
-            <span className="flex items-center gap-2"><span className="h-1 w-6 rounded-full" style={{ background: teamColor(meta.clubId) }} /><span style={{ color: C.text }}>{teamNames.A}</span></span>
-            <span className="flex items-center gap-2"><span className="h-1 w-6 rounded-full" style={{ background: teamColor(meta.opponentId), backgroundImage: `repeating-linear-gradient(90deg, ${teamColor(meta.opponentId)} 0 5px, transparent 5px 8px)` }} /><span style={{ color: C.text }}>{teamNames.B}</span></span>
+            {/* Deux séries, donc deux couleurs de la charte et non deux hachages : un
+                trait d'un pixel en marine sombre était invisible sur la carte sombre,
+                et rien ne garantissait que les deux hachages tombent sur des teintes
+                séparables. Le citron et le bleu se distinguent dans les deux thèmes,
+                et le pointillé continue de dire « l'adversaire » sans la couleur. */}
+            <span className="flex items-center gap-2"><span className="h-1 w-6 rounded-full" style={{ background: C.brand }} /><span style={{ color: C.text }}>{teamNames.A}</span></span>
+            <span className="flex items-center gap-2"><span className="h-1 w-6 rounded-full" style={{ backgroundImage: `repeating-linear-gradient(90deg, ${C.infoFill} 0 5px, transparent 5px 8px)` }} /><span style={{ color: C.text }}>{teamNames.B}</span></span>
           </span>
         </div>
         <div className="overflow-x-auto" style={{ color: C.muted }}>
-          <ProgressionChart points={scoreProgression(match)} colorA={teamColor(meta.clubId)} colorB={teamColor(meta.opponentId)} />
+          <ProgressionChart points={scoreProgression(match)} colorA={C.brand} colorB={C.infoFill} />
         </div>
       </section>
 
@@ -220,7 +225,13 @@ function FinalSide({ id, name, score, win, align }: { id: string; name: string; 
       <TeamBadge id={id} name={name} size="h-11 w-11 text-xs" />
       <div className="min-w-0">
         <p className="truncate text-sm font-bold" style={{ color: win ? C.text : C.muted }}>{name}</p>
-        <p className="text-5xl font-black tabular-nums sm:text-6xl" style={{ color: win ? teamColor(id) : C.muted, opacity: win ? 1 : 0.8 }}>{score}</p>
+        {/* Le vainqueur en accent, le perdant en gris. `teamColor(id)` tirait la
+            couleur d'un hachage parmi huit hexadécimaux façon NBA : c'est juste pour
+            un écusson dans une liste, faux pour un nombre de soixante pixels, et le
+            marine comme le cramoisi tombaient à 2,1:1 sur la carte sombre. L'écusson
+            juste à gauche garde sa couleur de club — c'est là que l'identité a un
+            sens. Ici la question est « qui a gagné », et un seul accent y répond. */}
+        <p className="text-5xl font-black tabular-nums sm:text-6xl" style={{ color: win ? C.accent : C.muted }}>{score}</p>
       </div>
     </div>
   )
@@ -249,12 +260,14 @@ function OpponentCard({ teamId, name, score }: { teamId: string; name: string; s
         <h3 className="truncate text-sm font-extrabold uppercase tracking-wide">Visiteurs · {name}</h3>
         <p className="mt-0.5 text-[12px] font-semibold" style={{ color: C.faint }}>Score saisi globalement — l'adversaire n'a pas d'effectif à détailler.</p>
       </div>
-      <span className="text-3xl font-black tabular-nums" style={{ color: teamColor(teamId) }}>{score}</span>
+      <span className="text-3xl font-black tabular-nums" style={{ color: C.accent }}>{score}</span>
     </section>
   )
 }
 
-function TeamTable({ match, players, name, teamId, onPick }: { match: Match; players: Record<string, Player>; name: string; teamId: string; onPick?: (playerId: string, label: string) => void }) {
+/* `teamId` a disparu de la signature : il n'y servait qu'à `teamColor`, et laisser un
+   paramètre que rien ne lit invite le prochain à croire qu'il compte. */
+function TeamTable({ match, players, name, onPick }: { match: Match; players: Record<string, Player>; name: string; onPick?: (playerId: string, label: string) => void }) {
   const stats = playerStats(match)
   const times = playingTimes(match)
   const totals = teamTotals(match)
@@ -266,7 +279,7 @@ function TeamTable({ match, players, name, teamId, onPick }: { match: Match; pla
   return (
     <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: bd, ...(onPick ? { boxShadow: `0 0 0 1px ${C.accentBd}` } : {}) }}>
       <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: `1px solid ${C.border}` }}>
-        <span className="h-2.5 w-2.5 rounded-full" style={{ background: teamColor(teamId) }} />
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: C.brand }} />
         <h3 className="text-sm font-extrabold uppercase tracking-wide">Locaux · {name}</h3>
         {onPick && <span className="ml-auto text-[12px] font-bold" style={{ color: C.accent }}><Pencil className="mr-1 inline h-3 w-3 align-[-1px]" strokeWidth={2} />cliquez une ligne</span>}
       </div>
@@ -286,7 +299,7 @@ function TeamTable({ match, players, name, teamId, onPick }: { match: Match; pla
                   className={onPick ? 'cursor-pointer transition hover:bg-[var(--c-hover)]' : ''}
                   style={{ borderTop: `1px solid ${C.border}`, opacity: dnp && !onPick ? 0.5 : 1 }}>
                   <Td left><span className="font-black">{p?.number ?? '—'}</span></Td>
-                  <Td left>{p ? <Link to={`/players/${s.playerId}`} onClick={(e) => e.stopPropagation()} className="hover:underline">{p.lastName} {p.firstName}</Link> : s.playerId}</Td>
+                  <Td left>{p ? <Link to={`/players/${s.playerId}`} onClick={(e) => e.stopPropagation()} className="-my-1 inline-block py-1.5 hover:underline">{p.lastName} {p.firstName}</Link> : s.playerId}</Td>
                   <Td>{s.isStarter ? '●' : ''}</Td>
                   <Td>{fmt(times.get(s.playerId) ?? 0)}</Td>
                   <Td><span className="font-black" style={{ color: s.points > 0 ? C.text : C.faint }}>{s.points}</span></Td>
@@ -300,7 +313,7 @@ function TeamTable({ match, players, name, teamId, onPick }: { match: Match; pla
             })}
             <tr style={{ borderTop: `2px solid ${C.border}`, background: C.panel }}>
               <Td left></Td><Td left><span className="font-black uppercase text-[12px]">Total équipe</span></Td><Td></Td><Td></Td>
-              <Td><span className="font-black" style={{ color: teamColor(teamId) }}>{totals.team.points}</span></Td>
+              <Td><span className="font-black" style={{ color: C.accent }}>{totals.team.points}</span></Td>
               <Td><b>{totals.team.fieldGoalsMade}</b></Td><Td></Td><Td><b>{totals.team.threes}</b></Td><Td><b>{totals.team.twoInside}</b></Td><Td><b>{totals.team.twoOutside}</b></Td><Td><b>{totals.team.freeThrows}</b></Td>
               <Td><b>{totals.team.assists}</b></Td><Td><b>{totals.team.offRebounds}</b></Td><Td><b>{totals.team.defRebounds}</b></Td><Td><b>{totals.team.blocks}</b></Td>
               <Td><b>{totals.team.fouls}</b></Td>

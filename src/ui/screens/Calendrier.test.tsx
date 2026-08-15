@@ -136,11 +136,20 @@ describe('Calendrier', () => {
     expect(enregistrés[0]).toMatchObject({ clubId: 'ta', date: '2026-02-03', time: '19:00', place: 'Gymnase des Tilleuls', theme: 'Tirs extérieurs' })
   })
 
-  it('supprime un entraînement', async () => {
+  it('ne supprime un entraînement qu’après confirmation', async () => {
+    // Ce test affirmait l'inverse : que le clic sur la croix suffisait. C'était le
+    // comportement, et c'était le défaut — une séance disparaissait sur un clic unique
+    // alors que supprimer une rencontre, un schéma ou une équipe demande confirmation.
+    // La première moitié du test est donc la propriété nouvelle, et la seconde l'ancienne.
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })
     renderCal()
     await userEvent.click(await screen.findByRole('button', { name: /supprimer cet entraînement/i }))
 
+    // Le dialogue s'ouvre et la séance est toujours là.
+    expect(await screen.findByText(/supprimer cette séance/i)).toBeInTheDocument()
+    expect(await listTrainings()).toHaveLength(1)
+
+    await userEvent.click(screen.getByRole('button', { name: /^supprimer$/i }))
     // La suppression passe par `guard()`, qui déclenche l'action sans l'attendre :
     // l'effacement du DOM et de la base est asynchrone après le clic.
     await waitFor(async () => expect(await listTrainings()).toHaveLength(0))

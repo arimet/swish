@@ -488,8 +488,12 @@ export function SchemaEdit() {
               ))}
             </div>
             {refus && <p className="mt-2 text-[12px] font-semibold" style={{ color: C.accent }}>{refus}</p>}
-            <label className="mt-4 flex items-center gap-2 text-sm font-semibold">
-              <input type="checkbox" checked={vivant.defense} onChange={(e) => changerDefense(e.target.checked)} style={{ accentColor: C.accent, width: 18, height: 18 }} />
+            {/* `-mx-2 px-2 py-2.5` : c'est le libellé qu'on touche, pas la case, et il
+                faisait vingt pixels de haut — pour une bascule qui redessine le schéma
+                entier et demande confirmation. La marge négative garde l'alignement
+                visuel du texte sur le reste de la carte. */}
+            <label className="-mx-2 mt-3 flex items-center gap-2 rounded-lg px-2 py-2.5 text-sm font-semibold">
+              <input type="checkbox" checked={vivant.defense} onChange={(e) => changerDefense(e.target.checked)} />
               Défense
             </label>
           </section>

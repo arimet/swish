@@ -1,4 +1,5 @@
 import type { Player, ScoreKind } from '../../domain/types'
+import { C } from '../olive/kit'
 import { RotateCcw } from 'lucide-react'
 
 type Stat = { points: number; fouls: number }
@@ -92,7 +93,13 @@ export function TeamPanel({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-bold leading-tight">{p.lastName}</span>
                   <span className="mt-0.5 flex items-center gap-1.5">
-                    <span className="nums whitespace-nowrap text-xs font-black" style={{ color }}>{st.points} pts</span>
+                    {/* L'accent, et non `color` — c'est-à-dire l'encre et non le
+                        remplissage. `color` vaut la marque, un citron d'aplat : il
+                        tient l'anneau du numéro et le filet du panneau, mais écrit à
+                        1,77:1 sur une ligne claire. Le thème sombre ne le montrait
+                        pas, le citron y étant lisible partout ; c'est la passe en
+                        thème clair qui l'a trouvé. */}
+                    <span className="nums whitespace-nowrap text-xs font-black" style={{ color: C.accent }}>{st.points} pts</span>
                     <span className="flex items-center gap-0.5">
                       {[0, 1, 2, 3, 4].map((i) => <span key={i} className={`h-1.5 w-1.5 rounded-full ${i < st.fouls ? 'bg-[var(--c-danger-fill)]' : 'bg-muted-foreground/25'}`} />)}
                     </span>

@@ -104,6 +104,23 @@ describe('TeamDetail — droits', () => {
     expect(await listPlayers('ta')).toHaveLength(1) // MARTIN seul, DUPONT n'a pas été ajouté
   })
 
+  it('ne retire un joueur qu’après confirmation', async () => {
+    // Ce chemin n'était pas couvert, et c'est pour ça que le défaut a tenu : « retirer »
+    // supprimait le joueur sur un clic unique, depuis un bouton de vingt-quatre pixels
+    // collé à « modifier », alors que supprimer l'équipe juste au-dessus demandait
+    // confirmation. Aucun test n'a cassé quand j'ai ajouté le dialogue — preuve qu'il
+    // n'y avait rien là pour le dire.
+    renderTeam()
+    await userEvent.click(await screen.findByRole('button', { name: /retirer MARTIN/i }))
+
+    expect(await screen.findByText(/retirer MARTIN Lucas/i)).toBeInTheDocument()
+    expect(await listPlayers('ta')).toHaveLength(1)
+
+    await userEvent.click(screen.getByRole('button', { name: /^retirer$/i }))
+    // `guard()` déclenche l'action sans l'attendre : la base se vide après le clic.
+    await waitFor(async () => expect(await listPlayers('ta')).toHaveLength(0))
+  })
+
   it('n’affiche le formulaire d’ajout qu’après un clic', async () => {
     renderTeam()
     await screen.findByRole('button', { name: /ajouter un joueur/i })

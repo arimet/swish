@@ -223,12 +223,12 @@ export function SchemaList() {
                           placeholder="Nom du dossier" className="min-w-0 flex-1 rounded-lg px-2 py-1 text-[12px] font-semibold"
                           style={{ background: C.panel, border: bd, color: C.text }}
                         />
-                        <button type="submit" className="rounded-lg px-2 py-1" style={{ color: C.accent }}>Ranger</button>
+                        <button type="submit" className="rounded-lg px-2 py-1.5" style={{ color: C.accent }}>Ranger</button>
                       </form>
                     ) : (
                       <button
                         onClick={() => ouvrirRangement(s)} aria-label={`Dossier de « ${s.nom} »`}
-                        className="rounded-md px-1.5 py-0.5" style={{ background: C.card2, color: s.dossier ? C.accent : C.faint }}
+                        className="rounded-md px-2 py-1.5" style={{ background: C.card2, color: s.dossier ? C.accent : C.faint }}
                       >
                         {s.dossier || 'Sans dossier'}
                       </button>

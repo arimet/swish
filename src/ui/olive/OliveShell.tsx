@@ -291,7 +291,7 @@ function Sidebar({ players }: { players: Player[] }) {
           </NavLink>
         )}
         <a href="https://github.com/arimet" target="_blank" rel="noopener noreferrer"
-          className="block px-2 text-center text-[12px] font-medium transition hover:underline" style={{ color: C.faint }}>
+          className="block px-2 py-1.5 text-center text-[12px] font-medium transition hover:underline" style={{ color: C.faint }}>
           Fait par Anthony Rimet ↗
         </a>
       </div>

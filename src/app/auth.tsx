@@ -58,6 +58,22 @@ interface AuthCtx {
    *  ou `null` si le code est inconnu — le rôle courant n'est alors pas modifié. */
   unlock: (code: string) => Role | 'joueur' | null
   lock: () => void
+  /**
+   * Accorde l'accès administrateur **sans code**, réservé à la fondation du club.
+   *
+   * Il faut justifier une porte qui s'ouvre sans clé. Le premier arrivant sur une
+   * installation vierge crée son équipe depuis l'écran de bienvenue, et cette
+   * création n'est déjà pas gardée — c'est l'issue que l'écran propose, il ne
+   * pourrait pas demander un code pour la seule action qui rend l'application
+   * utilisable. Une installation vide n'a donc rien à protéger : le code
+   * administrateur ne défend pas l'accès, il défend des données, et il n'y en a
+   * aucune. Refuser le droit à cet instant précis ne protégeait rien et laissait le
+   * fondateur devant six blocs vides sans un seul bouton.
+   *
+   * Ce qui suit reste gardé comme avant : le rôle vit dans `sessionStorage`, donc il
+   * s'éteint avec l'onglet, et tout autre appareil repasse par le code.
+   */
+  fonder: () => void
   setPlayer: (id: string | null) => void
   /** Exécute l'action si le rôle courant a le droit demandé, sinon ouvre la
    *  demande de code en nommant l'accès requis. */
@@ -88,6 +104,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const lock = useCallback(() => { sessionStorage.removeItem(ROLE_KEY); setRole('visiteur') }, [])
 
+  const fonder = useCallback(() => {
+    sessionStorage.setItem(ROLE_KEY, 'admin')
+    setRole('admin')
+  }, [])
+
   const setPlayer = useCallback((id: string | null) => {
     if (id) localStorage.setItem(PLAYER_ID_KEY, id)
     else localStorage.removeItem(PLAYER_ID_KEY)
@@ -113,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <Ctx.Provider value={{ role, playerId, can, unlock, lock, setPlayer, guard }}>
+    <Ctx.Provider value={{ role, playerId, can, unlock, lock, fonder, setPlayer, guard }}>
       {children}
       <Dialog open={!!pending} onOpenChange={(o) => !o && close()}>
         <DialogContent className="sm:max-w-xs border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
