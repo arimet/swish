@@ -41,7 +41,7 @@ export function playerStats(match: Match): PlayerStat[] {
     if (e.type === 'STARTING_FIVE' && e.team === 'A')
       for (const id of e.playerIds) { const s = stats.get(id); if (s) s.isStarter = true }
     if (e.type === 'SCORE' && e.team === 'A') {
-      if (!e.playerId) continue // panier d'équipe : compté au score, dans la ligne d'aucun joueur
+      if (!e.playerId) continue // a team basket: counted in the score, in no player's row
       const s = stats.get(e.playerId); if (!s) continue
       s.points += pointsForKind(e.kind)
       if (e.kind === '3') { s.threes++; s.fieldGoalsMade++ }

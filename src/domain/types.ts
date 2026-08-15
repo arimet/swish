@@ -7,7 +7,7 @@ export type FoulTarget =
   | { kind: 'player'; playerId: string }
   | { kind: 'coach' }
   | { kind: 'bench' }
-export type Period = number // 1..4 = périodes, 5+ = prolongations
+export type Period = number // 1..4 = periods, 5+ = overtimes
 
 export interface Team { id: string; name: string; coach?: string }
 export interface Player {
@@ -84,7 +84,7 @@ export interface Match {
  */
 export interface ReportedResult {
   id: string
-  /** Championnat auquel la rencontre appartient, pour grouper le classement. */
+  /** The league the game belongs to, used to group the standings. */
   championshipLabel: string
   date?: string
   homeId: string

@@ -222,18 +222,18 @@ export function Standings() {
                         <span className="truncate">{l.name}</span>
                       </span>
                     </td>
-                    <td className="hidden px-2 text-center tabular-nums sm:table-cell">{l.j}</td>
-                    <td className="px-2 text-center tabular-nums">{l.v}</td>
-                    <td className="px-2 text-center tabular-nums">{l.d}</td>
-                    <td className="hidden px-2 text-center tabular-nums sm:table-cell">{l.pf}</td>
-                    <td className="hidden px-2 text-center tabular-nums sm:table-cell">{l.pa}</td>
+                    <td className="hidden px-2 text-center tabular-nums sm:table-cell">{l.played}</td>
+                    <td className="px-2 text-center tabular-nums">{l.wins}</td>
+                    <td className="px-2 text-center tabular-nums">{l.losses}</td>
+                    <td className="hidden px-2 text-center tabular-nums sm:table-cell">{l.pointsFor}</td>
+                    <td className="hidden px-2 text-center tabular-nums sm:table-cell">{l.pointsAgainst}</td>
                     {/* The table's only tinted column, besides the points: the sign of
                         the differential is what the eye hunts for when scanning the
                         grid, and one coloured column out of nine stands out — nine
                         coloured columns stand out no longer. */}
                     <td className="px-2 text-center font-semibold tabular-nums"
-                      style={{ color: l.pf - l.pa > 0 ? C.green : l.pf - l.pa < 0 ? C.danger : C.faint }}>
-                      {l.pf - l.pa > 0 ? `+${l.pf - l.pa}` : l.pf - l.pa}
+                      style={{ color: l.pointsFor - l.pointsAgainst > 0 ? C.green : l.pointsFor - l.pointsAgainst < 0 ? C.danger : C.faint }}>
+                      {l.pointsFor - l.pointsAgainst > 0 ? `+${l.pointsFor - l.pointsAgainst}` : l.pointsFor - l.pointsAgainst}
                     </td>
                     <td className="rounded-r-lg px-2 text-center font-black tabular-nums" style={{ color: C.accent }}>{l.pts}</td>
                   </tr>

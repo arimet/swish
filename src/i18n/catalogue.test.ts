@@ -22,14 +22,14 @@ const RACINES = ['src/ui', 'src/app', 'src/i18n', 'src/components']
 
 function sources(): string[] {
   const out: string[] = []
-  const descendre = (dir: string) => {
+  const descend = (dir: string) => {
     for (const name of readdirSync(dir)) {
       const chemin = join(dir, name)
-      if (statSync(chemin).isDirectory()) descendre(chemin)
+      if (statSync(chemin).isDirectory()) descend(chemin)
       else if (/\.tsx?$/.test(name) && !name.includes('.test.')) out.push(chemin)
     }
   }
-  for (const r of RACINES) descendre(r)
+  for (const r of RACINES) descend(r)
   return out
 }
 
@@ -49,8 +49,8 @@ function sources(): string[] {
  * their own test, further down.
  */
 function clefsEmployees(): Map<string, string[]> {
-  const familles = [...new Set(Object.keys(fr).map((k) => k.split('.')[0]))]
-  const motif = new RegExp(`['\`](${familles.join('|')})\\.([A-Za-z][\\w]*)['\`]`, 'g')
+  const families = [...new Set(Object.keys(fr).map((k) => k.split('.')[0]))]
+  const motif = new RegExp(`['\`](${families.join('|')})\\.([A-Za-z][\\w]*)['\`]`, 'g')
   const par = new Map<string, string[]>()
   for (const f of sources()) {
     // The two catalogues define themselves; every other file under `src/i18n` is an
@@ -68,10 +68,10 @@ function clefsEmployees(): Map<string, string[]> {
 
 describe('the translation catalogue', () => {
   it('every key used in the code exists in French', () => {
-    const manquantes = [...clefsEmployees()]
+    const missing = [...clefsEmployees()]
       .filter(([key]) => !(key in fr) && !(`${key}_one` in fr))
       .map(([key, fichiers]) => `${key} (${fichiers.join(', ')})`)
-    expect(manquantes, 'clefs sans traduction française').toEqual([])
+    expect(missing, 'clefs sans traduction française').toEqual([])
   })
 
   it('the computed families are complete', () => {
@@ -85,8 +85,8 @@ describe('the translation catalogue', () => {
     // screen strewn with identifiers is not. So we check that *translating* into
     // English never returns the raw key, including for what English does not have.
     const t = translator('en')
-    const brutes = Object.keys(fr).filter((key) => t(key) === key && fr[key] !== key)
-    expect(brutes, 'clefs rendues telles quelles en anglais').toEqual([])
+    const raw = Object.keys(fr).filter((key) => t(key) === key && fr[key] !== key)
+    expect(raw, 'clefs rendues telles quelles en anglais').toEqual([])
   })
 
   it('English holds no key unknown to French', () => {
@@ -98,10 +98,10 @@ describe('the translation catalogue', () => {
   it('a template\'s parameters exist in both languages', () => {
     // "{role}" translated without its parameter would leave the brace on screen.
     const params = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',')
-    const divergents = Object.keys(en)
+    const divergent = Object.keys(en)
       .filter((key) => key in fr && params(en[key]) !== params(fr[key]))
       .map((key) => `${key} : fr(${params(fr[key])}) ≠ en(${params(en[key])})`)
-    expect(divergents).toEqual([])
+    expect(divergent).toEqual([])
   })
 
   it('interpolates and agrees the plural in both languages', () => {

@@ -6,7 +6,7 @@ export type Fixture =
   | { kind: 'training'; id: string; date: string; training: Training }
 
 /**
- * Le jour d'une date, au format ISO, lu sur l'horloge locale.
+ * A date's day, in ISO format, read off the local clock.
  *
  * `toISOString()` converts to UTC: between midnight and the local offset (0:00–2:00
  * in France, say), it still returns the previous day. So the day is derived from the
@@ -19,7 +19,7 @@ export const isoDay = (d: Date) =>
  *  "il y a 3 semaines" on an English machine, the same way the calendar writes its own
  *  months. `numeric: 'always'` rather than `'auto'`: "2 days ago" compares at a glance
  *  with "3 weeks ago", where "the day before yesterday" needs converting. */
-const relatif = (lang: string) => new Intl.RelativeTimeFormat(lang, { numeric: 'always' })
+const relative = (lang: string) => new Intl.RelativeTimeFormat(lang, { numeric: 'always' })
 
 /**
  * A date's age, in words: "2 days ago" does not weigh the same as "3 weeks ago", and a
@@ -30,15 +30,15 @@ const relatif = (lang: string) => new Intl.RelativeTimeFormat(lang, { numeric: '
  * the device clock moved back since writing — folded in here, because "in two hours"
  * makes no sense under a text already written.
  */
-export function since(iso: string, lang = 'fr', maintenant = new Date()): string | null {
-  const sec = Math.max(0, Math.round((maintenant.getTime() - new Date(iso).getTime()) / 1000))
-  const [n, unité]: [number, Intl.RelativeTimeFormatUnit] =
+export function since(iso: string, lang = 'fr', now = new Date()): string | null {
+  const sec = Math.max(0, Math.round((now.getTime() - new Date(iso).getTime()) / 1000))
+  const [n, unit]: [number, Intl.RelativeTimeFormatUnit] =
     sec < 3600 ? [Math.floor(sec / 60), 'minute']
     : sec < 86400 ? [Math.floor(sec / 3600), 'hour']
     : sec < 7 * 86400 ? [Math.floor(sec / 86400), 'day']
     : sec < 30 * 86400 ? [Math.floor(sec / (7 * 86400)), 'week']
     : [Math.floor(sec / (30 * 86400)), 'month']
-  return n < 1 ? null : relatif(lang).format(-n, unité)
+  return n < 1 ? null : relative(lang).format(-n, unit)
 }
 
 /**
@@ -50,25 +50,25 @@ export function since(iso: string, lang = 'fr', maintenant = new Date()): string
  */
 export function nextFixture(matches: Match[], trainings: Training[], today: Date): Fixture | null {
   const jour = isoDay(today)
-  const echeances: Fixture[] = []
+  const upcoming: Fixture[] = []
   // Trainings are added before games: the sort below is stable, so if insertion order
   // decided ties on date, it would have to coincide with the intended rule by accident.
   // Inserting them the "wrong" way round makes the explicit tie-break decide, rather
   // than an accidental insertion order.
   for (const t of trainings) {
-    if (t.date >= jour) echeances.push({ kind: 'training', id: t.id, date: t.date, training: t })
+    if (t.date >= jour) upcoming.push({ kind: 'training', id: t.id, date: t.date, training: t })
   }
   for (const m of matches) {
     // A finished game is no longer upcoming; a game with no date is not scheduled and
     // cannot be announced as next.
     if (m.status === 'finished' || !m.meta.date) continue
-    if (m.meta.date >= jour) echeances.push({ kind: 'match', id: m.id, date: m.meta.date, match: m })
+    if (m.meta.date >= jour) upcoming.push({ kind: 'match', id: m.id, date: m.meta.date, match: m })
   }
   // On an equal date the game comes first: it is the one that counts. Between two
   // items of the same kind nothing separates them: returning 0 (rather than -1 on both
   // sides) avoids an inconsistent comparator — a sort() malformed that way has an
   // undefined result that can vary between engines or versions.
-  echeances.sort((a, b) =>
+  upcoming.sort((a, b) =>
     a.date.localeCompare(b.date) || (a.kind === b.kind ? 0 : a.kind === 'match' ? -1 : 1))
-  return echeances[0] ?? null
+  return upcoming[0] ?? null
 }

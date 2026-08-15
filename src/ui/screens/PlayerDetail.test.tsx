@@ -76,8 +76,8 @@ describe('PlayerDetail', () => {
     renderAt('p1')
     await screen.findByText('MARTIN Lucas')
     // One assist in one game → 1.0 per game, never "1".
-    const ligne = screen.getByText('Passes décisives').closest('div')!
-    expect(within(ligne).getByText('1,0')).toBeInTheDocument()
+    const row = screen.getByText('Passes décisives').closest('div')!
+    expect(within(row).getByText('1,0')).toBeInTheDocument()
   })
 
   it('shows a dash rather than a zero for a player with no game', async () => {

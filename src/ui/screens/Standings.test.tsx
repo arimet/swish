@@ -27,7 +27,7 @@ const renderChamp = () =>
  *  click, never up front.
  *  The club's teams come from an asynchronous load: we wait for them to be there
  *  before choosing a value, otherwise the select only holds "— Choisir —". */
-const remplirFormulaire = async (home: string, away: string, hs: string, as_: string) => {
+const fillForm = async (home: string, away: string, hs: string, as_: string) => {
   await userEvent.click(await screen.findByRole('button', { name: /saisir un résultat/i }))
   await waitFor(() => expect((screen.getByLabelText('Équipe reçue') as HTMLSelectElement).options.length).toBeGreaterThan(1))
   await userEvent.selectOptions(screen.getByLabelText('Équipe reçue'), home)
@@ -82,7 +82,7 @@ describe('Standings', () => {
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     renderChamp()
     await screen.findByRole('table')
-    await remplirFormulaire('tc', 'tb', '55', '80')
+    await fillForm('tc', 'tb', '55', '80')
     await userEvent.type(screen.getByLabelText('Date de la rencontre'), '2026-01-10')
     await userEvent.clear(screen.getByLabelText('Championnat'))
     await userEvent.type(screen.getByLabelText('Championnat'), 'Poule A')
@@ -94,7 +94,7 @@ describe('Standings', () => {
 
   it('forbids adding while an entered score is negative', async () => {
     renderChamp()
-    await remplirFormulaire('tb', 'tc', '-5', '60')
+    await fillForm('tb', 'tc', '-5', '60')
     expect(screen.getByRole('button', { name: /ajouter le résultat/i })).toBeDisabled()
   })
 
@@ -102,7 +102,7 @@ describe('Standings', () => {
     // With no date, the same game entered once dated and once blank would produce two
     // distinct fixture keys and count twice in the standings.
     renderChamp()
-    await remplirFormulaire('tb', 'tc', '70', '60')
+    await fillForm('tb', 'tc', '70', '60')
     expect(screen.getByRole('button', { name: /ajouter le résultat/i })).toBeDisabled()
     await userEvent.type(screen.getByLabelText('Date de la rencontre'), '2026-01-10')
     expect(screen.getByRole('button', { name: /ajouter le résultat/i })).toBeEnabled()
@@ -115,7 +115,7 @@ describe('Standings', () => {
       roster: [], events: [], status: 'finished',
     })
     renderChamp()
-    await remplirFormulaire('ta', 'tb', '10', '5')
+    await fillForm('ta', 'tb', '10', '5')
     await userEvent.type(screen.getByLabelText('Date de la rencontre'), '2026-01-10')
 
     expect(await screen.findByText(/correspond déjà à une de nos rencontres/i)).toBeInTheDocument()

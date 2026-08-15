@@ -20,7 +20,7 @@ import { newPlay } from '../domain/plays'
  * it back itself, otherwise the queue would stay silent and all these tests would pass
  * for the wrong reasons.
  */
-async function depot() {
+async function repo() {
   vi.stubEnv('VITE_SYNC_URL', '/api')
   vi.resetModules()
   vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 0 })))
@@ -43,7 +43,7 @@ afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals() })
 
 describe('the five kinds reach the queue', () => {
   it('queues every write, under the right key', async () => {
-    const r = await depot()
+    const r = await repo()
     await r.saveResult({ id: 'r1', championshipLabel: 'Poule A', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
     await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
@@ -62,7 +62,7 @@ describe('the five kinds reach the queue', () => {
     // `savePlay` adds `updatedAt` to the object written. Queueing the argument received
     // would send a version with no timestamp, and the library would look shuffled on
     // the other devices — which have only the store's order.
-    const r = await depot()
+    const r = await repo()
     await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
     const [op] = await db.outbox.toArray()
     expect((op.doc as { updatedAt?: string }).updatedAt).toBeTruthy()
@@ -71,7 +71,7 @@ describe('the five kinds reach the queue', () => {
 
 describe('the deletion cascades', () => {
   it('removing a team takes everything that depends on it', async () => {
-    const r = await depot()
+    const r = await repo()
     await r.saveTeam({ id: 'ta', name: 'VIGNOT' })
     await r.savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'L' })
     await r.saveResult({ id: 'r1', championshipLabel: 'P', homeId: 'ta', awayId: 'tb', homeScore: 1, awayScore: 2 })
@@ -89,7 +89,7 @@ describe('the deletion cascades', () => {
   })
 
   it('removing a player also sends the pruned call-ups', async () => {
-    const r = await depot()
+    const r = await repo()
     await r.savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'M', firstName: 'L' })
     await r.saveConvocation({ matchId: 'm1', playerIds: ['p1', 'p2'] })
     await vider()
@@ -103,7 +103,7 @@ describe('the deletion cascades', () => {
   })
 
   it('removing a game takes its call-up', async () => {
-    const r = await depot()
+    const r = await repo()
     await r.saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
     await vider()
 
@@ -113,7 +113,7 @@ describe('the deletion cascades', () => {
   })
 
   it('removing a play also sends the sessions that cited it', async () => {
-    const r = await depot()
+    const r = await repo()
     await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05', playIds: ['s1'] })
     await vider()
@@ -126,7 +126,7 @@ describe('the deletion cascades', () => {
   })
 
   it('ticking a play on a session sends the session', async () => {
-    const r = await depot()
+    const r = await repo()
     await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
     await vider()
@@ -139,7 +139,7 @@ describe('the deletion cascades', () => {
 
 describe('the bulk cleanup', () => {
   it('takes the call-ups of the deleted games', async () => {
-    const r = await depot()
+    const r = await repo()
     await r.saveMatch({ id: 'm1', meta: { clubId: 'ta', opponentId: 'tb' }, roster: [], events: [], status: 'setup' })
     await r.saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
     await vider()
@@ -150,7 +150,7 @@ describe('the bulk cleanup', () => {
   })
 
   it('queues every result, session and play deleted in bulk', async () => {
-    const r = await depot()
+    const r = await repo()
     await r.saveResult({ id: 'r1', championshipLabel: 'P', homeId: 'tb', awayId: 'tc', homeScore: 1, awayScore: 2 })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
     await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })

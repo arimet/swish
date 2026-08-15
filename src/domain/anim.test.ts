@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { snapshot, recaler, transitions } from './anim'
+import { snapshot, refit, transitions } from './anim'
 import { newPlay, nextStep, type Play } from './plays'
 
 const proche = (a: { x: number; y: number }, b: { x: number; y: number }) => {
@@ -9,7 +9,7 @@ const proche = (a: { x: number; y: number }, b: { x: number; y: number }) => {
 describe('refit', () => {
   it('lands the endpoints exactly on the start and the end', () => {
     const trace = [{ x: 0.2, y: 0.2 }, { x: 0.2, y: 0.6 }, { x: 0.6, y: 0.6 }]
-    const r = recaler(trace, { x: 0.1, y: 0.1 }, { x: 0.9, y: 0.5 })
+    const r = refit(trace, { x: 0.1, y: 0.1 }, { x: 0.9, y: 0.5 })
     proche(r[0], { x: 0.1, y: 0.1 })
     proche(r[r.length - 1], { x: 0.9, y: 0.5 })
   })
@@ -17,7 +17,7 @@ describe('refit', () => {
   it('preserves the shape: an L stays an L', () => {
     // The corner is a right angle; a similarity preserves angles.
     const trace = [{ x: 0, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }]
-    const r = recaler(trace, { x: 0.2, y: 0.3 }, { x: 0.8, y: 0.7 })
+    const r = refit(trace, { x: 0.2, y: 0.3 }, { x: 0.8, y: 0.7 })
     const u = { x: r[0].x - r[1].x, y: r[0].y - r[1].y }
     const v = { x: r[2].x - r[1].x, y: r[2].y - r[1].y }
     expect(u.x * v.x + u.y * v.y).toBeCloseTo(0, 6)   // produit scalaire nul
@@ -26,24 +26,24 @@ describe('refit', () => {
   it('keeps the proportions along the stroke', () => {
     // The midpoint of a straight segment stays the midpoint after refitting.
     const trace = [{ x: 0, y: 0 }, { x: 0.5, y: 0 }, { x: 1, y: 0 }]
-    const r = recaler(trace, { x: 0.2, y: 0.2 }, { x: 0.8, y: 0.8 })
+    const r = refit(trace, { x: 0.2, y: 0.2 }, { x: 0.8, y: 0.8 })
     proche(r[1], { x: 0.5, y: 0.5 })
   })
 
   it('falls back to the straight line when the stroke is degenerate', () => {
     // Coincident endpoints: no similarity is defined.
     const trace = [{ x: 0.3, y: 0.3 }, { x: 0.4, y: 0.5 }, { x: 0.3, y: 0.3 }]
-    const r = recaler(trace, { x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 })
+    const r = refit(trace, { x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 })
     expect(r).toEqual([{ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 }])
   })
 
   it('leaves a stroke of fewer than two points as it is, clamped to the bounds', () => {
-    expect(recaler([], { x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 })).toEqual([{ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 }])
+    expect(refit([], { x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 })).toEqual([{ x: 0.1, y: 0.1 }, { x: 0.9, y: 0.9 }])
   })
 })
 
 /** Two steps: position 1 goes down from (0.5,0.62) to (0.5,0.2), the others stay put. */
-function deuxTemps(): Play {
+function twoSteps(): Play {
   const s: Play = { id: 'x', ...newPlay('c1', 'half', false) }
   const t1 = nextStep(s.steps[0])
   t1.markers = t1.markers.map((p) => (p.position === 1 ? { ...p, at: { x: 0.5, y: 0.2 } } : p))
@@ -53,29 +53,29 @@ function deuxTemps(): Play {
 
 describe('snapshot', () => {
   it('renders exactly the starting step at part 0, and the next at part 1', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     expect(snapshot(s, { step: 0, part: 0 }).markers).toEqual(s.steps[0].markers)
     expect(snapshot(s, { step: 0, part: 1 }).markers).toEqual(s.steps[1].markers)
   })
 
   it('interpolates a marker with no arrow in a straight line', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     const p = snapshot(s, { step: 0, part: 0.5 }).markers.find((q) => q.position === 1)!
     expect(p.at.x).toBeCloseTo(0.5, 6)
     expect(p.at.y).toBeCloseTo(0.41, 6)          // (0.62 + 0.2) / 2
   })
 
   it('leaves a marker that does not move strictly still', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     const avant = s.steps[0].markers.find((q) => q.position === 3)!
     const p = snapshot(s, { step: 0, part: 0.37 }).markers.find((q) => q.position === 3)!
     expect(p.at).toEqual(avant.at)
   })
 
   it('leaves a still marker still despite its arrow', () => {
-    // A stroke refitted onto two coincident positions has zero length: the
-    // pion doit rester posé là, pas partir en NaN.
-    const s = deuxTemps()
+    // A stroke refitted onto two coincident positions has zero length: the marker
+    // must stay put, not drift off into NaN.
+    const s = twoSteps()
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 3 },
       points: [{ x: 0.78, y: 0.48 }, { x: 0.6, y: 0.4 }, { x: 0.78, y: 0.48 }],
@@ -89,7 +89,7 @@ describe('snapshot', () => {
   it('follows the arrow\'s shape rather than the chord', () => {
     // A cut that curves round to the left: halfway along, the marker is off the
     // straight line joining the two positions.
-    const s = deuxTemps()
+    const s = twoSteps()
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 1 },
       points: [{ x: 0.5, y: 0.62 }, { x: 0.2, y: 0.41 }, { x: 0.5, y: 0.2 }],
@@ -102,7 +102,7 @@ describe('snapshot', () => {
   it('refits the arrow: a stroke drawn beside still leads to the real positions', () => {
     // The arrow runs from (0.3,0.7) to (0.3,0.25) — nowhere near the marker.
     // Following the raw stroke would start and land the marker beside itself.
-    const s = deuxTemps()
+    const s = twoSteps()
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 1 },
       points: [{ x: 0.3, y: 0.7 }, { x: 0.1, y: 0.45 }, { x: 0.3, y: 0.25 }],
@@ -116,7 +116,7 @@ describe('snapshot', () => {
   it('advances at constant speed, whatever the density of the stroke\'s points', () => {
     // A straight stroke but densely sampled at the start: parameterising by point
     // index would make the marker crawl at first and then leap at the end.
-    const s = deuxTemps()
+    const s = twoSteps()
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 1 },
       points: [{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.6 }, { x: 0.5, y: 0.58 }, { x: 0.5, y: 0.2 }],
@@ -127,7 +127,7 @@ describe('snapshot', () => {
   })
 
   it('exposes no arrow: the animation shows the players, not the strokes', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 1 }, points: [{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.2 }], stroke: 'cut',
     }] }
@@ -135,7 +135,7 @@ describe('snapshot', () => {
   })
 
   it('carries the ball to its new holder when it changes hands', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     s.steps[1] = { ...s.steps[1], ball: { side: 'offense', position: 3 } }
     const mi = snapshot(s, { step: 0, part: 0.5 })
     const start = s.steps[0].markers.find((q) => q.position === 1)!.at
@@ -147,7 +147,7 @@ describe('snapshot', () => {
   })
 
   it('makes the ball follow the pass arrow, not the chord', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     s.steps[1] = { ...s.steps[1], ball: { side: 'offense', position: 3 } }
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 1 },
@@ -159,12 +159,12 @@ describe('snapshot', () => {
   })
 
   it('keeps the ball carried when the carrier does not change', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     expect(snapshot(s, { step: 0, part: 0.5 }).ball).toEqual({ side: 'offense', position: 1 })
   })
 
   it('counts the transitions, and renders the last step beyond them', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     expect(transitions(s)).toBe(1)
     expect(snapshot(s, { step: 5, part: 0.5 }).markers).toEqual(s.steps[1].markers)
   })
@@ -184,12 +184,12 @@ describe('snapshot — the movement paths', () => {
 
   it('emits no path when none is asked for', () => {
     // The historical behaviour: the bare animation. It is still the default.
-    const s = deuxTemps()
+    const s = twoSteps()
     expect(snapshot(s, { step: 0, part: 0.5 }).arrows).toEqual([])
   })
 
   it('leads from the starting position to the arrival one', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     const l = ligneDe(s, 0.5, 1)!
     proche(l.points[0], { x: 0.5, y: 0.62 })
     proche(l.points[l.points.length - 1], { x: 0.5, y: 0.2 })
@@ -198,12 +198,12 @@ describe('snapshot — the movement paths', () => {
   it('stays the same across the whole transition: it is a path, not a trail', () => {
     // The line is not drawn progressively. At 10% as at 90%, it shows the whole
     // path — that is what gets pointed at during a time-out.
-    const s = deuxTemps()
+    const s = twoSteps()
     expect(ligneDe(s, 0.1, 1)!.points).toEqual(ligneDe(s, 0.9, 1)!.points)
   })
 
   it('borrows the drawn arrow\'s shape, refitted', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     s.steps[0] = { ...s.steps[0], arrows: [{
       from: { side: 'offense', position: 1 },
       points: [{ x: 0.3, y: 0.7 }, { x: 0.1, y: 0.45 }, { x: 0.3, y: 0.25 }],   // dessinée à côté
@@ -221,19 +221,19 @@ describe('snapshot — the movement paths', () => {
   it('gives a straight line to a marker that moves with no arrow drawn', () => {
     // Otherwise the toggle would light some movements and not others, which reads
     // as a fault rather than as a rule.
-    const s = deuxTemps()
+    const s = twoSteps()
     const l = ligneDe(s, 0.5, 1)!
     expect(l.points).toEqual([{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.2 }])
     expect(l.stroke).toBe('cut')
   })
 
   it('ignores still markers', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     expect(ligneDe(s, 0.5, 3)).toBeUndefined()
   })
 
   it('draws the pass when the ball changes hands', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     s.steps[1] = { ...s.steps[1], ball: { side: 'offense', position: 3 } }
     const pass = snapshot(s, { step: 0, part: 0.5 }, true).arrows.find((f) => f.stroke === 'pass')!
     expect(pass).toBeDefined()
@@ -242,19 +242,19 @@ describe('snapshot — the movement paths', () => {
   })
 
   it('draws no pass when the ball does not change hands', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     expect(snapshot(s, { step: 0, part: 0.5 }, true).arrows.some((f) => f.stroke === 'pass')).toBe(false)
   })
 
   it('emits nothing on the last step, which has nothing after it', () => {
-    const s = deuxTemps()
+    const s = twoSteps()
     expect(snapshot(s, { step: 1, part: 0 }, true).arrows).toEqual([])
   })
 
   it('shows the path from the first instant, before anything has moved', () => {
     // At part 0 the markers are still at the drawn positions, but the line must
     // already be there: it announces the gesture, it does not comment on it after.
-    const s = deuxTemps()
+    const s = twoSteps()
     expect(ligneDe(s, 0, 1)).toBeDefined()
   })
 })

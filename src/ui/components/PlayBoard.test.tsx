@@ -15,12 +15,12 @@ describe('PlayBoard', () => {
     const numeros = (camp: string) => [...container.querySelectorAll(`[data-marker="${camp}"] text`)].map((t) => t.textContent).sort()
     expect(numeros('offense')).toEqual(['1', '2', '3', '4', '5'])
     expect(numeros('defense')).toEqual(['1', '2', '3', '4', '5'])
-    const disque = (camp: string) => [...container.querySelectorAll(`[data-marker="${camp}"] circle`)]
-    expect(disque('defense')).toHaveLength(5)
-    expect(disque('defense').every((c) => c.getAttribute('r') === disque('offense')[0].getAttribute('r'))).toBe(true)
+    const disc = (camp: string) => [...container.querySelectorAll(`[data-marker="${camp}"] circle`)]
+    expect(disc('defense')).toHaveLength(5)
+    expect(disc('defense').every((c) => c.getAttribute('r') === disc('offense')[0].getAttribute('r'))).toBe(true)
     // Open against filled: the defence has a stroke, the attack has none.
-    expect(disque('defense').every((c) => !!c.getAttribute('stroke'))).toBe(true)
-    expect(disque('offense').every((c) => !c.getAttribute('stroke'))).toBe(true)
+    expect(disc('defense').every((c) => !!c.getAttribute('stroke'))).toBe(true)
+    expect(disc('offense').every((c) => !c.getAttribute('stroke'))).toBe(true)
     expect(screen.getByLabelText('ballon')).toBeInTheDocument()
   })
 

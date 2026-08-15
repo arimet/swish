@@ -91,14 +91,14 @@ describe('SummaryScreen — the shooting percentage column', () => {
 })
 
 describe('SummaryScreen — rights', () => {
-  const renderRésumé = () =>
+  const renderSummary = () =>
     render(<AuthProvider><MemoryRouter><SummaryScreen matchId={MATCH_ID} onHome={vi.fn()} /></MemoryRouter></AuthProvider>)
 
   it('post-game correction is refused to the scorer\'s table: no button, no correction mode', async () => {
     // Correcting a closed sheet is not the Saturday volunteer's job: neither correction
     // button is offered to them, and the mode does not open.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
-    renderRésumé()
+    renderSummary()
     await screen.findByText('Visiteurs · VERDUN')
 
     expect(screen.queryByRole('button', { name: /corriger stats/i })).not.toBeInTheDocument()
@@ -107,7 +107,7 @@ describe('SummaryScreen — rights', () => {
   })
 
   it('a visitor reads the summary without being asked for any code, and exports it', async () => {
-    renderRésumé()
+    renderSummary()
     await screen.findByText('Visiteurs · VERDUN')
     expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
     // Reading, following and exporting write nothing: those three stay open to all.

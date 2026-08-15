@@ -115,28 +115,28 @@ describe('clipping the zones to the court\'s frame', () => {
   // `corner3_left` starts at (0,0), the frame is inset by 4 and rounded by RAYON:
   // without a clip, the fill spilled into the rounded corners. Both uses — the
   // confirmation after a shot and the zone chart — must carry it.
-  const zonesDecoupees = (c: HTMLElement) =>
+  const slicedZones = (c: HTMLElement) =>
     [...c.querySelectorAll('g[clip-path] path[d]')].map((p) => p.getAttribute('d'))
 
   it('clips the confirmation fill', () => {
     const { container } = render(
       <ShotPicker onPick={vi.fn()} confirmation={{ spot: { x: 0.03, y: 0.12 }, label: '3 PTS · Corner gauche', made: true }} />,
     )
-    expect(zonesDecoupees(container)).toContain(ZONE_PATH.corner3_left)
+    expect(slicedZones(container)).toContain(ZONE_PATH.corner3_left)
   })
 
   it('clips the shot chart\'s seven zones', () => {
     const { container } = render(<ShotChart shots={[]} />)
-    const decoupees = zonesDecoupees(container)
-    expect(decoupees).toHaveLength(7)
-    expect(decoupees).toContain(ZONE_PATH.corner3_left)
+    const sliced = slicedZones(container)
+    expect(sliced).toHaveLength(7)
+    expect(sliced).toContain(ZONE_PATH.corner3_left)
   })
 
   it('gives the clip the drawn frame, not values copied out', () => {
     const { container } = render(<ShotChart shots={[]} />)
-    const decoupe = container.querySelector('clipPath rect')!
+    const sliced = container.querySelector('clipPath rect')!
     for (const [attr, value] of Object.entries(cadre()))
-      expect(decoupe.getAttribute(attr)).toBe(String(value))
+      expect(sliced.getAttribute(attr)).toBe(String(value))
   })
 })
 

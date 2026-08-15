@@ -9,8 +9,8 @@ describe('newPlay', () => {
     expect(s.steps[0].markers.every((p) => p.side === 'offense')).toBe(true)
     expect(s.steps[0].ball).toEqual({ side: 'offense', position: 1 })
     // 1-2-2: the point guard is furthest from the basket (largest y, baseline at the top)
-    const meneur = s.steps[0].markers.find((p) => p.position === 1)!
-    expect(Math.max(...s.steps[0].markers.map((p) => p.at.y))).toBe(meneur.at.y)
+    const pointGuard = s.steps[0].markers.find((p) => p.position === 1)!
+    expect(Math.max(...s.steps[0].markers.map((p) => p.at.y))).toBe(pointGuard.at.y)
   })
 
   it('adds five defenders, each between their attacker and the basket', () => {

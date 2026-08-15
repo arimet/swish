@@ -1,15 +1,15 @@
-# Le Postgres du développement local. En production, c'est Neon — même pilote,
-# même protocole, même code.
+# The local development Postgres. In production it is Neon — same driver, same
+# protocol, same code.
 #
 #   docker compose up -d
 #   psql "postgres://swish:swish@localhost:5433/swish" -f db/schema.sql
 #
-# Puis, dans un `.env` :
+# Then, in a `.env`:
 #   DATABASE_URL=postgres://swish:swish@localhost:5433/swish
 #   SYNC_WRITE_TOKEN=dev
 #   VITE_SYNC_URL=/api
 #
-# Sans ces variables, `pnpm dev` ignore tout ça et l'application reste 100 % locale.
+# Without these variables, `pnpm dev` ignores all of it and the app stays 100% local.
 
 services:
   db:
@@ -18,8 +18,8 @@ services:
       POSTGRES_USER: swish
       POSTGRES_PASSWORD: swish
       POSTGRES_DB: swish
-    # 5433 et non 5432 : un Postgres est souvent déjà installé sur la machine, et
-    # le conflit de port ne se manifesterait qu'à la première requête.
+    # 5433 and not 5432: a Postgres is often already installed on the machine, and the
+    # port conflict would only show up on the first query.
     ports: ['5433:5432']
     volumes: ['swish-db:/var/lib/postgresql/data']
     healthcheck:

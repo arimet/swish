@@ -48,15 +48,15 @@ describe('SchemaList — the playbook', () => {
     await savePlay({ ...play('s3', 'Combinaison de Metz'), clubId: 'tz' })
     renderList()
 
-    const cartes = await screen.findAllByRole('article')
-    expect(cartes).toHaveLength(2)
+    const cards = await screen.findAllByRole('article')
+    expect(cards).toHaveLength(2)
     // Each card carries its name and its thumbnail: it is by the first step's shape
     // that the coach recognises their play.
-    const noms = cartes.map((c) => within(c).getByRole('heading').textContent)
-    expect(noms).toEqual(expect.arrayContaining(['Pick and roll haut', 'Corner pour le 4']))
-    for (const carte of cartes) {
-      const name = within(carte).getByRole('heading').textContent
-      expect(within(carte).getByRole('img', { name: `tableau tactique — ${name}` })).toBeInTheDocument()
+    const names = cards.map((c) => within(c).getByRole('heading').textContent)
+    expect(names).toEqual(expect.arrayContaining(['Pick and roll haut', 'Corner pour le 4']))
+    for (const card of cards) {
+      const name = within(card).getByRole('heading').textContent
+      expect(within(card).getByRole('img', { name: `tableau tactique — ${name}` })).toBeInTheDocument()
     }
     expect(screen.queryByText('Combinaison de Metz')).not.toBeInTheDocument()
   })
@@ -92,20 +92,20 @@ describe('SchemaList — the playbook', () => {
     await userEvent.click(within((await screen.findAllByRole('article'))[0]).getByRole('button', { name: 'Dupliquer' }))
 
     await waitFor(async () => expect(await listPlays('ta')).toHaveLength(2))
-    const noms = (await listPlays('ta')).map((s) => s.name).sort()
-    expect(noms).toEqual(['Pick and roll haut', 'Pick and roll haut (copie)'])
+    const names = (await listPlays('ta')).map((s) => s.name).sort()
+    expect(names).toEqual(['Pick and roll haut', 'Pick and roll haut (copie)'])
   })
 
   it('duplicating and deleting are administrative: the scorer\'s table only gets "Play", and nothing is written', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await savePlay(play('s1', 'Pick and roll haut'))
     renderList()
-    const carte = (await screen.findAllByRole('article'))[0]
+    const card = (await screen.findAllByRole('article'))[0]
 
-    expect(within(carte).queryByRole('button', { name: 'Dupliquer' })).not.toBeInTheDocument()
-    expect(within(carte).queryByRole('button', { name: 'Supprimer' })).not.toBeInTheDocument()
+    expect(within(card).queryByRole('button', { name: 'Dupliquer' })).not.toBeInTheDocument()
+    expect(within(card).queryByRole('button', { name: 'Supprimer' })).not.toBeInTheDocument()
     // Play stays: it is what people come to the sideline for.
-    expect(within(carte).getByRole('link', { name: /jouer/i })).toBeInTheDocument()
+    expect(within(card).getByRole('link', { name: /jouer/i })).toBeInTheDocument()
     // What matters: the library has not moved.
     expect(await listPlays('ta')).toHaveLength(1)
   })
@@ -113,15 +113,15 @@ describe('SchemaList — the playbook', () => {
   it('deleting a play is confirmed and then takes effect', async () => {
     await savePlay(play('s1', 'Pick and roll haut'))
     renderList()
-    const carte = (await screen.findAllByRole('article'))[0]
-    await userEvent.click(within(carte).getByRole('button', { name: 'Supprimer' }))
+    const card = (await screen.findAllByRole('article'))[0]
+    await userEvent.click(within(card).getByRole('button', { name: 'Supprimer' }))
 
-    const dialogue = await screen.findByRole('dialog')
-    expect(within(dialogue).getByText(/Supprimer le schéma/)).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText(/Supprimer le schéma/)).toBeInTheDocument()
     // Until it is confirmed, the play is still there.
     expect(await listPlays('ta')).toHaveLength(1)
 
-    await userEvent.click(within(dialogue).getByRole('button', { name: 'Supprimer' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Supprimer' }))
     await waitFor(async () => expect(await listPlays('ta')).toHaveLength(0))
   })
 })
@@ -133,8 +133,8 @@ describe('SchemaList — filing the library', () => {
     await savePlay(play('s3', 'Brouillon'))
     renderList()
 
-    const barre = await screen.findByRole('group', { name: 'Dossiers' })
-    expect(within(barre).getAllByRole('button').map((b) => b.textContent))
+    const bar = await screen.findByRole('group', { name: 'Dossiers' })
+    expect(within(bar).getAllByRole('button').map((b) => b.textContent))
       .toEqual(['Tous', 'Attaque placée', 'Remises en jeu', 'Sans dossier'])
   })
 
@@ -142,8 +142,8 @@ describe('SchemaList — filing the library', () => {
     await savePlay(play('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     renderList()
 
-    const barre = await screen.findByRole('group', { name: 'Dossiers' })
-    expect(within(barre).getAllByRole('button').map((b) => b.textContent)).toEqual(['Tous', 'Attaque placée'])
+    const bar = await screen.findByRole('group', { name: 'Dossiers' })
+    expect(within(bar).getAllByRole('button').map((b) => b.textContent)).toEqual(['Tous', 'Attaque placée'])
   })
 
   it('choosing a folder leaves only its plays in the grid', async () => {
@@ -152,17 +152,17 @@ describe('SchemaList — filing the library', () => {
     await savePlay(play('s3', 'Brouillon'))
     renderList()
 
-    const barre = await screen.findByRole('group', { name: 'Dossiers' })
-    await userEvent.click(within(barre).getByRole('button', { name: 'Remises en jeu' }))
+    const bar = await screen.findByRole('group', { name: 'Dossiers' })
+    await userEvent.click(within(bar).getByRole('button', { name: 'Remises en jeu' }))
     expect(screen.getAllByRole('article').map((c) => within(c).getByRole('heading').textContent))
       .toEqual(['Remise ligne de fond'])
 
     // "Unfiled" shows only the unfiled plays, never the others.
-    await userEvent.click(within(barre).getByRole('button', { name: 'Sans dossier' }))
+    await userEvent.click(within(bar).getByRole('button', { name: 'Sans dossier' }))
     expect(screen.getAllByRole('article').map((c) => within(c).getByRole('heading').textContent))
       .toEqual(['Brouillon'])
 
-    await userEvent.click(within(barre).getByRole('button', { name: 'Tous' }))
+    await userEvent.click(within(bar).getByRole('button', { name: 'Tous' }))
     expect(screen.getAllByRole('article')).toHaveLength(3)
   })
 
@@ -217,11 +217,11 @@ describe('SchemaList — filing the library', () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await savePlay(play('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     renderList()
-    const carte = (await screen.findAllByRole('article'))[0]
+    const card = (await screen.findAllByRole('article'))[0]
 
     // The filing stays readable — it is a classification, not an action — but there is
     // no longer a button to press only to be asked for a code.
-    expect(within(carte).getByText('Attaque placée')).toBeInTheDocument()
+    expect(within(card).getByText('Attaque placée')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Dossier de « Pick and roll haut »' })).not.toBeInTheDocument()
     // Ni saisie ouverte, ni écriture en base.
     expect(screen.queryByRole('combobox', { name: 'Dossier' })).not.toBeInTheDocument()
@@ -234,8 +234,8 @@ describe('SchemaList — filing the library', () => {
     await savePlay(play('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
     renderList()
 
-    const barre = await screen.findByRole('group', { name: 'Dossiers' })
-    await userEvent.click(within(barre).getByRole('button', { name: 'Remises en jeu' }))
+    const bar = await screen.findByRole('group', { name: 'Dossiers' })
+    await userEvent.click(within(bar).getByRole('button', { name: 'Remises en jeu' }))
     await userEvent.type(screen.getByRole('searchbox'), 'remise')
 
     expect(screen.getAllByRole('article').map((c) => within(c).getByRole('heading').textContent))

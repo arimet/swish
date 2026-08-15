@@ -11,7 +11,7 @@ export function playingTimes(match: Match): Map<string, number> {
 
   const accrue = (untilRemaining: number) => {
     if (!running) return
-    const delta = lastRemaining - untilRemaining // secondes écoulées
+    const delta = lastRemaining - untilRemaining // seconds elapsed
     if (delta > 0) for (const id of onCourt) times.set(id, (times.get(id) ?? 0) + delta)
     lastRemaining = untilRemaining
   }

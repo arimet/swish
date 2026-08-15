@@ -6,16 +6,16 @@ const match = (id: string, date: string): Match => ({
   id, meta: { championshipLabel: 'Poule A', date, clubId: 'ta', opponentId: 'tb' },
   roster: [], events: [], status: 'setup',
 })
-const entrainement = (id: string, date: string): Training => ({ id, date, clubId: 'ta' })
+const training = (id: string, date: string): Training => ({ id, date, clubId: 'ta' })
 
 describe('nextFixture', () => {
   it('picks the first upcoming fixture', () => {
-    const f = nextFixture([match('m1', '2026-02-07')], [entrainement('e1', '2026-02-03')], new Date('2026-02-01'))
+    const f = nextFixture([match('m1', '2026-02-07')], [training('e1', '2026-02-03')], new Date('2026-02-01'))
     expect(f).toMatchObject({ kind: 'training', id: 'e1' })
   })
 
   it('never picks a past fixture', () => {
-    const f = nextFixture([match('m1', '2026-01-10')], [entrainement('e1', '2026-01-05')], new Date('2026-02-01'))
+    const f = nextFixture([match('m1', '2026-01-10')], [training('e1', '2026-01-05')], new Date('2026-02-01'))
     expect(f).toBeNull()
   })
 
@@ -29,13 +29,13 @@ describe('nextFixture', () => {
     // 00:30 local time on 3 February: in UTC, depending on the offset, it may still
     // be the 2nd. The day kept must stay the 3rd (local components), otherwise the
     // 2nd's fixture — already past for the user — would pass the filter again.
-    const aube = new Date(2026, 1, 3, 0, 30)
-    expect(nextFixture([match('m1', '2026-02-02')], [], aube)).toBeNull()
-    expect(nextFixture([match('m1', '2026-02-03')], [], aube)).toMatchObject({ kind: 'match', id: 'm1' })
+    const dawn = new Date(2026, 1, 3, 0, 30)
+    expect(nextFixture([match('m1', '2026-02-02')], [], dawn)).toBeNull()
+    expect(nextFixture([match('m1', '2026-02-03')], [], dawn)).toMatchObject({ kind: 'match', id: 'm1' })
   })
 
   it('on an equal date, the game comes before the training', () => {
-    const f = nextFixture([match('m1', '2026-02-03')], [entrainement('e1', '2026-02-03')], new Date('2026-02-01'))
+    const f = nextFixture([match('m1', '2026-02-03')], [training('e1', '2026-02-03')], new Date('2026-02-01'))
     expect(f).toMatchObject({ kind: 'match', id: 'm1' })
   })
 
@@ -49,13 +49,13 @@ describe('nextFixture', () => {
   })
 
   it('ignores a game with no date', () => {
-    const sansDate = { ...match('m1', '2026-02-03'), meta: { championshipLabel: 'Poule A', clubId: 'ta', opponentId: 'tb' } }
-    expect(nextFixture([sansDate], [], new Date('2026-02-01'))).toBeNull()
+    const noDate = { ...match('m1', '2026-02-03'), meta: { championshipLabel: 'Poule A', clubId: 'ta', opponentId: 'tb' } }
+    expect(nextFixture([noDate], [], new Date('2026-02-01'))).toBeNull()
   })
 
   it('ignores a game already finished', () => {
-    const finie = { ...match('m1', '2026-02-03'), status: 'finished' as const }
-    expect(nextFixture([finie], [], new Date('2026-02-01'))).toBeNull()
+    const finished = { ...match('m1', '2026-02-03'), status: 'finished' as const }
+    expect(nextFixture([finished], [], new Date('2026-02-01'))).toBeNull()
   })
 
   it('returns null when nothing is scheduled', () => {
@@ -65,32 +65,32 @@ describe('nextFixture', () => {
 
 describe('since', () => {
   const t0 = new Date('2026-08-13T12:00:00')
-  const ilYA = (ms: number) => since(new Date(t0.getTime() - ms).toISOString(), 'fr', t0)
+  const ago = (ms: number) => since(new Date(t0.getTime() - ms).toISOString(), 'fr', t0)
   const MIN = 60_000, HEURE = 60 * MIN, JOUR = 24 * HEURE
 
   it('formats nothing under a minute — the interface writes « à l’instant »', () => {
-    expect(ilYA(30_000)).toBeNull()
+    expect(ago(30_000)).toBeNull()
   })
 
   it('counts in minutes, then in hours', () => {
-    expect(ilYA(5 * MIN)).toBe('il y a 5 minutes')
-    expect(ilYA(3 * HEURE)).toBe('il y a 3 heures')
+    expect(ago(5 * MIN)).toBe('il y a 5 minutes')
+    expect(ago(3 * HEURE)).toBe('il y a 3 heures')
   })
 
   it('tells two days ago from three weeks ago', () => {
     // The whole weight of the message is here: two days still read, three
     // semaines sentent l'oubli.
-    expect(ilYA(2 * JOUR)).toBe('il y a 2 jours')
-    expect(ilYA(21 * JOUR)).toBe('il y a 3 semaines')
+    expect(ago(2 * JOUR)).toBe('il y a 2 jours')
+    expect(ago(21 * JOUR)).toBe('il y a 3 semaines')
   })
 
   it('moves to months past thirty days', () => {
-    expect(ilYA(40 * JOUR)).toBe('il y a 1 mois')
+    expect(ago(40 * JOUR)).toBe('il y a 1 mois')
   })
 
   it('never returns a negative age for a future date', () => {
     // The device clock moved back since the write: "in 2 hours" would have
     // aucun sens sous un message déjà écrit.
-    expect(ilYA(-2 * HEURE)).toBeNull()
+    expect(ago(-2 * HEURE)).toBeNull()
   })
 })

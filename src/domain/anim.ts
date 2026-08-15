@@ -16,16 +16,15 @@ export interface Instant { step: number; part: number }
 export const transitions = (s: Play) => Math.max(0, s.steps.length - 1)
 
 /** The strokes that move a marker; a `pass` moves the ball, not the player. */
-const TRAITS_DE_PION: Stroke[] = ['cut', 'screen', 'dribble']
+const MARKER_STROKES: Stroke[] = ['cut', 'screen', 'dribble']
 
 /**
- * Applies to the stroke the similarity — rotation, uniform scale, translation —
- * qui envoie son premier point sur `start` et son dernier sur `end`. La
- * shape of the gesture is preserved and the endpoints become exact. A degenerate
- * stroke (endpoints coincident) has no defined similarity: we fall back
- * sur la ligne droite.
+ * Applies to the stroke the similarity — rotation, uniform scale, translation — that
+ * sends its first point onto `start` and its last onto `end`. The gesture's shape is
+ * preserved and the endpoints become exact. A degenerate stroke (coincident
+ * endpoints) has no defined similarity: we fall back on the straight line.
  */
-export function recaler(points: Point[], start: Point, end: Point): Point[] {
+export function refit(points: Point[], start: Point, end: Point): Point[] {
   if (points.length < 2) return [start, end]
   const a = points[0], b = points[points.length - 1]
   const dx = b.x - a.x, dy = b.y - a.y
@@ -42,33 +41,33 @@ export function recaler(points: Point[], start: Point, end: Point): Point[] {
 }
 
 /** Linear interpolation between two points. */
-const entre = (a: Point, b: Point, t: number): Point => ({ x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) })
+const between = (a: Point, b: Point, t: number): Point => ({ x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) })
 
 /**
  * The position at fraction `part` of the stroke's **length**. Cumulative length is
  * what counts, not the index of the points: a gesture sampled densely at the start
  * would slow down there and leap afterwards, for no reason at all.
  */
-function avanceSur(points: Point[], part: number): Point {
-  const cumul = [0]
+function advanceAlong(points: Point[], part: number): Point {
+  const cumulative = [0]
   for (let i = 1; i < points.length; i++) {
-    cumul.push(cumul[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y))
+    cumulative.push(cumulative[i - 1] + Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y))
   }
-  const vise = part * cumul[cumul.length - 1]
+  const target = part * cumulative[cumulative.length - 1]
   let i = 1
-  while (i < points.length - 1 && cumul[i] < vise) i++
+  while (i < points.length - 1 && cumulative[i] < target) i++
   // A zero-length segment — degenerate stroke, or two coincident points: we stay put
   // rather than divide by zero and drift off into NaN.
-  const segment = cumul[i] - cumul[i - 1]
-  return entre(points[i - 1], points[i], segment === 0 ? 0 : (vise - cumul[i - 1]) / segment)
+  const segment = cumulative[i] - cumulative[i - 1]
+  return between(points[i - 1], points[i], segment === 0 ? 0 : (target - cumulative[i - 1]) / segment)
 }
 
 /** Where a step's ball is: the position of whoever carries it, or the floor. */
 function ballAt(t: Step): Point | null {
   const b = t.ball
   if ('x' in b) return b
-  const porteur = t.markers.find((p) => p.side === b.side && p.position === b.position)
-  return porteur ? porteur.at : null
+  const carrier = t.markers.find((p) => p.side === b.side && p.position === b.position)
+  return carrier ? carrier.at : null
 }
 
 /** Is the ball held by the same thing at both steps? */
@@ -96,63 +95,63 @@ function sameBall(a: Step['ball'], b: Step['ball']): boolean {
 export function snapshot(s: Play, at: Instant, withPaths = false): Step {
   const n = Math.max(0, Math.min(Math.floor(at.step), transitions(s)))
   const from = s.steps[n]
-  const vers = s.steps[n + 1]
-  if (!vers) return { markers: structuredClone(from.markers), ball: structuredClone(from.ball), arrows: [] }
+  const next = s.steps[n + 1]
+  if (!next) return { markers: structuredClone(from.markers), ball: structuredClone(from.ball), arrows: [] }
   const part = Math.max(0, Math.min(at.part, 1))
 
-  const flecheDe = (side: Side, position: Position, traits: Stroke[]): Arrow | undefined =>
-    from.arrows.find((f) => f.from.side === side && f.from.position === position && traits.includes(f.stroke))
+  const arrowFrom = (side: Side, position: Position, strokes: Stroke[]): Arrow | undefined =>
+    from.arrows.find((f) => f.from.side === side && f.from.position === position && strokes.includes(f.stroke))
 
   /** The complete path, computed once: the drawn curve refitted onto the two
    *  positions, or the chord when nothing was drawn. This same list of points both
    *  places the moving marker **and** draws the line — which is why they cannot
    *  contradict each other. */
-  const chemin = (start: Point, end: Point, f: Arrow | undefined): Point[] =>
-    f ? recaler(f.points, start, end) : [start, end]
+  const path = (start: Point, end: Point, f: Arrow | undefined): Point[] =>
+    f ? refit(f.points, start, end) : [start, end]
 
   /** The lines emitted, in the order the moving markers generate them. */
   const lines: Arrow[] = []
 
-  const markers = from.markers.map((pion): Marker => {
-    const homologue = vers.markers.find((q) => q.side === pion.side && q.position === pion.position)
-    const end = homologue?.at ?? pion.at           // absent au temps suivant : il ne bouge pas
-    const immobile = end.x === pion.at.x && end.y === pion.at.y
-    const dessinee = flecheDe(pion.side, pion.position, TRAITS_DE_PION)
+  const markers = from.markers.map((marker): Marker => {
+    const counterpart = next.markers.find((q) => q.side === marker.side && q.position === marker.position)
+    const end = counterpart?.at ?? marker.at      // absent at the next step: it does not move
+    const still = end.x === marker.at.x && end.y === marker.at.y
+    const drawn = arrowFrom(marker.side, marker.position, MARKER_STROKES)
     // The line is computed even at the bounds: at `part` 0 nothing has moved yet, but
     // the path must already show — it announces the gesture, it does not comment on it
     // afterwards. A stationary marker gets none: it has no path.
-    if (withPaths && !immobile) {
+    if (withPaths && !still) {
       lines.push({
-        from: { side: pion.side, position: pion.position },
-        points: chemin(pion.at, end, dessinee),
+        from: { side: marker.side, position: marker.position },
+        points: path(marker.at, end, drawn),
         // With no arrow drawn, the movement is a cut: that is the neutral stroke of
         // the playbook, and the toggle must light up *every* movement
-        // — n'en montrer qu'une partie se lirait comme une panne.
-        stroke: dessinee?.stroke ?? 'cut',
+        // — showing only some of them would read as a fault.
+        stroke: drawn?.stroke ?? 'cut',
       })
     }
-    // Immobile ou aux bornes : la valeur exacte du temps, sans interpolation qui ferait trembler.
-    if (immobile || part <= 0) return { ...pion, at: { ...pion.at } }
-    if (part >= 1) return { ...pion, at: { ...end } }
-    return { ...pion, at: avanceSur(chemin(pion.at, end, dessinee), part) }
+    // Still, or at the bounds: the step's exact value, with no interpolation to shiver.
+    if (still || part <= 0) return { ...marker, at: { ...marker.at } }
+    if (part >= 1) return { ...marker, at: { ...end } }
+    return { ...marker, at: advanceAlong(path(marker.at, end, drawn), part) }
   })
 
   const ball = ((): Step['ball'] => {
-    if (sameBall(from.ball, vers.ball)) return structuredClone(from.ball)
+    if (sameBall(from.ball, next.ball)) return structuredClone(from.ball)
     const start = ballAt(from)
-    const end = ballAt(vers)
+    const end = ballAt(next)
     if (!start || !end) return structuredClone(from.ball)
     // In flight: neither carried nor resting where it was. A pass arrow from the carrier bends the path.
-    const pass = 'x' in from.ball ? undefined : flecheDe(from.ball.side, from.ball.position, ['pass'])
-    const vol = chemin(start, end, pass)
+    const pass = 'x' in from.ball ? undefined : arrowFrom(from.ball.side, from.ball.position, ['pass'])
+    const flight = path(start, end, pass)
     // A pass is a movement like any other, and the coach shows it as much as the cuts:
     // it gets its line, dashed since that is its stroke.
     if (withPaths && 'x' in from.ball === false) {
-      lines.push({ from: from.ball, points: vol, stroke: 'pass' })
+      lines.push({ from: from.ball, points: flight, stroke: 'pass' })
     }
     if (part <= 0) return structuredClone(from.ball)
-    if (part >= 1) return structuredClone(vers.ball)
-    return avanceSur(vol, part)
+    if (part >= 1) return structuredClone(next.ball)
+    return advanceAlong(flight, part)
   })()
 
   return { markers, ball, arrows: lines }

@@ -18,7 +18,7 @@
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { snapshot, transitions } from '../../domain/anim'
-import { LIMITE_LIEN, encoder } from '../../domain/share'
+import { LINK_LIMIT, encode } from '../../domain/share'
 import type { Play, Step } from '../../domain/plays'
 import { C, bd } from '../olive/kit'
 import { useT } from '../../i18n'
@@ -382,8 +382,8 @@ export function SharePlay({ play, stepIndex = 0, open, onClose }: {
     if (!open) return
     let alive = true
     setStatus('')
-    encoder(play).then((code) => {
-      if (alive) setLink(code.length > LIMITE_LIEN ? null : `${location.origin}/schemas/recu#${code}`)
+    encode(play).then((code) => {
+      if (alive) setLink(code.length > LINK_LIMIT ? null : `${location.origin}/schemas/recu#${code}`)
     })
     return () => { alive = false }
   }, [open, play])
