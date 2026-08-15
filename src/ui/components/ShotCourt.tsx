@@ -40,13 +40,21 @@ export const ZONE_PATH: Record<ShotZone, string> = {
  * raquette et le cercle de lancer franc viennent ensuite, le reste s'efface.
  */
 export function CourtLines({ bord = true }: { bord?: boolean }) {
-  const major = { fill: 'none', stroke: 'currentColor', strokeWidth: 9, opacity: 0.7 } as const
-  const minor = { fill: 'none', stroke: 'currentColor', strokeWidth: 6, opacity: 0.4 } as const
-  const faint = { fill: 'none', stroke: 'currentColor', strokeWidth: 4, opacity: 0.22 } as const
+  // Les lignes d'un terrain sont peintes, pas suggérées. Elles étaient à 70 %,
+  // 40 % et 22 % d'opacité : même les principales étaient des fantômes, et c'est
+  // ce qui donnait au tableau son air de brouillon plutôt que de terrain. Les
+  // principales passent à l'opacité pleine ; les secondaires gardent un retrait,
+  // parce qu'un cercle de lancer franc n'a pas à disputer l'attention aux joueurs.
+  const major = { fill: 'none', stroke: 'currentColor', strokeWidth: 9, opacity: 1 } as const
+  const minor = { fill: 'none', stroke: 'currentColor', strokeWidth: 6, opacity: 0.62 } as const
+  const faint = { fill: 'none', stroke: 'currentColor', strokeWidth: 4, opacity: 0.34 } as const
   return (
     <g style={{ color: T.line }}>
-      {/* Fond propre à la raquette */}
-      <rect x={505} y={0} width={490} height={580} fill={T.ink} fillOpacity={0.05} />
+      {/* La raquette **peinte**, comme dans un gymnase. Elle était remplie de l'encre
+          des trajets à cinq pour cent d'opacité, c'est-à-dire invisible : le terrain
+          n'avait aucune couleur propre, seulement des marques posées sur une dalle
+          nue. C'est la surface qui manquait, pas la teinte du bois. */}
+      <rect x={505} y={0} width={490} height={580} fill={T.paint} />
       {/* Prolongements des lignes de raquette : laissent deviner les cibles de mi-distance */}
       <g {...faint} strokeDasharray="18 22">
         <line x1={505} y1={580} x2={505} y2={786.5} />
@@ -195,7 +203,7 @@ export function ShotPicker({ onPick, confirmation, shots }: {
             key={z}
             disabled={locked}
             onClick={() => commit(ZONE_CENTROID[z])}
-            className="rounded-lg px-2 py-1 text-[11px] font-semibold transition hover:brightness-125 disabled:opacity-40"
+            className="rounded-lg px-2 py-1 text-[12px] font-semibold transition hover:brightness-125 disabled:opacity-40"
             style={{ background: C.card2, color: C.muted, border: `1px solid ${C.border}` }}
           >
             {ZONE_LABELS[z]}

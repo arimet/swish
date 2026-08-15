@@ -20,6 +20,7 @@ import { matchRatios, scoreProgression } from '../../domain/progression'
 import { fmt } from '../components/GameClock'
 import { C, bd, TeamBadge, teamColor, fmtDate, champLabel } from '../olive/kit'
 import type { GameEvent, Match, Player, ScoreKind, ShotSpot, StatKind, TeamSide } from '../../domain/types'
+import { Check, Download, Eye, Pencil } from 'lucide-react'
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
 type EventInput = DistributiveOmit<GameEvent, 'id' | 'wallClock'>
@@ -107,13 +108,13 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <button onClick={onHome} className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>← Accueil</button>
         <div className="flex flex-wrap items-center gap-2.5">
-          <Link to={`/match/${match.id}/watch`} target="_blank" className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.muted }}>👁 Suivi</Link>
+          <Link to={`/match/${match.id}/watch`} target="_blank" className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.muted }}><Eye className="h-4 w-4" strokeWidth={2} />Suivi</Link>
           {/* Corriger les infos ou les stats après coup relève de l'administration :
               les deux boutons ne se rendent que pour elle. Lire la feuille, la
               suivre et l'exporter restent libres pour tout le monde. */}
           {can('manage') && (
             <>
-              <button onClick={() => guard('manage', () => setShowEdit(true))} className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>✎ Infos</button>
+              <button onClick={() => guard('manage', () => setShowEdit(true))} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}><Pencil className="h-4 w-4" strokeWidth={2} />Infos</button>
               {/* Le droit est vérifié à l'ouverture du mode correction, pas redérivé ensuite :
                   un administrateur qui ouvre « Corriger stats » puis se verrouille garde un mode
                   correction écrivant jusqu'à ce qu'il en sorte. C'est assumé — il faudrait rendre
@@ -121,12 +122,14 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
                   à chaque rendu parce que la saisie du match dure deux heures et change de mains,
                   pas parce que cet écran-ci aurait oublié de le faire. */}
               <button onClick={() => (editStats ? setEditStats(false) : guard('manage', () => setEditStats(true)))}
-                className="rounded-xl px-4 py-2.5 text-sm font-semibold" style={editStats ? { background: C.accent, color: C.onAccent } : { border: bd, color: C.text }}>
-                {editStats ? '✓ Terminer' : '✎ Corriger stats'}
+                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={editStats ? { background: C.brand, color: C.onBrand } : { border: bd, color: C.text }}>
+                {editStats
+                  ? <><Check className="h-4 w-4 shrink-0" strokeWidth={2.5} />Terminer</>
+                  : <><Pencil className="h-4 w-4 shrink-0" strokeWidth={2} />Corriger stats</>}
               </button>
             </>
           )}
-          <button onClick={printSummary} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>⬇ Exporter en PDF</button>
+          <button onClick={printSummary} className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}><Download className="h-4 w-4" strokeWidth={2} />Exporter en PDF</button>
         </div>
       </div>
       {editStats && (
@@ -156,15 +159,15 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       {/* SCOREBOARD FINAL */}
       <div className="overflow-hidden rounded-3xl" style={{ background: C.frame, border: bd }}>
         <div className="flex items-center justify-between px-6 pt-5">
-          <span className="truncate text-[11px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{champLabel(meta)}</span>
-          <span className="rounded-md px-2 py-0.5 text-[10px] font-black uppercase" style={{ background: C.neutralBg, color: C.muted }}>Final</span>
+          <span className="truncate text-[12px] font-bold" style={{ color: C.muted }}>{champLabel(meta)}</span>
+          <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.neutralBg, color: C.muted }}>Final</span>
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-6 py-5 sm:gap-8">
           <FinalSide id={meta.clubId} name={teamNames.A} score={score.a} win={score.a >= score.b} align="right" />
           <span className="text-lg font-black" style={{ color: C.faint }}>–</span>
           <FinalSide id={meta.opponentId} name={teamNames.B} score={score.b} win={score.b > score.a} align="left" />
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t px-6 py-3 text-[11px] font-semibold" style={{ borderColor: C.border, color: C.faint }}>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t px-6 py-3 text-[12px] font-semibold" style={{ borderColor: C.border, color: C.faint }}>
           {meta.matchNumber && <span>Rencontre n°{meta.matchNumber}</span>}
           {f.long && <span className="capitalize">{f.long}</span>}
           {meta.venue && <span>{meta.venue}</span>}
@@ -186,7 +189,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         <Stat label="Points du banc" a={teamTotals(match).bench.points} b="—" />
         <Stat label="Temps en tête" a={fmt(ratios.A.leadDurationSec)} b={fmt(ratios.B.leadDurationSec)} />
         <div className="rounded-2xl p-4" style={{ background: C.card, border: bd }}>
-          <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Égalités</p>
+          <p className="text-[12px] font-bold tracking-wide" style={{ color: C.faint }}>Égalités</p>
           <p className="mt-1 text-2xl font-black tabular-nums">{ratios.ties}</p>
         </div>
       </div>
@@ -226,7 +229,7 @@ function FinalSide({ id, name, score, win, align }: { id: string; name: string; 
 function Stat({ label, a, b }: { label: string; a: ReactNode; b: ReactNode }) {
   return (
     <div className="rounded-2xl p-4" style={{ background: C.card, border: bd }}>
-      <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</p>
+      <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</p>
       <p className="mt-1 flex items-baseline gap-1.5 text-lg font-black tabular-nums">
         <span>{a}</span><span className="text-xs font-bold" style={{ color: C.faint }}>/</span><span>{b}</span>
       </p>
@@ -244,7 +247,7 @@ function OpponentCard({ teamId, name, score }: { teamId: string; name: string; s
       <TeamBadge id={teamId} name={name} size="h-11 w-11 text-xs" />
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-sm font-extrabold uppercase tracking-wide">Visiteurs · {name}</h3>
-        <p className="mt-0.5 text-[11px] font-semibold" style={{ color: C.faint }}>Score saisi globalement — l'adversaire n'a pas d'effectif à détailler.</p>
+        <p className="mt-0.5 text-[12px] font-semibold" style={{ color: C.faint }}>Score saisi globalement — l'adversaire n'a pas d'effectif à détailler.</p>
       </div>
       <span className="text-3xl font-black tabular-nums" style={{ color: teamColor(teamId) }}>{score}</span>
     </section>
@@ -265,12 +268,12 @@ function TeamTable({ match, players, name, teamId, onPick }: { match: Match; pla
       <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: `1px solid ${C.border}` }}>
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: teamColor(teamId) }} />
         <h3 className="text-sm font-extrabold uppercase tracking-wide">Locaux · {name}</h3>
-        {onPick && <span className="ml-auto text-[11px] font-bold" style={{ color: C.accent }}>✎ cliquez une ligne</span>}
+        {onPick && <span className="ml-auto text-[12px] font-bold" style={{ color: C.accent }}><Pencil className="mr-1 inline h-3 w-3 align-[-1px]" strokeWidth={2} />cliquez une ligne</span>}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-[11px] font-bold uppercase" style={{ color: C.faint }}>
+            <tr className="text-[12px] font-bold uppercase" style={{ color: C.faint }}>
               <Th left>N°</Th><Th left>Joueur</Th><Th>5</Th><Th>Tps</Th><Th>Pts</Th><Th>Tirs</Th><Th>%Tirs</Th><Th>3pts</Th><Th>2 Int</Th><Th>2 Ext</Th><Th>LF</Th><Th>PD</Th><Th>RO</Th><Th>RD</Th><Th>CT</Th><Th>Ftes</Th>
             </tr>
           </thead>
@@ -291,7 +294,7 @@ function TeamTable({ match, players, name, teamId, onPick }: { match: Match; pla
                   <Td>{tracksMisses && s.fieldGoalsMade + s.misses > 0 ? `${Math.round((s.fieldGoalsMade / (s.fieldGoalsMade + s.misses)) * 100)} %` : '—'}</Td>
                   <Td>{s.threes}</Td><Td>{s.twoInside}</Td><Td>{s.twoOutside}</Td><Td>{s.freeThrows}</Td>
                   <Td>{s.assists}</Td><Td>{s.offRebounds}</Td><Td>{s.defRebounds}</Td><Td>{s.blocks}</Td>
-                  <Td><span style={{ color: s.fouls >= 5 ? C.pink : undefined }}>{s.fouls}</span></Td>
+                  <Td><span style={{ color: s.fouls >= 5 ? C.accent : undefined }}>{s.fouls}</span></Td>
                 </tr>
               )
             })}

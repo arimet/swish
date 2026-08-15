@@ -16,10 +16,12 @@ describe('TeamCreate', () => {
 
     await userEvent.type(screen.getByLabelText(/nom de l.équipe/i), 'VIGNOT')
 
-    // Ajoute un joueur au passage
-    await userEvent.type(screen.getByPlaceholderText('N°'), '7')
-    await userEvent.type(screen.getByPlaceholderText('Nom'), 'HOSTIN')
-    await userEvent.click(screen.getByRole('button', { name: '+' }))
+    // Ajoute un joueur au passage. Les champs se désignent par leur étiquette et
+    // non par leur `placeholder` : c'est ce qu'un lecteur d'écran entend, et le
+    // `placeholder` ne portait plus le nom du champ depuis qu'il a une étiquette.
+    await userEvent.type(screen.getByLabelText('N°'), '7')
+    await userEvent.type(screen.getByLabelText('Nom'), 'HOSTIN')
+    await userEvent.click(screen.getByRole('button', { name: /ajouter ce joueur/i }))
 
     await userEvent.click(screen.getByRole('button', { name: /créer l.équipe/i }))
 

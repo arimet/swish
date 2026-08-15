@@ -82,7 +82,7 @@ export function Admin() {
 
   return (
     <div className="p-6">
-      <p className="mb-6 rounded-2xl px-4 py-3 text-sm" style={{ background: C.accentBg, color: C.pink }}>
+      <p className="mb-6 rounded-2xl px-4 py-3 text-sm" style={{ background: C.accentBg, color: C.accent }}>
         Ces suppressions sont définitives : il n’y a pas de corbeille, et résultats, convocations,
         entraînements et schémas ne sont pas synchronisés — ce qui est effacé ici n’existe plus nulle part.
       </p>
@@ -158,7 +158,7 @@ export function Admin() {
         {/* La remise à zéro à part, et derrière la recopie du nom du club : un clic
             unique n'est pas à la hauteur d'une action qui vide tout l'appareil. */}
         <section className="rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
-          <p className="mb-1 text-xs font-bold uppercase tracking-wide" style={{ color: C.pink }}>Tout effacer</p>
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>Tout effacer</p>
           <p className="mb-3 text-[13px]" style={{ color: C.muted }}>
             Remise à zéro complète de cet appareil : équipes, joueurs, rencontres, résultats,
             convocations, entraînements, schémas et le message à l’équipe. L’application repart
@@ -220,7 +220,7 @@ function Ligne({ libelle, compte, action, aria, desactive, onClick }: {
       <button
         onClick={onClick} disabled={desactive} aria-label={aria}
         className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40"
-        style={{ border: `1px solid ${C.accentBd}`, color: C.pink }}
+        style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}
       >
         {action}
       </button>

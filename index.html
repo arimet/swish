@@ -7,9 +7,24 @@
     <!-- La barre du navigateur suit la page, pas l'accent : c'est le prolongement
          du fond, et un bandeau rose au-dessus d'une application claire se voit
          comme une erreur. Les deux thèmes sont déclarés, le clair d'abord. -->
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#d8dce5" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d0d0f" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#c3cbd6" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#07090c" />
     <title>Swish — Feuille de match basket</title>
+    <!-- Le thème est posé avant la première peinture, et il faut que ce soit ici :
+         les jetons clairs vivent sur `:root` nu, donc un appareil réglé en sombre
+         aurait vu un éclair blanc le temps que React monte. Choix enregistré
+         d'abord, préférence du système ensuite. Le même couple de clés est relu
+         par `ui/theme/ThemeProvider.tsx` — s'il change, il change aux deux endroits. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('swish-theme')
+          if (t !== 'light' && t !== 'dark') t = 'dark'
+          document.documentElement.setAttribute('data-theme', t)
+          document.documentElement.classList.toggle('dark', t === 'dark')
+        } catch (e) { /* navigation privée : le thème clair par défaut fait l'affaire */ }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

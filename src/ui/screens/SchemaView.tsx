@@ -48,7 +48,7 @@ export function SchemaView() {
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.nom}</h1>
           {/* Les mêmes marques que sur la carte de la bibliothèque : on reconnaît
               d'un coup d'œil le schéma qu'on vient d'ouvrir. */}
-          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-bold" style={{ color: C.muted }}>
+          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold" style={{ color: C.muted }}>
             <span className="rounded-md px-1.5 py-0.5" style={{ background: C.card2 }}>
               {schema.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'}
             </span>
@@ -64,7 +64,7 @@ export function SchemaView() {
         <div className="flex shrink-0 items-center gap-2">
           <button onClick={() => setPartage(true)} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>Partager</button>
           {can('manage') && <button onClick={modifier} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>Modifier</button>}
-          <Link to={`/schemas/${id}/lecteur`} className="flex h-11 items-center rounded-xl px-4 text-sm font-bold text-white" style={{ background: C.accent }}>▶ Jouer</Link>
+          <Link to={`/schemas/${id}/lecteur`} className="flex h-11 items-center rounded-xl px-4 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>▶ Jouer</Link>
         </div>
       </div>
 

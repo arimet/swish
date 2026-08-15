@@ -107,7 +107,7 @@ export function SchemaList() {
     <div className="p-6">
       <PageTitle
         action={gere && (
-          <button onClick={creer} className="rounded-xl px-4 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+          <button onClick={creer} className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
             + Nouveau schéma
           </button>
         )}
@@ -132,7 +132,7 @@ export function SchemaList() {
                 Posez vos cinq joueurs, tirez leurs trajectoires au doigt, empilez les temps : la combinaison
                 se rejoue ensuite au temps-mort, animée, sur le téléphone.
               </p>
-              <button onClick={creer} className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+              <button onClick={creer} className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
                 Dessiner ma première combinaison →
               </button>
             </>
@@ -194,20 +194,20 @@ export function SchemaList() {
                       <PlayBoard schema={s} tempsIndex={0} apercu remplit />
                     </div>
                     <h3 className="mt-2.5 truncate text-[15px] font-extrabold tracking-tight">{s.nom}</h3>
-                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-bold" style={{ color: C.muted }}>
+                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold" style={{ color: C.muted }}>
                       <span className="rounded-md px-1.5 py-0.5" style={{ background: C.card2 }}>
                         {s.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'}
                       </span>
                       <span>{s.temps.length} temps</span>
                       {s.defense && <span>· défense</span>}
                     </p>
-                    {s.note && <p className="mt-1 truncate text-[11px]" style={{ color: C.faint }}>{s.note}</p>}
+                    {s.note && <p className="mt-1 truncate text-[12px]" style={{ color: C.faint }}>{s.note}</p>}
                   </Link>
 
                   {/* Le dossier reste lisible par tout le monde — c'est un
                       classement, pas une action — mais seul qui peut ranger
                       obtient un bouton pour le changer. */}
-                  <div className="mt-2 text-[11px] font-bold">
+                  <div className="mt-2 text-[12px] font-bold">
                     {!gere ? (
                       <span className="inline-block rounded-md px-1.5 py-0.5" style={{ background: C.card2, color: s.dossier ? C.accent : C.faint }}>
                         {s.dossier || 'Sans dossier'}
@@ -220,7 +220,7 @@ export function SchemaList() {
                         <input
                           list={DATALIST} aria-label="Dossier" autoFocus value={enRangement.valeur}
                           onChange={(e) => setEnRangement({ id: s.id, valeur: e.target.value })}
-                          placeholder="Nom du dossier" className="min-w-0 flex-1 rounded-lg px-2 py-1 text-[11px] font-semibold"
+                          placeholder="Nom du dossier" className="min-w-0 flex-1 rounded-lg px-2 py-1 text-[12px] font-semibold"
                           style={{ background: C.panel, border: bd, color: C.text }}
                         />
                         <button type="submit" className="rounded-lg px-2 py-1" style={{ color: C.accent }}>Ranger</button>
@@ -261,7 +261,7 @@ export function SchemaList() {
                         <button
                           onClick={() => guard('manage', () => setASupprimer(s))} aria-label="Supprimer" title="Supprimer"
                           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-                          style={{ border: `1px solid ${C.accentBd}`, color: C.pink }}
+                          style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}
                         >
                           <Ic d={ICONE_POUBELLE} className="h-[17px] w-[17px]" />
                         </button>
@@ -277,7 +277,7 @@ export function SchemaList() {
 
       {/* Même formulation que les entraînements et les résultats extérieurs :
           une seule limite à retenir, pas une par écran. */}
-      <p className="mt-8 text-[11px]" style={{ color: C.faint }}>Ces schémas restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
+      <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>Ces schémas restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
 
       <ConfirmDialog
         open={!!aSupprimer} danger
@@ -294,7 +294,7 @@ function Onglet({ actif, onClick, children }: { actif: boolean; onClick: () => v
     <button
       onClick={onClick} aria-pressed={actif}
       className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
-      style={actif ? { background: C.accent, color: C.onAccent } : { background: C.card2, color: C.muted, border: bd }}
+      style={actif ? { background: C.brand, color: C.onBrand } : { background: C.card2, color: C.muted, border: bd }}
     >
       {children}
     </button>

@@ -7,20 +7,26 @@ const ThemeContext = createContext<{ theme: Theme; setTheme: (t: Theme) => void 
 })
 export const useTheme = () => useContext(ThemeContext)
 
-/**
- * Le clair, toujours, au démarrage — et c'est aussi ce que les jetons CSS posent
- * sur `:root` nu, donc pas de clignotement au chargement.
+/** La clé du choix enregistré. Le script en tête d'`index.html` lit la même :
+ *  c'est lui qui pose le thème avant la première peinture, pour qu'un appareil
+ *  réglé en sombre ne voie pas d'éclair blanc. */
+export const THEME_KEY = 'swish-theme'
+
+/** Choix enregistré s'il y en a un, sombre sinon.
  *
- * On ne relit **pas** de préférence enregistrée, et c'est délibéré : aucun écran
- * n'expose de bascule aujourd'hui. Un `theme: dark` laissé dans un navigateur
- * par une version précédente enfermait donc son propriétaire dans un thème dont
- * rien ne permettait de sortir. Tant que le choix n'est pas offert, il ne se
- * mémorise pas.
+ *  Le sombre n'est pas ici un mode d'économie mais l'identité du produit : le
+ *  canevas encre est ce qui autorise l'accent citron à être vif, aucune couleur
+ *  n'ayant plus à se défendre contre du blanc. Un premier lancement doit donc
+ *  montrer le produit tel qu'il est pensé.
  *
- * Le sombre reste complet et `setTheme` fonctionne : le jour où l'on posera un
- * `ThemeSwitcher`, c'est ici qu'on relira ce qu'il aura écrit.
- */
-const initialTheme = (): Theme => 'light'
+ *  La préférence système n'est **pas** consultée, et c'est le seul endroit du
+ *  dépôt où l'on s'autorise à passer outre. Le thème clair existe, il est composé
+ *  et non hérité, et la bascule est dans l'en-tête de chaque écran : qui le
+ *  préfère l'obtient d'un clic, et son choix est mémorisé pour toujours. */
+const initialTheme = (): Theme => {
+  const stored = localStorage.getItem(THEME_KEY)
+  return stored === 'light' || stored === 'dark' ? stored : 'dark'
+}
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(initialTheme)
@@ -28,9 +34,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement
     root.setAttribute('data-theme', theme)
     root.classList.toggle('dark', theme === 'dark')
-    // Rien n'est enregistré : sans bascule à l'écran, une préférence mémorisée ne
-    // pourrait que piéger. Voir `initialTheme`.
-    localStorage.removeItem('theme')
+    localStorage.setItem(THEME_KEY, theme)
   }, [theme])
   return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>
 }

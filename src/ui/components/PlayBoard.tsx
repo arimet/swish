@@ -185,7 +185,11 @@ function PionDessine({ pion, h }: { pion: Pion; h: number }) {
   return (
     <g data-pion="attaque">
       <circle cx={x} cy={y} r={54} fill={T.attack} />
-      <text x={x} y={y} {...commun} fontSize={62} fill={T.ink}>{String(pion.poste)}</text>
+      {/* `onAttack` et non `ink` : l'encre des trajets et le numero ecrit sur le
+          disque sont deux roles, et `ink` les tenait tous les deux. Quand le
+          terrain est passe au parquet clair, `ink` a vire au sombre pour les
+          trajets — et le numero s'est retrouve en noir sur rouge, a 2,4:1. */}
+      <text x={x} y={y} {...commun} fontSize={62} fill={T.onAttack}>{String(pion.poste)}</text>
     </g>
   )
 }

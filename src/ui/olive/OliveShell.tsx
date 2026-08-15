@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
+import { Eraser, Lock, LockOpen } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { listPlayers } from '../../persistence/repositories'
 import type { Player } from '../../domain/types'
 import { C, bd, Ic, ICON } from './kit'
+import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { NOM_ROLE, useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 
@@ -58,11 +60,25 @@ export function OliveShell() {
       <div className="mx-auto flex h-dvh w-full max-w-[1680px] overflow-hidden lg:h-[calc(100dvh-2rem)] lg:rounded-[26px] lg:shadow-2xl" style={{ background: C.frame, color: C.text }}>
         <Sidebar players={effectif} />
         <div className="flex min-w-0 flex-1 flex-col">
+          {/* Le titre de la page, en encre et non en accent : c'est le repère le
+              plus stable de l'écran, il n'a rien à mettre en avant. L'accent
+              coloriait chaque titre, si bien qu'il ne signalait plus rien — la
+              couleur de marque doit rester rare pour rester lisible. Et le ballon
+              qui le précédait était le même sur les huit pages : une décoration
+              répétée n'informe pas. Il tient sa place de marque dans la barre
+              latérale, une fois. */}
           <header className="flex shrink-0 items-center gap-3 px-4 py-3 sm:px-6 sm:py-4" style={{ borderBottom: `1px solid ${C.border}` }}>
-            <div className="flex items-center gap-2 text-base font-extrabold sm:text-lg"><span>🏀</span><span style={{ color: C.orange }}>{title}</span></div>
-            {/* L'en-tête ne garde que le titre et le menu d'accès. « Nouvelle
-                rencontre » est parti au calendrier, où vivent les choses datées. */}
+            {/* Pas un `<h1>` : chaque écran a déjà le sien, qui nomme *sa* matière
+                (« Avenir de Vignot », « Nouveau match »). Celui-ci ne dit que
+                l'endroit où l'on se trouve, comme un fil d'Ariane, et deux titres
+                de premier niveau par page ne feraient qu'égarer une lecture à voix
+                haute. Il porte le rôle du repère, pas le rang du titre. */}
+            <p className="truncate text-lg font-extrabold tracking-tight sm:text-xl">{title}</p>
+            {/* L'en-tête ne garde que le titre, le thème et le menu d'accès.
+                « Nouvelle rencontre » est parti au calendrier, où vivent les
+                choses datées. */}
             <div className="ml-auto flex items-center gap-2">
+              <ThemeSwitcher />
               <AccesMenu players={effectif} compact />
             </div>
           </header>
@@ -123,7 +139,10 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
           : 'flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition'}
         style={{ background: C.card, border: bd, color: verrouille ? C.muted : C.green }}
       >
-        <span>{verrouille ? '🔒' : '🔓'}</span>
+        {/* Un glyphe tracé, pas un cadenas en couleur : l'émoji ignorait la teinte
+            posée juste au-dessus, donc il restait jaune quand l'état disait « vert,
+            déverrouillé » — et il changeait de dessin d'un système à l'autre. */}
+        {verrouille ? <Lock className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} /> : <LockOpen className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />}
         {!compact && <span className="truncate">Accès · {NOM_ROLE[role]}</span>}
       </button>
 
@@ -147,7 +166,7 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
                       onClick={() => { setPlayer(p.id); setChoix(false); setOpen(false) }}
                       className="flex w-full items-center gap-2.5 rounded-xl bg-[var(--c-card2)] px-2.5 py-2 text-left text-sm font-medium transition hover:bg-[var(--c-card2)]"
                     >
-                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[9px] font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[12px] font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
                       <span className="truncate">{p.lastName} {p.firstName}</span>
                     </button>
                   </li>
@@ -161,10 +180,10 @@ function AccesMenu({ players, compact = false }: { players: Player[]; compact?: 
                 autoFocus aria-label="Code d’accès" type="password" value={code} placeholder="Code"
                 onChange={(e) => { setCode(e.target.value); setErreur('') }}
                 onKeyDown={(e) => e.key === 'Enter' && valider()}
-                className={`w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${erreur ? 'border-red-500/60' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
+                className={`w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${erreur ? 'border-[var(--c-danger)]' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
               />
               {erreur && <p className="text-xs font-semibold text-[var(--c-danger)]">{erreur}</p>}
-              <button onClick={valider} className="rounded-xl bg-[var(--c-accent)] py-2.5 text-sm font-bold text-white transition hover:brightness-110">Déverrouiller</button>
+              <button onClick={valider} className="rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">Déverrouiller</button>
             </>
           )}
 
@@ -193,8 +212,8 @@ function MobileNav() {
     <nav className="flex shrink-0 items-stretch justify-around gap-1 border-t px-1 pb-[env(safe-area-inset-bottom)] pt-1 lg:hidden" style={{ borderColor: C.border, background: C.panel }}>
       {items.map((n) => (
         <NavLink key={n.label} to={n.to} end={n.end}
-          className="flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[10px] font-bold transition"
-          style={({ isActive }) => ({ color: isActive ? C.orange : C.muted, background: isActive ? C.card2 : 'transparent' })}>
+          className="flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[12px] font-bold transition"
+          style={({ isActive }) => ({ color: isActive ? C.accent : C.muted, background: isActive ? C.card2 : 'transparent' })}>
           <Ic d={n.icon} className="h-5 w-5" />
           {n.label}
         </NavLink>
@@ -216,8 +235,8 @@ function NavGroup({ items, inactifSur }: { items: { icon: string; label: string;
       {items.map((n) => (
         <NavLink key={n.label} to={n.to} end={n.end}
           className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
-          style={({ isActive }) => ({ background: actif(isActive, n.to) ? C.card2 : 'transparent', color: actif(isActive, n.to) ? C.orange : C.muted })}>
-          {({ isActive }) => (<>{actif(isActive, n.to) && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.orange }} />}<Ic d={n.icon} />{n.label}</>)}
+          style={({ isActive }) => ({ background: actif(isActive, n.to) ? C.card2 : 'transparent', color: actif(isActive, n.to) ? C.accent : C.muted })}>
+          {({ isActive }) => (<>{actif(isActive, n.to) && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.brand }} />}<Ic d={n.icon} />{n.label}</>)}
         </NavLink>
       ))}
     </nav>
@@ -233,17 +252,19 @@ function Sidebar({ players }: { players: Player[] }) {
           et ne disait plus rien de juste depuis qu'elle fait bien plus qu'une
           table de marque. */}
       <Link to="/" className="flex items-center gap-2.5 px-1">
-        <span className="grid h-8 w-8 place-items-center rounded-xl" style={{ background: C.orange }}>🏀</span>
-        <span className="text-[15px] font-extrabold leading-none tracking-tight">Swish</span>
+        <span className="grid h-9 w-9 place-items-center rounded-xl" style={{ background: C.brand, color: C.onBrand }}>
+          <Ic d={ICON.ball} className="h-5 w-5" />
+        </span>
+        <span className="text-lg font-extrabold leading-none tracking-tight">Swish</span>
       </Link>
 
-      <p className="mt-6 px-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Mon club</p>
+      <p className="mt-6 px-2 text-[12px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>Mon club</p>
       <NavGroup items={NAV_TOP} />
       {clubId && (
         <NavLink to={`/teams/${clubId}`} end
           className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
-          style={({ isActive }) => ({ background: isActive ? C.card2 : 'transparent', color: isActive ? C.orange : C.muted })}>
-          {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.orange }} />}<Ic d={ICON.users} />Mon équipe</>)}
+          style={({ isActive }) => ({ background: isActive ? C.card2 : 'transparent', color: isActive ? C.accent : C.muted })}>
+          {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.brand }} />}<Ic d={ICON.users} />Mon équipe</>)}
         </NavLink>
       )}
       <NavGroup items={NAV_REST} inactifSur={clubId ? `/teams/${clubId}` : undefined} />
@@ -264,13 +285,13 @@ function Sidebar({ players }: { players: Player[] }) {
         {can('manage') && (
           <NavLink to="/admin"
             className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition"
-            style={({ isActive }) => ({ background: C.card, border: bd, color: isActive ? C.orange : C.muted })}>
-            <span>🧹</span>
+            style={({ isActive }) => ({ background: C.card, border: bd, color: isActive ? C.accent : C.muted })}>
+            <Eraser className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
             Administration
           </NavLink>
         )}
         <a href="https://github.com/arimet" target="_blank" rel="noopener noreferrer"
-          className="block px-2 text-center text-[11px] font-medium transition hover:underline" style={{ color: C.faint }}>
+          className="block px-2 text-center text-[12px] font-medium transition hover:underline" style={{ color: C.faint }}>
           Fait par Anthony Rimet ↗
         </a>
       </div>

@@ -8,7 +8,7 @@ import { periodLength } from '../../domain/ids'
 import { shotsOf } from '../../domain/shotchart'
 import { ShotChart } from '../components/ShotCourt'
 import { fmt } from '../components/GameClock'
-import { C, TeamBadge, teamColor, champLabel } from '../olive/kit'
+import { C, TeamBadge, champLabel } from '../olive/kit'
 import type { Match, Player, TeamSide } from '../../domain/types'
 
 /** Page de suivi en direct pour les spectateurs (lecture seule, plein écran).
@@ -89,26 +89,33 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
             partage (lien projeté / envoyé à des spectateurs sans club réglé),
             pas une porte d'entrée dans l'application derrière la garde club. */}
         <div className="mb-5 flex items-center justify-center">
-          <span className="flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide"
-            style={live ? { background: C.greenBg, color: C.green } : finished ? { background: C.neutralBg, color: C.muted } : { background: C.amberBg, color: C.amber }}>
+          <span className="flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-black uppercase tracking-wide"
+            style={live ? { background: C.greenFill, color: C.onGreen } : finished ? { background: C.neutralBg, color: C.muted } : { background: C.amberBg, color: C.amber }}>
             {live && <span className="h-2 w-2 animate-pulse rounded-full" style={{ background: C.green }} />}
             {live ? 'En direct' : finished ? 'Terminé' : 'À venir'}
           </span>
         </div>
 
-        <p className="text-center text-[12px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{champLabel(match.meta)}</p>
+        <p className="text-center text-[12px] font-bold" style={{ color: C.muted }}>{champLabel(match.meta)}</p>
 
         {/* SCOREBOARD (blocs équipe : lisible sur mobile) */}
         <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-6">
-          <TeamScore id={match.meta.clubId} name={names.A} score={ls.score.a} />
-          <TeamScore id={match.meta.opponentId} name={names.B} score={ls.score.b} />
+          {/* Nous en encre, l'adversaire en accent : les mêmes deux jetons que la
+              table de marque, pour qu'un spectateur qui passe d'un écran à l'autre
+              lise le même code. Ce sont des jetons de **thème**, et pas les anciens
+              `--sb-*` du bandeau : ceux-là valaient un blanc en dur, correct sur un
+              bandeau charbon et illisible ici, où le score est posé sur le fond clair
+              de la page. Emprunter les couleurs d'une surface pour les employer sur
+              une autre, c'est ce qui a produit un score blanc sur blanc. */}
+          <TeamScore id={match.meta.clubId} name={names.A} score={ls.score.a} couleur={C.text} />
+          <TeamScore id={match.meta.opponentId} name={names.B} score={ls.score.b} couleur={C.accent} />
         </div>
         <div className="mt-3 flex flex-col items-center gap-1">
           <span className="nums rounded-lg px-3.5 py-1.5 text-base font-black tabular-nums" style={{ background: C.card, color: finished ? C.muted : C.text, border: `1px solid ${C.border}` }}>
             {finished ? 'FINAL' : `${periodLabel} · ${fmt(displaySec)}`}
           </span>
           {!finished && ls.clockRunning && !canSimulate && (
-            <span className="text-[10px] font-semibold" style={{ color: C.faint }}>chrono mis à jour à chaque action</span>
+            <span className="text-[12px] font-semibold" style={{ color: C.faint }}>chrono mis à jour à chaque action</span>
           )}
         </div>
 
@@ -121,10 +128,10 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
         <div className="mt-5 grid gap-4 lg:grid-cols-2">
           <StatList name={names.A} match={match} players={players}
             openId={openShotsId} onToggle={setOpenShotsId} />
-          <OpponentPanel id={match.meta.opponentId} name={names.B} score={ls.score.b} />
+          <OpponentPanel name={names.B} score={ls.score.b} />
         </div>
 
-        <p className="mt-6 text-center text-[11px]" style={{ color: C.faint }}>Mise à jour automatique · suivi en direct</p>
+        <p className="mt-6 text-center text-[12px]" style={{ color: C.faint }}>Mise à jour automatique · suivi en direct</p>
       </div>
     </Screen>
   )
@@ -134,12 +141,24 @@ function Screen({ children }: { children: ReactNode }) {
   return <div className="min-h-dvh" style={{ background: C.frame, color: C.text }}>{children}</div>
 }
 
-function TeamScore({ id, name, score }: { id: string; name: string; score: number }) {
+/**
+ * Un côté du tableau spectateur.
+ *
+ * Le score portait `teamColor(id)`, une teinte tirée d'un hachage de l'identifiant
+ * parmi huit hexadécimaux façon NBA. C'est le bon procédé pour distinguer six
+ * écussons dans une liste — et le mauvais ici : sur un tableau d'affichage, la
+ * question n'est pas « laquelle des six équipes » mais « nous ou eux », et la réponse
+ * était un cramoisi et un marine étrangers à la charte. Les deux jetons qui disent
+ * exactement cela existaient déjà pour la table de marque : le nôtre en blanc,
+ * l'adversaire en citron. L'écusson, lui, garde sa couleur de club — c'est là que
+ * l'identité a un sens.
+ */
+function TeamScore({ id, name, score, couleur }: { id: string; name: string; score: number; couleur: string }) {
   return (
     <div className="flex min-w-0 flex-col items-center gap-1.5 text-center">
       <TeamBadge id={id} name={name} size="h-10 w-10 text-xs sm:h-14 sm:w-14 sm:text-sm" />
       <span className="line-clamp-2 min-h-[2.4em] w-full text-sm font-extrabold leading-tight sm:min-h-0 sm:text-lg">{name}</span>
-      <span className="nums text-5xl font-black leading-none tabular-nums sm:text-7xl" style={{ color: teamColor(id) }}>{score}</span>
+      <span className="nums text-5xl font-black leading-none tabular-nums sm:text-7xl" style={{ color: couleur }}>{score}</span>
     </div>
   )
 }
@@ -147,9 +166,9 @@ function TeamScore({ id, name, score }: { id: string; name: string; score: numbe
 function MetaRow({ label, fouls, bonus, to }: { label: string; fouls: number; bonus: boolean; to: number }) {
   return (
     <div className="flex items-center justify-between gap-2 rounded-xl px-3 py-2" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-      <span className="truncate text-[11px] font-bold uppercase" style={{ color: C.muted }}>{label}</span>
-      <span className="flex shrink-0 items-center gap-2 text-[11px] font-bold">
-        {bonus && <span className="rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase text-white" style={{ background: 'var(--destructive)' }}>Bonus</span>}
+      <span className="truncate text-[12px] font-bold" style={{ color: C.muted }}>{label}</span>
+      <span className="flex shrink-0 items-center gap-2 text-[12px] font-bold">
+        {bonus && <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: C.dangerFill, color: C.onDanger }}>Bonus</span>}
         <span style={{ color: C.faint }}>Fautes <span style={{ color: C.text }}>{fouls}</span></span>
         <span style={{ color: C.faint }}>TM <span style={{ color: C.text }}>{to}</span></span>
       </span>
@@ -160,12 +179,12 @@ function MetaRow({ label, fouls, bonus, to }: { label: string; fouls: number; bo
 /** Côté spectateur, l'adversaire n'a pas d'effectif, donc pas de tableau joueur
  *  possible — on affiche à la place le score réel (saisi globalement) en gros,
  *  plutôt qu'un tableau vide sous un total à 0. */
-function OpponentPanel({ id, name, score }: { id: string; name: string; score: number }) {
+function OpponentPanel({ name, score }: { name: string; score: number }) {
   return (
     <section className="flex flex-col items-center justify-center gap-2 rounded-2xl px-4 py-8 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <h3 className="text-sm font-extrabold uppercase tracking-wide">{name}</h3>
-      <span className="nums text-6xl font-black leading-none tabular-nums" style={{ color: teamColor(id) }}>{score}</span>
-      <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Score saisi globalement</p>
+      <span className="nums text-6xl font-black leading-none tabular-nums" style={{ color: C.accent }}>{score}</span>
+      <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Score saisi globalement</p>
     </section>
   )
 }
@@ -182,13 +201,13 @@ function StatList({ name, match, players, openId, onToggle }: {
   return (
     <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: `1px solid ${C.border}` }}>
-        <span className="h-2.5 w-2.5 rounded-full" style={{ background: teamColor(match.meta.clubId) }} />
+        <span className="h-2.5 w-2.5 rounded-full" style={{ background: C.brand }} />
         <h3 className="text-sm font-extrabold uppercase tracking-wide">{name}</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-[11px] font-bold uppercase" style={{ color: C.faint }}>
+            <tr className="text-[12px] font-bold uppercase" style={{ color: C.faint }}>
               <th className="px-3 py-2 text-left">N°</th><th className="px-2 py-2 text-left">Joueur</th>
               <Sth>Pts</Sth><Sth>3PT</Sth><Sth>PD</Sth><Sth>Reb</Sth><Sth>CT</Sth><Sth>F</Sth>
             </tr>
@@ -208,9 +227,9 @@ function StatList({ name, match, players, openId, onToggle }: {
                         {label} <span style={{ color: C.faint }}>{isOpen ? '▾' : '▸'}</span>
                       </button>
                     </td>
-                    <td className="px-3 py-2 text-center font-black tabular-nums" style={{ color: s.points > 0 && s.points === top ? C.orange : s.points > 0 ? C.text : C.faint }}>{s.points}</td>
+                    <td className="px-3 py-2 text-center font-black tabular-nums" style={{ color: s.points > 0 && s.points === top ? C.accent : s.points > 0 ? C.text : C.faint }}>{s.points}</td>
                     <Std>{s.threes}</Std><Std>{s.assists}</Std><Std>{s.offRebounds + s.defRebounds}</Std><Std>{s.blocks}</Std>
-                    <td className="px-3 py-2 text-center tabular-nums" style={{ color: s.fouls >= 5 ? C.pink : C.muted }}>{s.fouls}</td>
+                    <td className="px-3 py-2 text-center tabular-nums" style={{ color: s.fouls >= 5 ? C.accent : C.muted }}>{s.fouls}</td>
                   </tr>
                   {isOpen && (
                     <tr style={{ background: C.panel }}>
@@ -227,7 +246,7 @@ function StatList({ name, match, players, openId, onToggle }: {
             {rows.length === 0 && <tr><td colSpan={8} className="px-3 py-6 text-center text-sm" style={{ color: C.muted }}>Pas encore de statistiques.</td></tr>}
             <tr style={{ borderTop: `2px solid ${C.border}`, background: C.panel }}>
               <td className="px-3 py-2"></td><td className="px-2 py-2 text-[12px] font-black uppercase">Total</td>
-              <td className="px-3 py-2 text-center font-black tabular-nums" style={{ color: teamColor(match.meta.clubId) }}>{t.points}</td>
+              <td className="px-3 py-2 text-center font-black tabular-nums" style={{ color: C.accent }}>{t.points}</td>
               <Std b>{t.threes}</Std><Std b>{t.assists}</Std><Std b>{t.offRebounds + t.defRebounds}</Std><Std b>{t.blocks}</Std><Std b>{t.fouls}</Std>
             </tr>
           </tbody>

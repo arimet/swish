@@ -86,8 +86,112 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-@keyframes pop-in {
-  0% { transform: scale(0.96); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+/* Le score qui répond au doigt.
+ *
+ * C'est le seul mouvement authorial de la table de marque, et il porte une
+ * information que rien d'autre ne porte : *le geste a été pris en compte, de ce
+ * côté-ci*. Sans lui, marquer un panier, en marquer un à la mauvaise équipe et ne
+ * rien toucher du tout produisent le même écran — le pire des trois étant celui
+ * qu'on ne remarque pas.
+ *
+ * Deux sens, parce que la cause diffère : le score monte parce qu'on a marqué,
+ * il descend parce qu'on a annulé. Un panier arrive en grandissant vers sa place ;
+ * une annulation part de plus grand et se retire. Le même mouvement dans les deux
+ * cas dirait « quelque chose a changé » là où il faut lire « quoi ».
+ *
+ * 150 ms : la bande du retour immédiat. Au-delà, un retour se lit comme une
+ * latence. La décélération est celle des arrivées assurées, pas un rebond.
+ *
+ * Un `@keyframes pop-in` et sa classe `.animate-pop` vivaient ici, décrits en
+ * commentaire comme étant « sur un panier marqué », et branchés à rien : le geste
+ * avait été pensé, jamais posé. Leur `scale(0.96)` était de toute façon invisible
+ * sur un nombre de cette taille. */
+@keyframes score-up {
+  from { transform: scale(0.84); opacity: 0.5; }
+  to   { transform: scale(1);    opacity: 1; }
 }
-.animate-pop { animation: pop-in 0.14s ease-out; }
+@keyframes score-down {
+  from { transform: scale(1.12); opacity: 0.5; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.score-up   { animation: score-up 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
+.score-down { animation: score-down 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Le passage en bonus : au cinquième faute d'équipe dans la période
+ * (`TEAM_FOUL_BONUS` dans `rules/ffbb.ts`), l'adversaire tire des lancers francs.
+ * Ce n'est pas un compteur qui avance, c'est la règle du match qui change — et la
+ * table de marque ne doit pas le manquer. Une arrivée, une seule fois, au montage
+ * de la pastille. Deux cents millisecondes : un changement d'état, pas un accusé
+ * de réception. */
+@keyframes bonus-in {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+.bonus-in { animation: bonus-in 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Ce que devient l'accusé de réception quand le mouvement dérange : l'échelle
+ * tombe, la reconnaissance reste. Une coupe franche rendrait le score muet, ce qui
+ * est précisément le défaut qu'on vient de corriger. */
+@keyframes score-flash {
+  from { opacity: 0.4; }
+  to   { opacity: 1; }
+}
+
+/* Ce que l'application devient quand le système demande moins de mouvement.
+ *
+ * Ce n'est pas un `animation: none` général, et c'est la nuance qui compte : une
+ * coupe franche supprimerait aussi les animations qui *portent une information*.
+ * Deux familles, deux traitements.
+ *
+ * — Les boucles infinies (`animate-pulse` sur les pastilles « en direct »,
+ *   `animate-spin` sur les attentes) ne disent rien qu'un état fixe ne dise :
+ *   elles s'arrêtent, sur leur image pleine. Le point « en direct » reste
+ *   visible, il cesse seulement de battre.
+ * — Le score et le bonus **accusent réception**. Les supprimer rendrait le score
+ *   muet, ce qui est le défaut même que ce mouvement corrige : ils gardent leur
+ *   durée et perdent leur échelle, l'opacité seule portant la reconnaissance.
+ * — Les entrées de dialogue (`animate-in` / `animate-out`) gardent leur état final
+ *   et l'atteignent d'un coup : le déplacement disparaît, la présence reste.
+ *
+ * `tw-animate-css` n'embarque aucun garde de ce genre — vérifié, aucun de ses
+ * fichiers ne mentionne `prefers-reduced-motion`. D'où ce bloc, ici, une fois.
+ */
+@media (prefers-reduced-motion: reduce) {
+  /* Les boucles s'immobilisent sur leur dernière image, pleinement opaques. */
+  .animate-pulse,
+  .animate-spin {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  /* Le mouvement s'en va, l'accusé de réception reste : même durée, même
+     déclenchement, mais un fondu au lieu d'un changement d'échelle. C'est
+     l'« alternative intentionnelle » plutôt qu'une coupe. */
+  .score-up,
+  .score-down,
+  .bonus-in {
+    animation-name: score-flash !important;
+  }
+
+  /* Les entrées arrivent sans trajet : plus d'échelle, plus de glissement, mais
+     l'élément est bien là, et les transitions restent assez courtes pour se lire
+     comme un changement d'état plutôt que comme un mouvement. */
+  .animate-in,
+  .animate-out {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    --tw-enter-scale: 1;
+    --tw-exit-scale: 1;
+    --tw-enter-translate-x: 0;
+    --tw-enter-translate-y: 0;
+    --tw-exit-translate-x: 0;
+    --tw-exit-translate-y: 0;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -15,10 +15,12 @@ export default defineConfig({
         short_name: 'Swish',
         description: 'Table de marque basket : score, chrono, fautes, stats et export e-marque.',
         display: 'standalone',
-        // L'écran de démarrage et la barre de l'application installée : la
-        // page claire, comme le `theme-color` de l'index.
-        background_color: '#eef1f6',
-        theme_color: '#d8dce5',
+        // L'écran de démarrage et la barre de l'application installée : le cadre
+        // et la gouttière du thème clair, comme les `theme-color` de l'index.
+        // Ces deux-là suivent `ui/theme/themes.css` à la main — un manifeste PWA
+        // ne lit pas de variables CSS.
+        background_color: '#0e1116',
+        theme_color: '#07090c',
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, useNavigate, useParams, Navigate } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import { Suspense, lazy, type ReactNode } from 'react'
 import { OliveShell } from './ui/olive/OliveShell'
 import { Dashboard } from './ui/screens/Dashboard'
 import { Calendrier } from './ui/screens/Calendrier'
@@ -10,18 +10,28 @@ import { TeamDetail } from './ui/screens/TeamDetail'
 import { PlayerDetail } from './ui/screens/PlayerDetail'
 import { MatchSetup } from './ui/screens/MatchSetup'
 import { MatchPreview } from './ui/screens/MatchPreview'
-import { LiveMatch } from './ui/screens/LiveMatch'
-import { SummaryScreen } from './ui/screens/SummaryScreen'
-import { SpectatorMatch } from './ui/screens/SpectatorMatch'
 import { AuthProvider } from './app/auth'
 import { ClubProvider, useClub } from './app/club'
 import { Welcome } from './ui/screens/Welcome'
-import { SchemaEdit } from './ui/screens/SchemaEdit'
-import { SchemaList } from './ui/screens/SchemaList'
-import { SchemaView } from './ui/screens/SchemaView'
-import { SchemaPlayer } from './ui/screens/SchemaPlayer'
-import { SchemaRecu } from './ui/screens/SchemaRecu'
-import { Admin } from './ui/screens/Admin'
+
+/* Les écrans chargés à la demande. Le paquet était d'un seul morceau : ouvrir le
+ * tableau de bord téléchargeait aussi l'éditeur de schémas, le lecteur de
+ * combinaisons, la table de marque et tout le chemin d'export — 657 ko pour
+ * afficher un score. Ces neuf écrans partagent deux traits : ils sont lourds, et
+ * aucun n'est la première chose qu'on ouvre.
+ *
+ * Le reste — tableau de bord, calendrier, championnat, équipes — arrive dans le
+ * paquet initial : ce sont les quatre entrées du menu, les découper ne ferait
+ * qu'ajouter un aller-retour au geste le plus courant. */
+const SchemaEdit = lazy(() => import('./ui/screens/SchemaEdit').then((m) => ({ default: m.SchemaEdit })))
+const SchemaList = lazy(() => import('./ui/screens/SchemaList').then((m) => ({ default: m.SchemaList })))
+const SchemaView = lazy(() => import('./ui/screens/SchemaView').then((m) => ({ default: m.SchemaView })))
+const SchemaPlayer = lazy(() => import('./ui/screens/SchemaPlayer').then((m) => ({ default: m.SchemaPlayer })))
+const SchemaRecu = lazy(() => import('./ui/screens/SchemaRecu').then((m) => ({ default: m.SchemaRecu })))
+const SummaryScreen = lazy(() => import('./ui/screens/SummaryScreen').then((m) => ({ default: m.SummaryScreen })))
+const SpectatorMatch = lazy(() => import('./ui/screens/SpectatorMatch').then((m) => ({ default: m.SpectatorMatch })))
+const Admin = lazy(() => import('./ui/screens/Admin').then((m) => ({ default: m.Admin })))
+const LiveMatch = lazy(() => import('./ui/screens/LiveMatch').then((m) => ({ default: m.LiveMatch })))
 
 const Padded = ({ children }: { children: ReactNode }) => <div className="p-6">{children}</div>
 
@@ -55,9 +65,15 @@ function SpectatorRoute() {
 /** Tant qu'aucun club valide n'est réglé, l'application est l'écran de bienvenue.
  *  Le suivi spectateur reste accessible sans club : il se partage à des gens qui
  *  n'ont pas l'application réglée. */
+/** Le repli d'attente, en un seul endroit : la garde club et le découpage des
+ *  routes l'utilisent tous les deux. */
+function Chargement() {
+  return <div className="grid min-h-dvh place-items-center text-muted-foreground" role="status" aria-live="polite">Chargement…</div>
+}
+
 function ClubGate() {
   const { clubId, ready } = useClub()
-  if (!ready) return <div className="grid min-h-dvh place-items-center text-muted-foreground">Chargement…</div>
+  if (!ready) return <Chargement />
   if (!clubId) return <Welcome />
   return <OliveShell />
 }
@@ -67,6 +83,11 @@ export default function App() {
     <BrowserRouter>
       <ClubProvider>
         <AuthProvider>
+          {/* Un seul `Suspense`, autour de toutes les routes : le repli est le
+              même que celui de `ClubGate`, si bien qu'attendre un écran découpé
+              et attendre la résolution du club se ressemblent — le pire repli est
+              celui qui change d'aspect selon ce qu'on attend. */}
+          <Suspense fallback={<Chargement />}>
           <Routes>
             {/* Suivi spectateur : plein écran, hors du shell (projetable) */}
             <Route path="/match/:id/watch" element={<SpectatorRoute />} />
@@ -108,6 +129,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
+          </Suspense>
         </AuthProvider>
       </ClubProvider>
     </BrowserRouter>

@@ -93,11 +93,15 @@ describe('Calendrier', () => {
     await saveTraining({ id: 'auj', clubId: 'ta', date: jour(0), theme: 'Séance du jour' })
     renderCal()
 
+    // L'estompe vaut 0,75 et non 0,60 : à 0,60 le texte du jour écoulé tombait à
+    // 4,63:1 sur le cadre, trois pour cent au-dessus du seuil AA et 3,1:1 en
+    // pixels rendus. Ce que le test garde, c'est qu'il y a une estompe et que le
+    // jour même n'en a pas — pas sa valeur exacte, qui est un réglage.
     const passé = (await screen.findByText('Séance passée')).closest('section')
-    expect(passé).toHaveClass('opacity-60')
+    expect(passé).toHaveClass('opacity-75')
 
     const jourMême = screen.getByText('Séance du jour').closest('section')
-    expect(jourMême).not.toHaveClass('opacity-60')
+    expect(jourMême?.className ?? '').not.toMatch(/opacity-/)
     expect(within(jourMême!).getByText(/^aujourd/i)).toBeInTheDocument()
   })
 

@@ -52,7 +52,7 @@ export function SchemaRecu() {
             Le schéma voyage entier dans le lien : une messagerie qui le coupe le rend illisible.
             Demandez qu’on vous le renvoie.
           </p>
-          <Link to="/" className="mt-5 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+          <Link to="/" className="mt-5 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
             Ouvrir Swish →
           </Link>
         </div>
@@ -82,7 +82,7 @@ export function SchemaRecu() {
     <Ecran>
       <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-3 p-4">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>Combinaison reçue</p>
+          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>Combinaison reçue</p>
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.nom}</h1>
           <p className="text-sm" style={{ color: C.muted }}>
             {schema.terrain === 'demi' ? 'Demi-terrain' : 'Terrain complet'} · {schema.temps.length} temps{schema.defense ? ' · défense' : ''}
@@ -104,16 +104,16 @@ export function SchemaRecu() {
         {/* Tant que les équipes ne sont pas chargées, on ne sait pas si un club
             est réglé : proposer l'un ou l'autre trop tôt ferait clignoter l'écran. */}
         {ready && (clubId ? (
-          <button onClick={ajouter} className="rounded-2xl py-3.5 text-sm font-black text-white" style={{ background: C.accent, maxWidth: large }}>
+          <button onClick={ajouter} className="rounded-2xl py-3.5 text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: large }}>
             + Ajouter à ma bibliothèque
           </button>
         ) : (
-          <Link to="/" className="rounded-2xl py-3.5 text-center text-sm font-black text-white" style={{ background: C.accent, maxWidth: large }}>
+          <Link to="/" className="rounded-2xl py-3.5 text-center text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: large }}>
             Choisir un club pour l’ajouter →
           </Link>
         ))}
 
-        <p className="text-[11px]" style={{ color: C.faint }}>
+        <p className="text-[12px]" style={{ color: C.faint }}>
           Ce lien contient la combinaison entière : il n’y a rien à installer, et il ne périme pas.
         </p>
       </div>

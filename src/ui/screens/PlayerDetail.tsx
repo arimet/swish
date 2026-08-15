@@ -8,7 +8,7 @@ import { playerCareer, ageAt } from '../../domain/career'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { ShotChart } from '../components/ShotCourt'
 import { fmt } from '../components/GameClock'
-import { C, bd, NumBadge, TeamBadge, champLabel, fmtDate } from '../olive/kit'
+import { C, NumBadge, Panel, TeamBadge, bd, champLabel, fmtDate } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import type { Match, Player, Team } from '../../domain/types'
 
@@ -78,13 +78,13 @@ export function PlayerDetail() {
             {/* L'identité met en avant, elle ne protège rien : la fiche est
                 identique pour tout le monde, à cette mention près. */}
             {playerId === player.id && (
-              <span className="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-black uppercase tracking-wide"
+              <span className="shrink-0 rounded-md px-2 py-0.5 text-[12px] font-black uppercase tracking-wide"
                 style={{ background: C.accentBg, color: C.accent }}>C’est vous</span>
             )}
           </h1>
           {team && (
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm" style={{ color: C.muted }}>
-              <span className="flex items-center gap-2"><TeamBadge id={team.id} name={team.name} size="h-5 w-5 text-[8px]" />{team.name}</span>
+              <span className="flex items-center gap-2"><TeamBadge id={team.id} name={team.name} size="h-5 w-5 text-[12px]" />{team.name}</span>
               {player.birthDate && <span>· {ageAt(player.birthDate, new Date())} ans</span>}
               {player.height && <span>· {player.height} cm</span>}
             </p>
@@ -111,7 +111,7 @@ export function PlayerDetail() {
           </Panel>
 
           <Panel title="Statistiques">
-            <div className="mb-1 flex items-center justify-between text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>
+            <div className="mb-1 flex items-center justify-between text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>
               <span>Par match</span>
               <span className="flex gap-4"><span className="w-8 text-right">Cumul</span><span className="w-14 text-right">Moy.</span></span>
             </div>
@@ -120,7 +120,7 @@ export function PlayerDetail() {
             <StatRow label="Rebonds défensifs" total={career.defRebounds} games={played} />
             <StatRow label="Contres" total={career.blocks} games={played} />
             <StatRow label="Fautes" total={career.fouls} games={played} />
-            <p className="mb-1 mt-4 text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Répartition des paniers</p>
+            <p className="mb-1 mt-4 text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Répartition des paniers</p>
             <StatRow label="2 pts intérieurs" total={career.twoInside} games={played} />
             <StatRow label="2 pts extérieurs" total={career.twoOutside} games={played} />
             <StatRow label="3 pts" total={career.threes} games={played} />
@@ -141,14 +141,14 @@ export function PlayerDetail() {
                   <li key={m.id} className="rounded-xl" style={{ background: C.panel }}>
                     <button onClick={() => setOpenMatch(isOpen ? null : m.id)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
                       <span className="min-w-0 flex-1 truncate text-sm font-bold">{champLabel(m.meta)}</span>
-                      <span className="shrink-0 text-[11px] font-semibold" style={{ color: C.faint }}>{fmtDate(m.meta.date).long || '—'}</span>
+                      <span className="shrink-0 text-[12px] font-semibold" style={{ color: C.faint }}>{fmtDate(m.meta.date).long || '—'}</span>
                       <span className="nums w-14 shrink-0 text-right text-sm font-black">{s?.points ?? 0} pts</span>
                       <span style={{ color: C.faint }}>{isOpen ? '▾' : '▸'}</span>
                     </button>
                     {isOpen && (
                       <div className="border-t px-3 py-3" style={{ borderColor: C.border }}>
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                          <ul className="grid flex-1 grid-cols-2 gap-x-4 gap-y-1 text-[11px] font-semibold" style={{ color: C.muted }}>
+                          <ul className="grid flex-1 grid-cols-2 gap-x-4 gap-y-1 text-[12px] font-semibold" style={{ color: C.muted }}>
                             <li className="col-span-2 font-bold" style={{ color: C.text }}>{s?.points ?? 0} pt{plur(s?.points ?? 0)}</li>
                             <li>{s?.fieldGoalsMade ?? 0} tir{plur(s?.fieldGoalsMade ?? 0)} réussi{plur(s?.fieldGoalsMade ?? 0)}</li>
                             <li>{s?.misses ?? 0} manqué{plur(s?.misses ?? 0)}</li>
@@ -182,9 +182,9 @@ export function PlayerDetail() {
 function StatCard({ label, value, hint, accent }: { label: string; value: string; hint?: string; accent?: string }) {
   return (
     <div className="rounded-2xl p-4" style={{ background: C.card, border: bd }}>
-      <p className="text-[11px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</p>
+      <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{label}</p>
       <p className="mt-1 text-2xl font-black tabular-nums" style={{ color: accent ?? C.text }}>{value}</p>
-      {hint && <p className="mt-0.5 text-[11px] font-semibold" style={{ color: C.muted }}>{hint}</p>}
+      {hint && <p className="mt-0.5 text-[12px] font-semibold" style={{ color: C.muted }}>{hint}</p>}
     </div>
   )
 }
@@ -197,14 +197,6 @@ function StatRow({ label, total, games }: { label: string; total: number; games:
         <span className="nums w-14 text-right text-xs font-semibold" style={{ color: C.faint }}>{parMatch(total, games)}</span>
       </span>
     </div>
-  )
-}
-function Panel({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
-      <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{title}</p>
-      {children}
-    </section>
   )
 }
 function Empty({ children }: { children: ReactNode }) {

@@ -72,7 +72,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
         <h1 className="text-2xl font-extrabold tracking-tight">Nouveau match</h1>
         <div className="mt-6 rounded-2xl p-10 text-center" style={{ border: `1px dashed ${C.border}` }}>
           <p className="text-sm" style={{ color: C.muted }}>Il faut au moins <strong style={{ color: C.text }}>une autre équipe</strong> pour créer une rencontre.</p>
-          <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>Créer une équipe →</Link>
+          <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>Créer une équipe →</Link>
         </div>
       </div>
     )
@@ -84,13 +84,13 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
         <div className="flex flex-col items-center gap-2 text-center">
           <TeamBadge id={club.id} name={club.name} size="h-10 w-10 text-xs" />
           <span className="line-clamp-2 text-sm font-bold">{club.name}</span>
-          <span className="text-[11px] font-semibold" style={{ color: C.muted }}>Locaux</span>
+          <span className="text-[12px] font-semibold" style={{ color: C.muted }}>Locaux</span>
         </div>
         <span className="text-lg font-black" style={{ color: C.faint }}>VS</span>
         <div className="flex flex-col items-center gap-2 text-center">
           <TeamBadge id={opponentId} name={nameOf(opponentId)} size="h-10 w-10 text-xs" />
           <span className="line-clamp-2 text-sm font-bold">{nameOf(opponentId)}</span>
-          <span className="text-[11px] font-semibold" style={{ color: C.muted }}>Visiteurs</span>
+          <span className="text-[12px] font-semibold" style={{ color: C.muted }}>Visiteurs</span>
         </div>
       </div>
 
@@ -109,7 +109,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
 
       <div className="mt-6 flex justify-end gap-3">
         <Link to="/" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>Annuler</Link>
-        <button onClick={() => guard('manage', create)} disabled={!canCreate} className="rounded-xl px-6 py-3 text-sm font-bold text-white disabled:opacity-40" style={{ background: C.accent }}>Planifier la rencontre →</button>
+        <button onClick={() => guard('manage', create)} disabled={!canCreate} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>Planifier la rencontre →</button>
       </div>
     </div>
   )

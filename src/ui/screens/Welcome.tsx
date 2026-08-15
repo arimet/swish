@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useClub } from '../../app/club'
-import { C, bd, TeamBadge } from '../olive/kit'
+import { C, bd, Ic, ICON, TeamBadge } from '../olive/kit'
 
 /** Premier lancement : choisir le club suivi. Affiché à la place du shell tant
  *  qu'aucun club valide n'est réglé — ce n'est pas une route dont on s'échappe.
@@ -18,7 +18,7 @@ export function Welcome() {
     <div className="grid min-h-dvh place-items-center p-6" style={{ background: C.frame, color: C.text }}>
       <div className="w-full max-w-md">
         <div className="mb-6 flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl text-xl" style={{ background: C.orange }}>🏀</span>
+          <span className="grid h-11 w-11 place-items-center rounded-2xl" style={{ background: C.brand, color: C.onBrand }}><Ic d={ICON.ball} className="h-6 w-6" /></span>
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight">Bienvenue sur Swish</h1>
             <p className="text-sm" style={{ color: C.muted }}>Quel club suivez-vous ?</p>
@@ -28,7 +28,7 @@ export function Welcome() {
         {teams.length === 0 ? (
           <div className="rounded-2xl p-8 text-center" style={{ border: `1px dashed ${C.border}` }}>
             <p className="text-sm" style={{ color: C.muted }}>Aucune équipe enregistrée pour l’instant.</p>
-            <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: C.accent }}>
+            <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
               Créer ma première équipe →
             </Link>
           </div>
@@ -39,7 +39,7 @@ export function Welcome() {
                 <button onClick={() => setClub(t.id)}
                   className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:brightness-125"
                   style={{ background: C.card, border: bd }}>
-                  <TeamBadge id={t.id} name={t.name} size="h-9 w-9 text-[11px]" />
+                  <TeamBadge id={t.id} name={t.name} size="h-9 w-9 text-[12px]" />
                   <span className="min-w-0 flex-1 truncate text-sm font-bold">{t.name}</span>
                   <span style={{ color: C.faint }}>→</span>
                 </button>

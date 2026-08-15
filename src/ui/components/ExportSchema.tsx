@@ -23,6 +23,7 @@ import type { Schema, Temps } from '../../domain/plays'
 import { C, bd } from '../olive/kit'
 import { PlayBoard } from './PlayBoard'
 import { D, W } from './ShotCourt'
+import { Link2 } from 'lucide-react'
 
 /** Profondeur du viewBox : le terrain complet, c'est le demi et son miroir. */
 const profondeur = (s: Schema) => (s.terrain === 'complet' ? D * 2 : D)
@@ -442,15 +443,16 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
             <input
               readOnly value={lien} aria-label="Lien de la combinaison"
               onFocus={(e) => e.currentTarget.select()}
-              className="w-full truncate rounded-xl bg-[var(--c-card2)] px-3 py-2 text-[11px] outline-none"
+              className="w-full truncate rounded-xl bg-[var(--c-card2)] px-3 py-2 text-[12px] outline-none"
               style={{ border: bd, color: C.muted }}
             />
             <button
               onClick={copier}
-              className="rounded-xl py-3 text-sm font-black text-white transition hover:brightness-110"
-              style={{ background: C.accent }}
+              className="flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-black text-[var(--c-on-brand)] transition hover:brightness-110"
+              style={{ background: C.brand }}
             >
-              🔗 Copier le lien
+              <Link2 className="h-4 w-4 shrink-0" strokeWidth={2} />
+              Copier le lien
             </button>
           </>
         )}
@@ -459,7 +461,7 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
             plus : un filet et un titre disent qu'on change de moyen, et chaque
             bouton annonce ce qu'il produit — un temps, tous les temps, l'animation. */}
         <div className="flex items-center gap-3 pt-1">
-          <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: C.faint }}>Ou envoyer un fichier</span>
+          <span className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>Ou envoyer un fichier</span>
           <span className="h-px flex-1" style={{ background: C.border }} />
         </div>
         <div className="grid grid-cols-3 gap-2">
@@ -487,7 +489,7 @@ function Sortie({ label, quoi, onClick, disabled }: { label: string; quoi: strin
       style={{ background: C.card2, border: bd, color: C.text }}
     >
       <span className="text-[13px] font-bold">{label}</span>
-      <span className="text-[10px] font-semibold" style={{ color: C.muted }}>{quoi}</span>
+      <span className="text-[12px] font-semibold" style={{ color: C.muted }}>{quoi}</span>
     </button>
   )
 }

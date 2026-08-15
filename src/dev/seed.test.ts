@@ -1,11 +1,14 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { seedDevData } from './seed'
+import { EMPREINTE_DONNEES, empreinte, seedDevData } from './seed'
 import { db } from '../persistence/db'
-import { getConvocation, listMatches, listPlayers, listPlays, listResults, listTeams, listTrainings, saveConvocation, saveTraining } from '../persistence/repositories'
+import { getConvocation, listMatches, listPlayers, listPlays, listResults, listTeams, listTrainings, saveConvocation, savePlayer, saveTraining } from '../persistence/repositories'
 import { playingTimes } from '../domain/playingtime'
 import { nextFixture } from '../domain/fixtures'
 import { dossiers } from '../domain/plays'
+import { standings } from '../domain/standings'
+import { playerStats } from '../domain/boxscore'
+import { TEAM_FOUL_BONUS } from '../rules/ffbb'
 
 beforeEach(async () => {
   localStorage.clear()
@@ -33,6 +36,136 @@ describe('données de démonstration', () => {
     const temps = [...playingTimes(joue).values()].filter((t) => t > 0)
     // Sans SUBSTITUTION, seuls les cinq titulaires auraient du temps de jeu.
     expect(temps.length).toBeGreaterThan(5)
+  })
+
+  it('place l’Avenir de Vignot en tête, à égalité de rencontres jouées', async () => {
+    // Le classement FFBB compte des points absolus (V=2, D=1) : être premier exige
+    // donc d'avoir joué autant que les autres. Le seed publiait les résultats des
+    // cinq journées alors que nous n'en avons que trois de jouées, ce qui rendait la
+    // première place arithmétiquement inatteignable — d'où le nombre de rencontres
+    // vérifié ici, et pas seulement le rang.
+    const [matches, results, teams] = await Promise.all([listMatches(), listResults(), listTeams()])
+    const byId = Object.fromEntries(teams.map((t) => [t.id, t]))
+    const lines = standings(matches, results, byId)[0].lines
+    expect(lines[0].name).toBe('AVENIR DE VIGNOT')
+    expect(lines[0].v).toBe(3)
+    expect(lines[0].d).toBe(0)
+    expect(new Set(lines.map((l) => l.j))).toEqual(new Set([3]))
+    // Et premier sans partage : une égalité de points départagée au différentiel
+    // tiendrait au hasard des scores, pas à une intention.
+    expect(lines[0].pts).toBeGreaterThan(lines[1].pts)
+  })
+
+  it('le cinq majeur est celui que le coach a désigné', async () => {
+    const matches = await listMatches()
+    const players = await listPlayers(matches[0].meta.clubId)
+    const cinq = new Set([2, 11, 13, 15, 17])
+    const match = matches.find((m) => m.events.some((e) => e.type === 'STARTING_FIVE'))!
+    const ev = match.events.find((e) => e.type === 'STARTING_FIVE') as Extract<typeof match.events[number], { type: 'STARTING_FIVE' }>
+    const numeros = ev.playerIds.map((id) => players.find((p) => p.id === id)!.number)
+    expect(new Set(numeros)).toEqual(cinq)
+  })
+
+  it('répartit les paniers plausiblement : BUZZI devant, une feuille de match crédible', async () => {
+    // Trois tentatives ratées avant celle-ci, toutes invisibles sans mesure.
+    // La liste pondérée groupée par joueur : `k % longueur` ne sortait jamais du
+    // premier bloc, un seul joueur prenait tous les paniers (202 points pour un
+    // remplaçant). Entrelacée : on ne dépassait pas les deux premiers tours, donc les
+    // poids ne changeaient plus rien. Et le compteur d'allocation remis à zéro à
+    // chacun des huit segments d'une rencontre : le plus faible poids n'était jamais
+    // servi, un titulaire finissait à zéro.
+    const matches = await listMatches()
+    const players = await listPlayers(matches[0].meta.clubId)
+    const joues = matches.filter((m) => m.status === 'finished')
+    const parJoueur = new Map<string, number>()
+    let total = 0
+    for (const m of joues) {
+      for (const s of playerStats(m)) {
+        parJoueur.set(s.playerId, (parJoueur.get(s.playerId) ?? 0) + s.points)
+        total += s.points
+      }
+    }
+    const numero = (id: string) => players.find((p) => p.id === id)!.number
+    const classe = [...parJoueur.entries()].sort((a, b) => b[1] - a[1])
+
+    // Le meilleur marqueur est celui que le coach a désigné.
+    expect(numero(classe[0][0])).toBe(11)
+    // Il domine sans écraser : un quart des points de l'équipe est déjà beaucoup.
+    expect(classe[0][1] / total).toBeLessThan(0.25)
+    // Et l'écart du premier au dernier marqueur reste celui d'une feuille de match,
+    // pas celui d'une aberration : un rapport de dix voulait dire que les poids
+    // étaient trop écartés.
+    const marqueurs = classe.filter(([, pts]) => pts > 0)
+    expect(classe[0][1] / marqueurs[marqueurs.length - 1][1]).toBeLessThan(7)
+    // Le banc marque : une allocation qui ne descend pas jusqu'à lui est cassée.
+    expect(marqueurs.length).toBeGreaterThanOrEqual(9)
+    // Les cinq majeurs restent devant dans l'ensemble — un sixième homme productif
+    // peut dépasser le cinquième titulaire, c'est le cas dans une vraie équipe.
+    const cinq = new Set([2, 11, 13, 15, 17])
+    expect(classe.slice(0, 5).filter(([id]) => cinq.has(numero(id))).length).toBeGreaterThanOrEqual(4)
+  })
+
+  /**
+   * La feuille de match au complet, et pas seulement sa colonne de points.
+   *
+   * Trois colonnes étaient vides sur **toutes** les rencontres — 3PT, CT, F — et rien
+   * ne le disait. Les positions à trois points existaient dans le seed mais étaient
+   * inatteignables (`k % longueur` sur une liste de neuf, avec cinq paniers par
+   * segment) ; les contres n'allaient qu'au quatrième joueur du cinq, parce que la
+   * statistique était choisie par l'indice du joueur ; et aucune faute n'était jamais
+   * saisie, si bien que le compteur d'équipe restait à zéro d'un bout à l'autre.
+   *
+   * Ce test mesure les cinq catégories. Il n'a pas d'exigence de réalisme fine — les
+   * poids sont inventés et se corrigent depuis l'application — mais il refuse le zéro,
+   * qui est la seule valeur dont on est sûr qu'elle est fausse.
+   */
+  it('remplit toute la feuille de match : 3 points, passes, rebonds, contres, fautes', async () => {
+    const matches = await listMatches()
+    const players = await listPlayers(matches[0].meta.clubId)
+    const numero = (id: string) => players.find((p) => p.id === id)!.number
+    const joues = matches.filter((m) => m.status === 'finished')
+    expect(joues.length).toBeGreaterThan(0)
+
+    for (const m of joues) {
+      const stats = playerStats(m)
+      const somme = (lire: (s: (typeof stats)[number]) => number) => stats.reduce((t, s) => t + lire(s), 0)
+
+      // Un tir primé se déduit de sa position, jamais déclaré : que la colonne soit
+      // non nulle prouve donc aussi que les positions du seed tombent bien derrière
+      // la ligne, ce qu'aucune assertion n'avait à répéter à la main.
+      expect(somme((s) => s.threes)).toBeGreaterThan(3)
+      expect(somme((s) => s.assists)).toBeGreaterThan(10)
+      expect(somme((s) => s.defRebounds)).toBeGreaterThan(somme((s) => s.offRebounds))
+      expect(somme((s) => s.blocks)).toBeGreaterThan(0)
+      expect(somme((s) => s.fouls)).toBeGreaterThan(10)
+
+      // Personne ne sort pour cinq fautes : un joueur exclu quitte le terrain, alors
+      // que les rotations du seed le comptent encore présent.
+      expect(stats.every((s) => s.fouls < 5)).toBe(true)
+
+      // Les rôles doivent se lire dans les chiffres, sinon les poids par catégorie ne
+      // servent à rien : le meilleur passeur est un meneur, le meilleur rebondeur un
+      // intérieur. C'est ce qui manquait quand la statistique suivait l'indice du
+      // joueur dans le cinq.
+      const meilleur = (lire: (s: (typeof stats)[number]) => number) =>
+        numero([...stats].sort((a, b) => lire(b) - lire(a))[0].playerId)
+      expect([2, 5]).toContain(meilleur((s) => s.assists))
+      expect([15, 17, 20, 8]).toContain(meilleur((s) => s.defRebounds))
+    }
+
+    // Le total composé retombe **exactement** sur les scores annoncés. Le seed
+    // compose maintenant chaque segment avec des tirs de trois valeurs différentes ;
+    // une décomposition fausse se lirait comme un bug du tableau d'affichage, pas
+    // comme un bug du seed.
+    const totaux = joues.map((m) => playerStats(m).reduce((t, s) => t + s.points, 0)).sort((a, b) => a - b)
+    expect(totaux).toEqual([72, 78, 81])
+
+    // Une période au moins atteint le bonus (cinq fautes d'équipe en FFBB, et non
+    // quatre comme en NBA) : la démonstration doit pouvoir montrer la pastille.
+    const parPeriode = new Map<number, number>()
+    for (const e of joues[0].events)
+      if (e.type === 'FOUL' && e.team === 'A') parPeriode.set(e.period, (parPeriode.get(e.period) ?? 0) + 1)
+    expect(Math.max(...parPeriode.values())).toBeGreaterThanOrEqual(TEAM_FOUL_BONUS)
   })
 
   it('crée des résultats extérieurs pour que le classement ait du sens', async () => {
@@ -141,5 +274,41 @@ describe('données de démonstration', () => {
     await seedDevData()
     expect((await listTrainings()).some((t) => t.id === 'orphelin')).toBe(false)
     expect(await getConvocation('inexistant')).toBeUndefined()
+  })
+})
+
+describe('la garde de version du seed', () => {
+  it('l’empreinte change dès qu’une donnée change', () => {
+    // Le vrai défaut n'était pas dans les données mais dans la garde : la version
+    // était un numéro à incrémenter de mémoire, et on a oublié de le faire en
+    // corrigeant la répartition des paniers. Les navigateurs déjà à jour sur
+    // l'ancienne version n'ont donc rien régénéré, et le bug corrigé restait visible.
+    const base = [[[2, 'CAUTENET', 'Louis']], { 11: 6 }]
+    const autreJoueur = [[[2, 'CAUTENET', 'Louise']], { 11: 6 }]
+    const autrePoids = [[[2, 'CAUTENET', 'Louis']], { 11: 7 }]
+    expect(empreinte(base)).not.toBe(empreinte(autreJoueur))
+    expect(empreinte(base)).not.toBe(empreinte(autrePoids))
+    expect(empreinte(base)).toBe(empreinte(base))   // et stable à données égales
+  })
+
+  it('l’empreinte ne dépend pas de la date du jour', () => {
+    // Les dates du seed sont ancrées sur aujourd'hui. Les inclure ferait tout
+    // régénérer chaque nuit, effaçant ce qu'un développeur a saisi la veille.
+    expect(EMPREINTE_DONNEES).toBe(EMPREINTE_DONNEES)
+    expect(EMPREINTE_DONNEES).not.toMatch(new RegExp(String(new Date().getFullYear())))
+  })
+
+  it('un re-seed suit la version, et ne rejoue rien à version égale', async () => {
+    const version = localStorage.getItem('seed-version')
+    expect(version).toContain(EMPREINTE_DONNEES)
+    // À version identique, un second appel ne touche pas la base : on n'écrase pas
+    // ce qu'un développeur vient de saisir à la main.
+    await savePlayer({ id: 'ajout-main', teamId: (await listMatches())[0].meta.clubId, number: 99, lastName: 'TEST', firstName: 'Manuel' })
+    await seedDevData()
+    expect((await listPlayers((await listMatches())[0].meta.clubId)).some((p) => p.id === 'ajout-main')).toBe(true)
+    // Version changée : tout est régénéré, donc l'ajout manuel disparaît.
+    localStorage.setItem('seed-version', 'autre-chose')
+    await seedDevData()
+    expect((await listPlayers((await listMatches())[0].meta.clubId)).some((p) => p.id === 'ajout-main')).toBe(false)
   })
 })

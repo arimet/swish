@@ -81,10 +81,22 @@ function memeBallon(a: Temps['ballon'], b: Temps['ballon']): boolean {
  * L'état figé d'un schéma à l'instant `at`, rendu comme un `Temps` — donc
  * directement affichable par le tableau. Chaque pion va de sa position au temps
  * N à celle du même pion au temps N+1 ; sa flèche, recalée sur ces deux
- * positions, ne fait que courber le trajet. L'instantané ne porte aucune
- * flèche : pendant l'animation on regarde les joueurs, pas les traits.
+ * positions, ne fait que courber le trajet.
+ *
+ * `avecLignes` décide de ce que porte `fleches`. Éteint — le défaut, et le seul
+ * comportement qui existait — l'instantané n'en porte aucune : pendant
+ * l'animation on regarde les joueurs, pas les traits. Allumé, il porte les
+ * **trajets réellement suivis** : non pas les flèches du carnet, mais ces mêmes
+ * flèches recalées sur les positions des deux temps, c'est-à-dire exactement la
+ * courbe qui transporte chaque pion.
+ *
+ * Cette distinction est tout l'intérêt de l'option. Réafficher les flèches
+ * dessinées telles quelles serait plus simple, et faux : elles partent des
+ * positions du carnet alors que les pions sont ailleurs, et le décalage se lirait
+ * comme une panne. Une ligne qui divergerait du mouvement qu'elle prétend décrire
+ * serait pire que pas de ligne du tout.
  */
-export function instantane(s: Schema, at: Instant): Temps {
+export function instantane(s: Schema, at: Instant, avecLignes = false): Temps {
   const n = Math.max(0, Math.min(Math.floor(at.temps), transitions(s)))
   const depuis = s.temps[n]
   const vers = s.temps[n + 1]
@@ -94,28 +106,57 @@ export function instantane(s: Schema, at: Instant): Temps {
   const flecheDe = (camp: Camp, poste: Poste, traits: Trait[]): Fleche | undefined =>
     depuis.fleches.find((f) => f.depuis.camp === camp && f.depuis.poste === poste && traits.includes(f.trait))
 
-  const trajet = (depart: Point, arrivee: Point, f: Fleche | undefined): Point =>
-    f ? avanceSur(recaler(f.points, depart, arrivee), part) : entre(depart, arrivee, part)
+  /** Le trajet complet, une fois pour toutes : la courbe dessinée recalée sur les
+   *  deux positions, ou la corde s'il n'y a rien de dessiné. C'est cette liste de
+   *  points qui sert **et** à placer le mobile **et** à tracer la ligne — d'où
+   *  l'impossibilité qu'elles se contredisent. */
+  const chemin = (depart: Point, arrivee: Point, f: Fleche | undefined): Point[] =>
+    f ? recaler(f.points, depart, arrivee) : [depart, arrivee]
+
+  /** Les lignes émises, dans l'ordre où les mobiles les engendrent. */
+  const lignes: Fleche[] = []
 
   const pions = depuis.pions.map((pion): Pion => {
     const homologue = vers.pions.find((q) => q.camp === pion.camp && q.poste === pion.poste)
     const arrivee = homologue?.at ?? pion.at           // absent au temps suivant : il ne bouge pas
+    const immobile = arrivee.x === pion.at.x && arrivee.y === pion.at.y
+    const dessinee = flecheDe(pion.camp, pion.poste, TRAITS_DE_PION)
+    // La ligne se calcule même aux bornes : à `part` 0 rien n'a encore bougé, mais
+    // le trajet doit déjà s'afficher — il annonce le geste, il ne le commente pas
+    // après coup. Un pion immobile n'en reçoit aucune : il n'a pas de trajet.
+    if (avecLignes && !immobile) {
+      lignes.push({
+        depuis: { camp: pion.camp, poste: pion.poste },
+        points: chemin(pion.at, arrivee, dessinee),
+        // Sans flèche dessinée, le déplacement est une course : c'est le trait
+        // neutre du carnet, et la bascule doit éclairer *tous* les déplacements
+        // — n'en montrer qu'une partie se lirait comme une panne.
+        trait: dessinee?.trait ?? 'course',
+      })
+    }
     // Immobile ou aux bornes : la valeur exacte du temps, sans interpolation qui ferait trembler.
-    if ((arrivee.x === pion.at.x && arrivee.y === pion.at.y) || part <= 0) return { ...pion, at: { ...pion.at } }
+    if (immobile || part <= 0) return { ...pion, at: { ...pion.at } }
     if (part >= 1) return { ...pion, at: { ...arrivee } }
-    return { ...pion, at: trajet(pion.at, arrivee, flecheDe(pion.camp, pion.poste, TRAITS_DE_PION)) }
+    return { ...pion, at: avanceSur(chemin(pion.at, arrivee, dessinee), part) }
   })
 
   const ballon = ((): Temps['ballon'] => {
-    if (memeBallon(depuis.ballon, vers.ballon) || part <= 0) return structuredClone(depuis.ballon)
-    if (part >= 1) return structuredClone(vers.ballon)
+    if (memeBallon(depuis.ballon, vers.ballon)) return structuredClone(depuis.ballon)
     const depart = ouEstLeBallon(depuis)
     const arrivee = ouEstLeBallon(vers)
     if (!depart || !arrivee) return structuredClone(depuis.ballon)
     // En vol : ni porté, ni posé où il était. Une flèche de passe du porteur courbe le trajet.
     const passe = 'x' in depuis.ballon ? undefined : flecheDe(depuis.ballon.camp, depuis.ballon.poste, ['passe'])
-    return trajet(depart, arrivee, passe)
+    const vol = chemin(depart, arrivee, passe)
+    // La passe est un déplacement comme un autre, et le coach la montre autant que
+    // les courses : elle a droit à sa ligne, en pointillé puisque c'est son trait.
+    if (avecLignes && 'x' in depuis.ballon === false) {
+      lignes.push({ depuis: depuis.ballon, points: vol, trait: 'passe' })
+    }
+    if (part <= 0) return structuredClone(depuis.ballon)
+    if (part >= 1) return structuredClone(vers.ballon)
+    return avanceSur(vol, part)
   })()
 
-  return { pions, ballon, fleches: [] }
+  return { pions, ballon, fleches: lignes }
 }

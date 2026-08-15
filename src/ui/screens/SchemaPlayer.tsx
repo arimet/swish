@@ -12,6 +12,7 @@ import { getPlay } from '../../persistence/repositories'
 import { ExportSchema } from '../components/ExportSchema'
 import { largeurTerrain, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
+import { Pause, Play, X } from 'lucide-react'
 
 /** Une transition dure une seconde et demie, le double au ralenti. Ce n'est pas
  *  réglable : 1,5 s laisse lire un mouvement sans qu'on s'impatiente. */
@@ -36,6 +37,11 @@ export function SchemaPlayer() {
   const [enLecture, setEnLecture] = useState(false)
   const [boucle, setBoucle] = useState(false)
   const [ralenti, setRalenti] = useState(false)
+  // Les trajets pendant la lecture. Éteint par défaut : sans eux, l'animation
+  // nue, qui est ce que le lecteur a toujours montré. Rien n'est mémorisé d'une
+  // ouverture à l'autre, comme la boucle et le ralenti — un réglage sur trois qui
+  // se souviendrait serait le plus déroutant des trois.
+  const [trajets, setTrajets] = useState(false)
   const [partage, setPartage] = useState(false)
 
   useEffect(() => { if (id) getPlay(id).then((s) => setSchema(s ?? null)) }, [id])
@@ -106,9 +112,12 @@ export function SchemaPlayer() {
   // partent des positions dessinées, pas de celles où les pions se trouvent à cet
   // instant, et le décalage se lirait comme une erreur. Un arrêt à mi-geste montre
   // où les joueurs en sont ; c'est déjà ce qu'on est venu voir.
+  // Arrêté **entre** deux temps, on ne remontrait pas non plus les flèches, faute
+  // de pouvoir les ancrer. La bascule lève cette réserve : le trajet qu'elle trace
+  // est recalé sur les positions réelles, donc il se lit à mi-geste aussi.
   const temps = !enLecture && Number.isInteger(pos)
     ? schema.temps[pos]
-    : instantane(schema, { temps: Math.floor(pos), part: pos - Math.floor(pos) })
+    : instantane(schema, { temps: Math.floor(pos), part: pos - Math.floor(pos) }, trajets)
   // Le lecteur prend la place disponible, mais pas plus que `TERRAIN_MAX` : sur un
   // téléphone tenu à bout de bras chaque centimètre compte, sur un écran de bureau
   // un terrain de mille pixels ne se lit pas mieux, il se lit moins bien. Le SVG se
@@ -128,7 +137,7 @@ export function SchemaPlayer() {
             to={`/schemas/${id}`} aria-label="Quitter le lecteur" title="Quitter le lecteur"
             className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-base font-black" style={{ border: bd, color: C.muted }}
           >
-            ✕
+            <X className="h-4 w-4" strokeWidth={2.5} />
           </Link>
           <h1 className="min-w-0 flex-1 truncate text-sm font-extrabold tracking-tight">{schema.nom}</h1>
           {/* La lecture s'arrête pendant le partage : on ne fabrique pas une image
@@ -164,15 +173,25 @@ export function SchemaPlayer() {
               style={{ background: C.card2, accentColor: C.accent }}
             />
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => (enLecture ? setEnLecture(false) : jouer())} disabled={dernier === 0}
-              aria-label={enLecture ? 'Pause' : 'Lecture'}
-              className="flex-1 rounded-2xl py-4 text-base font-black text-white disabled:opacity-40"
-              style={{ background: C.accent }}
-            >
-              {enLecture ? '❚❚ Pause' : '▶ Lecture'}
-            </button>
+          {/* Deux rangées, et non plus une. À trois réglages, la rangée unique
+              débordait de sept pixels et c'est « Lecture » qui payait : en `flex-1`
+              il se laissait comprimer jusqu'à quatre-vingt-sept pixels, son libellé
+              rogné, alors que c'est la seule commande qu'on vise en plein
+              temps-mort. L'action prend donc toute la largeur, les réglages se
+              partagent la suivante à parts égales — et un quatrième réglage, un
+              jour, ne cassera rien. */}
+          <button
+            onClick={() => (enLecture ? setEnLecture(false) : jouer())} disabled={dernier === 0}
+            aria-label={enLecture ? 'Pause' : 'Lecture'}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-[var(--c-on-brand)] disabled:opacity-40"
+            style={{ background: C.brand }}
+          >
+            {enLecture
+              ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />Pause</>
+              : <><Play className="h-4 w-4 shrink-0" strokeWidth={2.5} />Lecture</>}
+          </button>
+          <div className="grid grid-cols-3 gap-2">
+            <Bascule label="Trajets" actif={trajets} onClick={() => setTrajets((t) => !t)} />
             <Bascule label="Boucle" actif={boucle} onClick={() => setBoucle((b) => !b)} />
             <Bascule label="Ralenti" actif={ralenti} onClick={() => setRalenti((r) => !r)} />
           </div>
@@ -208,12 +227,14 @@ function Zone({ cote, label, fleche, onClick, disabled }: {
   )
 }
 
-/** Boucle et ralenti : les deux seuls réglages qu'un coach utilise réellement. */
+/** Trajets, boucle et ralenti : les trois réglages qu'un coach utilise réellement.
+ *  Plus de `shrink-0` : dans une grille à colonnes égales, chacune tient déjà sa
+ *  largeur, et l'interdiction de rétrécir n'y servait qu'à déborder. */
 function Bascule({ label, actif, onClick }: { label: string; actif: boolean; onClick: () => void }) {
   return (
     <button
       onClick={onClick} aria-pressed={actif}
-      className="shrink-0 rounded-2xl px-4 py-4 text-sm font-bold"
+      className="rounded-2xl px-2 py-4 text-sm font-bold"
       style={{ border: bd, background: actif ? C.accentBg : C.card, color: actif ? C.accent : C.muted }}
     >
       {label}
