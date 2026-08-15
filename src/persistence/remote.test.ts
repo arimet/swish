@@ -18,8 +18,8 @@ async function moduleDistant() {
 }
 
 /** Une réponse d'hydratation, telle que `GET /api/state` la renvoie. */
-const etat = (docs: unknown[], vivants: string[], rev = 1) =>
-  ({ ok: true, status: 200, json: async () => ({ rev, docs, vivants }) })
+const etat = (docs: unknown[], alive: string[], rev = 1) =>
+  ({ ok: true, status: 200, json: async () => ({ rev, docs, alive }) })
 
 beforeEach(async () => {
   await db.teams.clear(); await db.players.clear(); await db.matches.clear(); await db.outbox.clear()
@@ -90,12 +90,12 @@ describe('hydrate — le serveur fait foi', () => {
 
   it('un jeton refusé ne touche pas au miroir', async () => {
     await db.teams.put({ id: 'ta', name: 'VIGNOT' })
-    const { hydrate, etatSync } = await moduleDistant()
+    const { hydrate, syncState } = await moduleDistant()
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) })))
 
     expect(await hydrate()).toBe(false)
     expect(await db.teams.get('ta')).toBeDefined()
-    expect(etatSync()).toBe('jeton')
+    expect(syncState()).toBe('token')
   })
 })
 
@@ -103,39 +103,39 @@ describe('la santé de la synchronisation', () => {
   it('annonce le nombre d’actions en attente et l’état du dernier envoi', async () => {
     // Le compte est la mesure honnête : « en attente » ne dit pas si ça avance,
     // un nombre qui grossit, si.
-    const { enqueuePut, flushNow, surSante } = await moduleDistant()
+    const { enqueuePut, flushNow, onHealth } = await moduleDistant()
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 401 })))
-    const vus: { etat: string; enAttente: number }[] = []
-    const stop = surSante((s) => vus.push(s))
+    const vus: { state: string; pending: number }[] = []
+    const stop = onHealth((s) => vus.push(s))
 
     await enqueuePut('team', 'ta', { id: 'ta' })
     await enqueuePut('team', 'tb', { id: 'tb' })
     await flushNow()
     stop()
 
-    expect(vus.at(-1)).toEqual({ etat: 'jeton', enAttente: 2 })
+    expect(vus.at(-1)).toEqual({ state: 'token', pending: 2 })
   })
 
   it('retombe à zéro quand la file part', async () => {
     // C'est ce qui fait disparaître la pastille toute seule : elle ne s'efface pas
     // au bout d'un délai, elle s'efface quand la condition cesse d'être vraie.
-    const { enqueuePut, flushNow, surSante } = await moduleDistant()
+    const { enqueuePut, flushNow, onHealth } = await moduleDistant()
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 204 })))
-    const vus: { etat: string; enAttente: number }[] = []
-    const stop = surSante((s) => vus.push(s))
+    const vus: { state: string; pending: number }[] = []
+    const stop = onHealth((s) => vus.push(s))
 
     await enqueuePut('team', 'ta', { id: 'ta' })
     await flushNow()
     stop()
 
-    expect(vus.at(-1)).toEqual({ etat: 'ok', enAttente: 0 })
+    expect(vus.at(-1)).toEqual({ state: 'ok', pending: 0 })
   })
 
   it('cesse d’annoncer une fois désabonné', async () => {
-    const { enqueuePut, surSante } = await moduleDistant()
+    const { enqueuePut, onHealth } = await moduleDistant()
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 204 })))
     let appels = 0
-    surSante(() => { appels++ })()
+    onHealth(() => { appels++ })()
 
     await enqueuePut('team', 'ta', { id: 'ta' })
     expect(appels).toBe(0)
@@ -159,14 +159,14 @@ describe('la file d’attente', () => {
   })
 
   it('garde la file quand le serveur refuse le jeton', async () => {
-    const { enqueuePut, flushNow, etatSync } = await moduleDistant()
+    const { enqueuePut, flushNow, syncState } = await moduleDistant()
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 401 })))
 
     await enqueuePut('team', 'ta', { id: 'ta', name: 'VIGNOT' })
     await flushNow()
 
     expect(await db.outbox.count()).toBe(1)
-    expect(etatSync()).toBe('jeton')
+    expect(syncState()).toBe('token')
   })
 
   it('n’envoie pas un gros lot en `keepalive` — le navigateur le plafonne à 64 Ko', async () => {

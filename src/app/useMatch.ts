@@ -9,7 +9,7 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
 type EventInput = DistributiveOmit<GameEvent, 'id' | 'wallClock'>
 
 export function useMatch(matchId: string) {
-  const trad = useT()
+  const translate = useT()
   const [match, setMatch] = useState<Match | null>(null)
   const [error, setError] = useState<string | null>(null)
   const matchRef = useRef<Match | null>(null)
@@ -41,10 +41,10 @@ export function useMatch(matchId: string) {
       return true
     } catch {
       apply(precedent)
-      setError(trad('erreur.enregistrement'))
+      setError(translate('erreur.enregistrement'))
       return false
     }
-  }, [trad])
+  }, [translate])
 
   useEffect(() => {
     getMatch(matchId).then((m) => { matchRef.current = m ?? null; setMatch(m ?? null) })
@@ -64,11 +64,11 @@ export function useMatch(matchId: string) {
       next = appendEvent(current, event)
     } catch (e) {
       // Le domaine renvoie une clef de règle, pas une phrase : voir `validateEvent`.
-      setError(trad((e as Error).message))
+      setError(translate((e as Error).message))
       return
     }
     await persister(next, current)
-  }, [persister, trad])
+  }, [persister, translate])
 
   /** Enchaîne plusieurs évènements en un seul état/sauvegarde atomique — évite qu'un
    * second dispatch synchrone n'écrase le premier en repartant d'un match périmé. */
@@ -82,11 +82,11 @@ export function useMatch(matchId: string) {
         next = appendEvent(next, event)
       }
     } catch (e) {
-      setError(trad((e as Error).message))
+      setError(translate((e as Error).message))
       return
     }
     await persister(next, current)
-  }, [persister, trad])
+  }, [persister, translate])
 
   const undo = useCallback(async () => {
     const current = matchRef.current

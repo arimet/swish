@@ -9,7 +9,7 @@ import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { ShotChart } from '../components/ShotCourt'
 import { fmt } from '../components/GameClock'
 import { useT } from '../../i18n'
-import { C, NumBadge, Panel, TeamBadge, bd, fmtDate , useChampLabel } from '../olive/kit'
+import { C, NumBadge, Panel, TeamBadge, bd, fmtDate , useLeagueLabel } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import type { Match, Player, Team } from '../../domain/types'
 
@@ -21,8 +21,8 @@ const parMatch = (total: number, games: number) =>
 /** Accord au pluriel pour les petits décomptes affichés en toutes lettres. */
 
 export function PlayerDetail() {
-  const trad = useT()
-  const champ = useChampLabel()
+  const translate = useT()
+  const champ = useLeagueLabel()
   const { id } = useParams<{ id: string }>()
   const { playerId } = useAuth()
   const [player, setPlayer] = useState<Player | null | undefined>(undefined)
@@ -54,7 +54,7 @@ export function PlayerDetail() {
     return (
       <div className="p-6">
         <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
-          {trad('joueur.introuvable')} <Link to="/teams" className="font-bold" style={{ color: C.accent }}>{trad('equipe.retourEquipes')}</Link>
+          {translate('joueur.introuvable')} <Link to="/teams" className="font-bold" style={{ color: C.accent }}>{translate('equipe.retourEquipes')}</Link>
         </p>
       </div>
     )
@@ -69,7 +69,7 @@ export function PlayerDetail() {
   return (
     <div className="p-6">
       <Link to={team ? `/teams/${team.id}` : '/teams'} className="inline-block rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>
-        ← {team?.name ?? trad('nav.equipes')}
+        ← {team?.name ?? translate('nav.equipes')}
       </Link>
 
       <div className="mb-6 mt-4 flex items-center gap-3">
@@ -81,7 +81,7 @@ export function PlayerDetail() {
                 identique pour tout le monde, à cette mention près. */}
             {playerId === player.id && (
               <span className="shrink-0 rounded-md px-2 py-0.5 text-[12px] font-black uppercase tracking-wide"
-                style={{ background: C.accentBg, color: C.accent }}>{trad('joueur.cestVous')}</span>
+                style={{ background: C.accentBg, color: C.accent }}>{translate('joueur.cestVous')}</span>
             )}
           </h1>
           {team && (
@@ -95,44 +95,44 @@ export function PlayerDetail() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatCard label={trad('equipe.rencontres')} value={String(played)} hint={trad('equipe.jouees')} />
-        <StatCard label={trad('joueur.pointsParMatch')} value={parMatch(career.points, played)} hint={trad('equipe.auTotal', { n: career.points })} />
-        <StatCard label={trad('joueur.reussiteTirs')} value={pct.fg === null ? '—' : `${pct.fg} %`} hint={trad('compte.tirLocalise', { count: shotsCareer.length })} accent={C.accent} />
-        <StatCard label={trad('joueur.reussite3pts')} value={pct.three === null ? '—' : `${pct.three} %`} hint={trad('joueur.surLaCarriere')} />
-        <StatCard label={trad('joueur.tempsJeuMoyen')} value={played ? fmt(Math.round(career.seconds / played)) : '—'} hint={trad('joueur.parMatchHint')} />
+        <StatCard label={translate('equipe.rencontres')} value={String(played)} hint={translate('equipe.jouees')} />
+        <StatCard label={translate('joueur.pointsParMatch')} value={parMatch(career.points, played)} hint={translate('equipe.auTotal', { n: career.points })} />
+        <StatCard label={translate('joueur.reussiteTirs')} value={pct.fg === null ? '—' : `${pct.fg} %`} hint={translate('compte.tirLocalise', { count: shotsCareer.length })} accent={C.accent} />
+        <StatCard label={translate('joueur.reussite3pts')} value={pct.three === null ? '—' : `${pct.three} %`} hint={translate('joueur.surLaCarriere')} />
+        <StatCard label={translate('joueur.tempsJeuMoyen')} value={played ? fmt(Math.round(career.seconds / played)) : '—'} hint={translate('joueur.parMatchHint')} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[420px_1fr] [&>*]:min-w-0">
         <div className="space-y-6">
-          <Panel title={trad('joueur.hotZoneCarriere')}>
+          <Panel title={translate('joueur.hotZoneCarriere')}>
             {shotsCareer.length === 0 ? (
-              <Empty>{trad('bord.aucunTir')}</Empty>
+              <Empty>{translate('bord.aucunTir')}</Empty>
             ) : (
               <ShotChart shots={shotsCareer} />
             )}
           </Panel>
 
-          <Panel title={trad('joueur.statistiques')}>
+          <Panel title={translate('joueur.statistiques')}>
             <div className="mb-1 flex items-center justify-between text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>
-              <span>{trad('joueur.parMatch')}</span>
-              <span className="flex gap-4"><span className="w-8 text-right">{trad('joueur.cumul')}</span><span className="w-14 text-right">{trad('joueur.moyenne')}</span></span>
+              <span>{translate('joueur.parMatch')}</span>
+              <span className="flex gap-4"><span className="w-8 text-right">{translate('joueur.cumul')}</span><span className="w-14 text-right">{translate('joueur.moyenne')}</span></span>
             </div>
-            <StatRow label={trad('joueur.passesDecisives')} total={career.assists} games={played} />
-            <StatRow label={trad('joueur.rebondsOffensifs')} total={career.offRebounds} games={played} />
-            <StatRow label={trad('joueur.rebondsDefensifs')} total={career.defRebounds} games={played} />
-            <StatRow label={trad('joueur.contres')} total={career.blocks} games={played} />
-            <StatRow label={trad('joueur.fautes')} total={career.fouls} games={played} />
-            <p className="mb-1 mt-4 text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{trad('joueur.repartition')}</p>
-            <StatRow label={trad('joueur.deuxInterieurs')} total={career.twoInside} games={played} />
-            <StatRow label={trad('joueur.deuxExterieurs')} total={career.twoOutside} games={played} />
-            <StatRow label={trad('joueur.troisPts')} total={career.threes} games={played} />
-            <StatRow label={trad('joueur.lancersFrancs')} total={career.freeThrows} games={played} />
+            <StatRow label={translate('joueur.passesDecisives')} total={career.assists} games={played} />
+            <StatRow label={translate('joueur.rebondsOffensifs')} total={career.offRebounds} games={played} />
+            <StatRow label={translate('joueur.rebondsDefensifs')} total={career.defRebounds} games={played} />
+            <StatRow label={translate('joueur.contres')} total={career.blocks} games={played} />
+            <StatRow label={translate('joueur.fautes')} total={career.fouls} games={played} />
+            <p className="mb-1 mt-4 text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('joueur.repartition')}</p>
+            <StatRow label={translate('joueur.deuxInterieurs')} total={career.twoInside} games={played} />
+            <StatRow label={translate('joueur.deuxExterieurs')} total={career.twoOutside} games={played} />
+            <StatRow label={translate('joueur.troisPts')} total={career.threes} games={played} />
+            <StatRow label={translate('joueur.lancersFrancs')} total={career.freeThrows} games={played} />
           </Panel>
         </div>
 
-        <Panel title={trad('equipe.rencontres')}>
+        <Panel title={translate('equipe.rencontres')}>
           {ordered.length === 0 ? (
-            <Empty>{trad('joueur.aucuneRencontreJouee')}</Empty>
+            <Empty>{translate('joueur.aucuneRencontreJouee')}</Empty>
           ) : (
             <ul className="space-y-1.5">
               {ordered.map((m) => {
@@ -151,22 +151,22 @@ export function PlayerDetail() {
                       <div className="border-t px-3 py-3" style={{ borderColor: C.border }}>
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                           <ul className="grid flex-1 grid-cols-2 gap-x-4 gap-y-1 text-[12px] font-semibold" style={{ color: C.muted }}>
-                            <li className="col-span-2 font-bold" style={{ color: C.text }}>{trad('compte.pt', { count: s?.points ?? 0 })}</li>
-                            <li>{trad('compte.tirReussi', { count: s?.fieldGoalsMade ?? 0 })}</li>
-                            <li>{trad('compte.manque', { count: s?.misses ?? 0 })}</li>
-                            <li>{trad('compte.passeDecisive', { count: s?.assists ?? 0 })}</li>
-                            <li>{trad('compte.contre', { count: s?.blocks ?? 0 })}</li>
-                            <li>{trad('compte.rebondOff', { count: s?.offRebounds ?? 0 })}</li>
-                            <li>{trad('compte.rebondDef', { count: s?.defRebounds ?? 0 })}</li>
-                            <li>{trad('compte.faute', { count: s?.fouls ?? 0 })}</li>
+                            <li className="col-span-2 font-bold" style={{ color: C.text }}>{translate('compte.pt', { count: s?.points ?? 0 })}</li>
+                            <li>{translate('compte.tirReussi', { count: s?.fieldGoalsMade ?? 0 })}</li>
+                            <li>{translate('compte.manque', { count: s?.misses ?? 0 })}</li>
+                            <li>{translate('compte.passeDecisive', { count: s?.assists ?? 0 })}</li>
+                            <li>{translate('compte.contre', { count: s?.blocks ?? 0 })}</li>
+                            <li>{translate('compte.rebondOff', { count: s?.offRebounds ?? 0 })}</li>
+                            <li>{translate('compte.rebondDef', { count: s?.defRebounds ?? 0 })}</li>
+                            <li>{translate('compte.faute', { count: s?.fouls ?? 0 })}</li>
                             <li>{fmt(playingTimes(m).get(id) ?? 0)} de jeu</li>
                           </ul>
                           <div className="shrink-0 sm:w-44">
-                            {shots.length === 0 ? <Empty>{trad('joueur.aucunTirRencontre')}</Empty> : <ShotChart shots={shots} minAttempts={1} />}
+                            {shots.length === 0 ? <Empty>{translate('joueur.aucunTirRencontre')}</Empty> : <ShotChart shots={shots} minAttempts={1} />}
                           </div>
                         </div>
                         <Link to={`/match/${m.id}/summary`} className="mt-2 inline-block text-xs font-bold" style={{ color: C.accent }}>
-                          {trad('joueur.voirFeuille')}
+                          {translate('joueur.voirFeuille')}
                         </Link>
                       </div>
                     )}

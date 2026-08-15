@@ -7,7 +7,7 @@
  * La compression est celle de la plateforme — `CompressionStream('deflate-raw')`,
  * présent partout depuis 2023 —, donc aucune dépendance.
  */
-import type { ObjetPose, Schema, Temps, Terrain } from './plays'
+import type { Prop, Play, Step, Court } from './plays'
 
 /** Au-delà, une URL devient fragile dans les messageries : mieux vaut proposer
  *  l'image ou le PDF qu'un lien qui se tronquerait en silence. */
@@ -18,10 +18,10 @@ export const LIMITE_LIEN = 8000
 interface Transport {
   nom: string
   note?: string
-  terrain: Terrain
+  court: Court
   defense: boolean
-  objets: ObjetPose[]
-  temps: Temps[]
+  props: Prop[]
+  temps: Step[]
 }
 
 const versB64url = (octets: Uint8Array) =>
@@ -41,13 +41,13 @@ const enFlux = (octets: Uint8Array<ArrayBuffer>) => new ReadableStream<Uint8Arra
 })
 
 /** Le schéma compressé et encodé, prêt à mettre après le `#` d'une URL. */
-export async function encoder(s: Schema): Promise<string> {
+export async function encoder(s: Play): Promise<string> {
   const utile: Transport = {
-    nom: s.nom, note: s.note, terrain: s.terrain, defense: s.defense, objets: s.objets, temps: s.temps,
+    nom: s.nom, note: s.note, court: s.court, defense: s.defense, props: s.props, temps: s.temps,
   }
   const octets = new TextEncoder().encode(JSON.stringify(utile))
-  const flux = enFlux(octets).pipeThrough(new CompressionStream('deflate-raw'))
-  return versB64url(new Uint8Array(await new Response(flux).arrayBuffer()))
+  const stream = enFlux(octets).pipeThrough(new CompressionStream('deflate-raw'))
+  return versB64url(new Uint8Array(await new Response(stream).arrayBuffer()))
 }
 
 const estObjet = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
@@ -59,8 +59,8 @@ const estPoint = (v: unknown): boolean =>
 
 /** Un pion, ou le porteur du ballon : un camp connu et un poste de 1 à 5. */
 const estPorteur = (v: unknown): boolean =>
-  estObjet(v) && (v.camp === 'attaque' || v.camp === 'defense')
-  && typeof v.poste === 'number' && v.poste >= 1 && v.poste <= 5
+  estObjet(v) && (v.side === 'offense' || v.side === 'defense')
+  && typeof v.position === 'number' && v.position >= 1 && v.position <= 5
 
 /**
  * La forme, vraiment vérifiée, **jusqu'au fond des tableaux**. C'est la seule
@@ -75,31 +75,31 @@ function estTransport(v: unknown): v is Transport {
   if (!estObjet(v)) return false
   if (typeof v.nom !== 'string') return false
   if (v.note !== undefined && typeof v.note !== 'string') return false
-  if (v.terrain !== 'demi' && v.terrain !== 'complet') return false
-  if (!Array.isArray(v.objets) || !v.objets.every((o) => estObjet(o) && typeof o.sorte === 'string' && estPoint(o.at))) return false
+  if (v.court !== 'half' && v.court !== 'full') return false
+  if (!Array.isArray(v.props) || !v.props.every((o) => estObjet(o) && typeof o.kind === 'string' && estPoint(o.at))) return false
   if (!Array.isArray(v.temps) || v.temps.length === 0) return false
   return v.temps.every((t) =>
     estObjet(t)
-    && Array.isArray(t.pions) && t.pions.length > 0
-    && t.pions.every((p) => estPorteur(p) && estPoint((p as Record<string, unknown>).at))
+    && Array.isArray(t.markers) && t.markers.length > 0
+    && t.markers.every((p) => estPorteur(p) && estPoint((p as Record<string, unknown>).at))
     // Le ballon est porté par un pion, ou posé quelque part : les deux formes,
     // et rien d'autre.
-    && (estPoint(t.ballon) || estPorteur(t.ballon))
-    && Array.isArray(t.fleches)
-    && t.fleches.every((f) =>
+    && (estPoint(t.ball) || estPorteur(t.ball))
+    && Array.isArray(t.arrows)
+    && t.arrows.every((f) =>
       estObjet(f)
-      && estPorteur(f.depuis)
-      && typeof f.trait === 'string'
+      && estPorteur(f.from)
+      && typeof f.stroke === 'string'
       && Array.isArray(f.points) && f.points.length >= 2 && f.points.every(estPoint)),
   )
 }
 
 /** L'inverse. Rend `null` sur un texte qui n'est pas un schéma valide. */
-export async function decoder(code: string): Promise<Schema | null> {
+export async function decoder(code: string): Promise<Play | null> {
   if (!code) return null
   try {
-    const flux = enFlux(depuisB64url(code)).pipeThrough(new DecompressionStream('deflate-raw'))
-    const lu: unknown = JSON.parse(await new Response(flux).text())
+    const stream = enFlux(depuisB64url(code)).pipeThrough(new DecompressionStream('deflate-raw'))
+    const lu: unknown = JSON.parse(await new Response(stream).text())
     if (!estTransport(lu)) return null
     // Les champs absents du transport reviennent à leur valeur neutre : sans
     // identifiant ni club, le schéma reçu est neuf.

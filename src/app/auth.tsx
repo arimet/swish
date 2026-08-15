@@ -74,7 +74,7 @@ interface AuthCtx {
    * Ce qui suit reste gardé comme avant : le rôle vit dans `sessionStorage`, donc il
    * s'éteint avec l'onglet, et tout autre appareil repasse par le code.
    */
-  fonder: () => void
+  found: () => void
   setPlayer: (id: string | null) => void
   /** Exécute l'action si le rôle courant a le droit demandé, sinon ouvre la
    *  demande de code en nommant l'accès requis. */
@@ -83,7 +83,7 @@ interface AuthCtx {
 const Ctx = createContext<AuthCtx | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const trad = useT()
+  const translate = useT()
   const [role, setRole] = useState<Role>(() => {
     const stored = sessionStorage.getItem(ROLE_KEY)
     return estRole(stored) ? stored : 'visiteur'
@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const lock = useCallback(() => { sessionStorage.removeItem(ROLE_KEY); setRole('visiteur') }, [])
 
-  const fonder = useCallback(() => {
+  const found = useCallback(() => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
     setRole('admin')
   }, [])
@@ -131,32 +131,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPending(null)
       action()
     } else {
-      setError(trad('acces.codeIncorrect', { role: trad(`role.${REQUIS[pending.ability]}`) }))
+      setError(translate('acces.codeIncorrect', { role: translate(`role.${REQUIS[pending.ability]}`) }))
     }
   }
 
   return (
-    <Ctx.Provider value={{ role, playerId, can, unlock, lock, fonder, setPlayer, guard }}>
+    <Ctx.Provider value={{ role, playerId, can, unlock, lock, found, setPlayer, guard }}>
       {children}
       <Dialog open={!!pending} onOpenChange={(o) => !o && close()}>
         <DialogContent className="sm:max-w-xs border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
           <DialogHeader>
             <DialogTitle className="text-lg font-extrabold">
               <Lock className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-              {trad('acces.requis', { role: pending ? trad(`role.${REQUIS[pending.ability]}`) : '' })}
+              {translate('acces.requis', { role: pending ? translate(`role.${REQUIS[pending.ability]}`) : '' })}
             </DialogTitle>
           </DialogHeader>
-          <p className="text-[13px]" style={{ color: C.muted }}>{trad('acces.necessiteCode')}</p>
+          <p className="text-[13px]" style={{ color: C.muted }}>{translate('acces.necessiteCode')}</p>
           <input
-            autoFocus type="password" value={code} placeholder={trad('acces.codePlaceholder')}
+            autoFocus type="password" value={code} placeholder={translate('acces.codePlaceholder')}
             onChange={(e) => { setCode(e.target.value); setError('') }}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
             className={`mt-2 w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${error ? 'border-[var(--c-danger)]' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
           />
           {error && <p className="text-xs font-semibold text-[var(--c-danger)]">{error}</p>}
           <div className="mt-2 flex gap-2">
-            <button onClick={close} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{trad('commun.annuler')}</button>
-            <button onClick={submit} className="flex-1 rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">{trad('acces.deverrouiller')}</button>
+            <button onClick={close} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{translate('commun.annuler')}</button>
+            <button onClick={submit} className="flex-1 rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">{translate('acces.deverrouiller')}</button>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,9 +1,9 @@
 import { db } from '../persistence/db'
 import { saveTeam, savePlayer, saveMatch, saveResult, saveTraining, saveConvocation, savePlay, saveMessage } from '../persistence/repositories'
-import type { Convocation, GameEvent, Match, MessageEquipe, Period, Player, ReportedResult, ScoreKind, StatKind, Training } from '../domain/types'
+import type { Convocation, GameEvent, Match, TeamMessage, Period, Player, ReportedResult, ScoreKind, StatKind, Training } from '../domain/types'
 import { kindAt } from '../domain/shotzones'
-import { nouveauSchema, tempsSuivant } from '../domain/plays'
-import type { Camp, Fleche, Poste, Schema, Temps, Terrain, Trait } from '../domain/plays'
+import { newPlay, nextStep } from '../domain/plays'
+import type { Side, Arrow, Position, Play, Step, Court, Stroke } from '../domain/plays'
 import { CLUB_ID_KEY } from '../app/club'
 
 /**
@@ -172,17 +172,17 @@ const MAX_FAUTES = 4
  */
 interface Repartiteur {
   prochain: (candidats: string[]) => string
-  compte: (id: string) => number
+  count: (id: string) => number
 }
 function repartiteur(poids: (id: string) => number): Repartiteur {
   const servi = new Map<string, number>()
-  const compte = (id: string) => servi.get(id) ?? 0
-  const valeur = (id: string) => poids(id) / (compte(id) + 1)
+  const count = (id: string) => servi.get(id) ?? 0
+  const valeur = (id: string) => poids(id) / (count(id) + 1)
   return {
-    compte,
+    count,
     prochain(candidats) {
       const gagnant = candidats.reduce((meilleur, id) => (valeur(id) > valeur(meilleur) ? id : meilleur))
-      servi.set(gagnant, compte(gagnant) + 1)
+      servi.set(gagnant, count(gagnant) + 1)
       return gagnant
     },
   }
@@ -274,7 +274,7 @@ function secondaires(clock: () => number, period: Period, onCourtIds: string[], 
     // Le plafond est appliqué en **retirant** le joueur des candidats, et non en
     // sautant l'évènement : sauter ferait perdre une faute au compteur d'équipe, qui
     // doit atteindre le bonus à la période prévue.
-    const eligibles = onCourtIds.filter((id) => r.faute.compte(id) < MAX_FAUTES)
+    const eligibles = onCourtIds.filter((id) => r.faute.count(id) < MAX_FAUTES)
     if (eligibles.length === 0) break
     const playerId = r.faute.prochain(eligibles)
     out.push(ev({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId }, foulType: 'personal', period, gameClock: clock() }))
@@ -525,14 +525,14 @@ function buildResult(g: OutsideGame, idx: number): ReportedResult {
 // complet, tout est divisé par deux (la moitié avant est y ≤ 0,5).
 
 /** Un pion déplacé à ce temps : camp, poste, puis sa nouvelle position. */
-type Mvt = [Camp, Poste, number, number]
+type Mvt = [Side, Position, number, number]
 
 /** Une flèche, écrite comme on la lit : qui, quel trait, par où elle passe. */
-const fl = (poste: Poste, trait: Trait, points: [number, number][]): Fleche =>
-  ({ depuis: { camp: 'attaque', poste }, trait, points: points.map(([x, y]) => ({ x, y })) })
+const fl = (position: Position, stroke: Stroke, points: [number, number][]): Arrow =>
+  ({ from: { side: 'offense', position }, stroke, points: points.map(([x, y]) => ({ x, y })) })
 
 /** Un temps de la démonstration : ce qui bouge, à qui est le ballon, ce qui se trace. */
-interface Etape { deplace?: Mvt[]; ballon?: Temps['ballon']; fleches?: Fleche[] }
+interface Etape { deplace?: Mvt[]; ball?: Step['ball']; arrows?: Arrow[] }
 
 /**
  * Un schéma de démonstration : on part de la mise en place du domaine, puis
@@ -542,52 +542,52 @@ interface Etape { deplace?: Mvt[]; ballon?: Temps['ballon']; fleches?: Fleche[] 
  * une combinaison qui ne se joue pas.
  */
 function schemaDemo(
-  idx: number, clubId: string, nom: string, note: string, dossier: string,
-  terrain: Terrain, defense: boolean, etapes: Etape[],
-): Schema {
-  const base = nouveauSchema(clubId, terrain, defense)
+  idx: number, clubId: string, nom: string, note: string, folder: string,
+  court: Court, defense: boolean, etapes: Etape[],
+): Play {
+  const base = newPlay(clubId, court, defense)
   let t = base.temps[0]
   const temps = etapes.map((e, i) => {
-    t = i === 0 ? t : tempsSuivant(t)
-    for (const [camp, poste, x, y] of e.deplace ?? []) {
-      const pion = t.pions.find((p) => p.camp === camp && p.poste === poste)
+    t = i === 0 ? t : nextStep(t)
+    for (const [side, position, x, y] of e.deplace ?? []) {
+      const pion = t.markers.find((p) => p.side === side && p.position === position)
       if (pion) pion.at = { x, y }
     }
-    if (e.ballon) t.ballon = e.ballon
-    t.fleches = e.fleches ?? []
+    if (e.ball) t.ball = e.ball
+    t.arrows = e.arrows ?? []
     return t
   })
-  return { ...base, id: `seed-sch${idx}`, nom, note, dossier, temps }
+  return { ...base, id: `seed-sch${idx}`, nom, note, folder, temps }
 }
 
-function buildSchemas(clubId: string): Schema[] {
+function buildSchemas(clubId: string): Play[] {
   return [
     // Le classique du haut : le 5 monte prendre l'écran, le 1 tourne autour par
     // l'extérieur, le 5 plonge dans le dos de son défenseur et reçoit.
-    schemaDemo(0, clubId, 'Pick and roll haut', 'Écran du 5 au sommet, le 1 tourne autour, passe au 5 qui plonge.', 'Attaque placée', 'demi', true, [
+    schemaDemo(0, clubId, 'Pick and roll haut', 'Écran du 5 au sommet, le 1 tourne autour, passe au 5 qui plonge.', 'Attaque placée', 'half', true, [
       {
         deplace: [
-          ['attaque', 1, 0.50, 0.66], ['attaque', 2, 0.05, 0.16], ['attaque', 3, 0.95, 0.16],
-          ['attaque', 4, 0.16, 0.46], ['attaque', 5, 0.68, 0.38],
+          ['offense', 1, 0.50, 0.66], ['offense', 2, 0.05, 0.16], ['offense', 3, 0.95, 0.16],
+          ['offense', 4, 0.16, 0.46], ['offense', 5, 0.68, 0.38],
           ['defense', 1, 0.50, 0.55], ['defense', 2, 0.15, 0.16], ['defense', 3, 0.85, 0.16],
           ['defense', 4, 0.24, 0.40], ['defense', 5, 0.63, 0.32],
         ],
-        fleches: [fl(5, 'ecran', [[0.68, 0.38], [0.63, 0.52], [0.585, 0.625]])],
+        arrows: [fl(5, 'screen', [[0.68, 0.38], [0.63, 0.52], [0.585, 0.625]])],
       },
       {
         // L'écran est posé contre l'épaule droite du porteur ; le défenseur du 5
         // recule à hauteur de la raquette (il ne sort pas au contact), celui du 1
         // reste sur ses appuis.
-        deplace: [['attaque', 5, 0.585, 0.625], ['defense', 5, 0.635, 0.495], ['defense', 1, 0.50, 0.56]],
-        fleches: [fl(1, 'dribble', [[0.50, 0.66], [0.60, 0.685], [0.685, 0.575], [0.70, 0.44]])],
+        deplace: [['offense', 5, 0.585, 0.625], ['defense', 5, 0.635, 0.495], ['defense', 1, 0.50, 0.56]],
+        arrows: [fl(1, 'dribble', [[0.50, 0.66], [0.60, 0.685], [0.685, 0.575], [0.70, 0.44]])],
       },
       {
         // Le 1 est ressorti côté droit, son défenseur le poursuit ; celui du 5 est
         // resté haut, la voie du plongeon est ouverte.
-        deplace: [['attaque', 1, 0.70, 0.44], ['defense', 1, 0.73, 0.57], ['defense', 5, 0.60, 0.52]],
-        fleches: [
-          fl(5, 'course', [[0.585, 0.625], [0.55, 0.42], [0.52, 0.21]]),
-          fl(1, 'passe', [[0.70, 0.44], [0.63, 0.34], [0.555, 0.255]]),
+        deplace: [['offense', 1, 0.70, 0.44], ['defense', 1, 0.73, 0.57], ['defense', 5, 0.60, 0.52]],
+        arrows: [
+          fl(5, 'cut', [[0.585, 0.625], [0.55, 0.42], [0.52, 0.21]]),
+          fl(1, 'pass', [[0.70, 0.44], [0.63, 0.34], [0.555, 0.255]]),
         ],
       },
       {
@@ -595,62 +595,62 @@ function buildSchemas(clubId: string): Schema[] {
         // de sa course (là où menait sa flèche du temps précédent) et reçoit la
         // passe. Son défenseur, resté haut sur l'écran, ne le rattrape pas ; celui
         // du 1 reste collé au porteur qui vient de lâcher le ballon.
-        deplace: [['attaque', 5, 0.52, 0.21], ['defense', 5, 0.565, 0.37], ['defense', 1, 0.71, 0.51]],
-        ballon: { camp: 'attaque', poste: 5 },
+        deplace: [['offense', 5, 0.52, 0.21], ['defense', 5, 0.565, 0.37], ['defense', 1, 0.71, 0.51]],
+        ball: { side: 'offense', position: 5 },
       },
     ]),
 
     // Renversement d'un côté à l'autre : le 4 sort du poste bas et va prendre le
     // corner, le ballon y arrive par l'aile.
-    schemaDemo(1, clubId, 'Corner pour le 4', 'Le 4 sort du poste bas vers le corner, le ballon suit par l’aile.', 'Attaque placée', 'demi', false, [
+    schemaDemo(1, clubId, 'Corner pour le 4', 'Le 4 sort du poste bas vers le corner, le ballon suit par l’aile.', 'Attaque placée', 'half', false, [
       {
         deplace: [
-          ['attaque', 1, 0.50, 0.64], ['attaque', 2, 0.82, 0.46], ['attaque', 3, 0.18, 0.46],
-          ['attaque', 4, 0.31, 0.21], ['attaque', 5, 0.66, 0.36],
+          ['offense', 1, 0.50, 0.64], ['offense', 2, 0.82, 0.46], ['offense', 3, 0.18, 0.46],
+          ['offense', 4, 0.31, 0.21], ['offense', 5, 0.66, 0.36],
         ],
-        fleches: [
-          fl(1, 'passe', [[0.50, 0.64], [0.34, 0.55], [0.19, 0.47]]),
-          fl(4, 'course', [[0.31, 0.21], [0.22, 0.15], [0.06, 0.135]]),
+        arrows: [
+          fl(1, 'pass', [[0.50, 0.64], [0.34, 0.55], [0.19, 0.47]]),
+          fl(4, 'cut', [[0.31, 0.21], [0.22, 0.15], [0.06, 0.135]]),
         ],
       },
       {
         // Le ballon a changé de main : c'est le 3 qui sert le corner, et le 5
         // traverse la raquette pour le rebond du côté du tir.
-        deplace: [['attaque', 4, 0.06, 0.135]],
-        ballon: { camp: 'attaque', poste: 3 },
-        fleches: [
-          fl(3, 'passe', [[0.18, 0.46], [0.10, 0.30], [0.065, 0.17]]),
-          fl(5, 'course', [[0.66, 0.36], [0.60, 0.22], [0.44, 0.17]]),
+        deplace: [['offense', 4, 0.06, 0.135]],
+        ball: { side: 'offense', position: 3 },
+        arrows: [
+          fl(3, 'pass', [[0.18, 0.46], [0.10, 0.30], [0.065, 0.17]]),
+          fl(5, 'cut', [[0.66, 0.36], [0.60, 0.22], [0.44, 0.17]]),
         ],
       },
     ]),
 
     // Remise en jeu en boîte, sur terrain complet : le remetteur est derrière la
     // ligne de fond et le ballon attend au sol tant que l'arbitre ne l'a pas donné.
-    schemaDemo(2, clubId, 'Remise ligne de fond', 'Boîte à quatre : écran du 5, le 3 coupe au panier, le 4 assure derrière.', 'Remises en jeu', 'complet', false, [
+    schemaDemo(2, clubId, 'Remise ligne de fond', 'Boîte à quatre : écran du 5, le 3 coupe au panier, le 4 assure derrière.', 'Remises en jeu', 'full', false, [
       {
         deplace: [
-          ['attaque', 1, 0.62, 0.025], ['attaque', 2, 0.36, 0.20], ['attaque', 3, 0.64, 0.20],
-          ['attaque', 4, 0.64, 0.09], ['attaque', 5, 0.36, 0.09],
+          ['offense', 1, 0.62, 0.025], ['offense', 2, 0.36, 0.20], ['offense', 3, 0.64, 0.20],
+          ['offense', 4, 0.64, 0.09], ['offense', 5, 0.36, 0.09],
         ],
         // Le ballon attend au sol, à l'écart du remetteur : posé sur la ligne, il
         // ne doit pas se lire comme un ballon déjà en main.
-        ballon: { x: 0.82, y: 0.035 },
-        fleches: [
-          fl(5, 'ecran', [[0.36, 0.09], [0.47, 0.13], [0.565, 0.165]]),
-          fl(3, 'course', [[0.64, 0.20], [0.585, 0.135], [0.50, 0.09]]),
-          fl(2, 'course', [[0.36, 0.20], [0.20, 0.145], [0.065, 0.085]]),
+        ball: { x: 0.82, y: 0.035 },
+        arrows: [
+          fl(5, 'screen', [[0.36, 0.09], [0.47, 0.13], [0.565, 0.165]]),
+          fl(3, 'cut', [[0.64, 0.20], [0.585, 0.135], [0.50, 0.09]]),
+          fl(2, 'cut', [[0.36, 0.20], [0.20, 0.145], [0.065, 0.085]]),
           // Le 4 remonte en sécurité vers la ligne médiane : sans lui, une perte
           // de balle sur la remise part seule au panier. Sa course contourne le 3
           // par l'extérieur plutôt que de lui passer dessus.
-          fl(4, 'course', [[0.64, 0.09], [0.73, 0.22], [0.60, 0.41]]),
+          fl(4, 'cut', [[0.64, 0.09], [0.73, 0.22], [0.60, 0.41]]),
         ],
       },
       {
         // Le ballon est en main : la remise part vers le 3, sorti de l'écran du 5.
-        deplace: [['attaque', 2, 0.065, 0.085], ['attaque', 3, 0.50, 0.09], ['attaque', 4, 0.60, 0.41], ['attaque', 5, 0.565, 0.165]],
-        ballon: { camp: 'attaque', poste: 1 },
-        fleches: [fl(1, 'passe', [[0.62, 0.025], [0.57, 0.055], [0.505, 0.085]])],
+        deplace: [['offense', 2, 0.065, 0.085], ['offense', 3, 0.50, 0.09], ['offense', 4, 0.60, 0.41], ['offense', 5, 0.565, 0.165]],
+        ball: { side: 'offense', position: 1 },
+        arrows: [fl(1, 'pass', [[0.62, 0.025], [0.57, 0.055], [0.505, 0.085]])],
       },
     ]),
   ]
@@ -659,11 +659,11 @@ function buildSchemas(clubId: string): Schema[] {
 /** Le message du coach, daté d'il y a deux jours : le tableau de bord doit
  *  montrer l'encart ET son âge sans rien saisir, et deux jours restent du côté
  *  frais de la bascule à l'ambre (quinze jours). */
-function buildMessage(): MessageEquipe {
+function buildMessage(): TeamMessage {
   return {
     clubId: teamId(0),
-    texte: 'Pas d’entraînement mardi, le gymnase est fermé. Pensez au maillot blanc pour samedi.',
-    écritLe: new Date(Date.now() - 2 * 24 * 3600_000).toISOString(),
+    text: 'Pas d’entraînement mardi, le gymnase est fermé. Pensez au maillot blanc pour samedi.',
+    writtenAt: new Date(Date.now() - 2 * 24 * 3600_000).toISOString(),
   }
 }
 
@@ -680,9 +680,9 @@ function buildMessage(): MessageEquipe {
  * malveillante, seulement à repérer qu'une constante a bougé.
  */
 export function empreinte(valeur: unknown): string {
-  const texte = JSON.stringify(valeur)
+  const text = JSON.stringify(valeur)
   let h = 5381
-  for (let i = 0; i < texte.length; i++) h = ((h * 33) ^ texte.charCodeAt(i)) >>> 0
+  for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0
   return h.toString(36)
 }
 

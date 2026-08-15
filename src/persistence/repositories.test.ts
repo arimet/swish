@@ -2,8 +2,8 @@ import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import { saveTeam, listTeams, saveMatch, getMatch, listMatches, deleteMatch, deleteTeam, saveResult, listResults, savePlayer, deletePlayer, saveTraining, listTrainings, saveConvocation, getConvocation, savePlay, listPlays, getPlay, deletePlay, deleteMatchesWhere, clearClubStats, deleteAllResults, deleteTrainingsOfClub, deletePlaysOfClub, wipeAll, getMessage, saveMessage, deleteMessage } from './repositories'
-import { nouveauSchema } from '../domain/plays'
-import { aVider, deLAnnee, duChampionnat } from '../domain/menage'
+import { newPlay } from '../domain/plays'
+import { hasEvents, ofYear, ofLeague } from '../domain/menage'
 import type { GameEvent, Match } from '../domain/types'
 
 beforeEach(async () => {
@@ -75,8 +75,8 @@ describe('repositories', () => {
   })
 
   it('enregistre, liste par club et supprime un schéma', async () => {
-    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'PnR haut' })
-    await savePlay({ id: 's2', ...nouveauSchema('tb', 'demi', false), nom: 'Autre club' })
+    await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'PnR haut' })
+    await savePlay({ id: 's2', ...newPlay('tb', 'half', false), nom: 'Autre club' })
     expect((await listPlays('ta')).map((s) => s.id)).toEqual(['s1'])
     expect((await getPlay('s1'))?.nom).toBe('PnR haut')
     await deletePlay('s1')
@@ -86,23 +86,23 @@ describe('repositories', () => {
 
   it('supprimer une équipe emporte ses schémas', async () => {
     await saveTeam({ id: 'ta', name: 'VIGNOT' })
-    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'PnR haut' })
-    await savePlay({ id: 's2', ...nouveauSchema('tb', 'demi', false), nom: 'Autre club' })
+    await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'PnR haut' })
+    await savePlay({ id: 's2', ...newPlay('tb', 'half', false), nom: 'Autre club' })
     await deleteTeam('ta')
     expect(await listPlays('ta')).toEqual([])
     expect((await listPlays('tb')).map((s) => s.id)).toEqual(['s2'])
   })
 
   it('horodate chaque enregistrement de schéma', async () => {
-    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
+    await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
     const relu = (await getPlay('s1'))!
-    expect(relu.majLe).toBeTruthy()
-    expect(Number.isNaN(Date.parse(relu.majLe!))).toBe(false)
+    expect(relu.updatedAt).toBeTruthy()
+    expect(Number.isNaN(Date.parse(relu.updatedAt!))).toBe(false)
   })
 
   it('supprimer un schéma le retire des entraînements qui le citaient', async () => {
-    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
-    await savePlay({ id: 's2', ...nouveauSchema('ta', 'demi', false), nom: 'B' })
+    await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
+    await savePlay({ id: 's2', ...newPlay('ta', 'half', false), nom: 'B' })
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-09-01', playIds: ['s1', 's2'] })
     await deletePlay('s1')
     expect((await listTrainings())[0].playIds).toEqual(['s2'])
@@ -112,8 +112,8 @@ describe('repositories', () => {
     // Lire les séances avant la transaction, c'est en prendre un instantané : les
     // deux suppressions partiraient du même état et la seconde réinstallerait
     // l'identifiant que la première venait de retirer, pour de bon.
-    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
-    await savePlay({ id: 's2', ...nouveauSchema('ta', 'demi', false), nom: 'B' })
+    await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
+    await savePlay({ id: 's2', ...newPlay('ta', 'half', false), nom: 'B' })
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-09-01', playIds: ['s1', 's2'] })
 
     await Promise.all([deletePlay('s1'), deletePlay('s2')])
@@ -123,7 +123,7 @@ describe('repositories', () => {
   })
 
   it('les schémas ne passent pas par la file de synchronisation', async () => {
-    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'PnR haut' })
+    await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'PnR haut' })
     await deletePlay('s1')
     expect(await db.outbox.count()).toBe(0)
   })
@@ -135,29 +135,29 @@ describe('repositories', () => {
 
 describe('message d’équipe', () => {
   it('enregistre un message et le relit tel quel', async () => {
-    await saveMessage({ clubId: 'ta', texte: 'Pas d’entraînement mardi, gymnase fermé.', écritLe: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'ta', text: 'Pas d’entraînement mardi, gymnase fermé.', writtenAt: '2026-08-10T18:00:00.000Z' })
     const relu = await getMessage('ta')
-    expect(relu?.texte).toBe('Pas d’entraînement mardi, gymnase fermé.')
-    expect(relu?.écritLe).toBe('2026-08-10T18:00:00.000Z')
+    expect(relu?.text).toBe('Pas d’entraînement mardi, gymnase fermé.')
+    expect(relu?.writtenAt).toBe('2026-08-10T18:00:00.000Z')
   })
 
   it('n’en garde qu’un par club : le second remplace le premier', async () => {
-    await saveMessage({ clubId: 'ta', texte: 'Premier', écritLe: '2026-08-10T18:00:00.000Z' })
-    await saveMessage({ clubId: 'ta', texte: 'Second', écritLe: '2026-08-12T18:00:00.000Z' })
-    expect((await getMessage('ta'))?.texte).toBe('Second')
+    await saveMessage({ clubId: 'ta', text: 'Premier', writtenAt: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'ta', text: 'Second', writtenAt: '2026-08-12T18:00:00.000Z' })
+    expect((await getMessage('ta'))?.text).toBe('Second')
     expect(await db.messages.count()).toBe(1)
   })
 
   it('garde les messages de deux clubs séparés', async () => {
-    await saveMessage({ clubId: 'ta', texte: 'Chez nous', écritLe: '2026-08-10T18:00:00.000Z' })
-    await saveMessage({ clubId: 'tb', texte: 'Chez eux', écritLe: '2026-08-10T18:00:00.000Z' })
-    expect((await getMessage('ta'))?.texte).toBe('Chez nous')
-    expect((await getMessage('tb'))?.texte).toBe('Chez eux')
+    await saveMessage({ clubId: 'ta', text: 'Chez nous', writtenAt: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'tb', text: 'Chez eux', writtenAt: '2026-08-10T18:00:00.000Z' })
+    expect((await getMessage('ta'))?.text).toBe('Chez nous')
+    expect((await getMessage('tb'))?.text).toBe('Chez eux')
   })
 
   it('efface le message d’un club sans toucher à celui du voisin', async () => {
-    await saveMessage({ clubId: 'ta', texte: 'Chez nous', écritLe: '2026-08-10T18:00:00.000Z' })
-    await saveMessage({ clubId: 'tb', texte: 'Chez eux', écritLe: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'ta', text: 'Chez nous', writtenAt: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'tb', text: 'Chez eux', writtenAt: '2026-08-10T18:00:00.000Z' })
     await deleteMessage('ta')
     expect(await getMessage('ta')).toBeUndefined()
     expect(await getMessage('tb')).toBeDefined()
@@ -165,8 +165,8 @@ describe('message d’équipe', () => {
 
   it('supprimer l’équipe emporte son message', async () => {
     await saveTeam({ id: 'ta', name: 'VIGNOT' })
-    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: '2026-08-10T18:00:00.000Z' })
-    await saveMessage({ clubId: 'tb', texte: 'Chez eux', écritLe: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'tb', text: 'Chez eux', writtenAt: '2026-08-10T18:00:00.000Z' })
 
     await deleteTeam('ta')
 
@@ -176,7 +176,7 @@ describe('message d’équipe', () => {
 
   it('le message ne passe pas par la file de synchronisation', async () => {
     // Comme les convocations, les entraînements et les schémas : local à l'appareil.
-    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: '2026-08-10T18:00:00.000Z' })
+    await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: '2026-08-10T18:00:00.000Z' })
     await deleteMessage('ta')
     expect(await db.outbox.count()).toBe(0)
   })
@@ -200,7 +200,7 @@ describe('ménage groupé', () => {
     await saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
     await saveConvocation({ matchId: 'm3', playerIds: ['p1'] })
 
-    const supprimées = await deleteMatchesWhere(duChampionnat('Poule A'))
+    const supprimées = await deleteMatchesWhere(ofLeague('Poule A'))
 
     expect(supprimées.sort()).toEqual(['m1', 'm2'])
     expect((await listMatches()).map((m) => m.id)).toEqual(['m3'])
@@ -213,7 +213,7 @@ describe('ménage groupé', () => {
     await saveMatch(rencontre('m2', 'Poule A', '2026-01-17'))
     await saveMatch(rencontre('m3', 'Poule A', undefined))
 
-    await deleteMatchesWhere(deLAnnee('2026'))
+    await deleteMatchesWhere(ofYear('2026'))
 
     expect((await listMatches()).map((m) => m.id).sort()).toEqual(['m1', 'm3'])
   })
@@ -223,9 +223,9 @@ describe('ménage groupé', () => {
     await saveMatch(rencontre('m2', 'Poule A', '2026-01-17', 'tz', [evt('e3')]))
     await saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
 
-    const vidées = await clearClubStats('ta')
+    const cleared = await clearClubStats('ta')
 
-    expect(vidées).toBe(1)
+    expect(cleared).toBe(1)
     const m1 = await getMatch('m1')
     expect(m1?.events).toEqual([])
     expect(m1?.meta.date).toBe('2026-01-10')
@@ -241,8 +241,8 @@ describe('ménage groupé', () => {
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
     await saveTraining({ id: 'tr2', clubId: 'tz', date: '2026-01-05' })
-    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
-    await savePlay({ id: 's2', ...nouveauSchema('tz', 'demi', false), nom: 'B' })
+    await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
+    await savePlay({ id: 's2', ...newPlay('tz', 'half', false), nom: 'B' })
 
     await deleteAllResults()
     await deleteTrainingsOfClub('ta')
@@ -255,8 +255,8 @@ describe('ménage groupé', () => {
   })
 
   it('retire des séances conservées les schémas supprimés en bloc, sans laisser d’identifiant orphelin', async () => {
-    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
-    await savePlay({ id: 's2', ...nouveauSchema('ta', 'demi', false), nom: 'B' })
+    await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
+    await savePlay({ id: 's2', ...newPlay('ta', 'half', false), nom: 'B' })
     await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-09-01', playIds: ['s1', 's2'] })
 
     await deletePlaysOfClub('ta')
@@ -268,8 +268,8 @@ describe('ménage groupé', () => {
     // Même piège que `deletePlay` : lire les séances avant la transaction, c'est en
     // prendre un instantané — les deux ménages partiraient du même état et le second
     // réinstallerait l'identifiant que le premier venait de retirer, pour de bon.
-    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
-    await savePlay({ id: 's2', ...nouveauSchema('tz', 'demi', false), nom: 'B' })
+    await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
+    await savePlay({ id: 's2', ...newPlay('tz', 'half', false), nom: 'B' })
     await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-09-01', playIds: ['s1', 's2'] })
 
     await Promise.all([deletePlaysOfClub('ta'), deletePlaysOfClub('tz')])
@@ -284,8 +284,8 @@ describe('ménage groupé', () => {
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     await saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
     await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
-    await savePlay({ id: 's1', ...nouveauSchema('ta', 'demi', false), nom: 'A' })
-    await saveMessage({ clubId: 'ta', texte: 'Maillot blanc samedi.', écritLe: '2026-08-10T18:00:00.000Z' })
+    await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'A' })
+    await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: '2026-08-10T18:00:00.000Z' })
     // Une mutation en attente d'envoi : elle ne doit pas survivre à la remise à zéro.
     await db.outbox.add({ kind: 'match', op: 'put', id: 'm1', ts: Date.now(), modifiedAt: new Date().toISOString() })
 
@@ -304,7 +304,7 @@ describe('ménage groupé', () => {
     await saveMatch(rencontre('vierge', 'Poule A', '2026-01-10', 'ta'))
     await saveMatch(rencontre('remplie', 'Poule A', '2026-01-17', 'ta', [evt('e1')]))
 
-    expect((await listMatches()).filter(aVider('ta'))).toHaveLength(1)
+    expect((await listMatches()).filter(hasEvents('ta'))).toHaveLength(1)
     expect(await clearClubStats('ta')).toBe(1)
   })
 })

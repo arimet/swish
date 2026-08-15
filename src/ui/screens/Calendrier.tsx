@@ -4,12 +4,12 @@ import { newId } from '../../domain/ids'
 import { listMatches, listPlays, listTeams, listTrainings, saveTraining, deleteTraining, toggleTrainingPlay } from '../../persistence/repositories'
 import { refresh } from '../../persistence/remote'
 import type { Match, Team, Training } from '../../domain/types'
-import type { Schema } from '../../domain/plays'
-import { jourISO, nextFixture } from '../../domain/fixtures'
+import type { Play } from '../../domain/plays'
+import { isoDay, nextFixture } from '../../domain/fixtures'
 import { C, bd, Ic, ICON, MatchCard, PageTitle, fmtDate } from '../olive/kit'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useClub } from '../../app/club'
-import { langueCourante, useT } from '../../i18n'
+import { currentLang, useT } from '../../i18n'
 import { remoteEnabled } from '../../persistence/remote'
 import { useAuth } from '../../app/auth'
 import { X } from 'lucide-react'
@@ -23,14 +23,14 @@ const ENTR_BG = C.infoBg
 
 // Le mois en toutes lettres, dans la langue de l'application et non dans celle du
 // navigateur : un calendrier français doit dire « août » sur une machine en anglais.
-const moisLong = (d: Date) => new Intl.DateTimeFormat(langueCourante(), { month: 'long' }).format(d)
+const longMonth = (d: Date) => new Intl.DateTimeFormat(currentLang(), { month: 'long' }).format(d)
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
 type CalItem = { key: string; time: string } & ({ kind: 'match'; match: Match } | { kind: 'training'; training: Training })
 
 export function Calendrier() {
-  const trad = useT()
+  const translate = useT()
   const { clubId } = useClub()
   const { can, guard } = useAuth()
   // Planifier relève du club : ce qui l'écrit ne s'affiche que pour qui le gère.
@@ -39,7 +39,7 @@ export function Calendrier() {
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [trainings, setTrainings] = useState<Training[] | null>(null)
   // La bibliothèque du club : c'est elle qui dit quels schémas existent encore.
-  const [schemas, setSchemas] = useState<Schema[]>([])
+  const [schemas, setSchemas] = useState<Play[]>([])
 
   const refreshTrainings = () => listTrainings().then(setTrainings)
 
@@ -92,7 +92,7 @@ export function Calendrier() {
   // Le repère qui coupe la page en deux : ce qui précède est joué, ce qui suit
   // reste à faire. Et la prochaine échéance est celle du domaine — la même qu'au
   // tableau de bord, pour qu'il n'y ait pas deux règles pour désigner « la suite ».
-  const aujourdhui = jourISO(new Date())
+  const aujourdhui = isoDay(new Date())
   const prochaine = useMemo(
     () => (nos && nosEntrainements ? nextFixture(nos, nosEntrainements, new Date()) : null),
     [nos, nosEntrainements],
@@ -143,10 +143,10 @@ export function Calendrier() {
             <button onClick={() => guard('manage', () => setSaisieOuverte(true))}
               className="rounded-xl px-4 py-2.5 text-sm font-bold"
               style={{ background: ENTR_BG, color: ENTR_COLOR, border: `1px solid ${ENTR_COLOR}55` }}>
-              {trad('cal.nouvelEntrainement')}
+              {translate('cal.nouvelEntrainement')}
             </button>
             <Link to="/match/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-              {trad('cal.nouvelleRencontre')}
+              {translate('cal.nouvelleRencontre')}
             </Link>
           </div>
         )}
@@ -155,17 +155,17 @@ export function Calendrier() {
       {saisieOuverte && (
         <section className="mb-6 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${ENTR_COLOR}44` }}>
           <div className="mb-4 flex items-center gap-3">
-            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: ENTR_COLOR }}>{trad('cal.titreEntrainement')}</p>
-            <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{trad('commun.fermer2')}</button>
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: ENTR_COLOR }}>{translate('cal.titreEntrainement')}</p>
+            <button onClick={() => setSaisieOuverte(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('commun.fermer2')}</button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field id="entr-date" label={trad('cal.dateEntrainement')} type="date" value={date} onChange={setDate} />
-            <Field id="entr-time" label={trad('match.heure')} type="time" value={time} onChange={setTime} />
-            <Field id="entr-place" label={trad('match.lieu')} value={place} onChange={setPlace} />
-            <Field id="entr-theme" label={trad('cal.theme')} value={theme} onChange={setTheme} />
+            <Field id="entr-date" label={translate('cal.dateEntrainement')} type="date" value={date} onChange={setDate} />
+            <Field id="entr-time" label={translate('match.heure')} type="time" value={time} onChange={setTime} />
+            <Field id="entr-place" label={translate('match.lieu')} value={place} onChange={setPlace} />
+            <Field id="entr-theme" label={translate('cal.theme')} value={theme} onChange={setTheme} />
           </div>
           <button onClick={ajouter} disabled={!date || !clubId} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: ENTR_COLOR }}>
-            {trad('cal.ajouterEntrainement')}
+            {translate('cal.ajouterEntrainement')}
           </button>
         </section>
       )}
@@ -176,11 +176,11 @@ export function Calendrier() {
         // L'invitation à planifier ne s'adresse qu'à qui le peut ; les autres
         // lisent simplement qu'il n'y a rien de prévu.
         <div className="rounded-2xl py-16 text-center" style={{ border: `1px dashed ${C.border}` }}>
-          <p className="text-sm font-bold">{trad('cal.saisonVierge')}</p>
+          <p className="text-sm font-bold">{translate('cal.saisonVierge')}</p>
           <p className="mt-1 text-sm" style={{ color: C.muted }}>
             {gere
-              ? trad('cal.videGere')
-              : trad('cal.videVisiteur')}
+              ? translate('cal.videGere')
+              : translate('cal.videVisiteur')}
           </p>
         </div>
       ) : (
@@ -194,8 +194,8 @@ export function Calendrier() {
             const nbRencontres = items.filter((i) => i.kind === 'match').length
             const nbEntrainements = items.filter((i) => i.kind === 'training').length
             const résumé = [
-              nbRencontres ? trad('compte.rencontre', { count: nbRencontres }) : '',
-              nbEntrainements ? trad('compte.entrainement', { count: nbEntrainements }) : '',
+              nbRencontres ? translate('compte.rencontre', { count: nbRencontres }) : '',
+              nbEntrainements ? translate('compte.entrainement', { count: nbEntrainements }) : '',
             ].filter(Boolean).join(' · ')
             // Le passé est estompé plutôt que masqué : on veut pouvoir remonter la
             // saison, mais rien de joué ne doit disputer l'œil à ce qui reste à jouer.
@@ -227,7 +227,7 @@ export function Calendrier() {
                     <div className="min-w-0">
                       {vedette && (
                         <p className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.accent }}>
-                          {estAujourdhui ? trad('commun.aujourdhui') : trad('bord.prochaineEcheance')}
+                          {estAujourdhui ? translate('commun.aujourdhui') : translate('bord.prochaineEcheance')}
                         </p>
                       )}
                       <p className="truncate text-sm font-extrabold">{résumé}</p>
@@ -256,14 +256,14 @@ export function Calendrier() {
       {/* Comme les convocations et les résultats extérieurs : même formulation que sur
           les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux
           limites différentes — la décision couvrait aussi bien les entraînements. */}
-      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('cal.entrainementsLocaux')}</p>}
+      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('cal.entrainementsLocaux')}</p>}
 
       <ConfirmDialog open={!!aSupprimer} onClose={() => setASupprimer(null)} onConfirm={supprimer}
-        title={trad('cal.supprimerSeanceTitre')}
+        title={translate('cal.supprimerSeanceTitre')}
         message={aSupprimer
-          ? trad('cal.supprimerSeanceTexte', { date: fmtDate(aSupprimer.date).long || aSupprimer.date })
+          ? translate('cal.supprimerSeanceTexte', { date: fmtDate(aSupprimer.date).long || aSupprimer.date })
           : ''}
-        confirmLabel={trad('commun.supprimer')} danger />
+        confirmLabel={translate('commun.supprimer')} danger />
     </div>
   )
 }
@@ -274,7 +274,7 @@ export function Calendrier() {
  *  posé À CÔTÉ de la carte et non dedans : `MatchCard` est elle-même un lien, et
  *  un lien dans un lien n'est pas du HTML valide. */
 function CarteRencontre({ m, teams, gere }: { m: Match; teams: Record<string, Team>; gere: boolean }) {
-  const trad = useT()
+  const translate = useT()
   return (
     <div className="flex flex-col gap-1.5">
       <MatchCard m={m} teams={teams} />
@@ -283,7 +283,7 @@ function CarteRencontre({ m, teams, gere }: { m: Match; teams: Record<string, Te
       {gere && m.status === 'setup' && (
         <Link to={`/match/${m.id}#convocation`} className="rounded-xl px-3 py-1.5 text-center text-[12px] font-bold"
           style={{ background: C.accentBg, color: C.accent }}>
-          {trad('cal.convoquer')}
+          {translate('cal.convoquer')}
         </Link>
       )}
     </div>
@@ -294,9 +294,9 @@ function CarteRencontre({ m, teams, gere }: { m: Match; teams: Record<string, Te
  *  qu'une suite de quantièmes, et l'on ne sait plus si le 3 suit le 30 de justesse
  *  ou de cinq semaines. */
 function BarreDeMois({ iso }: { iso: string }) {
-  const trad = useT()
+  const translate = useT()
   const d = new Date(iso + 'T00:00:00')
-  const label = Number.isNaN(d.getTime()) ? trad('commun.sansDate') : `${moisLong(d)} ${d.getFullYear()}`
+  const label = Number.isNaN(d.getTime()) ? translate('commun.sansDate') : `${longMonth(d)} ${d.getFullYear()}`
   return (
     <div className="flex items-center gap-3 xl:col-span-2">
       <h2 className="text-[12px] font-black uppercase tracking-[0.18em]" style={{ color: C.muted }}>{label}</h2>
@@ -320,8 +320,8 @@ function Field({ id, label, value, onChange, type = 'text' }: { id: string; labe
  *  sur les schémas qu'on y travaille — mêmes cases à cocher que la convocation
  *  d'une rencontre, pour qui peut les cocher. Les autres lisent le programme de
  *  la séance sans pouvoir le changer : c'est ce qui les intéresse. */
-function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Training; schemas: Schema[]; gere: boolean; onToggleSchema: (playId: string) => void; onDelete: () => void }) {
-  const trad = useT()
+function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Training; schemas: Play[]; gere: boolean; onToggleSchema: (playId: string) => void; onDelete: () => void }) {
+  const translate = useT()
   // Le compte affiché est celui des schémas qui existent : un entraînement peut
   // citer un schéma supprimé (base antérieure à la cascade de `deletePlay`), et
   // le compter ferait mentir la ligne — la faute corrigée au projet 6 sur les
@@ -334,25 +334,25 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: ENTR_BG, color: ENTR_COLOR }}>{trad('cal.entrainement')}</span>
+          <span className="rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase" style={{ background: ENTR_BG, color: ENTR_COLOR }}>{translate('cal.entrainement')}</span>
           {t.time && <span className="ml-auto text-[12px] font-bold" style={{ color: C.muted }}>{t.time}</span>}
         </div>
-        <p className="mt-2 truncate text-sm font-bold">{t.theme || trad('cal.seanceLibre')}</p>
+        <p className="mt-2 truncate text-sm font-bold">{t.theme || translate('cal.seanceLibre')}</p>
 
         {/* `<details>` plutôt qu'un état local : le navigateur sait déjà déplier, et
             vingt schémas dépliés d'office noieraient le calendrier. */}
         <details className="mt-2">
           <summary className="flex cursor-pointer items-center gap-2 text-[12px] font-bold" style={{ color: ENTR_COLOR }}>
-            {trad('cal.schemasTravailles')}
+            {translate('cal.schemasTravailles')}
             {attachés.length > 0 && (
               <span className="rounded-md px-1.5 py-0.5 font-black" style={{ background: ENTR_BG, color: ENTR_COLOR }}>
-                {trad('cal.schemaCompte', { count: attachés.length })}
+                {translate('cal.schemaCompte', { count: attachés.length })}
               </span>
             )}
           </summary>
           {!gere ? (
             attachés.length === 0 ? (
-              <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{trad('cal.aucunSchemaSeance')}</p>
+              <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{translate('cal.aucunSchemaSeance')}</p>
             ) : (
               <div className="mt-2 grid gap-1.5">
                 {attachés.map((s) => (
@@ -361,7 +361,7 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
               </div>
             )
           ) : schemas.length === 0 ? (
-            <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{trad('cal.bibliothequeVide')}</p>
+            <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{translate('cal.bibliothequeVide')}</p>
           ) : (
             <div className="mt-2 grid gap-1.5">
               {schemas.map((s) => {
@@ -383,7 +383,7 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
               minimum de vingt-quatre pixels — et c'est une **suppression**, la
               combinaison la plus fâcheuse entre une cible qu'on rate et un geste qu'on
               ne défait pas. */}
-          {gere && <button onClick={onDelete} aria-label={trad('cal.supprimerEntrainement')} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-black transition hover:bg-[var(--c-danger-bg)] hover:text-[var(--c-danger)]" style={{ color: C.accent }}><X className="h-4 w-4" strokeWidth={2.5} /></button>}
+          {gere && <button onClick={onDelete} aria-label={translate('cal.supprimerEntrainement')} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-black transition hover:bg-[var(--c-danger-bg)] hover:text-[var(--c-danger)]" style={{ color: C.accent }}><X className="h-4 w-4" strokeWidth={2.5} /></button>}
         </div>
       </div>
     </div>

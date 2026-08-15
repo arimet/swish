@@ -1,8 +1,8 @@
 import { db } from './db'
 import { enqueuePut, enqueueDel, remoteEnabled, hydrate } from './remote'
-import { aVider } from '../domain/menage'
-import type { Team, Player, Match, ReportedResult, Convocation, Training, MessageEquipe } from '../domain/types'
-import type { Schema } from '../domain/plays'
+import { hasEvents } from '../domain/menage'
+import type { Team, Player, Match, ReportedResult, Convocation, Training, TeamMessage } from '../domain/types'
+import type { Play } from '../domain/plays'
 
 /*
  * Écritures : miroir local d'abord (immédiat, hors-ligne d'accord), puis mise en
@@ -31,28 +31,28 @@ export const listTeams = () => db.teams.toArray()
  *  filtrage sur `toArray()` évite d'ajouter un index Dexie pour si peu. */
 export const deleteTeam = async (id: string) => {
   const players = await db.players.where('teamId').equals(id).toArray()
-  const résultats = (await db.results.toArray()).filter((r) => r.homeId === id || r.awayId === id)
+  const results = (await db.results.toArray()).filter((r) => r.homeId === id || r.awayId === id)
   // Les entraînements sont propres au club (jamais partagés) : sans cette purge, ils
   // resteraient en base sous un `clubId` qui ne reviendra jamais, donc invisibles sur
   // tous les écrans et impossibles à supprimer — même sort que les résultats ci-dessus.
-  const entraînements = (await db.trainings.toArray()).filter((t) => t.clubId === id)
-  const schémas = await db.plays.where('clubId').equals(id).toArray()
+  const trainings = (await db.trainings.toArray()).filter((t) => t.clubId === id)
+  const plays = await db.plays.where('clubId').equals(id).toArray()
   await db.transaction('rw', [db.teams, db.players, db.results, db.trainings, db.plays, db.messages], async () => {
     await db.players.where('teamId').equals(id).delete()
     await db.teams.delete(id)
     // Le message est celui du club : sans cette purge il survivrait à l'équipe,
     // invisible (plus aucun écran ne porte ce `clubId`) et impossible à effacer.
     await db.messages.delete(id)
-    await db.results.bulkDelete(résultats.map((r) => r.id))
-    await db.trainings.bulkDelete(entraînements.map((t) => t.id))
+    await db.results.bulkDelete(results.map((r) => r.id))
+    await db.trainings.bulkDelete(trainings.map((t) => t.id))
     // Les schémas sont propres au club, comme les entraînements : même purge, mais
     // via l'index `clubId` de la table, qui évite de relire tout le tableau tactique.
     await db.plays.where('clubId').equals(id).delete()
   })
   for (const p of players) await enqueueDel('player', p.id)
-  for (const r of résultats) await enqueueDel('result', r.id)
-  for (const t of entraînements) await enqueueDel('training', t.id)
-  for (const s of schémas) await enqueueDel('play', s.id)
+  for (const r of results) await enqueueDel('result', r.id)
+  for (const t of trainings) await enqueueDel('training', t.id)
+  for (const s of plays) await enqueueDel('play', s.id)
   await enqueueDel('message', id)
   await enqueueDel('team', id)
 }
@@ -65,15 +65,15 @@ export const listPlayers = (teamId: string) => db.players.where('teamId').equals
  *  des convocations petite, un filtrage sur `toArray()` suffit (cf. `deleteTeam`). */
 export const deletePlayer = async (id: string) => {
   const convocations = (await db.convocations.toArray()).filter((c) => c.playerIds.includes(id))
-  const élaguées = convocations.map((c) => ({ ...c, playerIds: c.playerIds.filter((pid) => pid !== id) }))
+  const pruned = convocations.map((c) => ({ ...c, playerIds: c.playerIds.filter((pid) => pid !== id) }))
   await db.transaction('rw', db.players, db.convocations, async () => {
     await db.players.delete(id)
-    await db.convocations.bulkPut(élaguées)
+    await db.convocations.bulkPut(pruned)
   })
   await enqueueDel('player', id)
   // Les convocations élaguées sont des écritures comme les autres : sans elles,
   // le joueur retiré reviendrait dans la liste des convoqués à l'hydratation.
-  for (const c of élaguées) await enqueuePut('convocation', c.matchId, c)
+  for (const c of pruned) await enqueuePut('convocation', c.matchId, c)
 }
 
 export const saveMatch = async (m: Match) => { await db.matches.put(m); await enqueuePut('match', m.id, m) }
@@ -116,7 +116,7 @@ export const deleteTraining = async (id: string) => { await db.trainings.delete(
  *  C'est le document qui justifie à lui seul cette étape : un joueur ne pouvait
  *  pas le lire, puisqu'il ne quittait jamais le téléphone du coach. */
 export const getMessage = (clubId: string) => db.messages.get(clubId)
-export const saveMessage = async (m: MessageEquipe) => { await db.messages.put(m); await enqueuePut('message', m.clubId, m) }
+export const saveMessage = async (m: TeamMessage) => { await db.messages.put(m); await enqueuePut('message', m.clubId, m) }
 export const deleteMessage = async (clubId: string) => { await db.messages.delete(clubId); await enqueueDel('message', clubId) }
 
 /** Attache un schéma à un entraînement, ou l'en retire. Le va-et-vient se fait dans
@@ -125,17 +125,17 @@ export const deleteMessage = async (clubId: string) => { await db.messages.delet
  *  effacerait la première. Les identifiants qui ne désignent plus aucun schéma
  *  tombent au passage — même garde que la lecture, appliquée ici à l'écriture. */
 export const toggleTrainingPlay = async (trainingId: string, playId: string) => {
-  let écrite: Training | null = null
+  let written: Training | null = null
   await db.transaction('rw', db.trainings, db.plays, async () => {
     const t = await db.trainings.get(trainingId)
     if (!t) return
     const ids = t.playIds ?? []
     const suivants = ids.includes(playId) ? ids.filter((id) => id !== playId) : [...ids, playId]
     const existants = await db.plays.bulkGet(suivants)
-    écrite = { ...t, playIds: suivants.filter((_, i) => !!existants[i]) }
-    await db.trainings.put(écrite)
+    written = { ...t, playIds: suivants.filter((_, i) => !!existants[i]) }
+    await db.trainings.put(written)
   })
-  if (écrite) await enqueuePut('training', (écrite as Training).id, écrite)
+  if (written) await enqueuePut('training', (written as Training).id, written)
 }
 
 /** Les schémas du tableau tactique restent locaux à l'appareil, comme les résultats,
@@ -146,13 +146,13 @@ export const listPlays = (clubId: string) => db.plays.where('clubId').equals(clu
 export const getPlay = (id: string) => db.plays.get(id)
 /** Horodate à l'enregistrement : sans `majLe`, la bibliothèque n'aurait que l'ordre
  *  de la base, c'est-à-dire aucun, et paraîtrait mélangée à chaque ouverture. */
-export const savePlay = async (s: Schema) => {
+export const savePlay = async (s: Play) => {
   // L'horodatage fait partie du document rangé : mettre en file `s` plutôt que
   // l'objet écrit enverrait au serveur une version sans `majLe`, et la
   // bibliothèque se retrouverait mélangée sur les autres appareils.
-  const écrit = { ...s, majLe: new Date().toISOString() }
-  await db.plays.put(écrit)
-  await enqueuePut('play', écrit.id, écrit)
+  const written = { ...s, updatedAt: new Date().toISOString() }
+  await db.plays.put(written)
+  await enqueuePut('play', written.id, written)
 }
 /** Supprime un schéma et le retire des entraînements qui le citaient, dans la même
  *  transaction : même cascade que `deletePlayer` sur les convocations, et pour la
@@ -163,15 +163,15 @@ export const savePlay = async (s: Schema) => {
  *  et la seconde écriture réinstallerait l'identifiant que la première venait de
  *  retirer. Le déchet resterait ensuite indéfiniment. */
 export const deletePlay = async (id: string) => {
-  let élaguées: Training[] = []
+  let pruned: Training[] = []
   await db.transaction('rw', db.plays, db.trainings, async () => {
     await db.plays.delete(id)
-    const séances = (await db.trainings.toArray()).filter((t) => t.playIds?.includes(id))
-    élaguées = séances.map((t) => ({ ...t, playIds: t.playIds!.filter((pid) => pid !== id) }))
-    await db.trainings.bulkPut(élaguées)
+    const sessions = (await db.trainings.toArray()).filter((t) => t.playIds?.includes(id))
+    pruned = sessions.map((t) => ({ ...t, playIds: t.playIds!.filter((pid) => pid !== id) }))
+    await db.trainings.bulkPut(pruned)
   })
   await enqueueDel('play', id)
-  for (const t of élaguées) await enqueuePut('training', t.id, t)
+  for (const t of pruned) await enqueuePut('training', t.id, t)
 }
 
 // ── Ménage d'administration ─────────────────────────────────────────────────
@@ -199,13 +199,13 @@ export const deleteMatchesWhere = async (filtre: (m: Match) => boolean): Promise
  *  rencontre « terminée » sans le moindre évènement s'afficherait 0–0 partout, comme
  *  un score réellement observé. Renvoie le nombre de feuilles vidées. */
 export const clearClubStats = async (clubId: string): Promise<number> => {
-  let vidées: Match[] = []
+  let cleared: Match[] = []
   await db.transaction('rw', db.matches, async () => {
-    vidées = (await db.matches.toArray()).filter(aVider(clubId)).map((m) => ({ ...m, events: [], status: 'setup' as const }))
-    await db.matches.bulkPut(vidées)
+    cleared = (await db.matches.toArray()).filter(hasEvents(clubId)).map((m) => ({ ...m, events: [], status: 'setup' as const }))
+    await db.matches.bulkPut(cleared)
   })
-  for (const m of vidées) await enqueuePut('match', m.id, m)
-  return vidées.length
+  for (const m of cleared) await enqueuePut('match', m.id, m)
+  return cleared.length
 }
 
 /** Les résultats saisis à la main, en bloc. Aucune cascade : rien ne les référence. */
@@ -227,17 +227,17 @@ export const deleteTrainingsOfClub = async (clubId: string) => {
  *  citaient — même cascade que `deletePlay`, sinon le ménage laisserait derrière lui
  *  des identifiants orphelins dans les entraînements conservés. */
 export const deletePlaysOfClub = async (clubId: string) => {
-  let supprimés: string[] = []
-  let élaguées: Training[] = []
+  let removed: string[] = []
+  let pruned: Training[] = []
   await db.transaction('rw', db.plays, db.trainings, async () => {
-    supprimés = await db.plays.where('clubId').equals(clubId).primaryKeys()
-    await db.plays.bulkDelete(supprimés)
-    const séances = (await db.trainings.toArray()).filter((t) => t.playIds?.some((pid) => supprimés.includes(pid)))
-    élaguées = séances.map((t) => ({ ...t, playIds: t.playIds!.filter((pid) => !supprimés.includes(pid)) }))
-    await db.trainings.bulkPut(élaguées)
+    removed = await db.plays.where('clubId').equals(clubId).primaryKeys()
+    await db.plays.bulkDelete(removed)
+    const sessions = (await db.trainings.toArray()).filter((t) => t.playIds?.some((pid) => removed.includes(pid)))
+    pruned = sessions.map((t) => ({ ...t, playIds: t.playIds!.filter((pid) => !removed.includes(pid)) }))
+    await db.trainings.bulkPut(pruned)
   })
-  for (const id of supprimés) await enqueueDel('play', id)
-  for (const t of élaguées) await enqueuePut('training', t.id, t)
+  for (const id of removed) await enqueueDel('play', id)
+  for (const t of pruned) await enqueuePut('training', t.id, t)
 }
 
 /** Remise à zéro complète de l'appareil : toutes les tables, file de synchronisation

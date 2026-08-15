@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { fr } from './fr'
 import { en } from './en'
-import { traducteur } from './index'
+import { translator } from './index'
 
 /**
  * Le garde-fou de la traduction.
@@ -56,8 +56,8 @@ function clefsEmployees(): Map<string, string[]> {
   for (const f of sources()) {
     if (f.startsWith('src/i18n/')) continue // le catalogue se définit lui-même
     for (const m of readFileSync(f, 'utf8').matchAll(motif)) {
-      const clef = `${m[1]}.${m[2]}`
-      par.set(clef, [...(par.get(clef) ?? []), f])
+      const key = `${m[1]}.${m[2]}`
+      par.set(key, [...(par.get(key) ?? []), f])
     }
   }
   return par
@@ -66,8 +66,8 @@ function clefsEmployees(): Map<string, string[]> {
 describe('catalogue de traduction', () => {
   it('toute clef employée dans le code existe en français', () => {
     const manquantes = [...clefsEmployees()]
-      .filter(([clef]) => !(clef in fr) && !(`${clef}_un` in fr))
-      .map(([clef, fichiers]) => `${clef} (${fichiers.join(', ')})`)
+      .filter(([key]) => !(key in fr) && !(`${key}_un` in fr))
+      .map(([key, fichiers]) => `${key} (${fichiers.join(', ')})`)
     expect(manquantes, 'clefs sans traduction française').toEqual([])
   })
 
@@ -81,30 +81,30 @@ describe('catalogue de traduction', () => {
     // Le repli est le français, par choix : un écran à moitié traduit reste utilisable,
     // un écran semé d'identifiants ne l'est pas. On vérifie donc que *traduire* en
     // anglais ne rend jamais la clef brute, y compris pour ce que l'anglais n'a pas.
-    const t = traducteur('en')
-    const brutes = Object.keys(fr).filter((clef) => t(clef) === clef && fr[clef] !== clef)
+    const t = translator('en')
+    const brutes = Object.keys(fr).filter((key) => t(key) === key && fr[key] !== key)
     expect(brutes, 'clefs rendues telles quelles en anglais').toEqual([])
   })
 
   it('l’anglais ne contient pas de clef inconnue du français', () => {
     // L'inverse est permis — l'anglais peut être en retard — mais une clef anglaise
     // sans équivalent français est une faute de frappe ou un reliquat.
-    expect(Object.keys(en).filter((clef) => !(clef in fr))).toEqual([])
+    expect(Object.keys(en).filter((key) => !(key in fr))).toEqual([])
   })
 
   it('les paramètres d’un modèle existent dans les deux langues', () => {
     // « {role} » traduit sans son paramètre laisserait l'accolade à l'écran.
     const params = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',')
     const divergents = Object.keys(en)
-      .filter((clef) => clef in fr && params(en[clef]) !== params(fr[clef]))
-      .map((clef) => `${clef} : fr(${params(fr[clef])}) ≠ en(${params(en[clef])})`)
+      .filter((key) => key in fr && params(en[key]) !== params(fr[key]))
+      .map((key) => `${key} : fr(${params(fr[key])}) ≠ en(${params(en[key])})`)
     expect(divergents).toEqual([])
   })
 
   it('interpole et accorde le pluriel dans les deux langues', () => {
-    expect(traducteur('fr')('commun.joueur', { count: 1 })).toBe('1 joueur')
-    expect(traducteur('fr')('commun.joueur', { count: 3 })).toBe('3 joueurs')
-    expect(traducteur('en')('commun.joueur', { count: 1 })).toBe('1 player')
-    expect(traducteur('en')('commun.joueur', { count: 3 })).toBe('3 players')
+    expect(translator('fr')('commun.joueur', { count: 1 })).toBe('1 joueur')
+    expect(translator('fr')('commun.joueur', { count: 3 })).toBe('3 joueurs')
+    expect(translator('en')('commun.joueur', { count: 1 })).toBe('1 player')
+    expect(translator('en')('commun.joueur', { count: 3 })).toBe('3 players')
   })
 })

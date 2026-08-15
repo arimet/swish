@@ -7,7 +7,7 @@ import { SchemaEdit } from './SchemaEdit'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { db } from '../../persistence/db'
 import { getPlay, savePlay } from '../../persistence/repositories'
-import { nouveauSchema, type Fleche, type Schema } from '../../domain/plays'
+import { newPlay, type Arrow, type Play } from '../../domain/plays'
 
 // jsdom ne mesure rien : `getBoundingClientRect` rend des zéros, et la conversion
 // écran → SVG (`versSvg`) renverrait alors des points nuls pour tous les gestes.
@@ -19,11 +19,11 @@ beforeEach(() => {
   }
 })
 
-const schemaDemi = (): Schema => ({ id: 's1', ...nouveauSchema('c1', 'demi', false) })
+const schemaDemi = (): Play => ({ id: 's1', ...newPlay('c1', 'half', false) })
 
 // Une course du meneur vers l'aile : sert de flèche de départ aux cas qui
 // gomment, annulent ou ajoutent un temps sans avoir à la tracer d'abord.
-const course: Fleche = { depuis: { camp: 'attaque', poste: 1 }, points: [{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.3 }], trait: 'course' }
+const cut: Arrow = { from: { side: 'offense', position: 1 }, points: [{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.3 }], stroke: 'cut' }
 
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
@@ -75,9 +75,9 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     fireEvent.pointerDown(svg, { clientX: 150, clientY: 174 })
     fireEvent.pointerMove(svg, { clientX: 90, clientY: 220 })
     fireEvent.pointerUp(svg, { clientX: 30, clientY: 250 })
-    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].fleches).toHaveLength(1))
-    expect((await getPlay('s1'))!.temps[0].fleches[0].trait).toBe('course')
-    expect((await getPlay('s1'))!.temps[0].fleches[0].depuis).toEqual({ camp: 'attaque', poste: 1 })
+    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].arrows).toHaveLength(1))
+    expect((await getPlay('s1'))!.temps[0].arrows[0].stroke).toBe('cut')
+    expect((await getPlay('s1'))!.temps[0].arrows[0].from).toEqual({ side: 'offense', position: 1 })
   })
 
   it('ignore un tracé qui ne part pas d’un pion', async () => {
@@ -88,46 +88,46 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     fireEvent.pointerDown(svg, { clientX: 15, clientY: 252 })
     fireEvent.pointerMove(svg, { clientX: 90, clientY: 200 })
     fireEvent.pointerUp(svg, { clientX: 150, clientY: 100 })
-    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].fleches).toHaveLength(0))
+    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].arrows).toHaveLength(0))
   })
 
   it('la gomme retire une flèche ; annuler la restaure', async () => {
     const s = schemaDemi()
-    s.temps[0].fleches = [course]
+    s.temps[0].arrows = [cut]
     await savePlay(s)
     renderEdit('s1')
     await userEvent.click(await screen.findByRole('button', { name: 'Gomme' }))
     // (0.5, 0.45) : au milieu du trait de la course
     fireEvent.pointerDown(await tableau(), { clientX: 150, clientY: 126 })
-    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].fleches).toHaveLength(0))
+    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].arrows).toHaveLength(0))
 
     await userEvent.click(screen.getByRole('button', { name: 'Annuler la dernière action' }))
     // Annuler restaure la base, pas seulement l'écran.
-    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].fleches).toHaveLength(1))
+    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].arrows).toHaveLength(1))
   })
 
   it('« + » ajoute un temps qui hérite des positions, pas des flèches', async () => {
     const s = schemaDemi()
-    s.temps[0].fleches = [course]
+    s.temps[0].arrows = [cut]
     await savePlay(s)
     renderEdit('s1')
     await userEvent.click(await screen.findByRole('button', { name: 'Ajouter un temps' }))
     await waitFor(async () => expect((await getPlay('s1'))!.temps).toHaveLength(2))
     const apres = (await getPlay('s1'))!
-    expect(apres.temps[1].pions).toEqual(apres.temps[0].pions)
-    expect(apres.temps[1].ballon).toEqual(apres.temps[0].ballon)
-    expect(apres.temps[1].fleches).toEqual([])
+    expect(apres.temps[1].markers).toEqual(apres.temps[0].markers)
+    expect(apres.temps[1].ball).toEqual(apres.temps[0].ball)
+    expect(apres.temps[1].arrows).toEqual([])
   })
 
   it('refuse le passage en demi-terrain quand la moitié arrière est occupée', async () => {
-    const s: Schema = { id: 's1', ...nouveauSchema('c1', 'complet', false) }
-    s.temps[0].pions[0] = { ...s.temps[0].pions[0], at: { x: 0.5, y: 0.8 } }
+    const s: Play = { id: 's1', ...newPlay('c1', 'full', false) }
+    s.temps[0].markers[0] = { ...s.temps[0].markers[0], at: { x: 0.5, y: 0.8 } }
     await savePlay(s)
     renderEdit('s1')
     await userEvent.click(await screen.findByRole('button', { name: 'Demi-terrain' }))
     // Le refus nomme son occupant, et le terrain enregistré ne bouge pas.
     expect(await screen.findByText(/le poste 1 occupe la moitié arrière/i)).toBeInTheDocument()
-    expect((await getPlay('s1'))!.terrain).toBe('complet')
+    expect((await getPlay('s1'))!.court).toBe('full')
   })
 
   it('n’annule pas dans l’ancienne échelle après un changement de terrain', async () => {
@@ -140,50 +140,50 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     fireEvent.pointerDown(svg, { clientX: 150, clientY: 174 })
     fireEvent.pointerMove(svg, { clientX: 120, clientY: 240 })
     fireEvent.pointerUp(svg, { clientX: 120, clientY: 240 })
-    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].pions[0].at.y).toBeCloseTo(0.857, 2))
+    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].markers[0].at.y).toBeCloseTo(0.857, 2))
 
     await userEvent.click(screen.getByRole('button', { name: 'Terrain complet' }))
-    await waitFor(async () => expect((await getPlay('s1'))!.terrain).toBe('complet'))
+    await waitFor(async () => expect((await getPlay('s1'))!.court).toBe('full'))
 
     // La pile est vidée : plus rien à annuler, donc rien à restaurer de travers.
     expect(screen.getByRole('button', { name: 'Annuler la dernière action' })).toBeDisabled()
-    expect((await getPlay('s1'))!.temps[0].pions[0].at.y).toBeCloseTo(0.4285, 3)
+    expect((await getPlay('s1'))!.temps[0].markers[0].at.y).toBeCloseTo(0.4285, 3)
   })
 
   it('n’annule pas une défense retirée : le schéma ne repasse pas à dix pions', async () => {
     // Une étape empilée porte dix pions ; la restaurer après le retrait de la
     // défense écrirait `defense: false` avec ses croix — l'invariante « cinq ou
     // dix pions selon `defense` » cassée, et écrite en base.
-    const s: Schema = { id: 's2', ...nouveauSchema('c1', 'demi', true) }
+    const s: Play = { id: 's2', ...newPlay('c1', 'half', true) }
     await savePlay(s)
     renderEdit('s2')
     const svg = await tableau()
     fireEvent.pointerDown(svg, { clientX: 150, clientY: 174 })
     fireEvent.pointerMove(svg, { clientX: 120, clientY: 240 })
     fireEvent.pointerUp(svg, { clientX: 120, clientY: 240 })
-    await waitFor(async () => expect((await getPlay('s2'))!.temps[0].pions).toHaveLength(10))
+    await waitFor(async () => expect((await getPlay('s2'))!.temps[0].markers).toHaveLength(10))
 
     await userEvent.click(screen.getByRole('checkbox', { name: /défense/i }))
     await userEvent.click(await screen.findByRole('button', { name: 'Retirer' }))
-    await waitFor(async () => expect((await getPlay('s2'))!.temps[0].pions).toHaveLength(5))
+    await waitFor(async () => expect((await getPlay('s2'))!.temps[0].markers).toHaveLength(5))
 
     expect(screen.getByRole('button', { name: 'Annuler la dernière action' })).toBeDisabled()
     const apres = (await getPlay('s2'))!
     expect(apres.defense).toBe(false)
-    expect(apres.temps[0].pions).toHaveLength(5)
+    expect(apres.temps[0].markers).toHaveLength(5)
   })
 
   it('pose la défense au panier le plus proche, pas toujours au panier avant', async () => {
     // Sur terrain complet, une attaque dans la moitié arrière — transition, presse —
     // verrait sinon son défenseur posé au milieu du terrain, à dix mètres d'elle.
-    const s: Schema = { id: 's3', ...nouveauSchema('c1', 'complet', false) }
-    s.temps[0].pions = s.temps[0].pions.map((p) => ({ ...p, at: { x: p.at.x, y: 0.9 } }))
+    const s: Play = { id: 's3', ...newPlay('c1', 'full', false) }
+    s.temps[0].markers = s.temps[0].markers.map((p) => ({ ...p, at: { x: p.at.x, y: 0.9 } }))
     await savePlay(s)
     renderEdit('s3')
     await userEvent.click(await screen.findByRole('checkbox', { name: /défense/i }))
 
-    await waitFor(async () => expect((await getPlay('s3'))!.temps[0].pions).toHaveLength(10))
-    const croix = (await getPlay('s3'))!.temps[0].pions.filter((p) => p.camp === 'defense')
+    await waitFor(async () => expect((await getPlay('s3'))!.temps[0].markers).toHaveLength(10))
+    const croix = (await getPlay('s3'))!.temps[0].markers.filter((p) => p.side === 'defense')
     // Panier arrière à y ≈ 0,944 : le défenseur est entre son attaquant et lui.
     croix.forEach((c) => expect(c.at.y).toBeGreaterThan(0.9))
   })
@@ -199,8 +199,8 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     fireEvent.pointerMove(svg, { clientX: 90, clientY: 220 })
     fireEvent.pointerUp(svg, { clientX: 30, clientY: 250 })
 
-    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].fleches).toHaveLength(1))
-    const f = (await getPlay('s1'))!.temps[0].fleches[0]
+    await waitFor(async () => expect((await getPlay('s1'))!.temps[0].arrows).toHaveLength(1))
+    const f = (await getPlay('s1'))!.temps[0].arrows[0]
     expect(f.points[0]).toEqual({ x: 0.5, y: 0.62 })
   })
 
@@ -222,7 +222,7 @@ describe('SchemaEdit — l’éditeur du tableau tactique', () => {
     expect(await screen.findByText('consultation')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Course' })).not.toBeInTheDocument()
     // Ce qui compte : rien n'est écrit en base, ni montré à l'écran.
-    expect((await getPlay('s1'))!.temps[0].fleches).toHaveLength(0)
-    expect(container.querySelectorAll('[data-trait="course"]')).toHaveLength(0)
+    expect((await getPlay('s1'))!.temps[0].arrows).toHaveLength(0)
+    expect(container.querySelectorAll('[data-stroke="cut"]')).toHaveLength(0)
   })
 })

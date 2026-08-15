@@ -12,16 +12,16 @@ import type { Match, Player, TeamSide } from '../../domain/types'
 import { useT } from '../../i18n'
 
 export function Summary({ match, players, teamNames }: { match: Match; players: Record<string, Player>; teamNames: Record<TeamSide, string> }) {
-  const trad = useT()
+  const translate = useT()
   const ratios = matchRatios(match)
   const score = liveState(match).score
   return (
     <div className="space-y-8 p-4">
-      <Button className="no-print" onClick={printSummary}>{trad('imprime.exporter')}</Button>
+      <Button className="no-print" onClick={printSummary}>{translate('imprime.exporter')}</Button>
       <TeamBox match={match} players={players} />
       <OpponentLine name={teamNames.B} score={score.b} />
       <section>
-        <h3 className="font-bold mb-2">{trad('imprime.donneesRatios')}</h3>
+        <h3 className="font-bold mb-2">{translate('imprime.donneesRatios')}</h3>
         <ul className="text-sm grid grid-cols-2 gap-x-8 max-w-xl">
           <li>Avantage max — A {ratios.A.maxLead} / B {ratios.B.maxLead}</li>
           <li>Série max — A {ratios.A.maxRun} / B {ratios.B.maxRun}</li>
@@ -31,7 +31,7 @@ export function Summary({ match, players, teamNames }: { match: Match; players: 
         </ul>
       </section>
       <section>
-        <h3 className="font-bold mb-2">{trad('resume.progression')}</h3>
+        <h3 className="font-bold mb-2">{translate('resume.progression')}</h3>
         <ProgressionChart points={scoreProgression(match)} />
       </section>
     </div>
@@ -42,32 +42,32 @@ export function Summary({ match, players, teamNames }: { match: Match; players: 
  *  réel — l'écrire évite la contradiction avec le score final affiché en
  *  en-tête. */
 function OpponentLine({ name, score }: { name: string; score: number }) {
-  const trad = useT()
+  const translate = useT()
   return (
     <section>
-      <h3 className="font-bold mb-2">{trad('imprime.visiteurs')}</h3>
+      <h3 className="font-bold mb-2">{translate('imprime.visiteurs')}</h3>
       <p className="border border-black p-2 text-sm">
-        {name} — {score} points. Score saisi globalement — l'adversaire n'a pas d'effectif à détailler.
+        {name} — {score} points. Score saisi globalement — l'adversaire n'a pas d'roster à détailler.
       </p>
     </section>
   )
 }
 
 function TeamBox({ match, players }: { match: Match; players: Record<string, Player> }) {
-  const trad = useT()
+  const translate = useT()
   const stats = playerStats(match)
   const times = playingTimes(match)
   const totals = teamTotals(match)
   return (
     <section>
-      <h3 className="font-bold mb-2">{trad('imprime.locaux')}</h3>
+      <h3 className="font-bold mb-2">{translate('imprime.locaux')}</h3>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{trad('equipe.numero')}</TableHead><TableHead>{trad('imprime.nomPrenom')}</TableHead><TableHead>5</TableHead>
-            <TableHead>{trad('resume.thTps')}</TableHead><TableHead>{trad('resume.thPts')}</TableHead><TableHead>{trad('resume.thTirs')}</TableHead>
-            <TableHead>{trad('resume.th3pts')}</TableHead><TableHead>{trad('resume.th2Int')}</TableHead><TableHead>{trad('resume.th2Ext')}</TableHead>
-            <TableHead>{trad('resume.thLf')}</TableHead><TableHead>{trad('resume.thFtes')}</TableHead>
+            <TableHead>{translate('equipe.numero')}</TableHead><TableHead>{translate('imprime.nomPrenom')}</TableHead><TableHead>5</TableHead>
+            <TableHead>{translate('resume.thTps')}</TableHead><TableHead>{translate('resume.thPts')}</TableHead><TableHead>{translate('resume.thTirs')}</TableHead>
+            <TableHead>{translate('resume.th3pts')}</TableHead><TableHead>{translate('resume.th2Int')}</TableHead><TableHead>{translate('resume.th2Ext')}</TableHead>
+            <TableHead>{translate('resume.thLf')}</TableHead><TableHead>{translate('resume.thFtes')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -87,7 +87,7 @@ function TeamBox({ match, players }: { match: Match; players: Record<string, Pla
             )
           })}
           <TableRow className="font-semibold">
-            <TableCell colSpan={4}>{trad('imprime.totalEquipe')}</TableCell>
+            <TableCell colSpan={4}>{translate('imprime.totalEquipe')}</TableCell>
             <TableCell>{totals.team.points}</TableCell><TableCell>{totals.team.fieldGoalsMade}</TableCell>
             <TableCell>{totals.team.threes}</TableCell><TableCell>{totals.team.twoInside}</TableCell>
             <TableCell>{totals.team.twoOutside}</TableCell><TableCell>{totals.team.freeThrows}</TableCell>

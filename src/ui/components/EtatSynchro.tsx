@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CloudOff, TriangleAlert } from 'lucide-react'
-import { remoteEnabled, surSante, type Sante } from '../../persistence/remote'
+import { remoteEnabled, onHealth, type Health } from '../../persistence/remote'
 import { useT } from '../../i18n'
 import { C } from '../olive/kit'
 
@@ -28,18 +28,18 @@ import { C } from '../olive/kit'
  * Rien ne s'affiche tant que tout va bien : sur cet écran, le silence est une
  * information, et une pastille verte permanente n'en serait pas une.
  */
-export function EtatSynchro({ compact = false }: { compact?: boolean }) {
-  const trad = useT()
-  const [sante, setSante] = useState<Sante>({ etat: 'inactif', enAttente: 0 })
+export function SyncState({ compact = false }: { compact?: boolean }) {
+  const translate = useT()
+  const [health, setSante] = useState<Health>({ state: 'idle', pending: 0 })
 
-  useEffect(() => (remoteEnabled() ? surSante(setSante) : undefined), [])
+  useEffect(() => (remoteEnabled() ? onHealth(setSante) : undefined), [])
 
   // Une file non vide juste après un geste est l'état NORMAL : elle se vide sous
   // la seconde. Sans la condition sur l'état, la pastille clignoterait à chaque
   // panier — au milieu de l'écran qu'on regarde le moins longtemps.
-  if (!remoteEnabled() || sante.enAttente === 0 || sante.etat === 'ok' || sante.etat === 'inactif') return null
+  if (!remoteEnabled() || health.pending === 0 || health.state === 'ok' || health.state === 'idle') return null
 
-  const bloque = sante.etat === 'jeton'
+  const bloque = health.state === 'token'
   const Icone = bloque ? TriangleAlert : CloudOff
   // Le jeton ne se réparera pas tout seul, le réseau si : deux couleurs, deux
   // durées de vie. L'ambre dit « ça attend », le danger dit « ça demande un geste ».
@@ -48,16 +48,16 @@ export function EtatSynchro({ compact = false }: { compact?: boolean }) {
   return (
     <span
       role="status"
-      title={trad(bloque ? 'sync.refuseDetail' : 'sync.horsReseauDetail')}
-      aria-label={`${trad('sync.compte', { count: sante.enAttente })} — ${trad(bloque ? 'sync.refuseDetail' : 'sync.horsReseauDetail')}`}
+      title={translate(bloque ? 'sync.refuseDetail' : 'sync.horsReseauDetail')}
+      aria-label={`${translate('sync.compte', { count: health.pending })} — ${translate(bloque ? 'sync.refuseDetail' : 'sync.horsReseauDetail')}`}
       className="flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-bold"
       style={{ background: teinte.fond, color: teinte.encre }}
     >
       <Icone className="h-[14px] w-[14px] shrink-0" strokeWidth={2.2} />
       {/* Le compte seul quand la place manque — c'est lui qui porte l'information,
           le libellé ne fait que la nommer. Le nom accessible reste entier. */}
-      <span className="nums">{sante.enAttente}</span>
-      {!compact && <span>{trad(bloque ? 'sync.refuse' : 'sync.horsReseau')}</span>}
+      <span className="nums">{health.pending}</span>
+      {!compact && <span>{translate(bloque ? 'sync.refuse' : 'sync.horsReseau')}</span>}
     </span>
   )
 }

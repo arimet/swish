@@ -15,7 +15,7 @@ const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
  *  fixé d'avance, seul l'adversaire se choisit ici — il n'a pas d'effectif à
  *  détailler, son score se saisira globalement pendant le match. */
 export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
-  const trad = useT()
+  const translate = useT()
   const { can, guard } = useAuth()
   const { clubId, club, ready } = useClub()
   const [teams, setTeams] = useState<Team[] | null>(null) // null = pas encore chargé
@@ -69,10 +69,10 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   if (opponents.length === 0) {
     return (
       <div className="mx-auto max-w-lg">
-        <h1 className="text-2xl font-extrabold tracking-tight">{trad('match.nouveau')}</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">{translate('match.nouveau')}</h1>
         <div className="mt-6 rounded-2xl p-10 text-center" style={{ border: `1px dashed ${C.border}` }}>
-          <p className="text-sm" style={{ color: C.muted }}>{trad('match.ilFautEquipe')}<strong style={{ color: C.text }}>{trad('match.uneAutreEquipe')}</strong>{trad('match.pourCreer')}</p>
-          <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{trad('match.creerEquipe')}</Link>
+          <p className="text-sm" style={{ color: C.muted }}>{translate('match.ilFautEquipe')}<strong style={{ color: C.text }}>{translate('match.uneAutreEquipe')}</strong>{translate('match.pourCreer')}</p>
+          <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('match.creerEquipe')}</Link>
         </div>
       </div>
     )
@@ -84,32 +84,32 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
         <div className="flex flex-col items-center gap-2 text-center">
           <TeamBadge id={club.id} name={club.name} size="h-10 w-10 text-xs" />
           <span className="line-clamp-2 text-sm font-bold">{club.name}</span>
-          <span className="text-[12px] font-semibold" style={{ color: C.muted }}>{trad('match.locaux')}</span>
+          <span className="text-[12px] font-semibold" style={{ color: C.muted }}>{translate('match.locaux')}</span>
         </div>
         <span className="text-lg font-black" style={{ color: C.faint }}>VS</span>
         <div className="flex flex-col items-center gap-2 text-center">
           <TeamBadge id={opponentId} name={nameOf(opponentId)} size="h-10 w-10 text-xs" />
           <span className="line-clamp-2 text-sm font-bold">{nameOf(opponentId)}</span>
-          <span className="text-[12px] font-semibold" style={{ color: C.muted }}>{trad('match.visiteurs')}</span>
+          <span className="text-[12px] font-semibold" style={{ color: C.muted }}>{translate('match.visiteurs')}</span>
         </div>
       </div>
 
       <div className="space-y-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="champ" label={trad('match.championnat')} value={championshipLabel} onChange={setChampionship} placeholder={trad('match.champPlaceholder')} />
-          <Field id="num" label={trad('match.numero')} value={matchNumber} onChange={setNum} placeholder={trad('match.numeroPlaceholder')} />
+          <Field id="champ" label={translate('match.championnat')} value={championshipLabel} onChange={setChampionship} placeholder={translate('match.champPlaceholder')} />
+          <Field id="num" label={translate('match.numero')} value={matchNumber} onChange={setNum} placeholder={translate('match.numeroPlaceholder')} />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="date" label={trad('match.date')} type="date" value={date} onChange={setDate} />
-          <Field id="time" label={trad('match.heure')} type="time" value={time} onChange={setTime} />
+          <Field id="date" label={translate('match.date')} type="date" value={date} onChange={setDate} />
+          <Field id="time" label={translate('match.heure')} type="time" value={time} onChange={setTime} />
         </div>
-        <Field id="venue" label={trad('match.lieu')} value={venue} onChange={setVenue} placeholder={trad('match.lieuPlaceholder')} />
-        <Picker id="opp" label={trad('match.adversaire')} teams={opponents} value={opponentId} onChange={setOpponentId} />
+        <Field id="venue" label={translate('match.lieu')} value={venue} onChange={setVenue} placeholder={translate('match.lieuPlaceholder')} />
+        <Picker id="opp" label={translate('match.adversaire')} teams={opponents} value={opponentId} onChange={setOpponentId} />
       </div>
 
       <div className="mt-6 flex justify-end gap-3">
-        <Link to="/" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{trad('commun.annuler')}</Link>
-        <button onClick={() => guard('manage', create)} disabled={!canCreate} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>{trad('match.planifier')}</button>
+        <Link to="/" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('commun.annuler')}</Link>
+        <button onClick={() => guard('manage', create)} disabled={!canCreate} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>{translate('match.planifier')}</button>
       </div>
     </div>
   )

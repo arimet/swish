@@ -6,17 +6,17 @@
  * donc entre les positions des temps, la seule paire dont le modèle garantisse
  * la cohérence, et la flèche ne sert qu'à courber le trajet après recalage.
  */
-import type { Camp, Fleche, Pion, Point, Poste, Schema, Temps, Trait } from './plays'
+import type { Side, Arrow, Marker, Point, Position, Play, Step, Stroke } from './plays'
 
 /** Avancement dans la combinaison : `temps` est le rang du temps de départ,
  *  `part` la fraction parcourue vers le temps suivant (0 à 1). */
 export interface Instant { temps: number; part: number }
 
 /** Nombre de transitions animables — un schéma à trois temps en a deux. */
-export const transitions = (s: Schema) => Math.max(0, s.temps.length - 1)
+export const transitions = (s: Play) => Math.max(0, s.temps.length - 1)
 
 /** Les traits qui déplacent un pion ; la `passe` déplace le ballon, pas le joueur. */
-const TRAITS_DE_PION: Trait[] = ['course', 'ecran', 'dribble']
+const TRAITS_DE_PION: Stroke[] = ['cut', 'screen', 'dribble']
 
 /**
  * Applique au tracé la similitude — rotation, échelle uniforme, translation —
@@ -64,17 +64,17 @@ function avanceSur(points: Point[], part: number): Point {
 }
 
 /** Où se trouve le ballon d'un temps : la position de son porteur, ou le sol. */
-function ouEstLeBallon(t: Temps): Point | null {
-  const b = t.ballon
+function ouEstLeBallon(t: Step): Point | null {
+  const b = t.ball
   if ('x' in b) return b
-  const porteur = t.pions.find((p) => p.camp === b.camp && p.poste === b.poste)
+  const porteur = t.markers.find((p) => p.side === b.side && p.position === b.position)
   return porteur ? porteur.at : null
 }
 
 /** Le ballon est-il tenu par la même chose aux deux temps ? */
-function memeBallon(a: Temps['ballon'], b: Temps['ballon']): boolean {
+function memeBallon(a: Step['ball'], b: Step['ball']): boolean {
   if ('x' in a) return 'x' in b && a.x === b.x && a.y === b.y
-  return !('x' in b) && a.camp === b.camp && a.poste === b.poste
+  return !('x' in b) && a.side === b.side && a.position === b.position
 }
 
 /**
@@ -96,42 +96,42 @@ function memeBallon(a: Temps['ballon'], b: Temps['ballon']): boolean {
  * comme une panne. Une ligne qui divergerait du mouvement qu'elle prétend décrire
  * serait pire que pas de ligne du tout.
  */
-export function instantane(s: Schema, at: Instant, avecLignes = false): Temps {
+export function instantane(s: Play, at: Instant, avecLignes = false): Step {
   const n = Math.max(0, Math.min(Math.floor(at.temps), transitions(s)))
-  const depuis = s.temps[n]
+  const from = s.temps[n]
   const vers = s.temps[n + 1]
-  if (!vers) return { pions: structuredClone(depuis.pions), ballon: structuredClone(depuis.ballon), fleches: [] }
+  if (!vers) return { markers: structuredClone(from.markers), ball: structuredClone(from.ball), arrows: [] }
   const part = Math.max(0, Math.min(at.part, 1))
 
-  const flecheDe = (camp: Camp, poste: Poste, traits: Trait[]): Fleche | undefined =>
-    depuis.fleches.find((f) => f.depuis.camp === camp && f.depuis.poste === poste && traits.includes(f.trait))
+  const flecheDe = (side: Side, position: Position, traits: Stroke[]): Arrow | undefined =>
+    from.arrows.find((f) => f.from.side === side && f.from.position === position && traits.includes(f.stroke))
 
   /** Le trajet complet, une fois pour toutes : la courbe dessinée recalée sur les
    *  deux positions, ou la corde s'il n'y a rien de dessiné. C'est cette liste de
    *  points qui sert **et** à placer le mobile **et** à tracer la ligne — d'où
    *  l'impossibilité qu'elles se contredisent. */
-  const chemin = (depart: Point, arrivee: Point, f: Fleche | undefined): Point[] =>
+  const chemin = (depart: Point, arrivee: Point, f: Arrow | undefined): Point[] =>
     f ? recaler(f.points, depart, arrivee) : [depart, arrivee]
 
   /** Les lignes émises, dans l'ordre où les mobiles les engendrent. */
-  const lignes: Fleche[] = []
+  const lignes: Arrow[] = []
 
-  const pions = depuis.pions.map((pion): Pion => {
-    const homologue = vers.pions.find((q) => q.camp === pion.camp && q.poste === pion.poste)
+  const markers = from.markers.map((pion): Marker => {
+    const homologue = vers.markers.find((q) => q.side === pion.side && q.position === pion.position)
     const arrivee = homologue?.at ?? pion.at           // absent au temps suivant : il ne bouge pas
     const immobile = arrivee.x === pion.at.x && arrivee.y === pion.at.y
-    const dessinee = flecheDe(pion.camp, pion.poste, TRAITS_DE_PION)
+    const dessinee = flecheDe(pion.side, pion.position, TRAITS_DE_PION)
     // La ligne se calcule même aux bornes : à `part` 0 rien n'a encore bougé, mais
     // le trajet doit déjà s'afficher — il annonce le geste, il ne le commente pas
     // après coup. Un pion immobile n'en reçoit aucune : il n'a pas de trajet.
     if (avecLignes && !immobile) {
       lignes.push({
-        depuis: { camp: pion.camp, poste: pion.poste },
+        from: { side: pion.side, position: pion.position },
         points: chemin(pion.at, arrivee, dessinee),
         // Sans flèche dessinée, le déplacement est une course : c'est le trait
         // neutre du carnet, et la bascule doit éclairer *tous* les déplacements
         // — n'en montrer qu'une partie se lirait comme une panne.
-        trait: dessinee?.trait ?? 'course',
+        stroke: dessinee?.stroke ?? 'cut',
       })
     }
     // Immobile ou aux bornes : la valeur exacte du temps, sans interpolation qui ferait trembler.
@@ -140,23 +140,23 @@ export function instantane(s: Schema, at: Instant, avecLignes = false): Temps {
     return { ...pion, at: avanceSur(chemin(pion.at, arrivee, dessinee), part) }
   })
 
-  const ballon = ((): Temps['ballon'] => {
-    if (memeBallon(depuis.ballon, vers.ballon)) return structuredClone(depuis.ballon)
-    const depart = ouEstLeBallon(depuis)
+  const ball = ((): Step['ball'] => {
+    if (memeBallon(from.ball, vers.ball)) return structuredClone(from.ball)
+    const depart = ouEstLeBallon(from)
     const arrivee = ouEstLeBallon(vers)
-    if (!depart || !arrivee) return structuredClone(depuis.ballon)
+    if (!depart || !arrivee) return structuredClone(from.ball)
     // En vol : ni porté, ni posé où il était. Une flèche de passe du porteur courbe le trajet.
-    const passe = 'x' in depuis.ballon ? undefined : flecheDe(depuis.ballon.camp, depuis.ballon.poste, ['passe'])
-    const vol = chemin(depart, arrivee, passe)
+    const pass = 'x' in from.ball ? undefined : flecheDe(from.ball.side, from.ball.position, ['pass'])
+    const vol = chemin(depart, arrivee, pass)
     // La passe est un déplacement comme un autre, et le coach la montre autant que
     // les courses : elle a droit à sa ligne, en pointillé puisque c'est son trait.
-    if (avecLignes && 'x' in depuis.ballon === false) {
-      lignes.push({ depuis: depuis.ballon, points: vol, trait: 'passe' })
+    if (avecLignes && 'x' in from.ball === false) {
+      lignes.push({ from: from.ball, points: vol, stroke: 'pass' })
     }
-    if (part <= 0) return structuredClone(depuis.ballon)
-    if (part >= 1) return structuredClone(vers.ballon)
+    if (part <= 0) return structuredClone(from.ball)
+    if (part >= 1) return structuredClone(vers.ball)
     return avanceSur(vol, part)
   })()
 
-  return { pions, ballon, fleches: lignes }
+  return { markers, ball, arrows: lignes }
 }

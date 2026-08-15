@@ -13,12 +13,12 @@ export function ConfirmDialog({ open, title, message, confirmLabel, cancelLabel,
   confirmLabel?: string; cancelLabel?: string; danger?: boolean; saisieAttendue?: string
   onConfirm: () => void; onClose: () => void
 }) {
-  const trad = useT()
+  const translate = useT()
   const [saisie, setSaisie] = useState('')
   /* Les libellés par défaut se résolvent ici et non dans la signature : un paramètre
      par défaut ne peut pas appeler un hook. */
-  const libelleConfirmer = confirmLabel ?? trad('commun.confirmer')
-  const libelleAnnuler = cancelLabel ?? trad('commun.annuler')
+  const libelleConfirmer = confirmLabel ?? translate('commun.confirmer')
+  const libelleAnnuler = cancelLabel ?? translate('commun.annuler')
   // La saisie repart à zéro à chaque fermeture : rouvrir le dialogue ne doit pas
   // trouver la confirmation déjà remplie par la fois d'avant.
   const fermer = () => { setSaisie(''); onClose() }
@@ -31,7 +31,7 @@ export function ConfirmDialog({ open, title, message, confirmLabel, cancelLabel,
         {saisieAttendue && (
           <>
             <label htmlFor="confirm-saisie" className="mt-1 text-[13px] font-semibold">
-              {trad('dialogue.saisissez', { texte: saisieAttendue ?? '' })}
+              {translate('dialogue.saisissez', { text: saisieAttendue ?? '' })}
             </label>
             <input
               id="confirm-saisie" autoFocus value={saisie} onChange={(e) => setSaisie(e.target.value)}

@@ -33,11 +33,11 @@ pool?.on('error', (e) => { console.error('[swish] connexion Postgres perdue :', 
  *  dans le bundle, contrairement aux trois codes d'accès qui, eux, sont lisibles
  *  dans les outils du navigateur. C'est toute la différence entre une porte que
  *  le client s'ouvre lui-même et une porte gardée par le serveur. */
-const JETON = process.env.SYNC_WRITE_TOKEN ?? ''
+const TOKEN = process.env.SYNC_WRITE_TOKEN ?? ''
 
 /** Comparaison à durée constante : une comparaison naïve fuit la longueur du
  *  préfixe correct, donc le jeton, un caractère à la fois. */
-function memeSecret(a: string, b: string): boolean {
+function sameSecret(a: string, b: string): boolean {
   const x = Buffer.from(a), y = Buffer.from(b)
   return x.length === y.length && timingSafeEqual(x, y)
 }
@@ -50,15 +50,15 @@ function memeSecret(a: string, b: string): boolean {
  * Renvoie `true` quand la requête peut continuer ; sinon la réponse est déjà
  * écrite et l'appelant n'a plus qu'à sortir.
  */
-export function refuse(req: VercelRequest, res: VercelResponse): boolean {
-  if (!JETON) {
+export function unauthorized(req: VercelRequest, res: VercelResponse): boolean {
+  if (!TOKEN) {
     // Une base configurée sans jeton serait ouverte à qui connaît l'URL. On
     // refuse de démarrer dans cet état plutôt que de le laisser passer en silence.
     res.status(503).json({ error: 'SYNC_WRITE_TOKEN manquant côté serveur' })
     return true
   }
   const fourni = req.headers['x-swish-token']
-  if (typeof fourni !== 'string' || !memeSecret(fourni, JETON)) {
+  if (typeof fourni !== 'string' || !sameSecret(fourni, TOKEN)) {
     res.status(401).json({ error: 'Jeton invalide' })
     return true
   }
@@ -67,7 +67,7 @@ export function refuse(req: VercelRequest, res: VercelResponse): boolean {
 
 /** Le préambule commun : CORS, pré-vol, base configurée. Renvoie `true` quand la
  *  réponse est déjà écrite. */
-export function prelude(req: VercelRequest, res: VercelResponse, methodes: string): boolean {
+export function preamble(req: VercelRequest, res: VercelResponse, methodes: string): boolean {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', `${methodes}, OPTIONS`)
   res.setHeader('Access-Control-Allow-Headers', 'content-type, x-swish-token')

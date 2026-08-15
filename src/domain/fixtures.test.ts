@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { depuis, nextFixture } from './fixtures'
+import { since, nextFixture } from './fixtures'
 import type { Match, Training } from './types'
 
 const match = (id: string, date: string): Match => ({
@@ -65,7 +65,7 @@ describe('nextFixture', () => {
 
 describe('depuis', () => {
   const t0 = new Date('2026-08-13T12:00:00')
-  const ilYA = (ms: number) => depuis(new Date(t0.getTime() - ms).toISOString(), 'fr', t0)
+  const ilYA = (ms: number) => since(new Date(t0.getTime() - ms).toISOString(), 'fr', t0)
   const MIN = 60_000, HEURE = 60 * MIN, JOUR = 24 * HEURE
 
   it('ne formate rien en deçà d’une minute — l’interface écrit « à l’instant »', () => {

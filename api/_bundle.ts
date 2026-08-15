@@ -14,19 +14,19 @@ import { pool } from './_db.js'
  * `rev` est le plus grand numéro d'écriture des lignes qui composent le paquet :
  * le flux SSE s'en sert pour n'émettre que sur changement réel.
  */
-export interface Paquet {
+export interface Bundle {
   match: unknown
   players: unknown[]
   teamNames: { A: string; B: string }
   rev: number
 }
 
-interface Ligne { doc: Record<string, unknown>; rev: string }
+interface Row { doc: Record<string, unknown>; rev: string }
 
-export async function paquet(id: string): Promise<Paquet | null> {
+export async function bundle(id: string): Promise<Bundle | null> {
   if (!pool) return null
 
-  const { rows: m } = await pool.query<Ligne>(
+  const { rows: m } = await pool.query<Row>(
     "select doc, rev from documents where kind = 'match' and id = $1", [id])
   if (!m.length) return null
 
@@ -35,23 +35,23 @@ export async function paquet(id: string): Promise<Paquet | null> {
   const clubId = meta.clubId ?? ''
   const opponentId = meta.opponentId ?? ''
 
-  const [effectif, equipes] = await Promise.all([
-    pool.query<Ligne>(
+  const [roster, teams] = await Promise.all([
+    pool.query<Row>(
       "select doc, rev from documents where kind = 'player' and doc ->> 'teamId' = $1", [clubId]),
-    pool.query<Ligne>(
+    pool.query<Row>(
       "select doc, rev from documents where kind = 'team' and id = any($1::text[])", [[clubId, opponentId]]),
   ])
 
   const nom = (tid: string) =>
-    (equipes.rows.find((r) => r.doc.id === tid)?.doc.name as string | undefined) ?? ''
+    (teams.rows.find((r) => r.doc.id === tid)?.doc.name as string | undefined) ?? ''
 
   const rev = Math.max(
-    ...[...m, ...effectif.rows, ...equipes.rows].map((r) => Number(r.rev)),
+    ...[...m, ...roster.rows, ...teams.rows].map((r) => Number(r.rev)),
   )
 
   return {
     match,
-    players: effectif.rows.map((r) => reduit(r.doc)),
+    players: roster.rows.map((r) => publicPlayer(r.doc)),
     teamNames: { A: nom(clubId), B: nom(opponentId) },
     rev,
   }
@@ -69,6 +69,6 @@ export async function paquet(id: string): Promise<Paquet | null> {
  * La liste est **positive** : on énumère ce qui sort, et non ce qu'on retire. Un
  * champ ajouté un jour à `Player` ne se retrouvera donc pas publié par défaut.
  */
-function reduit(p: Record<string, unknown>) {
+function publicPlayer(p: Record<string, unknown>) {
   return { id: p.id, teamId: p.teamId, number: p.number, lastName: p.lastName, firstName: p.firstName }
 }

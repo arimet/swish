@@ -5,7 +5,7 @@ import { db } from '../persistence/db'
 import { getConvocation, listMatches, listPlayers, listPlays, listResults, listTeams, listTrainings, saveConvocation, savePlayer, saveTraining } from '../persistence/repositories'
 import { playingTimes } from '../domain/playingtime'
 import { nextFixture } from '../domain/fixtures'
-import { dossiers } from '../domain/plays'
+import { folders } from '../domain/plays'
 import { standings } from '../domain/standings'
 import { playerStats } from '../domain/boxscore'
 import { TEAM_FOUL_BONUS } from '../rules/ffbb'
@@ -228,12 +228,12 @@ describe('données de démonstration', () => {
     const matches = await listMatches()
     const schemas = await listPlays(matches[0].meta.clubId)
     expect(schemas).toHaveLength(3)
-    expect(schemas.filter((s) => s.terrain === 'complet')).toHaveLength(1)
+    expect(schemas.filter((s) => s.court === 'full')).toHaveLength(1)
     // Un ballon au sol est un Point ; porté, c'est un pion désigné.
-    expect(schemas.filter((s) => 'x' in s.temps[0].ballon)).toHaveLength(1)
+    expect(schemas.filter((s) => 'x' in s.temps[0].ball)).toHaveLength(1)
     // Chaque temps garde son effectif complet — la défense n'apparaît que là où
     // le schéma la demande.
-    for (const s of schemas) for (const t of s.temps) expect(t.pions).toHaveLength(s.defense ? 10 : 5)
+    for (const s of schemas) for (const t of s.temps) expect(t.markers).toHaveLength(s.defense ? 10 : 5)
   })
 
   it('range les schémas de démonstration et en attache à la prochaine séance', async () => {
@@ -242,17 +242,17 @@ describe('données de démonstration', () => {
     const schemas = await listPlays(clubId)
     // Deux dossiers distincts : sans quoi la barre de la bibliothèque n'aurait
     // qu'un onglet et ne montrerait pas ce qu'elle sait faire.
-    expect(dossiers(schemas)).toEqual(['Attaque placée', 'Remises en jeu'])
-    expect(schemas.every((s) => !!s.dossier)).toBe(true)
+    expect(folders(schemas)).toEqual(['Attaque placée', 'Remises en jeu'])
+    expect(schemas.every((s) => !!s.folder)).toBe(true)
 
     // Le pick and roll va jusqu'au panier : le 5 arrive au bout de sa course et
     // reçoit le ballon, au lieu d'une finition qui n'existait qu'en flèches.
     const pnr = schemas.find((s) => s.nom.includes('Pick and roll'))!
     expect(pnr.temps).toHaveLength(4)
     const fin = pnr.temps[3]
-    expect(fin.ballon).toEqual({ camp: 'attaque', poste: 5 })
-    const cinqAvant = pnr.temps[2].pions.find((p) => p.camp === 'attaque' && p.poste === 5)!
-    const cinqApres = fin.pions.find((p) => p.camp === 'attaque' && p.poste === 5)!
+    expect(fin.ball).toEqual({ side: 'offense', position: 5 })
+    const cinqAvant = pnr.temps[2].markers.find((p) => p.side === 'offense' && p.position === 5)!
+    const cinqApres = fin.markers.find((p) => p.side === 'offense' && p.position === 5)!
     expect(cinqApres.at.y).toBeLessThan(cinqAvant.at.y)
     // Près du panier (y = 0 à la ligne de fond), et non à mi-chemin.
     expect(cinqApres.at.y).toBeLessThan(0.25)

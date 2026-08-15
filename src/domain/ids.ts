@@ -26,5 +26,5 @@ export function seedSeconds(match: Match, period: Period): number {
  * dans les résultats saisis à la main. La traduire ici scinderait un même championnat
  * en deux selon la langue de qui l'a saisi. L'affichage la remplace au dernier moment,
  * par `useChampLabel` (voir `ui/olive/kit`). */
-export const AMICAL = 'Match amical'
-export const champLabel = (meta: MatchMeta) => meta.championshipLabel?.trim() || AMICAL
+export const FRIENDLY = 'Match amical'
+export const leagueLabel = (meta: MatchMeta) => meta.championshipLabel?.trim() || FRIENDLY

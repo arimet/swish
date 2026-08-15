@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { pool } from '../../_db.js'
-import { paquet } from '../../_bundle.js'
+import { bundle } from '../../_bundle.js'
 
 /**
  * Flux SSE : pousse le paquet d'une rencontre aux spectateurs dès qu'il change.
@@ -13,8 +13,8 @@ import { paquet } from '../../_bundle.js'
  */
 export const config = { maxDuration: 60 }
 
-const DUREE_MS = 50_000
-const PAS_MS = 1500
+const WINDOW_MS = 50_000
+const STEP_MS = 1500
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -30,27 +30,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     'access-control-allow-origin': '*',
   })
 
-  let ouvert = true
-  req.on('close', () => { ouvert = false })
+  let open = true
+  req.on('close', () => { open = false })
 
   // On n'émet que sur changement réel : `rev` est un numéro d'écriture, donc
   // comparer deux entiers suffit — pas besoin de sérialiser le paquet pour savoir
   // s'il a bougé.
-  let dernier = -1
+  let last = -1
   res.write(': ok\n\n')
 
-  const debut = Date.now()
-  while (ouvert && Date.now() - debut < DUREE_MS) {
+  const start = Date.now()
+  while (open && Date.now() - start < WINDOW_MS) {
     try {
-      const p = await paquet(id)
-      if (p && p.rev !== dernier) {
-        dernier = p.rev
+      const p = await bundle(id)
+      if (p && p.rev !== last) {
+        last = p.rev
         res.write(`data: ${JSON.stringify(p)}\n\n`)
       } else {
         res.write(': ping\n\n')
       }
     } catch { /* transitoire : on réessaie au tour suivant */ }
-    await new Promise((r) => setTimeout(r, PAS_MS))
+    await new Promise((r) => setTimeout(r, STEP_MS))
   }
 
   res.end()

@@ -2,12 +2,12 @@
 import { Link } from 'react-router-dom'
 import type { CSSProperties, ReactNode } from 'react'
 import { liveState } from '../../rules/ffbb'
-import { AMICAL, champLabel, periodLength } from '../../domain/ids'
+import { FRIENDLY, leagueLabel, periodLength } from '../../domain/ids'
 import { fmt } from '../components/GameClock'
 import type { Match, MatchMeta, Team } from '../../domain/types'
-import { langueCourante, useT } from '../../i18n'
+import { currentLang, useT } from '../../i18n'
 
-export { champLabel }
+export { leagueLabel }
 
 /**
  * La palette, en jetons. Aucune valeur n'est écrite ici : chaque entrée pointe
@@ -78,17 +78,17 @@ export const initials = (n?: string) => String(n ?? '').split(/\s+/).filter(Bool
    — un club français lit « SAM 12 avr. » sur une machine réglée en anglais.
    Le point final des abréviations françaises (« sam. », « avr. ») saute : le cartouche
    de date est en capitales serrées, la ponctuation y fait du bruit. */
-const sansPoint = (s: string) => s.replace(/\.$/, '')
-const jourCourt = (d: Date) =>
-  sansPoint(new Intl.DateTimeFormat(langueCourante(), { weekday: 'short' }).format(d)).toUpperCase()
-const moisCourt = (d: Date) =>
-  sansPoint(new Intl.DateTimeFormat(langueCourante(), { month: 'short' }).format(d))
+const stripDot = (s: string) => s.replace(/\.$/, '')
+const shortWeekday = (d: Date) =>
+  stripDot(new Intl.DateTimeFormat(currentLang(), { weekday: 'short' }).format(d)).toUpperCase()
+const shortMonth = (d: Date) =>
+  stripDot(new Intl.DateTimeFormat(currentLang(), { month: 'short' }).format(d))
 
 export function fmtDate(iso?: string) {
   if (!iso) return { day: '—', wd: '', long: '' }
   const d = new Date(iso + 'T00:00:00')
   if (Number.isNaN(d.getTime())) return { day: '—', wd: '', long: iso }
-  return { day: String(d.getDate()), wd: jourCourt(d), long: `${jourCourt(d)} ${d.getDate()} ${moisCourt(d)}` }
+  return { day: String(d.getDate()), wd: shortWeekday(d), long: `${shortWeekday(d)} ${d.getDate()} ${shortMonth(d)}` }
 }
 
 /**
@@ -96,11 +96,11 @@ export function fmtDate(iso?: string) {
  * amical » traduit. La sentinelle reste intacte dans les données (voir `AMICAL`),
  * elle ne devient une phrase qu'ici.
  */
-export function useChampLabel() {
-  const trad = useT()
+export function useLeagueLabel() {
+  const translate = useT()
   return (v: MatchMeta | string) => {
-    const l = typeof v === 'string' ? v : champLabel(v)
-    return l === AMICAL ? trad('commun.matchAmical') : l
+    const l = typeof v === 'string' ? v : leagueLabel(v)
+    return l === FRIENDLY ? translate('commun.matchAmical') : l
   }
 }
 export function displayClock(m: Match) {
@@ -128,10 +128,10 @@ export const ICON = {
 /** Marque discrète du joueur identifié sur cet appareil. Elle met en avant, elle
  *  ne protège rien : l'identité et les droits d'écriture sont deux axes séparés. */
 export function Vous() {
-  const trad = useT()
+  const translate = useT()
   return (
     <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase tracking-wide"
-      style={{ background: C.accentBg, color: C.accent }}>{trad('commun.vous')}</span>
+      style={{ background: C.accentBg, color: C.accent }}>{translate('commun.vous')}</span>
   )
 }
 
@@ -153,9 +153,9 @@ export function TeamBadge({ id, name, size = 'h-8 w-8 text-[12px]' }: { id: stri
 
 /** Carte de match façon 'Live Score' Olive. */
 export function MatchCard({ m, teams }: { m: Match; teams: Record<string, Team> }) {
-  const trad = useT()
-  const champ = useChampLabel()
-  const a = teams[m.meta.clubId]?.name ?? trad('commun.equipeA'), b = teams[m.meta.opponentId]?.name ?? trad('commun.equipeB')
+  const translate = useT()
+  const champ = useLeagueLabel()
+  const a = teams[m.meta.clubId]?.name ?? translate('commun.equipeA'), b = teams[m.meta.opponentId]?.name ?? translate('commun.equipeB')
   const { score } = liveState(m); const dc = displayClock(m)
   const to = m.status === 'finished' ? `/match/${m.id}/summary` : m.status === 'live' ? `/match/${m.id}/live` : `/match/${m.id}`
   const leadA = score.a > score.b, leadB = score.b > score.a, setup = m.status === 'setup'

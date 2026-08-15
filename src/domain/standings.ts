@@ -1,5 +1,5 @@
 import { liveState } from '../rules/ffbb'
-import { champLabel } from './ids'
+import { leagueLabel } from './ids'
 import type { Match, ReportedResult, Team } from './types'
 
 export interface StandingLine {
@@ -12,7 +12,7 @@ export interface StandingLine {
  *  même match dans l'ordre inverse doivent se reconnaître. Exportée pour que l'écran
  *  de saisie (Championnat.tsx) détecte les doublons avec la même définition — une
  *  clé dupliquée ailleurs divergerait un jour en silence. */
-export const clefConfrontation = (champ: string, x: string, y: string, date?: string) =>
+export const fixtureKey = (champ: string, x: string, y: string, date?: string) =>
   `${champ}|${[x, y].sort().join('~')}|${date ?? ''}`
 
 /**
@@ -29,7 +29,7 @@ export function standings(
     if (!m.has(id)) m.set(id, { id, name: teams[id]?.name ?? id, j: 0, v: 0, d: 0, pf: 0, pa: 0, pts: 0 })
     return m.get(id)!
   }
-  const compte = (champ: string, xId: string, yId: string, xs: number, ys: number) => {
+  const count = (champ: string, xId: string, yId: string, xs: number, ys: number) => {
     const X = ensure(champ, xId)
     const Y = ensure(champ, yId)
     X.j++; Y.j++; X.pf += xs; X.pa += ys; Y.pf += ys; Y.pa += xs
@@ -39,16 +39,16 @@ export function standings(
   const nôtres = new Set<string>()
   for (const m of matches) {
     if (m.status !== 'finished') continue
-    const champ = champLabel(m.meta)
+    const champ = leagueLabel(m.meta)
     const { score } = liveState(m)
-    nôtres.add(clefConfrontation(champ, m.meta.clubId, m.meta.opponentId, m.meta.date))
-    compte(champ, m.meta.clubId, m.meta.opponentId, score.a, score.b)
+    nôtres.add(fixtureKey(champ, m.meta.clubId, m.meta.opponentId, m.meta.date))
+    count(champ, m.meta.clubId, m.meta.opponentId, score.a, score.b)
   }
   for (const r of results) {
     // Une de nos rencontres fait foi : elle est saisie action par action, le résultat
     // recopié ne l'est pas. Sans ce garde, une saisie par distraction compterait deux fois.
-    if (nôtres.has(clefConfrontation(r.championshipLabel, r.homeId, r.awayId, r.date))) continue
-    compte(r.championshipLabel, r.homeId, r.awayId, r.homeScore, r.awayScore)
+    if (nôtres.has(fixtureKey(r.championshipLabel, r.homeId, r.awayId, r.date))) continue
+    count(r.championshipLabel, r.homeId, r.awayId, r.homeScore, r.awayScore)
   }
 
   return [...byChamp.entries()].map(([champ, m]) => ({

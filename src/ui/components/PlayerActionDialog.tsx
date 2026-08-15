@@ -38,7 +38,7 @@ export function PlayerActionDialog({
   onRemoveScore: (kind: ScoreKind) => void; onRemoveFoul: () => void
   onRemoveStat: (kind: StatKind) => void; onRemoveMiss: () => void
 }) {
-  const trad = useT()
+  const translate = useT()
   const [made, setMade] = useState(true)
   const [confirmation, setConfirmation] = useState<{ spot: ShotSpot; label: string; made: boolean } | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -62,7 +62,7 @@ export function PlayerActionDialog({
   const pick = (spot: ShotSpot) => {
     const kind = kindAt(spot.x, spot.y)
     if (made) onScore(kind, spot); else onMiss(kind, spot)
-    setConfirmation({ spot, made, label: `${made ? POINTS_LABEL[kind] : trad('action.manqueMaj')} · ${trad(ZONE_LABELS[zoneAt(spot.x, spot.y)])}` })
+    setConfirmation({ spot, made, label: `${made ? POINTS_LABEL[kind] : translate('action.manqueMaj')} · ${translate(ZONE_LABELS[zoneAt(spot.x, spot.y)])}` })
     closeTimer.current = setTimeout(close, SHOT_FEEDBACK_MS)
   }
 
@@ -82,17 +82,17 @@ export function PlayerActionDialog({
 
         {/* TIR : réussi ou manqué, puis position sur le terrain */}
         <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
-          <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{trad('action.reussi')}</Toggle>
-          <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">{trad('action.manque')}</Toggle>
+          <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{translate('action.reussi')}</Toggle>
+          <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">{translate('action.manque')}</Toggle>
         </div>
         <p className="mt-2 text-[12px] font-semibold text-[var(--c-muted)]">
-          {made ? trad('action.consigneReussi') : trad('action.consigneManque')}
+          {made ? translate('action.consigneReussi') : translate('action.consigneManque')}
         </p>
         <div className="mt-2"><ShotPicker onPick={pick} confirmation={confirmation} shots={shots} /></div>
 
         <button onClick={() => { onScore('lf'); close() }}
           className="mt-3 w-full rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] py-3 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-accent)] active:scale-[0.98]">
-          {trad('action.plusLancerFranc')}
+          {translate('action.plusLancerFranc')}
         </button>
 
         {/* AUTRES STATS */}
@@ -100,7 +100,7 @@ export function PlayerActionDialog({
           {STATS.map((s) => (
             <button key={s.k} onClick={() => { onStat(s.k); close() }}
               className="flex items-center justify-between rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] px-3.5 py-2.5 text-left transition hover:border-[var(--c-green)] hover:bg-[var(--c-panel)] active:scale-[0.97]">
-              <span className="text-[13px] font-semibold text-[var(--c-text)]">{trad(s.label)}</span>
+              <span className="text-[13px] font-semibold text-[var(--c-text)]">{translate(s.label)}</span>
               <span className="text-base font-black text-[var(--c-green)]">+1</span>
             </button>
           ))}
@@ -109,7 +109,7 @@ export function PlayerActionDialog({
         <button onClick={() => { onFoul('personal'); close() }}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--c-danger-bg)] py-3.5 text-base font-bold text-[var(--c-danger)] transition hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)] active:scale-[0.98]">
           <TriangleAlert className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-          {trad('action.fautePersonnelle')}
+          {translate('action.fautePersonnelle')}
         </button>
 
         {/* CORRECTIONS — repliées : on ouvre cette popup pour saisir, pas pour
@@ -118,23 +118,23 @@ export function PlayerActionDialog({
         {hasCorrections && (
           <details className="mt-4 border-t border-[var(--c-border)] pt-3">
             <summary className="cursor-pointer list-none text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)] transition hover:text-[var(--c-text)]">
-              {trad('action.corriger')}
+              {translate('action.corriger')}
             </summary>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {SCORES.map((s) => (
-                <RemoveBtn key={s.k} label={trad(s.label)} value={`−${s.pts}`} disabled={sc[s.k] <= 0} onClick={() => { onRemoveScore(s.k); close() }} />
+                <RemoveBtn key={s.k} label={translate(s.label)} value={`−${s.pts}`} disabled={sc[s.k] <= 0} onClick={() => { onRemoveScore(s.k); close() }} />
               ))}
               {STATS.map((s) => (
-                <RemoveBtn key={s.k} label={trad(s.label)} value="−1" disabled={tc[s.k] <= 0} onClick={() => { onRemoveStat(s.k); close() }} />
+                <RemoveBtn key={s.k} label={translate(s.label)} value="−1" disabled={tc[s.k] <= 0} onClick={() => { onRemoveStat(s.k); close() }} />
               ))}
             </div>
             <button disabled={misses <= 0} onClick={() => { onRemoveMiss(); close() }}
               className="mt-2 w-full rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] py-2.5 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)] disabled:opacity-35 disabled:hover:border-[var(--c-border)]">
-              {trad('action.retirerTirManque')} {misses > 0 && <span className="text-[var(--c-muted)]">({misses})</span>}
+              {translate('action.retirerTirManque')} {misses > 0 && <span className="text-[var(--c-muted)]">({misses})</span>}
             </button>
             <button disabled={fouls <= 0} onClick={() => { onRemoveFoul(); close() }}
               className="mt-2 w-full rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] py-2.5 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)] disabled:opacity-35 disabled:hover:border-[var(--c-border)]">
-              {trad('action.retirerFaute')} {fouls > 0 && <span className="text-[var(--c-muted)]">({fouls})</span>}
+              {translate('action.retirerFaute')} {fouls > 0 && <span className="text-[var(--c-muted)]">({fouls})</span>}
             </button>
           </details>
         )}

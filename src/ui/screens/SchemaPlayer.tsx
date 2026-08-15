@@ -7,13 +7,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { instantane, transitions } from '../../domain/anim'
-import type { Schema } from '../../domain/plays'
+import type { Play } from '../../domain/plays'
 import { getPlay } from '../../persistence/repositories'
 import { ExportSchema } from '../components/ExportSchema'
-import { largeurTerrain, PlayBoard } from '../components/PlayBoard'
+import { courtWidth, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
 import { useT } from '../../i18n'
-import { Pause, Play, X } from 'lucide-react'
+import { Pause, Play as PlayIcon, X } from 'lucide-react'
 
 /** Une transition dure une seconde et demie, le double au ralenti. Ce n'est pas
  *  réglable : 1,5 s laisse lire un mouvement sans qu'on s'impatiente. */
@@ -30,9 +30,9 @@ const PAS = 50
 const moinsDeMouvement = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 export function SchemaPlayer() {
-  const trad = useT()
+  const translate = useT()
   const { id } = useParams<{ id: string }>()
-  const [schema, setSchema] = useState<Schema | null | undefined>(undefined)
+  const [schema, setSchema] = useState<Play | null | undefined>(undefined)
   // L'avancement, en temps décimaux : 1,5 est à mi-chemin du deuxième au
   // troisième temps. Un seul nombre pour la barre, les zones et l'animation.
   const [pos, setPos] = useState(0)
@@ -48,7 +48,7 @@ export function SchemaPlayer() {
 
   useEffect(() => { if (id) getPlay(id).then((s) => setSchema(s ?? null)) }, [id])
 
-  const dernier = schema ? transitions(schema) : 0
+  const last = schema ? transitions(schema) : 0
 
   useEffect(() => {
     if (!enLecture) return
@@ -57,17 +57,17 @@ export function SchemaPlayer() {
     const pas = saute ? duree : PAS
     const iv = window.setInterval(() => setPos((p) => {
       const suivant = saute ? Math.floor(p) + 1 : p + pas / duree
-      if (suivant < dernier) return suivant
+      if (suivant < last) return suivant
       // On se pose exactement sur le dernier temps avant de reboucler : sinon on
       // ne le voit jamais.
-      if (p < dernier) return dernier
-      return boucle ? 0 : dernier
+      if (p < last) return last
+      return boucle ? 0 : last
     }), pas)
     return () => clearInterval(iv)
-  }, [enLecture, ralenti, boucle, dernier])
+  }, [enLecture, ralenti, boucle, last])
 
   // Arrivé au bout sans boucle, la lecture s'arrête d'elle-même.
-  useEffect(() => { if (enLecture && !boucle && pos >= dernier) setEnLecture(false) }, [enLecture, boucle, pos, dernier])
+  useEffect(() => { if (enLecture && !boucle && pos >= last) setEnLecture(false) }, [enLecture, boucle, pos, last])
 
   // Onglet en arrière-plan : on coupe. Une animation qui continue vide la
   // batterie et se retrouve à un endroit imprévu au retour.
@@ -78,11 +78,11 @@ export function SchemaPlayer() {
   }, [])
 
   if (!id) return null
-  if (schema === undefined) return <Ecran><p style={{ color: C.muted }}>{trad('commun.chargement')}</p></Ecran>
+  if (schema === undefined) return <Ecran><p style={{ color: C.muted }}>{translate('commun.chargement')}</p></Ecran>
   if (schema === null) return (
     <Ecran>
       <p style={{ color: C.muted }}>
-        {trad('sch.introuvable')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{trad('equipe.retour')}</Link>
+        {translate('sch.introuvable')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{translate('equipe.retour')}</Link>
       </p>
     </Ecran>
   )
@@ -98,11 +98,11 @@ export function SchemaPlayer() {
   const aller = (delta: number) => {
     setEnLecture(false)
     const vise = delta > 0 ? Math.floor(pos) + 1 : Math.ceil(pos) - 1
-    setPos(Math.min(dernier, Math.max(0, vise)))
+    setPos(Math.min(last, Math.max(0, vise)))
   }
   const jouer = () => {
     // Relancer depuis le bout, c'est rejouer : sinon le bouton ne ferait rien.
-    if (pos >= dernier) setPos(0)
+    if (pos >= last) setPos(0)
     setEnLecture(true)
   }
 
@@ -125,7 +125,7 @@ export function SchemaPlayer() {
   // un terrain de mille pixels ne se lit pas mieux, il se lit moins bien. Le SVG se
   // cale lui-même dans sa boîte (`preserveAspectRatio`), sans distorsion, et rien
   // ici ne convertit de coordonnées — on lit, on ne dessine pas.
-  const large = largeurTerrain(schema.terrain)
+  const large = courtWidth(schema.court)
 
   return (
     <Ecran>
@@ -136,7 +136,7 @@ export function SchemaPlayer() {
             « Lecture », en bas. */}
         <div className="flex shrink-0 items-center gap-2">
           <Link
-            to={`/schemas/${id}`} aria-label={trad('sch.quitterLecteur')} title={trad('sch.quitterLecteur')}
+            to={`/schemas/${id}`} aria-label={translate('sch.quitterLecteur')} title={translate('sch.quitterLecteur')}
             className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-base font-black" style={{ border: bd, color: C.muted }}
           >
             <X className="h-4 w-4" strokeWidth={2.5} />
@@ -148,7 +148,7 @@ export function SchemaPlayer() {
             onClick={() => { setEnLecture(false); setPartage(true) }}
             className="h-10 shrink-0 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}
           >
-            {trad('sch.partager')}
+            {translate('sch.partager')}
           </button>
         </div>
         <ExportSchema schema={schema} tempsIndex={courant} open={partage} onClose={() => setPartage(false)} />
@@ -160,16 +160,16 @@ export function SchemaPlayer() {
           <div className="h-full w-full select-none" style={{ maxWidth: large }}>
             <PlayBoard schema={schema} tempsIndex={0} temps={temps} remplit />
           </div>
-          <Zone cote="left" label={trad('lecteur.precedent')} fleche="‹" onClick={() => aller(-1)} disabled={courant === 0} />
-          <Zone cote="right" label={trad('lecteur.suivant')} fleche="›" onClick={() => aller(1)} disabled={courant === dernier} />
+          <Zone cote="left" label={translate('lecteur.precedent')} fleche="‹" onClick={() => aller(-1)} disabled={courant === 0} />
+          <Zone cote="right" label={translate('lecteur.suivant')} fleche="›" onClick={() => aller(1)} disabled={courant === last} />
         </div>
 
         <div className="mx-auto flex w-full shrink-0 flex-col gap-2" style={{ maxWidth: large }}>
           <div className="flex items-center gap-3">
-            <span className="w-24 shrink-0 text-sm font-extrabold">{trad('sch.temps', { n: courant + 1, total: schema.temps.length })}</span>
+            <span className="w-24 shrink-0 text-sm font-extrabold">{translate('sch.temps', { n: courant + 1, total: schema.temps.length })}</span>
             <input
-              type="range" aria-label={trad('sch.avancement')} min={0} max={dernier || 1} step={0.01} value={pos}
-              disabled={dernier === 0}
+              type="range" aria-label={translate('sch.avancement')} min={0} max={last || 1} step={0.01} value={pos}
+              disabled={last === 0}
               onChange={(e) => { setEnLecture(false); setPos(Number(e.target.value)) }}
               className="piste min-w-0 flex-1 cursor-pointer appearance-none disabled:opacity-40"
             />
@@ -182,19 +182,19 @@ export function SchemaPlayer() {
               partagent la suivante à parts égales — et un quatrième réglage, un
               jour, ne cassera rien. */}
           <button
-            onClick={() => (enLecture ? setEnLecture(false) : jouer())} disabled={dernier === 0}
-            aria-label={trad(enLecture ? 'sch.pause' : 'sch.lecture')}
+            onClick={() => (enLecture ? setEnLecture(false) : jouer())} disabled={last === 0}
+            aria-label={translate(enLecture ? 'sch.pause' : 'sch.lecture')}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-[var(--c-on-brand)] disabled:opacity-40"
             style={{ background: C.brand }}
           >
             {enLecture
-              ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{trad('sch.pause')}</>
-              : <><Play className="h-4 w-4 shrink-0" strokeWidth={2.5} />{trad('sch.lecture')}</>}
+              ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('sch.pause')}</>
+              : <><PlayIcon className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('sch.lecture')}</>}
           </button>
           <div className="grid grid-cols-3 gap-2">
-            <Bascule label={trad('sch.trajets')} actif={trajets} onClick={() => setTrajets((t) => !t)} />
-            <Bascule label={trad('sch.boucle')} actif={boucle} onClick={() => setBoucle((b) => !b)} />
-            <Bascule label={trad('sch.ralenti')} actif={ralenti} onClick={() => setRalenti((r) => !r)} />
+            <Bascule label={translate('sch.trajets')} actif={trajets} onClick={() => setTrajets((t) => !t)} />
+            <Bascule label={translate('sch.boucle')} actif={boucle} onClick={() => setBoucle((b) => !b)} />
+            <Bascule label={translate('sch.ralenti')} actif={ralenti} onClick={() => setRalenti((r) => !r)} />
           </div>
         </div>
       </div>

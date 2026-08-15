@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { newId } from '../../domain/ids'
-import { dossiers, nouveauSchema, type Schema } from '../../domain/plays'
+import { folders, newPlay, type Play } from '../../domain/plays'
 import { deletePlay, listPlays, savePlay } from '../../persistence/repositories'
 import { remoteEnabled } from '../../persistence/remote'
 import { useAuth } from '../../app/auth'
@@ -33,20 +33,20 @@ const sansAccents = (v: string) => v.normalize('NFD').replace(/\p{Diacritic}/gu,
 
 /** Le dossier d'un schéma, normalisé. Chaîne vide = « Sans dossier », ce qui sert
  *  aussi d'onglet : un vrai dossier n'est jamais vide (cf. `dossiers`). */
-const dossierDe = (s: Schema) => s.dossier?.trim() ?? ''
+const dossierDe = (s: Play) => s.folder?.trim() ?? ''
 
 const DATALIST = 'dossiers-connus'
 
 export function SchemaList() {
-  const trad = useT()
+  const translate = useT()
   const { clubId } = useClub()
   const { can, guard } = useAuth()
   const gere = can('manage')
   const navigate = useNavigate()
-  const [schemas, setSchemas] = useState<Schema[] | null>(null)
+  const [schemas, setSchemas] = useState<Play[] | null>(null)
   // Le schéma dont on a demandé la suppression : le droit est vérifié à
   // l'ouverture du dialogue, comme sur la fiche d'équipe.
-  const [aSupprimer, setASupprimer] = useState<Schema | null>(null)
+  const [aSupprimer, setASupprimer] = useState<Play | null>(null)
   // `null` = onglet « Tous », `''` = « Sans dossier », sinon le nom du dossier.
   const [dossierActif, setDossierActif] = useState<string | null>(null)
   const [recherche, setRecherche] = useState('')
@@ -62,12 +62,12 @@ export function SchemaList() {
   // acquis, sinon un visiteur laisserait des schémas vides derrière ses refus.
   const creer = () => guard('manage', async () => {
     if (!clubId) return
-    const s: Schema = { id: newId(), ...nouveauSchema(clubId, 'demi', false), nom: trad('sch.nouveauNom') }
+    const s: Play = { id: newId(), ...newPlay(clubId, 'half', false), nom: translate('sch.nouveauNom') }
     await savePlay(s)
     navigate(`/schemas/${s.id}/edit`)
   })
 
-  const dupliquer = (s: Schema) => guard('manage', async () => {
+  const dupliquer = (s: Play) => guard('manage', async () => {
     // Copie profonde : les temps et leurs flèches sont partagés sinon, et
     // retoucher la copie modifierait l'original.
     await savePlay({ ...structuredClone(s), id: newId(), nom: `${s.nom} (copie)` })
@@ -82,16 +82,16 @@ export function SchemaList() {
 
   // Garder d'abord, muter ensuite : la table de marque n'ouvre même pas la
   // saisie, plutôt que de taper un dossier pour se voir refuser à l'envoi.
-  const ouvrirRangement = (s: Schema) => guard('manage', () => setEnRangement({ id: s.id, valeur: dossierDe(s) }))
-  const ranger = (s: Schema) => guard('manage', async () => {
+  const ouvrirRangement = (s: Play) => guard('manage', () => setEnRangement({ id: s.id, valeur: dossierDe(s) }))
+  const ranger = (s: Play) => guard('manage', async () => {
     const valeur = enRangement?.valeur.trim()
-    await savePlay({ ...s, dossier: valeur || undefined })
+    await savePlay({ ...s, folder: valeur || undefined })
     setEnRangement(null)
     recharger()
   })
 
   const tous = useMemo(() => schemas ?? [], [schemas])
-  const listeDossiers = useMemo(() => dossiers(tous), [tous])
+  const listeDossiers = useMemo(() => folders(tous), [tous])
   const aDesNonRanges = tous.some((s) => !dossierDe(s))
 
   // Filtrer puis ranger : le dossier actif, la recherche sur le nom et la note,
@@ -103,7 +103,7 @@ export function SchemaList() {
     return tous
       .filter((s) => dossierActif === null || dossierDe(s) === dossierActif)
       .filter((s) => !q || sansAccents(`${s.nom} ${s.note ?? ''}`).includes(q))
-      .sort((a, b) => (b.majLe ?? '').localeCompare(a.majLe ?? ''))
+      .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
   }, [tous, dossierActif, recherche])
 
   return (
@@ -111,7 +111,7 @@ export function SchemaList() {
       <PageTitle
         action={gere && (
           <button onClick={creer} className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-            {trad('sch.nouveau')}
+            {translate('sch.nouveau')}
           </button>
         )}
       />
@@ -128,19 +128,19 @@ export function SchemaList() {
           <span className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl" style={{ background: C.accentBg, color: C.accent }}>
             <Ic d={ICON.matches} className="h-7 w-7" />
           </span>
-          <p className="text-base font-extrabold">{trad('sch.bibliothequeVide')}</p>
+          <p className="text-base font-extrabold">{translate('sch.bibliothequeVide')}</p>
           {gere ? (
             <>
               <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
-                {trad('sch.videGere')}
+                {translate('sch.videGere')}
               </p>
               <button onClick={creer} className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-                {trad('sch.dessinerPremiere')}
+                {translate('sch.dessinerPremiere')}
               </button>
             </>
           ) : (
             <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
-              {trad('sch.videVisiteur')}
+              {translate('sch.videVisiteur')}
             </p>
           )}
         </div>
@@ -149,12 +149,12 @@ export function SchemaList() {
           <div className="mb-4 flex flex-wrap items-center gap-3">
             {/* Les onglets se déduisent des schémas : un dossier vidé disparaît de
                 lui-même, et « Sans dossier » ne s'affiche que s'il reste à ranger. */}
-            <div role="group" aria-label={trad('sch.dossiers')} className="flex flex-wrap gap-1.5">
-              <Onglet actif={dossierActif === null} onClick={() => setDossierActif(null)}>{trad('sch.tous')}</Onglet>
+            <div role="group" aria-label={translate('sch.dossiers')} className="flex flex-wrap gap-1.5">
+              <Onglet actif={dossierActif === null} onClick={() => setDossierActif(null)}>{translate('sch.tous')}</Onglet>
               {listeDossiers.map((d) => (
                 <Onglet key={d} actif={dossierActif === d} onClick={() => setDossierActif(d)}>{d}</Onglet>
               ))}
-              {aDesNonRanges && <Onglet actif={dossierActif === ''} onClick={() => setDossierActif('')}>{trad('sch.sansDossier')}</Onglet>}
+              {aDesNonRanges && <Onglet actif={dossierActif === ''} onClick={() => setDossierActif('')}>{translate('sch.sansDossier')}</Onglet>}
             </div>
             {/* La loupe dans le champ : sur une barre de dossiers qui s'allonge, un
                 rectangle nu ne se distingue plus d'un onglet de plus. */}
@@ -164,7 +164,7 @@ export function SchemaList() {
               </span>
               <input
                 type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
-                aria-label={trad('sch.rechercher')} placeholder={trad('sch.rechercherPlaceholder')}
+                aria-label={translate('sch.rechercher')} placeholder={translate('sch.rechercherPlaceholder')}
                 className="h-10 w-full rounded-xl pl-9 pr-3 text-sm"
                 style={{ background: C.panel, border: bd, color: C.text }}
               />
@@ -177,7 +177,7 @@ export function SchemaList() {
 
           {visibles.length === 0 ? (
             <p className="rounded-2xl py-16 text-center text-sm" style={{ border: `1px dashed ${C.border}`, color: C.muted }}>
-              {trad('sch.aucunResultat')}
+              {translate('sch.aucunResultat')}
             </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
@@ -198,10 +198,10 @@ export function SchemaList() {
                     <h3 className="mt-2.5 truncate text-[15px] font-extrabold tracking-tight">{s.nom}</h3>
                     <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold" style={{ color: C.muted }}>
                       <span className="rounded-md px-1.5 py-0.5" style={{ background: C.card2 }}>
-                        {trad(s.terrain === 'demi' ? 'sch.demiTerrain' : 'sch.terrainComplet')}
+                        {translate(s.court === 'half' ? 'sch.demiTerrain' : 'sch.terrainComplet')}
                       </span>
-                      <span>{trad('sch.compteTemps', { count: s.temps.length })}</span>
-                      {s.defense && <span>{trad('sch.defense')}</span>}
+                      <span>{translate('sch.compteTemps', { count: s.temps.length })}</span>
+                      {s.defense && <span>{translate('sch.defense')}</span>}
                     </p>
                     {s.note && <p className="mt-1 truncate text-[12px]" style={{ color: C.faint }}>{s.note}</p>}
                   </Link>
@@ -211,8 +211,8 @@ export function SchemaList() {
                       obtient un bouton pour le changer. */}
                   <div className="mt-2 text-[12px] font-bold">
                     {!gere ? (
-                      <span className="inline-block rounded-md px-1.5 py-0.5" style={{ background: C.card2, color: s.dossier ? C.accent : C.faint }}>
-                        {s.dossier || trad('sch.sansDossier')}
+                      <span className="inline-block rounded-md px-1.5 py-0.5" style={{ background: C.card2, color: s.folder ? C.accent : C.faint }}>
+                        {s.folder || translate('sch.sansDossier')}
                       </span>
                     ) : enRangement?.id === s.id ? (
                       <form
@@ -220,19 +220,19 @@ export function SchemaList() {
                         onSubmit={(e) => { e.preventDefault(); ranger(s) }}
                       >
                         <input
-                          list={DATALIST} aria-label={trad('sch.dossier')} autoFocus value={enRangement.valeur}
+                          list={DATALIST} aria-label={translate('sch.dossier')} autoFocus value={enRangement.valeur}
                           onChange={(e) => setEnRangement({ id: s.id, valeur: e.target.value })}
-                          placeholder={trad('sch.nomDossier')} className="min-w-0 flex-1 rounded-lg px-2 py-1 text-[12px] font-semibold"
+                          placeholder={translate('sch.nomDossier')} className="min-w-0 flex-1 rounded-lg px-2 py-1 text-[12px] font-semibold"
                           style={{ background: C.panel, border: bd, color: C.text }}
                         />
-                        <button type="submit" className="rounded-lg px-2 py-1.5" style={{ color: C.accent }}>{trad('sch.ranger')}</button>
+                        <button type="submit" className="rounded-lg px-2 py-1.5" style={{ color: C.accent }}>{translate('sch.ranger')}</button>
                       </form>
                     ) : (
                       <button
-                        onClick={() => ouvrirRangement(s)} aria-label={trad('sch.dossierDe', { nom: s.nom })}
-                        className="rounded-md px-2 py-1.5" style={{ background: C.card2, color: s.dossier ? C.accent : C.faint }}
+                        onClick={() => ouvrirRangement(s)} aria-label={translate('sch.dossierDe', { nom: s.nom })}
+                        className="rounded-md px-2 py-1.5" style={{ background: C.card2, color: s.folder ? C.accent : C.faint }}
                       >
-                        {s.dossier || trad('sch.sansDossier')}
+                        {s.folder || translate('sch.sansDossier')}
                       </button>
                     )}
                   </div>
@@ -249,19 +249,19 @@ export function SchemaList() {
                       className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl text-[13px] font-black"
                       style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}
                     >
-                      {trad('sch.jouer')}
+                      {translate('sch.jouer')}
                     </Link>
                     {gere && (
                       <>
                         <button
-                          onClick={() => dupliquer(s)} aria-label={trad('sch.dupliquer')} title={trad('sch.dupliquer')}
+                          onClick={() => dupliquer(s)} aria-label={translate('sch.dupliquer')} title={translate('sch.dupliquer')}
                           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
                           style={{ background: C.card2, border: bd, color: C.muted }}
                         >
                           <Ic d={ICONE_COPIE} className="h-[17px] w-[17px]" />
                         </button>
                         <button
-                          onClick={() => guard('manage', () => setASupprimer(s))} aria-label={trad('commun.supprimer')} title={trad('commun.supprimer')}
+                          onClick={() => guard('manage', () => setASupprimer(s))} aria-label={translate('commun.supprimer')} title={translate('commun.supprimer')}
                           className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
                           style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}
                         >
@@ -279,13 +279,13 @@ export function SchemaList() {
 
       {/* Même formulation que les entraînements et les résultats extérieurs :
           une seule limite à retenir, pas une par écran. */}
-      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{trad('sch.schemasLocaux')}</p>}
+      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('sch.schemasLocaux')}</p>}
 
       <ConfirmDialog
         open={!!aSupprimer} danger
-        title={trad('sch.supprimerTitre')}
-        message={aSupprimer ? trad('sch.supprimerTexte', { nom: aSupprimer.nom }) : undefined}
-        confirmLabel={trad('commun.supprimer')} onConfirm={supprimer} onClose={() => setASupprimer(null)}
+        title={translate('sch.supprimerTitre')}
+        message={aSupprimer ? translate('sch.supprimerTexte', { nom: aSupprimer.nom }) : undefined}
+        confirmLabel={translate('commun.supprimer')} onConfirm={supprimer} onClose={() => setASupprimer(null)}
       />
     </div>
   )

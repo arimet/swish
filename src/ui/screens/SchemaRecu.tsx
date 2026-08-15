@@ -21,18 +21,18 @@ import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
 import { newId } from '../../domain/ids'
 import { decoder } from '../../domain/partage'
-import type { Schema } from '../../domain/plays'
+import type { Play } from '../../domain/plays'
 import { savePlay } from '../../persistence/repositories'
-import { largeurTerrain, PlayBoard } from '../components/PlayBoard'
+import { courtWidth, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
 
 export function SchemaRecu() {
-  const trad = useT()
+  const translate = useT()
   const { hash } = useLocation()
   const { guard } = useAuth()
   const { clubId, ready } = useClub()
   const navigate = useNavigate()
-  const [schema, setSchema] = useState<Schema | null | undefined>(undefined)
+  const [schema, setSchema] = useState<Play | null | undefined>(undefined)
   const [index, setIndex] = useState(0)
 
   // `useLocation().hash` porte le « # » : le code commence au caractère suivant.
@@ -44,49 +44,49 @@ export function SchemaRecu() {
     return () => { vivant = false }
   }, [code])
 
-  if (schema === undefined) return <Ecran><p style={{ color: C.muted }}>{trad('recu.ouverture')}</p></Ecran>
+  if (schema === undefined) return <Ecran><p style={{ color: C.muted }}>{translate('recu.ouverture')}</p></Ecran>
   if (schema === null) return (
     <Ecran>
       <div className="grid min-h-dvh place-items-center p-6 text-center">
         <div>
-          <p className="text-lg font-extrabold">{trad('recu.lienAbime')}</p>
+          <p className="text-lg font-extrabold">{translate('recu.lienAbime')}</p>
           <p className="mt-2 text-sm" style={{ color: C.muted }}>
-            {trad('recu.lienExplication')}
+            {translate('recu.lienExplication')}
           </p>
           <Link to="/" className="mt-5 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-            {trad('recu.ouvrirSwish')}
+            {translate('recu.ouvrirSwish')}
           </Link>
         </div>
       </div>
     </Ecran>
   )
 
-  const dernier = schema.temps.length - 1
+  const last = schema.temps.length - 1
   // Le défilement se borne, il ne boucle pas — même règle que la consultation.
-  const aller = (delta: number) => setIndex((i) => Math.min(dernier, Math.max(0, i + delta)))
+  const aller = (delta: number) => setIndex((i) => Math.min(last, Math.max(0, i + delta)))
 
   // Un schéma neuf : nouvel identifiant, club de celui qui reçoit. L'import ne
   // peut donc écraser aucun schéma existant, même si l'expéditeur et le
   // destinataire partagent la même base.
   const ajouter = () => guard('manage', async () => {
     if (!clubId) return
-    const s: Schema = { ...schema, id: newId(), clubId }
+    const s: Play = { ...schema, id: newId(), clubId }
     await savePlay(s)
     navigate(`/schemas/${s.id}`)
   })
 
   // Même bornage de largeur que la consultation : c'est le rapport du viewBox
   // qui doit tenir, le demi-terrain déborderait sinon sur un écran large.
-  const large = largeurTerrain(schema.terrain)
+  const large = courtWidth(schema.court)
 
   return (
     <Ecran>
       <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-3 p-4">
         <div>
-          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>{trad('recu.titre')}</p>
+          <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('recu.titre')}</p>
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.nom}</h1>
           <p className="text-sm" style={{ color: C.muted }}>
-            {trad(schema.terrain === 'demi' ? 'sch.demiTerrain' : 'sch.terrainComplet')} · {trad('sch.compteTemps', { count: schema.temps.length })}{schema.defense ? ` ${trad('sch.defense')}` : ''}
+            {translate(schema.court === 'half' ? 'sch.demiTerrain' : 'sch.terrainComplet')} · {translate('sch.compteTemps', { count: schema.temps.length })}{schema.defense ? ` ${translate('sch.defense')}` : ''}
           </p>
         </div>
 
@@ -97,25 +97,25 @@ export function SchemaRecu() {
         </div>
 
         <div className="flex select-none items-center gap-3" style={{ maxWidth: large }}>
-          <Pas label={trad('lecteur.precedent')} onClick={() => aller(-1)} disabled={index === 0}>◀</Pas>
-          <span className="flex-1 text-center text-sm font-extrabold">Temps {index + 1} / {schema.temps.length}</span>
-          <Pas label={trad('lecteur.suivant')} onClick={() => aller(1)} disabled={index === dernier}>▶</Pas>
+          <Pas label={translate('lecteur.precedent')} onClick={() => aller(-1)} disabled={index === 0}>◀</Pas>
+          <span className="flex-1 text-center text-sm font-extrabold">{translate('sch.temps', { n: index + 1, total: schema.temps.length })}</span>
+          <Pas label={translate('lecteur.suivant')} onClick={() => aller(1)} disabled={index === last}>▶</Pas>
         </div>
 
         {/* Tant que les équipes ne sont pas chargées, on ne sait pas si un club
             est réglé : proposer l'un ou l'autre trop tôt ferait clignoter l'écran. */}
         {ready && (clubId ? (
           <button onClick={ajouter} className="rounded-2xl py-3.5 text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: large }}>
-            {trad('recu.ajouter')}
+            {translate('recu.ajouter')}
           </button>
         ) : (
           <Link to="/" className="rounded-2xl py-3.5 text-center text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: large }}>
-            {trad('recu.choisirClub')}
+            {translate('recu.choisirClub')}
           </Link>
         ))}
 
         <p className="text-[12px]" style={{ color: C.faint }}>
-          {trad('recu.rienAInstaller')}
+          {translate('recu.rienAInstaller')}
         </p>
       </div>
     </Ecran>

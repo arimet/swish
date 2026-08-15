@@ -34,12 +34,12 @@ export function devApi(): Plugin {
         const url = new URL(req.url ?? '/', 'http://localhost')
         if (!url.pathname.startsWith('/api/')) return next()
 
-        const route = resoudre(url.pathname)
+        const route = resolve(url.pathname)
         if (!route) return next()
 
         try {
-          const mod = await server.ssrLoadModule(`/api/${route.fichier}`)
-          await mod.default(await enrichir(req, { ...route.params, ...query(url) }), decorer(res))
+          const mod = await server.ssrLoadModule(`/api/${route.file}`)
+          await mod.default(await enrich(req, { ...route.params, ...query(url) }), decorate(res))
         } catch (e) {
           server.ssrFixStacktrace(e as Error)
           server.config.logger.error(`  ✖  /api${url.pathname.slice(4)} : ${(e as Error).message}`)
@@ -53,21 +53,21 @@ export function devApi(): Plugin {
 
 /** Le routage de Vercel, réduit aux quatre routes du projet. Les crochets d'un
  *  nom de fichier deviennent un paramètre. */
-function resoudre(chemin: string): { fichier: string; params: Record<string, string> } | null {
+function resolve(chemin: string): { file: string; params: Record<string, string> } | null {
   const p = chemin.replace(/^\/api\//, '').replace(/\/$/, '')
-  if (p === 'state') return { fichier: 'state.ts', params: {} }
-  if (p === 'mutate') return { fichier: 'mutate.ts', params: {} }
-  const flux = p.match(/^match\/([^/]+)\/stream$/)
-  if (flux) return { fichier: 'match/[id]/stream.ts', params: { id: decodeURIComponent(flux[1]) } }
+  if (p === 'state') return { file: 'state.ts', params: {} }
+  if (p === 'mutate') return { file: 'mutate.ts', params: {} }
+  const stream = p.match(/^match\/([^/]+)\/stream$/)
+  if (stream) return { file: 'match/[id]/stream.ts', params: { id: decodeURIComponent(stream[1]) } }
   const un = p.match(/^match\/([^/]+)$/)
-  if (un) return { fichier: 'match/[id].ts', params: { id: decodeURIComponent(un[1]) } }
+  if (un) return { file: 'match/[id].ts', params: { id: decodeURIComponent(un[1]) } }
   return null
 }
 
 const query = (url: URL) => Object.fromEntries(url.searchParams)
 
 /** Vercel décode le corps JSON avant d'appeler le gestionnaire ; Node, non. */
-async function enrichir(req: IncomingMessage, params: Record<string, string>) {
+async function enrich(req: IncomingMessage, params: Record<string, string>) {
   const brut = await new Promise<string>((ok) => {
     let d = ''
     req.on('data', (c) => { d += c })
@@ -79,7 +79,7 @@ async function enrichir(req: IncomingMessage, params: Record<string, string>) {
 }
 
 /** Les raccourcis que Vercel ajoute à la réponse. */
-function decorer(res: ServerResponse) {
+function decorate(res: ServerResponse) {
   return Object.assign(res, {
     status(code: number) { res.statusCode = code; return this },
     json(v: unknown) { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(v)); return this },

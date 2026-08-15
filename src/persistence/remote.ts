@@ -29,65 +29,65 @@ const REV_KEY = 'swish-sync-rev'
  */
 export const TOKEN_KEY = 'swish-sync-token'
 
-export const jeton = (): string => localStorage.getItem(TOKEN_KEY) ?? ''
-export const setJeton = (v: string) => {
+export const token = (): string => localStorage.getItem(TOKEN_KEY) ?? ''
+export const setToken = (v: string) => {
   if (v) localStorage.setItem(TOKEN_KEY, v)
   else localStorage.removeItem(TOKEN_KEY)
 }
 
-const entetes = (): Record<string, string> => ({
+const headers = (): Record<string, string> => ({
   'content-type': 'application/json',
-  'x-swish-token': jeton(),
+  'x-swish-token': token(),
 })
 
 type Kind = OutboxItem['kind']
 
-interface EtatDistant {
+interface RemoteState {
   rev: number
   docs: { kind: Kind; id: string; doc: unknown }[]
   /** Les `kind:id` que la base détient **encore**. */
-  vivants: string[]
+  alive: string[]
 }
 
 /** Ce que la dernière tentative de synchronisation a donné. L'interface s'en sert
  *  pour dire à l'administrateur si son jeton passe, plutôt que d'échouer en
  *  silence comme le faisait la version Redis. */
-export type Etat = 'inactif' | 'ok' | 'jeton' | 'reseau'
-let dernierEtat: Etat = 'inactif'
-export const etatSync = (): Etat => dernierEtat
+export type State = 'idle' | 'ok' | 'token' | 'network'
+let lastState: State = 'idle'
+export const syncState = (): State => lastState
 
 /** Ce qu'un écran a besoin de savoir : où en est l'envoi, et combien d'actions
  *  attendent encore. Le compte est la mesure honnête — il grossit si ça coince. */
-export interface Sante { etat: Etat; enAttente: number }
+export interface Health { state: State; pending: number }
 
 /* On prévient plutôt que de faire interroger. Un sondage sur la table Dexie
    marcherait, mais `doFlush` sait exactement quand l'état change : le faire dire
    coûte moins et ne fabrique pas de latence entre l'échec et son affichage. */
-const ecoutes = new Set<(s: Sante) => void>()
+const listeners = new Set<(s: Health) => void>()
 
 /** S'abonne à la santé de la synchronisation. Renvoie de quoi se désabonner. */
-export function surSante(f: (s: Sante) => void): () => void {
-  ecoutes.add(f)
-  void annoncer()
-  return () => { ecoutes.delete(f) }
+export function onHealth(f: (s: Health) => void): () => void {
+  listeners.add(f)
+  void notify()
+  return () => { listeners.delete(f) }
 }
 
-async function annoncer(): Promise<void> {
-  if (!ecoutes.size) return
-  const enAttente = await db.outbox.count()
-  for (const f of ecoutes) f({ etat: dernierEtat, enAttente })
+async function notify(): Promise<void> {
+  if (!listeners.size) return
+  const pending = await db.outbox.count()
+  for (const f of listeners) f({ state: lastState, pending })
 }
 
-async function lireEtat(): Promise<EtatDistant | null> {
+async function readState(): Promise<RemoteState | null> {
   if (!BASE) return null
   const since = Number(localStorage.getItem(REV_KEY)) || 0
   try {
-    const r = await fetch(`${BASE}/state?since=${since}`, { headers: entetes() })
-    if (r.status === 401 || r.status === 503) { dernierEtat = 'jeton'; return null }
-    if (!r.ok) { dernierEtat = 'reseau'; return null }
-    dernierEtat = 'ok'
-    return (await r.json()) as EtatDistant
-  } catch { dernierEtat = 'reseau'; return null }
+    const r = await fetch(`${BASE}/state?since=${since}`, { headers: headers() })
+    if (r.status === 401 || r.status === 503) { lastState = 'token'; return null }
+    if (!r.ok) { lastState = 'network'; return null }
+    lastState = 'ok'
+    return (await r.json()) as RemoteState
+  } catch { lastState = 'network'; return null }
 }
 
 /* Le genre d'un document dit dans quelle table du miroir il se range. La clef
@@ -118,11 +118,11 @@ const TABLES = {
  * écriture que la personne vient de faire et qui n'est pas encore partie.
  */
 export async function hydrate(): Promise<boolean> {
-  const s = await lireEtat()
+  const s = await readState()
   if (!s) return false
 
-  const enAttente = new Set((await db.outbox.toArray()).map((o) => `${o.kind}:${o.id}`))
-  const vivants = new Set(s.vivants)
+  const pending = new Set((await db.outbox.toArray()).map((o) => `${o.kind}:${o.id}`))
+  const alive = new Set(s.alive)
 
   // Les huit tables, et pas seulement celles que `docs` touche : le balayage des
   // morts lit les clefs primaires de chacune. Dexie les veut dans un tableau
@@ -134,8 +134,8 @@ export async function hydrate(): Promise<boolean> {
     for (const d of s.docs) await (TABLES[d.kind] as Table<unknown, string> | undefined)?.put(d.doc)
     for (const [kind, table] of Object.entries(TABLES) as [Kind, (typeof TABLES)[Kind]][]) {
       const ids = (await table.toCollection().primaryKeys()) as string[]
-      const morts = ids.filter((id) => !vivants.has(`${kind}:${id}`) && !enAttente.has(`${kind}:${id}`))
-      if (morts.length) await table.bulkDelete(morts)
+      const dead = ids.filter((id) => !alive.has(`${kind}:${id}`) && !pending.has(`${kind}:${id}`))
+      if (dead.length) await table.bulkDelete(dead)
     }
   })
 
@@ -155,7 +155,7 @@ async function enqueue(op: Omit<OutboxItem, 'ts' | 'seq' | 'modifiedAt'>): Promi
   // plus récemment reçue : une file bloquée deux heures par un gymnase sans
   // réseau n'écrase pas une correction faite entre-temps sur un autre appareil.
   await db.outbox.add({ ...op, ts: Date.now(), modifiedAt: new Date().toISOString() })
-  void annoncer()
+  void notify()
   flush()
 }
 export const enqueuePut = (kind: Kind, id: string, doc: unknown) => enqueue({ kind, op: 'put', id, doc })
@@ -202,19 +202,19 @@ async function doFlush(): Promise<void> {
        * infiniment préférable à un lot qui ne part jamais.
        */
       const r = await fetch(`${BASE}/mutate`, {
-        method: 'POST', headers: entetes(), body,
+        method: 'POST', headers: headers(), body,
         keepalive: new Blob([body]).size < 60_000,
       })
       // Un jeton refusé n'est pas un incident de réseau : réessayer ne servira à
       // rien tant que personne n'aura corrigé le réglage. On garde la file — les
       // écritures ne sont pas perdues — et on le fait dire à l'administration.
-      if (r.status === 401 || r.status === 503) dernierEtat = 'jeton'
-      else if (r.ok) { dernierEtat = 'ok'; await db.outbox.bulkDelete(items.map((i) => i.seq!)) }
-      else dernierEtat = 'reseau'
+      if (r.status === 401 || r.status === 503) lastState = 'token'
+      else if (r.ok) { lastState = 'ok'; await db.outbox.bulkDelete(items.map((i) => i.seq!)) }
+      else lastState = 'network'
     }
-  } catch { dernierEtat = 'reseau' } finally {
+  } catch { lastState = 'network' } finally {
     flushing = false
-    await annoncer()
+    await notify()
   }
 }
 
