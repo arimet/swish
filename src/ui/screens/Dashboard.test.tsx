@@ -11,7 +11,7 @@ import { getMessage, saveConvocation, saveMatch, saveMessage, savePlay, savePlay
 import { newPlay, type Play } from '../../domain/plays'
 import type { GameEvent, Match } from '../../domain/types'
 
-const schema = (id: string, nom: string): Play => ({ id, ...newPlay('ta', 'half', false), nom })
+const schema = (id: string, name: string): Play => ({ id, ...newPlay('ta', 'half', false), name })
 
 const TOP3 = { x: 0.5, y: 0.65 }
 

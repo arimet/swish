@@ -65,13 +65,13 @@ export function TeamPanel({
               onClick={onUndoTimeout}
               disabled={timeoutsUsed <= 0}
               title={translate('panneau.annulerTMTitre')}
-              aria-label={translate('panneau.annulerTM', { equipe: title })}
+              aria-label={translate('panneau.annulerTM', { team: title })}
               className="h-11 w-11 border-l border-background/60 text-xs text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] disabled:opacity-30"
             >
               <RotateCcw className="mx-auto h-4 w-4" strokeWidth={2.5} />
             </button>
           </span>
-          <button onClick={onSub} title={translate('panneau.changement')} aria-label={translate('panneau.changementEquipe', { equipe: title })}
+          <button onClick={onSub} title={translate('panneau.changement')} aria-label={translate('panneau.changementEquipe', { team: title })}
             className="grid h-11 w-11 place-items-center rounded-lg bg-muted text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]">
             ⇄
           </button>

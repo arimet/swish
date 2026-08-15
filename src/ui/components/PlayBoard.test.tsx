@@ -7,7 +7,7 @@ const half = { id: 'x', ...newPlay('c1', 'half', true) }
 
 describe('PlayBoard', () => {
   it('rend les dix pions et le ballon du temps demandé', () => {
-    const { container } = render(<PlayBoard schema={half} tempsIndex={0} />)
+    const { container } = render(<PlayBoard schema={half} stepIndex={0} />)
     // Cinq attaquants, cinq défenseurs, mêmes chiffres de part et d'autre : c'est
     // le marqueur de camp qui les sépare. Les deux ont un disque de même rayon —
     // plein pour l'attaque, ouvert pour la défense —, ce qui les distingue aussi
@@ -26,10 +26,10 @@ describe('PlayBoard', () => {
 
   it('distingue les quatre traits de flèche', () => {
     const s = { ...half }
-    s.temps = [{ ...s.temps[0], arrows: (['cut', 'screen', 'pass', 'dribble'] as const).map((stroke, i) => ({
+    s.steps = [{ ...s.steps[0], arrows: (['cut', 'screen', 'pass', 'dribble'] as const).map((stroke, i) => ({
       from: { side: 'offense' as const, position: (i + 1) as 1|2|3|4|5 }, points: [{ x: 0.1 + i * 0.2, y: 0.7 }, { x: 0.1 + i * 0.2, y: 0.3 }], stroke,
     })) }]
-    const { container } = render(<PlayBoard schema={s} tempsIndex={0} />)
+    const { container } = render(<PlayBoard schema={s} stepIndex={0} />)
     expect(container.querySelectorAll('[data-stroke="cut"]')).toHaveLength(1)
     expect(container.querySelectorAll('[data-stroke="screen"]')).toHaveLength(1)
     expect(container.querySelectorAll('[data-stroke="pass"]')).toHaveLength(1)
@@ -38,7 +38,7 @@ describe('PlayBoard', () => {
 
   it('double la profondeur du viewBox sur terrain complet', () => {
     const s = { id: 'y', ...newPlay('c1', 'full', false) }
-    const { container } = render(<PlayBoard schema={s} tempsIndex={0} />)
+    const { container } = render(<PlayBoard schema={s} stepIndex={0} />)
     expect(container.querySelector('svg')!.getAttribute('viewBox')).toBe('0 0 1500 2800')
   })
 })

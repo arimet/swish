@@ -62,7 +62,7 @@ export function SchemaList() {
   // acquis, sinon un visiteur laisserait des schémas vides derrière ses refus.
   const creer = () => guard('manage', async () => {
     if (!clubId) return
-    const s: Play = { id: newId(), ...newPlay(clubId, 'half', false), nom: translate('sch.nouveauNom') }
+    const s: Play = { id: newId(), ...newPlay(clubId, 'half', false), name: translate('sch.nouveauNom') }
     await savePlay(s)
     navigate(`/schemas/${s.id}/edit`)
   })
@@ -70,7 +70,7 @@ export function SchemaList() {
   const dupliquer = (s: Play) => guard('manage', async () => {
     // Copie profonde : les temps et leurs flèches sont partagés sinon, et
     // retoucher la copie modifierait l'original.
-    await savePlay({ ...structuredClone(s), id: newId(), nom: `${s.nom} (copie)` })
+    await savePlay({ ...structuredClone(s), id: newId(), name: `${s.name} (copie)` })
     recharger()
   })
 
@@ -102,7 +102,7 @@ export function SchemaList() {
     const q = sansAccents(recherche.trim())
     return tous
       .filter((s) => dossierActif === null || dossierDe(s) === dossierActif)
-      .filter((s) => !q || sansAccents(`${s.nom} ${s.note ?? ''}`).includes(q))
+      .filter((s) => !q || sansAccents(`${s.name} ${s.note ?? ''}`).includes(q))
       .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
   }, [tous, dossierActif, recherche])
 
@@ -193,14 +193,14 @@ export function SchemaList() {
                         complet apparaît donc plus étroit, ce qui se lit très bien. Aucune
                         conversion de pointeur ici : `remplit` est sans danger. */}
                     <div className="h-[150px] sm:h-[200px]">
-                      <PlayBoard schema={s} tempsIndex={0} apercu remplit />
+                      <PlayBoard schema={s} stepIndex={0} apercu remplit />
                     </div>
-                    <h3 className="mt-2.5 truncate text-[15px] font-extrabold tracking-tight">{s.nom}</h3>
+                    <h3 className="mt-2.5 truncate text-[15px] font-extrabold tracking-tight">{s.name}</h3>
                     <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold" style={{ color: C.muted }}>
                       <span className="rounded-md px-1.5 py-0.5" style={{ background: C.card2 }}>
                         {translate(s.court === 'half' ? 'sch.demiTerrain' : 'sch.terrainComplet')}
                       </span>
-                      <span>{translate('sch.compteTemps', { count: s.temps.length })}</span>
+                      <span>{translate('sch.compteTemps', { count: s.steps.length })}</span>
                       {s.defense && <span>{translate('sch.defense')}</span>}
                     </p>
                     {s.note && <p className="mt-1 truncate text-[12px]" style={{ color: C.faint }}>{s.note}</p>}
@@ -229,7 +229,7 @@ export function SchemaList() {
                       </form>
                     ) : (
                       <button
-                        onClick={() => ouvrirRangement(s)} aria-label={translate('sch.dossierDe', { nom: s.nom })}
+                        onClick={() => ouvrirRangement(s)} aria-label={translate('sch.dossierDe', { name: s.name })}
                         className="rounded-md px-2 py-1.5" style={{ background: C.card2, color: s.folder ? C.accent : C.faint }}
                       >
                         {s.folder || translate('sch.sansDossier')}
@@ -284,7 +284,7 @@ export function SchemaList() {
       <ConfirmDialog
         open={!!aSupprimer} danger
         title={translate('sch.supprimerTitre')}
-        message={aSupprimer ? translate('sch.supprimerTexte', { nom: aSupprimer.nom }) : undefined}
+        message={aSupprimer ? translate('sch.supprimerTexte', { name: aSupprimer.name }) : undefined}
         confirmLabel={translate('commun.supprimer')} onConfirm={supprimer} onClose={() => setASupprimer(null)}
       />
     </div>

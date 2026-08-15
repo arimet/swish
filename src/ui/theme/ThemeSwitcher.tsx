@@ -1,13 +1,19 @@
 import { useTheme } from './ThemeProvider'
+import { useT } from '../../i18n'
 
+/** The theme toggle, twin of the language switcher and placed next to it. Two
+ *  themes, so a toggle: the icon shows what the click leads *to*, and the
+ *  accessible name says it in words. Both labels used to be hard-coded French, the
+ *  only two strings in the shell that the catalogue never saw. */
 export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme()
+  const translate = useT()
   const isDark = theme === 'dark'
   return (
     <button
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      aria-label={isDark ? 'Passer en mode Jour' : 'Passer en mode Nuit'}
-      title={isDark ? 'Mode Jour' : 'Mode Nuit'}
+      aria-label={translate(isDark ? 'theme.switchToLight' : 'theme.switchToDark')}
+      title={translate(isDark ? 'theme.light' : 'theme.dark')}
       className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-foreground transition hover:bg-muted active:scale-95"
     >
       {isDark ? (

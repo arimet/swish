@@ -10,8 +10,8 @@ import { db } from '../../persistence/db'
 import { listPlays, savePlay, saveTeam } from '../../persistence/repositories'
 import { newPlay, type Play } from '../../domain/plays'
 
-const schema = (id: string, nom: string, extra: Partial<Play> = {}): Play =>
-  ({ id, ...newPlay('ta', 'half', false), nom, ...extra })
+const schema = (id: string, name: string, extra: Partial<Play> = {}): Play =>
+  ({ id, ...newPlay('ta', 'half', false), name, ...extra })
 
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
@@ -54,8 +54,8 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
     const noms = cartes.map((c) => within(c).getByRole('heading').textContent)
     expect(noms).toEqual(expect.arrayContaining(['Pick and roll haut', 'Corner pour le 4']))
     for (const carte of cartes) {
-      const nom = within(carte).getByRole('heading').textContent
-      expect(within(carte).getByRole('img', { name: `tableau tactique — ${nom}` })).toBeInTheDocument()
+      const name = within(carte).getByRole('heading').textContent
+      expect(within(carte).getByRole('img', { name: `tableau tactique — ${name}` })).toBeInTheDocument()
     }
     expect(screen.queryByText('Combinaison de Metz')).not.toBeInTheDocument()
   })
@@ -82,7 +82,7 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
     expect(await screen.findByText('éditeur')).toBeInTheDocument()
     const crees = await listPlays('ta')
     expect(crees).toHaveLength(1)
-    expect(crees[0].temps).toHaveLength(1)
+    expect(crees[0].steps).toHaveLength(1)
   })
 
   it('dupliquer ajoute une copie nommée, sans toucher à l’original', async () => {
@@ -91,7 +91,7 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
     await userEvent.click(within((await screen.findAllByRole('article'))[0]).getByRole('button', { name: 'Dupliquer' }))
 
     await waitFor(async () => expect(await listPlays('ta')).toHaveLength(2))
-    const noms = (await listPlays('ta')).map((s) => s.nom).sort()
+    const noms = (await listPlays('ta')).map((s) => s.name).sort()
     expect(noms).toEqual(['Pick and roll haut', 'Pick and roll haut (copie)'])
   })
 

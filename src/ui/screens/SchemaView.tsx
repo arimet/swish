@@ -36,7 +36,7 @@ export function SchemaView() {
     </div>
   )
 
-  const last = schema.temps.length - 1
+  const last = schema.steps.length - 1
   // Le défilement se borne, il ne boucle pas : revenir au premier temps après le
   // dernier laisserait croire qu'il en reste à voir.
   const aller = (delta: number) => setIndex((i) => Math.min(last, Math.max(0, i + delta)))
@@ -47,14 +47,14 @@ export function SchemaView() {
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <Link to="/schemas" aria-label={translate('sch.retourSchemas')} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
         <div className="min-w-0 flex-1 basis-40">
-          <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.nom}</h1>
+          <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.name}</h1>
           {/* Les mêmes marques que sur la carte de la bibliothèque : on reconnaît
               d'un coup d'œil le schéma qu'on vient d'ouvrir. */}
           <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold" style={{ color: C.muted }}>
             <span className="rounded-md px-1.5 py-0.5" style={{ background: C.card2 }}>
               {translate(schema.court === 'half' ? 'sch.demiTerrain' : 'sch.terrainComplet')}
             </span>
-            <span>{translate('sch.compteTemps', { count: schema.temps.length })}</span>
+            <span>{translate('sch.compteTemps', { count: schema.steps.length })}</span>
             {schema.defense && <span>{translate('sch.defense')}</span>}
           </p>
         </div>
@@ -71,14 +71,14 @@ export function SchemaView() {
       </div>
 
       {/* Le temps affiché est celui que l'image reprendra : on partage ce qu'on regarde. */}
-      <ExportSchema schema={schema} tempsIndex={index} open={partage} onClose={() => setPartage(false)} />
+      <ExportSchema schema={schema} stepIndex={index} open={partage} onClose={() => setPartage(false)} />
 
       {schema.note && <p className="mb-4 rounded-2xl p-4 text-sm" style={{ background: C.card, border: bd, color: C.muted }}>{schema.note}</p>}
 
       {/* Même bornage de largeur que l'éditeur : c'est le rapport du viewBox qui
           doit tenir, le demi-terrain déborderait sinon sur un écran large. */}
       <div className="select-none" style={{ maxWidth: courtWidth(schema.court) }}>
-        <PlayBoard schema={schema} tempsIndex={index} />
+        <PlayBoard schema={schema} stepIndex={index} />
       </div>
 
       {/* Le défilement des temps, calé sur la largeur du terrain qu'il commande, et
@@ -92,7 +92,7 @@ export function SchemaView() {
           >
             ◀
           </button>
-          <span className="flex-1 text-center text-sm font-extrabold">{translate('sch.temps', { n: index + 1, total: schema.temps.length })}</span>
+          <span className="flex-1 text-center text-sm font-extrabold">{translate('sch.temps', { n: index + 1, total: schema.steps.length })}</span>
           <button
             onClick={() => aller(1)} aria-label={translate('lecteur.suivant')} disabled={index === last}
             className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-sm font-black disabled:opacity-30" style={{ background: C.card, border: bd, color: C.text }}
@@ -101,7 +101,7 @@ export function SchemaView() {
           </button>
         </div>
         <div className="mt-2 flex gap-1" aria-hidden>
-          {schema.temps.map((_, i) => (
+          {schema.steps.map((_, i) => (
             <span key={i} className="h-1 flex-1 rounded-full transition" style={{ background: i <= index ? C.accent : C.card2 }} />
           ))}
         </div>

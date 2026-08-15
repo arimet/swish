@@ -117,9 +117,9 @@ export function SchemaPlayer() {
   // Arrêté **entre** deux temps, on ne remontrait pas non plus les flèches, faute
   // de pouvoir les ancrer. La bascule lève cette réserve : le path qu'elle trace
   // est recalé sur les positions réelles, donc il se lit à mi-geste aussi.
-  const temps = !enLecture && Number.isInteger(pos)
-    ? schema.temps[pos]
-    : snapshot(schema, { temps: Math.floor(pos), part: pos - Math.floor(pos) }, trajets)
+  const steps = !enLecture && Number.isInteger(pos)
+    ? schema.steps[pos]
+    : snapshot(schema, { steps: Math.floor(pos), part: pos - Math.floor(pos) }, trajets)
   // Le lecteur prend la place disponible, mais pas plus que `TERRAIN_MAX` : sur un
   // téléphone tenu à bout de bras chaque centimètre compte, sur un écran de bureau
   // un terrain de mille pixels ne se lit pas mieux, il se lit moins bien. Le SVG se
@@ -141,7 +141,7 @@ export function SchemaPlayer() {
           >
             <X className="h-4 w-4" strokeWidth={2.5} />
           </Link>
-          <h1 className="min-w-0 flex-1 truncate text-sm font-extrabold tracking-tight">{schema.nom}</h1>
+          <h1 className="min-w-0 flex-1 truncate text-sm font-extrabold tracking-tight">{schema.name}</h1>
           {/* La lecture s'arrête pendant le partage : on ne fabrique pas une image
               du temps qu'on est en train de quitter. */}
           <button
@@ -151,14 +151,14 @@ export function SchemaPlayer() {
             {translate('sch.partager')}
           </button>
         </div>
-        <ExportSchema schema={schema} tempsIndex={courant} open={partage} onClose={() => setPartage(false)} />
+        <ExportSchema schema={schema} stepIndex={courant} open={partage} onClose={() => setPartage(false)} />
 
         {/* Le terrain, et par-dessus les deux moitiés d'écran : au temps-mort on
             ne vise pas un bouton de quarante pixels. Elles s'arrêtent au-dessus
             des commandes, qui restent atteignables. */}
         <div className="relative flex min-h-0 flex-1 items-center justify-center">
           <div className="h-full w-full select-none" style={{ maxWidth: large }}>
-            <PlayBoard schema={schema} tempsIndex={0} temps={temps} remplit />
+            <PlayBoard schema={schema} stepIndex={0} steps={steps} remplit />
           </div>
           <Zone cote="left" label={translate('lecteur.precedent')} fleche="‹" onClick={() => aller(-1)} disabled={courant === 0} />
           <Zone cote="right" label={translate('lecteur.suivant')} fleche="›" onClick={() => aller(1)} disabled={courant === last} />
@@ -166,7 +166,7 @@ export function SchemaPlayer() {
 
         <div className="mx-auto flex w-full shrink-0 flex-col gap-2" style={{ maxWidth: large }}>
           <div className="flex items-center gap-3">
-            <span className="w-24 shrink-0 text-sm font-extrabold">{translate('sch.temps', { n: courant + 1, total: schema.temps.length })}</span>
+            <span className="w-24 shrink-0 text-sm font-extrabold">{translate('sch.temps', { n: courant + 1, total: schema.steps.length })}</span>
             <input
               type="range" aria-label={translate('sch.avancement')} min={0} max={last || 1} step={0.01} value={pos}
               disabled={last === 0}

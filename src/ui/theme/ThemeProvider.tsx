@@ -7,22 +7,22 @@ const ThemeContext = createContext<{ theme: Theme; setTheme: (t: Theme) => void 
 })
 export const useTheme = () => useContext(ThemeContext)
 
-/** La clé du choix enregistré. Le script en tête d'`index.html` lit la même :
- *  c'est lui qui pose le thème avant la première peinture, pour qu'un appareil
- *  réglé en sombre ne voie pas d'éclair blanc. */
+/** The key of the saved choice. The script at the top of `index.html` reads the
+ *  same one: it is what sets the theme before the first paint, so that a device set
+ *  to dark sees no white flash. */
 export const THEME_KEY = 'swish-theme'
 
-/** Choix enregistré s'il y en a un, sombre sinon.
+/** The saved choice if there is one, dark otherwise.
  *
- *  Le sombre n'est pas ici un mode d'économie mais l'identité du produit : le
- *  canevas encre est ce qui autorise l'accent citron à être vif, aucune couleur
- *  n'ayant plus à se défendre contre du blanc. Un premier lancement doit donc
- *  montrer le produit tel qu'il est pensé.
+ *  Dark is not an economy mode here but the product's identity: the ink canvas is
+ *  what lets the lemon accent be vivid, no colour having to defend itself against
+ *  white any more. A first launch must therefore show the product as it is
+ *  conceived.
  *
- *  La préférence système n'est **pas** consultée, et c'est le seul endroit du
- *  dépôt où l'on s'autorise à passer outre. Le thème clair existe, il est composé
- *  et non hérité, et la bascule est dans l'en-tête de chaque écran : qui le
- *  préfère l'obtient d'un clic, et son choix est mémorisé pour toujours. */
+ *  The system preference is **not** consulted, and this is the one place in the repo
+ *  where we allow ourselves to override it. The light theme exists, it is composed
+ *  rather than inherited, and the toggle is in every screen's header: whoever
+ *  prefers it gets it in one click, and their choice is remembered forever. */
 const initialTheme = (): Theme => {
   const stored = localStorage.getItem(THEME_KEY)
   return stored === 'light' || stored === 'dark' ? stored : 'dark'

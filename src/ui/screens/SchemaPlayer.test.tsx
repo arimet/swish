@@ -11,14 +11,14 @@ import { newPlay, nextStep, type Play } from '../../domain/plays'
 /** Deux temps : le meneur descend de 0,62 à 0,20 ; personne d'autre ne bouge.
  *  Sa course est tracée droite, pour que le trajet reste la corde. */
 const deuxTemps = (): Play => {
-  const s: Play = { id: 's1', ...newPlay('ta', 'half', false), nom: 'Corner pour le 4' }
+  const s: Play = { id: 's1', ...newPlay('ta', 'half', false), name: 'Corner pour le 4' }
   const t0 = {
-    ...s.temps[0],
+    ...s.steps[0],
     arrows: [{ from: { side: 'offense' as const, position: 1 as const }, stroke: 'cut' as const, points: [{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.2 }] }],
   }
   const t1 = nextStep(t0)
   t1.markers = t1.markers.map((p) => (p.position === 1 ? { ...p, at: { x: 0.5, y: 0.2 } } : p))
-  return { ...s, temps: [t0, t1] }
+  return { ...s, steps: [t0, t1] }
 }
 
 /** Les deux ordonnées du meneur dans les unités du viewBox (profondeur 1400). */
@@ -66,7 +66,7 @@ async function ouvrir() {
 }
 
 const avancer = (ms: number) => act(() => { vi.advanceTimersByTime(ms) })
-const bouton = (nom: string | RegExp) => screen.getByRole('button', { name: nom })
+const bouton = (name: string | RegExp) => screen.getByRole('button', { name: name })
 
 /**
  * L'ordonnée du meneur telle que le tableau la dessine : la seule preuve que la
@@ -121,10 +121,10 @@ describe('SchemaPlayer — le lecteur du temps-mort', () => {
     // le ferait sauter au temps 3, et le coach ne verrait jamais l'étape qu'il
     // s'était arrêté pour commenter.
     const s = deuxTemps()
-    const t2 = nextStep(s.temps[1])
+    const t2 = nextStep(s.steps[1])
     t2.markers = t2.markers.map((p) => (p.position === 1 ? { ...p, at: { x: 0.5, y: 0.05 } } : p))
     await db.plays.clear()
-    await savePlay({ ...s, temps: [...s.temps, t2] })
+    await savePlay({ ...s, steps: [...s.steps, t2] })
 
     await ouvrir()
     fireEvent.click(bouton('Lecture'))

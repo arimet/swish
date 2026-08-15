@@ -1,4 +1,4 @@
-/* Kit visuel 'Olive' partagé par toutes les pages (palette + composants). */
+/* The shared 'Olive' visual kit, used by every page (palette + components). */
 import { Link } from 'react-router-dom'
 import type { CSSProperties, ReactNode } from 'react'
 import { liveState } from '../../rules/ffbb'
@@ -10,57 +10,56 @@ import { currentLang, useT } from '../../i18n'
 export { leagueLabel }
 
 /**
- * La palette, en jetons. Aucune valeur n'est écrite ici : chaque entrée pointe
- * une variable CSS définie dans `ui/theme/themes.css`, où les deux thèmes se
- * lisent côte à côte. Une couleur en dur dans un écran est un thème qui ne
- * s'appliquera jamais — c'est la raison d'être de cet indirection.
+ * The palette, as tokens. No value is written here: every entry points at a CSS
+ * variable defined in `ui/theme/themes.css`, where the two themes read side by
+ * side. A hard-coded colour in a screen is a theme that will never apply — that is
+ * the whole point of this indirection.
  *
- * `T` est la palette du terrain : du parquet. Sa **surface** bascule avec le thème
- * — bois clair dans l'application claire, bois sombre dans la sombre — mais sa
- * **convention de teintes** ne bascule pas : le rouge dit toujours « attaque », le
- * bleu « défense », l'ambre « ballon ». Le terrain était un panneau de charbon fixe
- * dans les deux thèmes ; voir themes.css pour ce qui a changé et pourquoi.
+ * `T` is the court's palette: the floor. Its **surface** switches with the theme —
+ * light wood in the light application, dark wood in the dark one — but its **colour
+ * convention** does not: red always says "attack", blue "defence", amber "ball".
+ * The court used to be a fixed charcoal panel in both themes; see themes.css for
+ * what changed and why.
  */
 export const C = {
   page: 'var(--c-page)', frame: 'var(--c-frame)', panel: 'var(--c-panel)',
   card: 'var(--c-card)', card2: 'var(--c-card2)', border: 'var(--c-border)',
   text: 'var(--c-text)', muted: 'var(--c-muted)', faint: 'var(--c-faint)',
   green: 'var(--c-green)', greenBg: 'var(--c-green-bg)',
-  // Les remplissages **vifs** et l'encre que chacun porte. C'est eux qui donnent
-  // sa couleur à l'écran. Les `*Bg` au-dessus restent les teintes pâles pour les
-  // fonds discrets, et les encres (`green`, `danger`, `amber`, `info`) servent aux
-  // rares endroits où une pastille serait ridicule — un chiffre dans un tableau.
-  // Toute la palette était faite d'encres, donc entièrement assombrie pour tenir
-  // sur du blanc : c'est ce qui la rendait terne.
+  // The **vivid** fills and the ink each one carries. They are what give the screen
+  // its colour. The `*Bg` above stay the pale shades for discreet backgrounds, and
+  // the inks (`green`, `danger`, `amber`, `info`) serve the rare places where a pill
+  // would be ridiculous — a figure in a table. The whole palette used to be made of
+  // inks, hence darkened throughout to hold on white: that is what made it dull.
   greenFill: 'var(--c-green-fill)', onGreen: 'var(--c-on-green)',
   goldFill: 'var(--c-gold-fill)', onGold: 'var(--c-on-gold)',
   dangerFill: 'var(--c-danger-fill)', onDanger: 'var(--c-on-danger)',
   infoFill: 'var(--c-info-fill)', onInfo: 'var(--c-on-info)',
-  // L'orange, en deux rôles. `brand` **remplit** (boutons, pastilles, écusson) et
-  // porte `onBrand`, une encre sombre — c'est ce qui l'autorise à rester vif.
-  // `accent` **écrit** (petits textes, icônes, chiffres) et est approfondi pour
-  // tenir sur les fonds clairs. Un seul jeton faisait les deux, ce qui le forçait
-  // au bout le plus sombre de la teinte : il en sortait couleur brique.
+  // Orange, in two roles. `brand` **fills** (buttons, pills, crest) and carries
+  // `onBrand`, a dark ink — which is what lets it stay vivid. `accent` **writes**
+  // (small text, icons, figures) and is deepened to hold on light backgrounds. A
+  // single token did both, which forced it to the darkest end of the hue: it came
+  // out brick-coloured.
   //
-  // Le nom dit le rôle et non la teinte. Ces clés s'appelaient `pink` et `orange`,
-  // et `orange` rendait du framboise depuis que la palette avait tourné : un nom
-  // qui décrit la couleur se périme au premier changement de couleur.
+  // The name says the role and not the hue. These keys used to be called `pink` and
+  // `orange`, and `orange` rendered raspberry once the palette had turned: a name
+  // that describes a colour goes stale at the first colour change.
   brand: 'var(--c-brand)', onBrand: 'var(--c-on-brand)',
   accent: 'var(--c-accent)',
   accentBg: 'var(--c-accent-bg)',
   amber: 'var(--c-amber)', amberBg: 'var(--c-amber-bg)',
   info: 'var(--c-info)', infoBg: 'var(--c-info-bg)',
   danger: 'var(--c-danger)', dangerBg: 'var(--c-danger-bg)',
-  // Les liserés teintés. Ils remplacent les deux chiffres hexadécimaux qu'on
-  // collait autrefois derrière l'accent pour l'affaiblir : le procédé cessait
-  // de marcher dès que la valeur devenait un `var(…)`.
+  // The tinted hairlines. They replace the two hex digits once appended to the
+  // accent to weaken it: the trick stopped working as soon as the value became a
+  // `var(…)`.
   accentBd: 'var(--c-accent-bd)', amberBd: 'var(--c-amber-bd)',
-  // Le voile neutre : il assombrit en clair, il éclaircit en sombre.
+  // The neutral veil: it darkens on light, it lightens on dark.
   hover: 'var(--c-hover)', neutralBg: 'var(--c-neutral-bg)',
-  // Ce qu'on écrit *sur* l'accent. Il **bascule** avec le thème, et c'est le
-  // seul jeton qui inverse son sens : en clair l'accent est un orange brûlé qui
-  // porte du blanc, en sombre un orange vif qui porte du presque-noir. Le `#fff`
-  // en dur d'avant devenait illisible dès qu'on allumait le thème sombre.
+  // What is written *on* the accent. It **switches** with the theme, and it is the
+  // one token that inverts its meaning: on light the accent is a burnt orange
+  // carrying white, on dark a vivid orange carrying near-black. The hard-coded
+  // `#fff` of before became illegible as soon as the dark theme came on.
   onAccent: 'var(--c-on-accent)',
 }
 export const T = {
@@ -73,11 +72,11 @@ export const bd = `1px solid var(--c-border)`
 const TEAM_COLORS = ['#552583', '#0072CE', '#98002E', '#007A33', '#b4491a', '#1D1160', '#0C2340', '#C8102E']
 export const teamColor = (id?: string) => TEAM_COLORS[[...String(id ?? '')].reduce((a, c) => a + c.charCodeAt(0), 0) % TEAM_COLORS.length]
 export const initials = (n?: string) => String(n ?? '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '—'
-/* Jours et mois abrégés : `Intl` les tient dans les deux langues, deux tableaux écrits
-   à la main n'en tenaient qu'une. La locale vient de l'application et non du navigateur
-   — un club français lit « SAM 12 avr. » sur une machine réglée en anglais.
-   Le point final des abréviations françaises (« sam. », « avr. ») saute : le cartouche
-   de date est en capitales serrées, la ponctuation y fait du bruit. */
+/* Abbreviated days and months: `Intl` holds them in both languages, two hand-written
+   arrays only held one. The locale comes from the application and not from the browser
+   — a French club reads "SAM 12 avr." on a machine set to English. The trailing dot of
+   the French abbreviations ("sam.", "avr.") is dropped: the date cartouche is in tight
+   capitals, where punctuation makes noise. */
 const stripDot = (s: string) => s.replace(/\.$/, '')
 const shortWeekday = (d: Date) =>
   stripDot(new Intl.DateTimeFormat(currentLang(), { weekday: 'short' }).format(d)).toUpperCase()
@@ -92,9 +91,9 @@ export function fmtDate(iso?: string) {
 }
 
 /**
- * Le libellé du championnat tel qu'on l'écrit à l'écran : le nom saisi, ou « Match
- * amical » traduit. La sentinelle reste intacte dans les données (voir `AMICAL`),
- * elle ne devient une phrase qu'ici.
+ * The league label as written on screen: the name entered, or a translated
+ * "Friendly". The sentinel stays intact in the data (see `FRIENDLY`); it only
+ * becomes a sentence here.
  */
 export function useLeagueLabel() {
   const translate = useT()
@@ -119,15 +118,15 @@ export const ICON = {
   cog: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6M19.4 13a7.9 7.9 0 0 0 0-2l2-1.5-2-3.5-2.4 1a7.9 7.9 0 0 0-1.7-1L15 3H9l-.3 2a7.9 7.9 0 0 0-1.7 1l-2.4-1-2 3.5L2.6 11a7.9 7.9 0 0 0 0 2L.6 14.5l2 3.5 2.4-1a7.9 7.9 0 0 0 1.7 1L9 21h6l.3-2a7.9 7.9 0 0 0 1.7-1l2.4 1 2-3.5z',
   search: 'M21 21l-4.3-4.3M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14', bell: 'M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0',
   clock: 'M12 7v5l3 2M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18', chevron: 'm6 9 6 6 6-6', arrow: 'm9 6 6 6-6 6', plus: 'M12 5v14M5 12h14',
-  // Le ballon : la marque. Un cercle et trois coutures, tracés au même trait que
-  // le reste du jeu — le 🏀 qu'il remplace était un pictogramme en couleur, donc
-  // ni orange en clair ni blanc en sombre, et redessiné par chaque système.
+  // The ball: the mark. A circle and three seams, drawn with the same stroke as the
+  // rest of the set — the 🏀 it replaces was a coloured pictogram, therefore neither
+  // orange on light nor white on dark, and redrawn by every operating system.
   ball: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M3.6 8.6c4.5 1 10.3 1 16.8 0M3.6 15.4c4.5-1 10.3-1 16.8 0M12 3c-2.8 2.4-2.8 15.6 0 18',
 }
 
-/** Marque discrète du joueur identifié sur cet appareil. Elle met en avant, elle
- *  ne protège rien : l'identité et les droits d'écriture sont deux axes séparés. */
-export function Vous() {
+/** A discreet mark for the player identified on this device. It highlights, it
+ *  protects nothing: identity and write rights are two separate axes. */
+export function You() {
   const translate = useT()
   return (
     <span className="shrink-0 rounded-md px-1.5 py-0.5 text-[12px] font-black uppercase tracking-wide"
@@ -135,11 +134,10 @@ export function Vous() {
   )
 }
 
-/** Le numéro de maillot, marqué partout de la même façon : un carré arrondi, du
- *  rose sur fond rose, et surtout des chiffres à chasse fixe (`nums`) centrés —
- *  un « 4 » et un « 12 » tiennent alors la même place et se lisent pareil.
- *  Reprend la pastille de la fiche joueur : trois écrans la recopiaient chacun
- *  de son côté, avec trois tailles de texte et deux arrondis. */
+/** The jersey number, marked the same way everywhere: a rounded square, accent on
+ *  accent, and above all centred tabular figures (`nums`) — a "4" and a "12" then
+ *  take the same room and read alike. Taken from the player sheet's pill: three
+ *  screens each kept their own copy, with three text sizes and two radii. */
 export function NumBadge({ n, size = 'h-8 w-8 rounded-xl text-sm' }: { n: number | string; size?: string }) {
   return (
     <span className={`nums grid shrink-0 place-items-center font-extrabold ${size}`}
@@ -151,7 +149,7 @@ export function TeamBadge({ id, name, size = 'h-8 w-8 text-[12px]' }: { id: stri
   return <span className={`grid shrink-0 place-items-center rounded-full font-black text-white ${size}`} style={{ background: teamColor(id) }}>{initials(name)}</span>
 }
 
-/** Carte de match façon 'Live Score' Olive. */
+/** A game card in the Olive 'Live Score' manner. */
 export function MatchCard({ m, teams }: { m: Match; teams: Record<string, Team> }) {
   const translate = useT()
   const champ = useLeagueLabel()
@@ -196,18 +194,17 @@ function ScoreRow({ name, score, lead, dim }: { name: string; score: number | nu
   )
 }
 
-/** Une section titrée, dans sa carte. Trois écrans en gardaient chacun sa copie,
- *  au caractère près — donc trois endroits à retoucher pour un seul changement de
- *  titre, et la garantie qu'un des trois serait oublié.
+/** A titled section, in its card. Three screens each kept their own copy, to the
+ *  character — hence three places to touch for a single title change, and the
+ *  guarantee that one of the three would be forgotten.
  *
- *  Le titre est un vrai titre : `<h2>`, en casse normale, à la taille du corps
- *  augmentée, dans l'encre du texte. Il était auparavant une micro-étiquette de
- *  douze pixels en capitales espacées, de la couleur la plus pâle — la forme d'un
- *  surtitre décoratif, alors que « Meilleurs marqueurs » est bel et bien le titre
- *  de ce qui suit. Cette forme-là coûtait deux fois : elle aplatissait l'échelle
- *  typographique (tout le texte tenait entre douze et vingt pixels) et les
- *  capitales sur trente caractères se lisent lettre à lettre, la silhouette des
- *  mots ayant disparu. */
+ *  The title is a real title: `<h2>`, in sentence case, at body size stepped up, in
+ *  the text ink. It used to be a twelve-pixel micro-label in tracked capitals, in
+ *  the palest colour — the shape of a decorative eyebrow, whereas "Top scorers" is
+ *  very much the title of what follows. That shape cost twice: it flattened the
+ *  typographic scale (all the text sat between twelve and twenty pixels) and
+ *  capitals across thirty characters are read letter by letter, the silhouette of
+ *  the words having vanished. */
 export function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
@@ -217,18 +214,18 @@ export function Panel({ title, children }: { title: string; children: ReactNode 
   )
 }
 
-/** Le même titre, hors carte : pour les sections qui n'ont pas de cadre à elles.
- *  Un seul style de titre de section dans l'application, à un seul endroit. */
+/** The same title, outside a card: for sections that have no frame of their own.
+ *  One section-title style in the application, in one place. */
 export function SectionTitle({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <h2 className={`text-base font-bold tracking-tight ${className}`} style={{ color: C.text }}>{children}</h2>
 }
 
-/** Barre d'action de l'écran (le titre est déjà affiché dans le header du shell).
- *  Plus de sous-titre : la phrase d'explication sous le titre n'apprenait rien à
- *  qui ouvrait la page, et le paramètre part avec elle — un paramètre que plus
- *  personne ne passe finit par être repassé par erreur. Sans action — le cas d'un
- *  visiteur à qui les boutons d'écriture sont masqués — la barre ne se rend pas,
- *  plutôt que de garder une place vide en haut de l'écran. */
+/** The screen's action bar (the title is already shown in the shell header). No
+ *  subtitle any more: the explanatory sentence under the title taught nothing to
+ *  whoever opened the page, and the parameter goes with it — a parameter nobody
+ *  passes any more ends up being passed again by mistake. With no action — the case
+ *  of a visitor whose write buttons are hidden — the bar does not render, rather
+ *  than keep an empty slot at the top of the screen. */
 export function PageTitle({ action }: { action?: ReactNode }) {
   if (!action) return null
   return <div className="mb-6 flex flex-wrap items-center justify-end gap-3">{action}</div>

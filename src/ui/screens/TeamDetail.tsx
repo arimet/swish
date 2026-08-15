@@ -126,9 +126,9 @@ export function TeamDetail() {
         {gere && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}>{translate('commun.supprimer')}</button>}
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
-        title={translate('equipe.supprimerTitre')} message={translate('equipe.supprimerTexte', { nom: team.name })} confirmLabel={translate('commun.supprimer')} danger />
+        title={translate('equipe.supprimerTitre')} message={translate('equipe.supprimerTexte', { name: team.name })} confirmLabel={translate('commun.supprimer')} danger />
       <ConfirmDialog open={!!aRetirer} onClose={() => setARetirer(null)} onConfirm={removePlayer}
-        title={aRetirer ? translate('equipe.retirerTitre', { nom: `${aRetirer.lastName} ${aRetirer.firstName}` }) : ''}
+        title={aRetirer ? translate('equipe.retirerTitre', { name: `${aRetirer.lastName} ${aRetirer.firstName}` }) : ''}
         message={translate('equipe.retirerTexte')}
         confirmLabel={translate('commun.retirer')} danger />
 
@@ -236,7 +236,7 @@ export function TeamDetail() {
                         sort du libellé visible, qui chevauchait le nom sur un téléphone. */}
                     {gere && (
                       <>
-                        <button aria-label={translate(editingId === p.id ? 'equipe.fermerJoueur' : 'equipe.modifierJoueur', { nom: p.lastName })}
+                        <button aria-label={translate(editingId === p.id ? 'equipe.fermerJoueur' : 'equipe.modifierJoueur', { name: p.lastName })}
                           onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold" style={{ color: C.muted }}>
                           {translate(editingId === p.id ? 'commun.fermer' : 'commun.modifier')}
                         </button>
@@ -246,7 +246,7 @@ export function TeamDetail() {
                             gris, et faisait vingt-quatre pixels de haut. Une destruction ne se
                             signale pas avec la couleur des boutons ordinaires, et ne se vise pas au
                             minimum tolérable. */}
-                        <button onClick={() => setARetirer(p)} aria-label={translate('equipe.retirerJoueur', { nom: `${p.lastName} ${p.firstName}` })}
+                        <button onClick={() => setARetirer(p)} aria-label={translate('equipe.retirerJoueur', { name: `${p.lastName} ${p.firstName}` })}
                           className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold transition hover:bg-[var(--c-danger-bg)]" style={{ color: C.danger }}>{translate('equipe.retirer')}</button>
                       </>
                     )}

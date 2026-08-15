@@ -61,7 +61,7 @@ export function SchemaRecu() {
     </Ecran>
   )
 
-  const last = schema.temps.length - 1
+  const last = schema.steps.length - 1
   // Le défilement se borne, il ne boucle pas — même règle que la consultation.
   const aller = (delta: number) => setIndex((i) => Math.min(last, Math.max(0, i + delta)))
 
@@ -84,21 +84,21 @@ export function SchemaRecu() {
       <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-3 p-4">
         <div>
           <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('recu.titre')}</p>
-          <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.nom}</h1>
+          <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.name}</h1>
           <p className="text-sm" style={{ color: C.muted }}>
-            {translate(schema.court === 'half' ? 'sch.demiTerrain' : 'sch.terrainComplet')} · {translate('sch.compteTemps', { count: schema.temps.length })}{schema.defense ? ` ${translate('sch.defense')}` : ''}
+            {translate(schema.court === 'half' ? 'sch.demiTerrain' : 'sch.terrainComplet')} · {translate('sch.compteTemps', { count: schema.steps.length })}{schema.defense ? ` ${translate('sch.defense')}` : ''}
           </p>
         </div>
 
         {schema.note && <p className="rounded-2xl p-4 text-sm" style={{ background: C.card, border: bd, color: C.muted }}>{schema.note}</p>}
 
         <div className="select-none" style={{ maxWidth: large }}>
-          <PlayBoard schema={schema} tempsIndex={index} />
+          <PlayBoard schema={schema} stepIndex={index} />
         </div>
 
         <div className="flex select-none items-center gap-3" style={{ maxWidth: large }}>
           <Pas label={translate('lecteur.precedent')} onClick={() => aller(-1)} disabled={index === 0}>◀</Pas>
-          <span className="flex-1 text-center text-sm font-extrabold">{translate('sch.temps', { n: index + 1, total: schema.temps.length })}</span>
+          <span className="flex-1 text-center text-sm font-extrabold">{translate('sch.temps', { n: index + 1, total: schema.steps.length })}</span>
           <Pas label={translate('lecteur.suivant')} onClick={() => aller(1)} disabled={index === last}>▶</Pas>
         </div>
 

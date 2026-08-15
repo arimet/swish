@@ -21,17 +21,17 @@ const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
  * le rôle de qui regarde. Le gagnant est en encre pleine, le perdant en gris :
  * c'est ce que la carte de match du kit fait déjà, et ça se lit sans compter.
  */
-function LigneEquipe({ id, nom, score, gagne, champId, modifiable, onScore }: {
-  id: string; nom: string; score: number; gagne: boolean
+function LigneEquipe({ id, name, score, gagne, champId, modifiable, onScore }: {
+  id: string; name: string; score: number; gagne: boolean
   champId: string; modifiable: boolean; onScore: (n: number) => void
 }) {
   return (
     <div className="flex items-center gap-2">
-      <TeamBadge id={id} name={nom} size="h-6 w-6 text-[12px]" />
-      <span className="min-w-0 flex-1 truncate text-sm" style={{ color: gagne ? C.text : C.muted, fontWeight: gagne ? 800 : 600 }}>{nom}</span>
+      <TeamBadge id={id} name={name} size="h-6 w-6 text-[12px]" />
+      <span className="min-w-0 flex-1 truncate text-sm" style={{ color: gagne ? C.text : C.muted, fontWeight: gagne ? 800 : 600 }}>{name}</span>
       {modifiable ? (
         <>
-          <label htmlFor={champId} className="sr-only">Score {nom}</label>
+          <label htmlFor={champId} className="sr-only">Score {name}</label>
           <input
             id={champId} type="number" min={0} defaultValue={score}
             style={{ ...field, width: 64, height: 34 }} className="nums shrink-0 text-center text-sm"
@@ -333,12 +333,12 @@ export function Championnat() {
               <li key={r.id} className="flex items-center gap-3 py-2.5">
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <LigneEquipe
-                    id={r.homeId} nom={teamsById[r.homeId]?.name ?? '—'} score={r.homeScore}
+                    id={r.homeId} name={teamsById[r.homeId]?.name ?? '—'} score={r.homeScore}
                     gagne={r.homeScore > r.awayScore} champId={`score-home-${r.id}`}
                     modifiable={peutCorriger} onScore={(n) => majScore(r, { homeScore: n })}
                   />
                   <LigneEquipe
-                    id={r.awayId} nom={teamsById[r.awayId]?.name ?? '—'} score={r.awayScore}
+                    id={r.awayId} name={teamsById[r.awayId]?.name ?? '—'} score={r.awayScore}
                     gagne={r.awayScore > r.homeScore} champId={`score-away-${r.id}`}
                     modifiable={peutCorriger} onScore={(n) => majScore(r, { awayScore: n })}
                   />

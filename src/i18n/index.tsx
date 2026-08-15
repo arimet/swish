@@ -3,156 +3,157 @@ import { fr } from './fr'
 import { en } from './en'
 
 /**
- * Les deux langues de l'application.
+ * The application's two languages.
  *
- * Le **français est la langue du produit** et le restera : les utilisateurs sont un
- * club français, tout le vocabulaire est celui de la FFBB, et l'anglais n'est pas une
- * traduction « par défaut » qu'on aurait négligé de faire. Il s'ajoute pour que
- * d'autres équipes puissent forker le projet et s'en servir — c'est l'objectif que le
- * README annonce, et il serait creux si l'interface restait unilingue.
+ * **French is the product's language** and will stay so: the users are a French
+ * club, all the vocabulary is the FFBB's, and English is not a "default"
+ * translation someone neglected to write. It is added so that other teams can fork
+ * the project and use it — that is the goal the README announces, and it would be
+ * hollow if the interface stayed monolingual.
  *
- * Conséquence directe sur le repli : une clef absente de l'anglais retombe sur le
- * **français**, jamais sur la clef elle-même. Un écran à moitié traduit reste un écran
- * qu'on peut utiliser ; un écran semé de `dashboard.emptyTitle` ne l'est pas.
+ * Direct consequence on the fallback: a key missing from English falls back to
+ * **French**, never to the key itself. A half-translated screen is still a screen
+ * you can use; a screen strewn with `dashboard.emptyTitle` is not.
  */
-export type Langue = 'fr' | 'en'
+export type Lang = 'fr' | 'en'
 
-export const LANGS: { code: Langue; nom: string }[] = [
-  { code: 'fr', nom: 'Français' },
-  { code: 'en', nom: 'English' },
+export const LANGS: { code: Lang; name: string }[] = [
+  { code: 'fr', name: 'Français' },
+  { code: 'en', name: 'English' },
 ]
 
-const CATALOGS: Record<Langue, Record<string, string>> = { fr, en }
+const CATALOGS: Record<Lang, Record<string, string>> = { fr, en }
 
-/** Mémorisée sur l'appareil, comme le thème — et pour la même raison : on ne
- *  redemande pas sa langue à quelqu'un à chaque ouverture. */
+/** Remembered on the device, like the theme — and for the same reason: we do not
+ *  ask someone for their language at every opening. */
 export const LANG_KEY = 'swish-lang'
 
-const isLang = (v: string | null): v is Langue => v === 'fr' || v === 'en'
+const isLang = (v: string | null): v is Lang => v === 'fr' || v === 'en'
 
 /**
- * La langue au premier rendu : le choix mémorisé, sinon le **français**.
+ * The language at first render: the remembered choice, otherwise **French**.
  *
- * La langue du navigateur n'est délibérément pas consultée, alors que c'est l'usage.
- * Le français est la langue du produit et non une localisation parmi d'autres ; suivre
- * `navigator.language` ferait ouvrir Swish en anglais au club auquel il est destiné,
- * dès que le portable de la table de marque est réglé en anglais — ce qui arrive.
- * L'anglais existe pour qui le demande, et le sélecteur est dans l'en-tête de chaque
- * écran. C'est le même raisonnement que le thème, qui ignore `prefers-color-scheme`
- * pour la même raison : une identité de produit n'est pas une préférence système.
+ * The browser's language is deliberately not consulted, although that is the
+ * convention. French is the product's language and not one localisation among
+ * others; following `navigator.language` would open Swish in English for the club
+ * it is meant for, as soon as the scorer's laptop is set to English — which
+ * happens. English exists for whoever asks, and the switcher is in every screen's
+ * header. This is the same reasoning as the theme, which ignores
+ * `prefers-color-scheme` for the same reason: a product identity is not a system
+ * preference.
  */
-export function initialLang(): Langue {
-  const stockee = typeof localStorage === 'undefined' ? null : localStorage.getItem(LANG_KEY)
-  return isLang(stockee) ? stockee : 'fr'
+export function initialLang(): Lang {
+  const stored = typeof localStorage === 'undefined' ? null : localStorage.getItem(LANG_KEY)
+  return isLang(stored) ? stored : 'fr'
 }
 
 /**
- * La langue courante, lisible hors de React.
+ * The current language, readable outside React.
  *
- * Les formateurs de date (`fmtDate` du kit, la barre de mois du calendrier) sont des
- * fonctions ordinaires appelées dans huit fichiers, souvent depuis des sous-composants
- * qui n'ont pas de crochet. Leur faire remonter la langue en paramètre demanderait
- * d'ajouter `useLangue()` à une dizaine d'endroits pour une valeur qui est, elle,
- * franchement globale — c'est la même pour tout l'écran, toujours.
+ * The date formatters (the kit's `fmtDate`, the calendar's month bar) are ordinary
+ * functions called in eight files, often from sub-components that have no hook.
+ * Making them take the language as a parameter would mean adding `useLang()` in a
+ * dozen places for a value that is, itself, frankly global — it is the same for the
+ * whole screen, always.
  *
- * Le champ est écrit **avant** le `setState` du sélecteur : au moment où React refait
- * le rendu, il porte déjà la nouvelle langue, et ce rendu traverse tout l'arbre puisque
- * le fournisseur est à la racine. Aucun écran ne peut donc afficher une date dans la
- * langue précédente.
+ * The field is written **before** the switcher's `setState`: by the time React
+ * re-renders, it already carries the new language, and that render crosses the
+ * whole tree since the provider is at the root. No screen can therefore display a
+ * date in the previous language.
  */
-let current: Langue = 'fr'
-export const currentLang = (): Langue => current
+let current: Lang = 'fr'
+export const currentLang = (): Lang => current
 
 /**
- * Remplace les paramètres `{nom}` d'un modèle.
+ * Replaces a template's `{name}` parameters.
  *
- * Le pluriel passe par deux clefs suffixées `_un` / `_autre` plutôt que par une
- * bibliothèque : les deux langues du projet partagent la même règle simple (un contre
- * le reste), et zéro y suit le pluriel dans les deux cas — « 0 joueur » est un cas
- * français à part, traité par le catalogue quand il compte, pas par une règle générale.
+ * Plurals go through two keys suffixed `_one` / `_other` rather than through a
+ * library: the project's two languages share the same simple rule (one against the
+ * rest), and zero follows the plural in both cases — "0 joueur" is a French special
+ * case, handled by the catalogue where it matters, not by a general rule.
  */
 function interpolate(template: string, params?: Record<string, string | number>): string {
   if (!params) return template
-  return template.replace(/\{(\w+)\}/g, (tout, key) => {
+  return template.replace(/\{(\w+)\}/g, (whole, key) => {
     const v = params[key]
-    return v === undefined ? tout : String(v)
+    return v === undefined ? whole : String(v)
   })
 }
 
 export type Translate = (key: string, params?: Record<string, string | number>) => string
 
-/** Fabrique la fonction de traduction d'une langue. Exportée à part pour les rares
- *  appelants hors composant (messages de règle du domaine, tests). */
-export function translator(lang: Langue): Translate {
+/** Builds a language's translation function. Exported separately for the rare
+ *  callers outside a component (the domain's rule messages, tests). */
+export function translator(lang: Lang): Translate {
   const catalog = CATALOGS[lang] ?? fr
   return (key, params) => {
     const count = params?.count
     if (typeof count === 'number') {
-      // Zéro n'accorde pas pareil dans les deux langues : le français le met au
-      // singulier (« 0 joueur »), l'anglais au pluriel (« 0 players »). C'est la seule
-      // divergence entre leurs règles, et elle se voit — un effectif vide et une
-      // rencontre sans convoqué s'affichent tous les deux à zéro.
-      const suffix = count === 1 || (lang === 'fr' && count === 0) ? '_un' : '_autre'
+      // Zero does not agree the same way in both languages: French puts it in the
+      // singular ("0 joueur"), English in the plural ("0 players"). It is the only
+      // divergence between their rules, and it shows — an empty roster and a game
+      // with nobody called up both display a zero.
+      const suffix = count === 1 || (lang === 'fr' && count === 0) ? '_one' : '_other'
       const template = catalog[key + suffix] ?? fr[key + suffix]
       if (template) return interpolate(template, params)
     }
-    // Repli sur le français, jamais sur la clef : voir l'en-tête du fichier.
+    // Fall back to French, never to the key: see the file header.
     return interpolate(catalog[key] ?? fr[key] ?? key, params)
   }
 }
 
 interface Ctx {
-  lang: Langue
-  setLang: (l: Langue) => void
+  lang: Lang
+  setLang: (l: Lang) => void
   t: Translate
 }
 
-/* La valeur par défaut n'est pas `null`, contrairement au contexte d'authentification
-   qui, lui, lève hors de son fournisseur. La différence est délibérée : « quel est mon
-   rôle » n'a pas de réponse sensée hors contexte, alors que « dans quelle langue » en a
-   toujours une. Un composant rendu sans fournisseur — c'est le cas de la cinquantaine
-   de fichiers de test qui montent un écran isolé — parle donc français au lieu de
-   planter. */
+/* The default value is not `null`, unlike the authentication context, which throws
+   outside its provider. The difference is deliberate: "what is my role" has no
+   sensible answer out of context, whereas "in which language" always has one. A
+   component rendered without a provider — the case of the fifty-odd test files that
+   mount a screen in isolation — therefore speaks French instead of crashing. */
 const Ctx = createContext<Ctx>({ lang: 'fr', setLang: () => {}, t: translator('fr') })
 
 export function LangProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Langue>(() => (current = initialLang()))
+  const [lang, setLangState] = useState<Lang>(() => (current = initialLang()))
 
-  // L'attribut `lang` du document suit le choix. Ce n'est pas décoratif : il décide de
-  // la césure, des guillemets, de la voix d'un lecteur d'écran et de la traduction
-  // automatique proposée par le navigateur. Le document naissait en `lang="en"` alors
-  // que tout son contenu était français.
+  // The document's `lang` attribute follows the choice. This is not decorative: it
+  // decides hyphenation, quotation marks, a screen reader's voice and the automatic
+  // translation the browser offers. The document was born `lang="en"` while all its
+  // content was French.
   useEffect(() => {
     document.documentElement.lang = lang
-    // Le titre de l'onglet suit aussi : `index.html` ne peut en porter qu'un seul, et
-    // il resterait français dans une application passée à l'anglais.
+    // The tab title follows too: `index.html` can only carry one, and it would stay
+    // French in an application switched to English.
     document.title = translator(lang)('app.titre')
   }, [lang])
 
-  const setLang = useCallback((l: Langue) => {
+  const setLang = useCallback((l: Lang) => {
     localStorage.setItem(LANG_KEY, l)
     current = l
     setLangState(l)
   }, [])
 
-  const valeur = useMemo(() => ({ lang, setLang, t: translator(lang) }), [lang, setLang])
-  return <Ctx.Provider value={valeur}>{children}</Ctx.Provider>
+  const value = useMemo(() => ({ lang, setLang, t: translator(lang) }), [lang, setLang])
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
 /**
- * La fonction de traduction du composant courant.
+ * The current component's translation function.
  *
- * Par convention on l'affecte à `trad` et non à `t`, alors que `t` est l'usage dans
- * l'écosystème. La raison est concrète : `t` est déjà pris une quinzaine de fois dans
- * ce dépôt comme nom de paramètre — `teams.map((t) => …)`, `trainings.filter((t) => …)`,
- * `const t = teamTotals(match).team`. TypeScript signale bien la collision, mais la
- * signaler quinze fois pour un caractère gagné est un mauvais échange.
+ * By convention it is assigned to `translate` and not to `t`, although `t` is the
+ * ecosystem's usage. The reason is concrete: `t` is already taken some fifteen
+ * times in this repo as a parameter name — `teams.map((t) => …)`,
+ * `trainings.filter((t) => …)`, `const t = teamTotals(match).team`. TypeScript does
+ * report the collision, but reporting it fifteen times for one character saved is a
+ * bad trade.
  */
 export function useT(): Translate {
   return useContext(Ctx).t
 }
 
-/** La langue courante et de quoi en changer — pour le sélecteur, et lui seul. */
+/** The current language and the means to change it — for the switcher, and only it. */
 export function useLang() {
   const { lang, setLang } = useContext(Ctx)
   return { lang, setLang }

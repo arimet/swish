@@ -14,14 +14,14 @@ import { newPlay, nextStep, type Play } from '../../domain/plays'
 /** Deux temps : le meneur descend de 0,62 à 0,20. Le même schéma que le lecteur
  *  de 8B, pour que le défilement se prouve sur un pion qui bouge vraiment. */
 const deuxTemps = (): Play => {
-  const s: Play = { id: 's1', ...newPlay('ta', 'half', false), nom: 'Corner pour le 4', note: 'Sortie de balle' }
+  const s: Play = { id: 's1', ...newPlay('ta', 'half', false), name: 'Corner pour le 4', note: 'Sortie de balle' }
   const t0 = {
-    ...s.temps[0],
+    ...s.steps[0],
     arrows: [{ from: { side: 'offense' as const, position: 1 as const }, stroke: 'cut' as const, points: [{ x: 0.5, y: 0.62 }, { x: 0.5, y: 0.2 }] }],
   }
   const t1 = nextStep(t0)
   t1.markers = t1.markers.map((p) => (p.position === 1 ? { ...p, at: { x: 0.5, y: 0.2 } } : p))
-  return { ...s, temps: [t0, t1] }
+  return { ...s, steps: [t0, t1] }
 }
 
 /** Les deux ordonnées du meneur dans les unités du viewBox (profondeur 1400). */
@@ -112,10 +112,10 @@ describe('SchemaRecu — la combinaison arrivée par un lien', () => {
     const ajoute = schemas.find((s) => s.id !== 's1')!
     expect(ajoute.id).not.toBe('')
     expect(ajoute.clubId).toBe('ta')
-    expect(ajoute.nom).toBe('Corner pour le 4')
-    expect(ajoute.temps).toEqual(original.temps)
+    expect(ajoute.name).toBe('Corner pour le 4')
+    expect(ajoute.steps).toEqual(original.steps)
     // L'original est intact, et c'est la fiche du schéma créé qu'on ouvre.
-    expect(schemas.find((s) => s.id === 's1')!.nom).toBe('Corner pour le 4')
+    expect(schemas.find((s) => s.id === 's1')!.name).toBe('Corner pour le 4')
     expect(await screen.findByText('fiche')).toBeInTheDocument()
   })
 

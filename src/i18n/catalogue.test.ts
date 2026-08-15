@@ -23,10 +23,10 @@ const RACINES = ['src/ui', 'src/app', 'src/i18n', 'src/components']
 function sources(): string[] {
   const out: string[] = []
   const descendre = (dir: string) => {
-    for (const nom of readdirSync(dir)) {
-      const chemin = join(dir, nom)
+    for (const name of readdirSync(dir)) {
+      const chemin = join(dir, name)
       if (statSync(chemin).isDirectory()) descendre(chemin)
-      else if (/\.tsx?$/.test(nom) && !nom.includes('.test.')) out.push(chemin)
+      else if (/\.tsx?$/.test(name) && !name.includes('.test.')) out.push(chemin)
     }
   }
   for (const r of RACINES) descendre(r)
@@ -54,7 +54,11 @@ function clefsEmployees(): Map<string, string[]> {
   const motif = new RegExp(`['\`](${familles.join('|')})\\.([A-Za-z][\\w]*)['\`]`, 'g')
   const par = new Map<string, string[]>()
   for (const f of sources()) {
-    if (f.startsWith('src/i18n/')) continue // le catalogue se définit lui-même
+    // The two catalogues define themselves; every other file under `src/i18n` is an
+    // ordinary component and must be read. Excluding the whole folder is how
+    // `LangSwitcher`'s missing `lang.switch` went unnoticed: its aria-label announced
+    // the key itself to screen readers.
+    if (f === join('src/i18n', 'fr.ts') || f === join('src/i18n', 'en.ts')) continue
     for (const m of readFileSync(f, 'utf8').matchAll(motif)) {
       const key = `${m[1]}.${m[2]}`
       par.set(key, [...(par.get(key) ?? []), f])
@@ -66,7 +70,7 @@ function clefsEmployees(): Map<string, string[]> {
 describe('catalogue de traduction', () => {
   it('toute clef employée dans le code existe en français', () => {
     const manquantes = [...clefsEmployees()]
-      .filter(([key]) => !(key in fr) && !(`${key}_un` in fr))
+      .filter(([key]) => !(key in fr) && !(`${key}_one` in fr))
       .map(([key, fichiers]) => `${key} (${fichiers.join(', ')})`)
     expect(manquantes, 'clefs sans traduction française').toEqual([])
   })

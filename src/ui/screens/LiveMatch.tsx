@@ -230,12 +230,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         <span className="min-w-0 truncate text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {OPP_POINTS.map(({ k, n }) => (
-            <button key={k} onClick={() => oppScore(k)} aria-label={translate('live.ajouterPoints', { count: n, equipe: teamNames.B })}
+            <button key={k} onClick={() => oppScore(k)} aria-label={translate('live.ajouterPoints', { count: n, team: teamNames.B })}
               className="nums h-11 min-w-11 rounded-lg bg-[var(--c-card2)] px-3 text-sm font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90">
               +{n}
             </button>
           ))}
-          <button onClick={removeOppScore} aria-label={translate('live.retirerPanier', { equipe: teamNames.B })}
+          <button onClick={removeOppScore} aria-label={translate('live.retirerPanier', { team: teamNames.B })}
             className="h-11 w-11 rounded-lg bg-[var(--c-card2)] text-sm font-bold text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90">
             <RotateCcw className="mx-auto h-4 w-4" strokeWidth={2.5} />
           </button>

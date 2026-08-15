@@ -236,12 +236,12 @@ function Objet({ o, h }: { o: Prop; h: number }) {
  * sur le premier — un schéma a toujours au moins un temps, une vignette ne doit
  * jamais rendre un terrain vide. `apercu` coupe toute interaction (vignettes).
  */
-export function PlayBoard({ schema, tempsIndex, temps, onPointerDown, onPointerMove, onPointerUp, children, apercu, remplit }: {
+export function PlayBoard({ schema, stepIndex, steps, onPointerDown, onPointerMove, onPointerUp, children, apercu, remplit }: {
   schema: Play
-  tempsIndex: number
+  stepIndex: number
   /** Un temps calculé — l'instantané du lecteur — à afficher au lieu de celui du
    *  schéma. Le rendu ne change pas : l'animation n'est qu'une suite d'états. */
-  temps?: Step
+  steps?: Step
   onPointerDown?: (e: React.PointerEvent<SVGSVGElement>) => void
   onPointerMove?: (e: React.PointerEvent<SVGSVGElement>) => void
   onPointerUp?: (e: React.PointerEvent<SVGSVGElement>) => void
@@ -254,13 +254,13 @@ export function PlayBoard({ schema, tempsIndex, temps, onPointerDown, onPointerM
 }) {
   const translate = useT()
   const h = profondeur(schema)
-  const t = temps ?? schema.temps[tempsIndex] ?? schema.temps[0]
+  const t = steps ?? schema.steps[stepIndex] ?? schema.steps[0]
   const interactif = !apercu && !!(onPointerDown || onPointerMove || onPointerUp)
   return (
     <svg
       viewBox={`0 0 ${W} ${h}`}
       role={interactif ? 'application' : 'img'}
-      aria-label={translate('sch.tableauTactique', { nom: schema.nom })}
+      aria-label={translate('sch.tableauTactique', { name: schema.name })}
       onPointerDown={apercu ? undefined : onPointerDown}
       onPointerMove={apercu ? undefined : onPointerMove}
       onPointerUp={apercu ? undefined : onPointerUp}

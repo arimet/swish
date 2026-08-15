@@ -3,9 +3,9 @@ import { encoder, decoder, LIMITE_LIEN } from './partage'
 import { newPlay, nextStep, type Play } from './plays'
 
 const full = (): Play => {
-  const s: Play = { id: 'x1', ...newPlay('club-a', 'full', true), nom: 'Presse tout terrain', note: 'Sortie de balle' }
-  const t0 = { ...s.temps[0], arrows: [{ from: { side: 'offense' as const, position: 1 as const }, stroke: 'dribble' as const, points: [{ x: 0.5, y: 0.4 }, { x: 0.3, y: 0.25 }] }] }
-  return { ...s, temps: [t0, nextStep(t0)], props: [{ kind: 'cone', at: { x: 0.2, y: 0.3 } }], folder: 'Presse', updatedAt: '2026-08-01T10:00:00.000Z' }
+  const s: Play = { id: 'x1', ...newPlay('club-a', 'full', true), name: 'Presse tout terrain', note: 'Sortie de balle' }
+  const t0 = { ...s.steps[0], arrows: [{ from: { side: 'offense' as const, position: 1 as const }, stroke: 'dribble' as const, points: [{ x: 0.5, y: 0.4 }, { x: 0.3, y: 0.25 }] }] }
+  return { ...s, steps: [t0, nextStep(t0)], props: [{ kind: 'cone', at: { x: 0.2, y: 0.3 } }], folder: 'Presse', updatedAt: '2026-08-01T10:00:00.000Z' }
 }
 
 describe('encoder / decoder', () => {
@@ -13,11 +13,11 @@ describe('encoder / decoder', () => {
     const s = full()
     const recu = await decoder(await encoder(s))
     expect(recu).not.toBeNull()
-    expect(recu!.nom).toBe(s.nom)
+    expect(recu!.name).toBe(s.name)
     expect(recu!.note).toBe(s.note)
     expect(recu!.court).toBe(s.court)
     expect(recu!.defense).toBe(s.defense)
-    expect(recu!.temps).toEqual(s.temps)
+    expect(recu!.steps).toEqual(s.steps)
     expect(recu!.props).toEqual(s.props)
   })
 
@@ -64,17 +64,17 @@ describe('encoder / decoder', () => {
     }
 
     // Un pion sans position : `PlayBoard` lirait `at.x` sur `undefined`.
-    expect(await decoder(await abime((t) => { delete t.temps[0].markers[0].at }))).toBeNull()
+    expect(await decoder(await abime((t) => { delete t.steps[0].markers[0].at }))).toBeNull()
     // Une position qui n'est pas un nombre fini : `NaN` traverse `typeof`.
-    expect(await decoder(await abime((t) => { t.temps[0].markers[0].at.x = null }))).toBeNull()
+    expect(await decoder(await abime((t) => { t.steps[0].markers[0].at.x = null }))).toBeNull()
     // Un objet posé sans position.
     expect(await decoder(await abime((t) => { delete t.props[0].at }))).toBeNull()
     // Un ballon qui n'est ni porté ni posé.
-    expect(await decoder(await abime((t) => { t.temps[0].ball = {} }))).toBeNull()
+    expect(await decoder(await abime((t) => { t.steps[0].ball = {} }))).toBeNull()
     // Une flèche sans tracé exploitable.
-    expect(await decoder(await abime((t) => { t.temps[0].arrows[0].points = [{ x: 0.1, y: 0.1 }] }))).toBeNull()
+    expect(await decoder(await abime((t) => { t.steps[0].arrows[0].points = [{ x: 0.1, y: 0.1 }] }))).toBeNull()
     // Un poste hors de l'effectif.
-    expect(await decoder(await abime((t) => { t.temps[0].markers[0].position = 9 }))).toBeNull()
+    expect(await decoder(await abime((t) => { t.steps[0].markers[0].position = 9 }))).toBeNull()
 
     // Le témoin : la même charge, intacte, passe. Sans lui, un `estTransport`
     // qui refuserait tout ferait passer ce test pour la mauvaise raison.

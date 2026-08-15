@@ -16,7 +16,7 @@ const mk = (id: string, clubId: string, opponentId: string, date = '2026-01-10')
   roster: [], events: [], status: 'setup',
 })
 
-const schema = (id: string, nom: string): Play => ({ id, ...newPlay('ta', 'half', false), nom })
+const schema = (id: string, name: string): Play => ({ id, ...newPlay('ta', 'half', false), name })
 
 /** Une date relative au jour d'exécution : le passé et le futur du calendrier se
  *  jugent sur l'horloge, une date en dur finirait par basculer d'un côté. */

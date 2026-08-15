@@ -31,7 +31,7 @@ const profondeur = (s: Play) => (s.court === 'full' ? D * 2 : D)
 
 /** Le nom du fichier, débarrassé de ce qu'un système de fichiers n'aime pas. */
 const nomFichier = (s: Play, ext: string) =>
-  `${(s.nom || 'schéma').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'schema'}.${ext}`
+  `${(s.name || 'schéma').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'schema'}.${ext}`
 
 /** Le moteur de rendu hors écran n'arrive qu'au premier partage : deux cents
  *  kilooctets qu'un coach n'a pas à télécharger pour ouvrir une feuille de match.
@@ -48,9 +48,9 @@ const rendu = async () => (await import('react-dom/server')).renderToStaticMarku
  * qui n'a que son `viewBox`, et les guillemets typographiques des identifiants
  * de React sont écartés : ce SVG-là est relu par un analyseur XML strict.
  */
-async function svgAutonome(schema: Play, temps: Step, largeur: number, hauteur: number): Promise<string> {
+async function svgAutonome(schema: Play, steps: Step, largeur: number, hauteur: number): Promise<string> {
   const enMarkup = await rendu()
-  return enMarkup(<PlayBoard schema={schema} tempsIndex={0} temps={temps} apercu />)
+  return enMarkup(<PlayBoard schema={schema} stepIndex={0} steps={steps} apercu />)
     .replace('<svg', `<svg xmlns="http://www.w3.org/2000/svg" width="${largeur}" height="${hauteur}"`)
     .replace(/[«»]/g, '_')
 }
@@ -85,9 +85,9 @@ const enBlob = (c: HTMLCanvasElement, type: string, q?: number) =>
 
 /** Le temps rendu à deux fois son viewBox — 3000 × 2800 pour un demi-terrain,
  *  soit une image qui tient sur le mur d'un vestiaire. */
-async function fabriquerPng(schema: Play, temps: Step): Promise<Blob> {
+async function fabriquerPng(schema: Play, steps: Step): Promise<Blob> {
   const h = profondeur(schema)
-  const canvas = await rasteriser(await svgAutonome(schema, temps, W * 2, h * 2), W * 2, h * 2)
+  const canvas = await rasteriser(await svgAutonome(schema, steps, W * 2, h * 2), W * 2, h * 2)
   return enBlob(canvas, 'image/png')
 }
 
@@ -194,12 +194,12 @@ async function fabriquerPdf(schema: Play): Promise<Blob> {
   const l = 1200
   const hi = Math.round((h / W) * l)
   const pages = []
-  for (let i = 0; i < schema.temps.length; i++) {
-    const canvas = await rasteriser(await svgAutonome(schema, schema.temps[i], l, hi), l, hi)
+  for (let i = 0; i < schema.steps.length; i++) {
+    const canvas = await rasteriser(await svgAutonome(schema, schema.steps[i], l, hi), l, hi)
     const jpeg = new Uint8Array(await (await enBlob(canvas, 'image/jpeg', 0.85)).arrayBuffer())
     pages.push({
       jpeg, l, h: hi,
-      titre: `${schema.nom} — temps ${i + 1} / ${schema.temps.length}`,
+      titre: `${schema.name} — temps ${i + 1} / ${schema.steps.length}`,
       sous: schema.note?.slice(0, 110) || (schema.court === 'half' ? 'Demi-terrain' : 'Terrain complet'),
     })
   }
@@ -257,14 +257,14 @@ function lzw(pixels: Uint8Array): number[] {
   emettre(CLEAR)
   let prefixe = pixels[0]
   for (let i = 1; i < pixels.length; i++) {
-    const cle = prefixe * 256 + pixels[i]
-    const connu = table.get(cle)
+    const key = prefixe * 256 + pixels[i]
+    const connu = table.get(key)
     if (connu !== undefined) {
       prefixe = connu
       continue
     }
     emettre(prefixe)
-    table.set(cle, suivant++)
+    table.set(key, suivant++)
     if (suivant === 4096) {
       // Dictionnaire plein : on repart de zéro, décodeur compris.
       emettre(CLEAR)
@@ -297,9 +297,9 @@ const sousBlocs = (octets: number[]) => {
  *  puis le dernier temps, qu'on tient un instant pour qu'il se lise. */
 function instants(s: Play) {
   const n = transitions(s)
-  const liste: { temps: number; part: number }[] = []
-  for (let t = 0; t < n; t++) for (let i = 0; i < PAR_TRANSITION; i++) liste.push({ temps: t, part: i / PAR_TRANSITION })
-  liste.push({ temps: n, part: 0 })
+  const liste: { steps: number; part: number }[] = []
+  for (let t = 0; t < n; t++) for (let i = 0; i < PAR_TRANSITION; i++) liste.push({ steps: t, part: i / PAR_TRANSITION })
+  liste.push({ steps: n, part: 0 })
   return liste
 }
 
@@ -367,10 +367,10 @@ export async function livrer(file: File): Promise<void> {
 
 // ──────────────────────────────── L'écran ────────────────────────────────
 
-export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
+export function ExportSchema({ schema, stepIndex = 0, open, onClose }: {
   schema: Play
   /** Le temps affiché : c'est celui-là que l'image reprend. */
-  tempsIndex?: number
+  stepIndex?: number
   open: boolean
   onClose: () => void
 }) {
@@ -395,13 +395,13 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
    *  remet — et si l'appareil ne sait pas dessiner, on le dit franchement. */
   const sortie = (libelle: string, faire: () => Promise<Blob>, ext: string, type: string) => async () => {
     setOccupe(true)
-    setEtat(translate('partage.enPreparation', { quoi: libelle }))
+    setEtat(translate('partage.enPreparation', { what: libelle }))
     try {
       const blob = await faire()
       await livrer(new File([blob], nomFichier(schema, ext), { type }))
-      setEtat(translate('partage.pret', { quoi: libelle, ko: Math.round(blob.size / 1024) }))
+      setEtat(translate('partage.pret', { what: libelle, kb: Math.round(blob.size / 1024) }))
     } catch {
-      setEtat(translate('partage.echecFichier', { quoi: libelle }))
+      setEtat(translate('partage.echecFichier', { what: libelle }))
     } finally {
       setOccupe(false)
     }
@@ -416,7 +416,7 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
       setEtat(translate('partage.pressePapiersRefuse'))
     }
     if (navigator.share) {
-      try { await navigator.share({ title: schema.nom, url: lien }) } catch { /* partage annulé */ }
+      try { await navigator.share({ title: schema.name, url: lien }) } catch { /* partage annulé */ }
     }
   }
 
@@ -424,7 +424,7 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
-          <DialogTitle className="text-lg font-extrabold">{translate('partage.titre', { nom: schema.nom })}</DialogTitle>
+          <DialogTitle className="text-lg font-extrabold">{translate('partage.titre', { name: schema.name })}</DialogTitle>
         </DialogHeader>
 
         {lien === undefined && <p className="text-[13px]" style={{ color: C.muted }}>{translate('partage.preparation')}</p>}
@@ -466,11 +466,11 @@ export function ExportSchema({ schema, tempsIndex = 0, open, onClose }: {
           <span className="h-px flex-1" style={{ background: C.border }} />
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <Sortie label={translate('partage.imagePng')} quoi={translate('partage.ceTemps')} disabled={occupe} onClick={sortie(translate('partage.lImage'), () => fabriquerPng(schema, schema.temps[tempsIndex] ?? schema.temps[0]), 'png', 'image/png')} />
+          <Sortie label={translate('partage.imagePng')} quoi={translate('partage.ceTemps')} disabled={occupe} onClick={sortie(translate('partage.lImage'), () => fabriquerPng(schema, schema.steps[stepIndex] ?? schema.steps[0]), 'png', 'image/png')} />
           <Sortie label={translate('partage.pdf')} quoi={translate('partage.tousLesTemps')} disabled={occupe} onClick={sortie(translate('partage.lePdf'), () => fabriquerPdf(schema), 'pdf', 'application/pdf')} />
           <Sortie
             label={translate('partage.gif')} quoi={translate('partage.animation')} disabled={occupe}
-            onClick={sortie(translate('partage.leGif'), () => fabriquerGif(schema, (fait, total) => setEtat(translate('partage.gifProgression', { fait, total }))), 'gif', 'image/gif')}
+            onClick={sortie(translate('partage.leGif'), () => fabriquerGif(schema, (fait, total) => setEtat(translate('partage.gifProgression', { done: fait, total }))), 'gif', 'image/gif')}
           />
         </div>
 
