@@ -11,8 +11,8 @@ import { Eye } from 'lucide-react'
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
-/** Fiche d'une rencontre planifiée (statut 'setup') : récapitulatif façon Olive
- * avec démarrage et suppression. Redirige live/terminé vers leur écran dédié. */
+/** The record of a planned game (status 'setup'): an Olive-style summary with
+ * starting and deletion. Live and finished games go to their own screens. */
 export function MatchPreview({ matchId }: { matchId: string }) {
   const translate = useT()
   const champ = useLeagueLabel()
@@ -40,25 +40,24 @@ export function MatchPreview({ matchId }: { matchId: string }) {
     return () => { cancel = true }
   }, [matchId])
 
-  // Effectif du club et convocation déjà enregistrée : chargés une seule fois par
-  // rencontre. Un rechargement déclenché par une frappe en cours (ex. un effet qui se
-  // fie à « le champ est vide ») écraserait la saisie dès que l'utilisateur efface
-  // pour retaper — on applique donc ces valeurs une fois, jamais en cours de saisie.
-  // L'effectif est celui du club de LA RENCONTRE (`match.meta.clubId`, jamais absent),
-  // pas celui du réglage d'appareil (`useClub`, préférence locale qui peut désigner un
-  // autre club si l'on a changé de club depuis) : une rencontre ancienne, rouverte par
-  // un lien direct après un changement de club, doit garder l'effectif à qui elle
-  // appartient.
+  // The club's roster and any call-up already saved: loaded once per game. A reload
+  // triggered by a keystroke in progress (say an effect that trusts "the field is
+  // empty") would overwrite what is being typed the moment someone clears a field to
+  // retype it — so these values are applied once, never mid-entry.
+  // The roster is THE GAME's club (`match.meta.clubId`, never absent), not the device
+  // setting (`useClub`, a local preference that may name a different club if the club
+  // has been changed since): an old game, reopened by a direct link after a club
+  // change, must keep the roster it belongs to.
   useEffect(() => {
     if (!match) return
     let cancel = false
     Promise.all([listPlayers(match.meta.clubId), getConvocation(match.id)]).then(([ps, conv]) => {
       if (cancel) return
       setPlayers(ps)
-      // Confronte les identifiants chargés à l'effectif réel : un joueur retiré de
-      // l'effectif depuis peut encore figurer dans une convocation déjà enregistrée
-      // (la cascade de `deletePlayer` ne répare que l'avenir), et resterait sinon
-      // compté sans case à décocher.
+      // Checks the loaded ids against the real roster: a player removed from the
+      // roster since may still appear in a call-up already saved (`deletePlayer`'s
+      // cascade only repairs the future), and would otherwise stay counted with no box
+      // to untick.
       const rosterIds = new Set(ps.map((p) => p.id))
       setCalledUp(new Set((conv?.playerIds ?? []).filter((id) => rosterIds.has(id))))
       setMeetTime(conv?.meetTime ?? '')
@@ -68,10 +67,10 @@ export function MatchPreview({ matchId }: { matchId: string }) {
     return () => { cancel = true }
   }, [match?.id])
 
-  // Arrivé par un lien « Convoquer » (tableau de bord, calendrier) : la convocation
-  // est en bas de la fiche, on l'amène sous les yeux. Le défilement attend l'effectif,
-  // car la section n'existe pas encore au moment du clic — les données arrivent après.
-  // `scrollIntoView` est appelé prudemment : jsdom ne l'implémente pas.
+  // Arrived from a "Call up" link (dashboard, calendar): the call-up is at the bottom
+  // of the record, so we bring it into view. The scroll waits for the roster, because
+  // the section does not exist yet at click time — the data arrives afterwards.
+  // `scrollIntoView` is called defensively: jsdom does not implement it.
   useEffect(() => {
     if (hash === '#convocation' && players.length) document.getElementById('convocation')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
   }, [hash, players.length])
@@ -80,13 +79,13 @@ export function MatchPreview({ matchId }: { matchId: string }) {
 
   const nameOf = (id: string) => teams[id]?.name ?? '—'
   const f = fmtDate(match.meta.date)
-  // Deux droits différents sur cette fiche : convoquer et supprimer relèvent du
-  // club, démarrer la rencontre relève de la table de marque.
-  const gere = can('manage')
-  const tientLaMarque = can('score')
-  // Démarrer (ou reprendre) relève de la table de marque, pas de l'administration :
-  // le bénévole du samedi doit pouvoir lancer la rencontre qu'il va tenir, sans le
-  // code admin. Convoquer et supprimer, juste en dessous, restent administratifs.
+  // Two different rights on this record: calling up and deleting belong to the club,
+  // starting the game belongs to the scorer's table.
+  const manages = can('manage')
+  const keepsScore = can('score')
+  // Starting (or resuming) belongs to the scorer's table, not to administration: the
+  // Saturday volunteer must be able to start the game they are about to keep, without
+  // the admin code. Calling up and deleting, just below, stay administrative.
   const start = () => guard('score', () => navigate(`/match/${match.id}/live`))
   const remove = async () => { await deleteMatch(match.id); navigate('/calendrier') }
 
@@ -114,9 +113,9 @@ export function MatchPreview({ matchId }: { matchId: string }) {
       <PageTitle action={<Link to="/calendrier" className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('apercu.retourCalendrier')}</Link>} />
 
       <div className="rounded-2xl p-6" style={{ background: C.card, border: bd }}>
-        {/* Le championnat était le « sous-titre » de la page ; ce n'en était pas un,
-            c'est une information de la rencontre. Il rejoint donc le bandeau de la
-            fiche, entre l'état et le numéro. */}
+        {/* The league used to be the page's "subtitle"; it was not one, it is a fact
+            about the game. So it joins the record's banner, between the status and the
+            number. */}
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <span className="rounded-md px-2 py-1 text-[12px] font-black uppercase" style={{ background: statusPill.bg, color: statusPill.fg }}>{statusPill.label}</span>
           <span className="min-w-0 truncate text-[12px] font-bold" style={{ color: C.muted }}>{champ(match.meta)}</span>
@@ -124,10 +123,10 @@ export function MatchPreview({ matchId }: { matchId: string }) {
         </div>
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <TeamCol id={match.meta.clubId} name={nameOf(match.meta.clubId)} role="Locaux" coach={match.meta.coachA} count={match.roster.length} />
+          <TeamCol id={match.meta.clubId} name={nameOf(match.meta.clubId)} role={translate('match.locaux')} coach={match.meta.coachA} count={match.roster.length} />
           <span className="text-xl font-black" style={{ color: C.faint }}>{translate('apercu.vs')}</span>
-          {/* L'adversaire n'a pas d'effectif saisi pour cette rencontre : pas de compte de joueurs à afficher. */}
-          <TeamCol id={match.meta.opponentId} name={nameOf(match.meta.opponentId)} role="Visiteurs" coach={teams[match.meta.opponentId]?.coach} />
+          {/* The opposition has no roster entered for this game: no player count to show. */}
+          <TeamCol id={match.meta.opponentId} name={nameOf(match.meta.opponentId)} role={translate('match.visiteurs')} coach={teams[match.meta.opponentId]?.coach} />
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3 border-t pt-5 sm:grid-cols-3" style={{ borderColor: C.border }}>
@@ -137,22 +136,22 @@ export function MatchPreview({ matchId }: { matchId: string }) {
         </div>
       </div>
 
-      {/* `scroll-mt-6` : l'ancre s'arrête sous le bord haut, pas collée à lui. */}
+      {/* `scroll-mt-6`: the anchor stops below the top edge, not flush against it. */}
       <div id="convocation" className="mt-6 scroll-mt-6 rounded-2xl p-6" style={{ background: C.card, border: bd }}>
         <div className="mb-4 flex items-center justify-between">
           <SectionTitle>{translate('apercu.convocation')}</SectionTitle>
-          {/* Affiché en permanence, pas seulement après enregistrement : douze convoqués
-              pour un match où l'on n'en inscrit que dix doit se voir sans compter les cases. */}
+          {/* Shown at all times, not only after saving: twelve called up for a game
+              where only ten can be listed must be visible without counting boxes. */}
           <span className="rounded-md px-2 py-1 text-[12px] font-black" style={{ background: C.accentBg, color: C.accent }}>
             {translate('compte.convoque', { count: calledUp.size })}
           </span>
         </div>
 
-        {/* Convoquer écrit ; savoir si l'on est convoqué, non — c'est même la
-            première chose qu'un joueur vient lire ici. La section reste donc
-            entière pour tout le monde, en cases à cocher pour qui convoque, en
-            liste pour qui est convoqué. */}
-        {gere ? (
+        {/* Calling up writes; knowing whether you are called up does not — it is even
+            the first thing a player comes here to read. The section therefore stays
+            whole for everyone, as checkboxes for whoever calls up, as a list for
+            whoever is called up. */}
+        {manages ? (
           <>
             <div className="grid gap-2 sm:grid-cols-2">
               {[...players].sort((a, b) => a.number - b.number).map((p) => (
@@ -174,8 +173,9 @@ export function MatchPreview({ matchId }: { matchId: string }) {
               {translate('apercu.enregistrerConvocation')}
             </button>
 
-            {/* Comme les résultats du championnat : aucune synchronisation pour la convocation,
-                même formulation que sur l'écran Championnat pour ne pas laisser croire à deux limites différentes. */}
+            {/* Like the league results: no synchronisation for the call-up, worded the
+                same way as on the standings screen so as not to suggest two different
+                limits. */}
             {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('apercu.convocationLocale')}</p>}
           </>
         ) : calledUp.size === 0 ? (
@@ -191,22 +191,23 @@ export function MatchPreview({ matchId }: { matchId: string }) {
               ))}
             </div>
             {(meetTime || meetPlace) && (
-              <p className="mt-4 text-sm" style={{ color: C.muted }}>Rendez-vous {[meetTime, meetPlace].filter(Boolean).join(' · ')}</p>
+              <p className="mt-4 text-sm" style={{ color: C.muted }}>{translate('apercu.rendezVous', { detail: [meetTime, meetPlace].filter(Boolean).join(' · ') })}</p>
             )}
             {note && <p className="mt-1 whitespace-pre-wrap text-sm" style={{ color: C.muted }}>{note}</p>}
           </>
         )}
       </div>
 
-      {/* `justify-end` et non `justify-between` : sans lui, la disparition de
-          « Supprimer » ferait glisser le reste de la rangée à gauche. */}
+      {/* `justify-end` and not `justify-between`: without it, "Delete" disappearing
+          would slide the rest of the row to the left. */}
       <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-        {/* Le droit est vérifié à l'ouverture du dialogue, pas redérivé ensuite : qui se
-            verrouille pendant que la confirmation est ouverte peut encore la confirmer.
-            C'est assumé — le scénario suppose de rendre la tablette en pleine action, et
-            `LiveMatch` réévalue `can()` à chaque rendu parce que la saisie du match dure
-            deux heures, pas parce que les autres écrans auraient oublié de le faire. */}
-        {gere && (
+        {/* The right is checked when the dialog opens, not re-derived afterwards:
+            someone who locks themselves out while the confirmation is open can still
+            confirm it. That is accepted — the scenario requires handing the tablet over
+            mid-action, and `LiveMatch` re-evaluates `can()` on every render because
+            recording a game lasts two hours, not because the other screens forgot
+            to. */}
+        {manages && (
           <button onClick={() => guard('manage', () => setAskDelete(true))} className="mr-auto rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: `1px solid ${C.border}`, color: C.muted }}>
             {translate('commun.supprimer')}
           </button>
@@ -216,11 +217,11 @@ export function MatchPreview({ matchId }: { matchId: string }) {
           {match.status === 'finished' ? (
             <Link to={`/match/${match.id}/summary`} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('apercu.voirResume')}</Link>
           ) : (
-            // Démarrer ou reprendre est le geste de la table de marque : le bouton
-            // est le sien, et n'apparaît pas au visiteur qui consulte la fiche.
-            tientLaMarque && (
+            // Starting or resuming is the scorer's table's gesture: the button is
+            // theirs, and does not appear to a visitor reading the record.
+            keepsScore && (
               <button onClick={start} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
-                {match.status === 'live' ? 'Reprendre la rencontre →' : translate('apercu.demarrerRencontre')}
+                {translate(match.status === 'live' ? 'apercu.reprendreRencontre' : 'apercu.demarrerRencontre')}
               </button>
             )
           )}
@@ -240,7 +241,7 @@ function TeamCol({ id, name, role, coach, count }: { id: string; name: string; r
       <TeamBadge id={id} name={name} size="h-14 w-14 text-sm" />
       <span className="line-clamp-2 text-base font-extrabold">{name}</span>
       <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.muted }}>{role}</span>
-      {coach && <span className="text-[12px]" style={{ color: C.faint }}>Coach · {coach}</span>}
+      {coach && <span className="text-[12px]" style={{ color: C.faint }}>{translate('apercu.coach', { name: coach })}</span>}
       {count !== undefined && <span className="text-[12px]" style={{ color: C.faint }}>{translate('commun.joueur', { count })}</span>}
     </div>
   )

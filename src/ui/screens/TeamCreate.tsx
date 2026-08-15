@@ -26,11 +26,11 @@ export function TeamCreate() {
     setRoster((r) => [...r, { number: Number(num), lastName: ln.trim().toUpperCase(), firstName: fn.trim() }])
     setNum(''); setLn(''); setFn('')
   }
-  /* La fondation du club : aucune équipe n'existe encore. C'est le seul instant où
-     l'application se crée un premier administrateur sans code — voir `fonder()` dans
-     `app/auth.tsx` pour la justification, et le bouton plus bas pour ce que ça change.
-     La condition est bien « aucune équipe » et non « aucun club suivi » : celui qui a
-     simplement effacé son choix de club n'est pas un fondateur. */
+  /* Founding the club: no team exists yet. It is the one moment where the
+     application makes itself a first administrator without a code — see `found()` in
+     `app/auth.tsx` for the justification, and the button below for what it changes.
+     The condition is indeed "no team" and not "no club followed": someone who merely
+     cleared their club choice is not a founder. */
   const founding = teams.length === 0
 
   const create = async () => {
@@ -38,13 +38,13 @@ export function TeamCreate() {
     const teamId = newId()
     await saveTeam({ id: teamId, name: name.trim(), coach: coach.trim() || undefined })
     for (const p of roster) await savePlayer({ id: newId(), teamId, ...p })
-    // Aucun club suivi : l'équipe qu'on vient de créer le devient, sinon la
-    // garde renvoie droit vers l'écran de bienvenue qu'on quitte à peine.
+    // No club followed: the team just created becomes it, otherwise the gate sends
+    // us straight back to the welcome screen we have only just left.
     if (!clubId) setClub(teamId)
-    // Le fondateur devient administrateur, sur cet appareil et pour cette session.
-    // Sans cela, le bénévole qui vient de saisir son effectif restait « Visiteur » :
-    // plus un seul bouton de création sur cinq écrans, et rien ne lui disait que
-    // « Accès » dans la barre latérale était le passage.
+    // The founder becomes an administrator, on this device and for this session.
+    // Without it, the volunteer who has just entered their roster stayed a "Visitor":
+    // not a single create button left across five screens, and nothing told them that
+    // "Access" in the sidebar was the way through.
     if (founding) found()
     navigate(`/teams/${teamId}`)
   }
@@ -52,8 +52,8 @@ export function TeamCreate() {
   return (
     <div className="p-6">
       <Link to="/teams" className="-mx-2 inline-block px-2 py-1.5 text-sm font-semibold" style={{ color: C.muted }}>{translate('equipe.retourEquipes')}</Link>
-      {/* Un vrai titre, et non plus le sous-titre qui en tenait lieu : cet écran
-          vit hors de la coquille, son en-tête ne le nomme donc pas à sa place. */}
+      {/* A real heading, no longer the subtitle that stood in for one: this screen
+          lives outside the shell, so its header does not name it on its behalf. */}
       <h1 className="mb-6 mt-2 text-2xl font-extrabold tracking-tight">{translate('creation.titre')}</h1>
 
       <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
@@ -78,10 +78,10 @@ export function TeamCreate() {
               ))}
             </ul>
           )}
-          {/* Trois étiquettes réelles, au-dessus de leurs champs. Le mot était
-              auparavant dans le `placeholder` : il disparaissait à la première
-              frappe, donc au moment précis où l'on vérifie qu'on remplit la bonne
-              case, et un lecteur d'écran n'annonçait qu'« champ de saisie ». */}
+          {/* Three real labels, above their fields. The word used to be in the
+              `placeholder`: it vanished at the first keystroke, that is at the precise
+              moment you check you are filling the right box, and a screen reader
+              announced nothing but "edit text". */}
           <div className="grid grid-cols-[68px_1fr_1fr_44px] items-end gap-2">
             <div><Label htmlFor="roster-num">{translate('equipe.numero')}</Label>
               <input id="roster-num" value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center', width: '100%' }} /></div>
@@ -95,17 +95,16 @@ export function TeamCreate() {
         </div>
       </div>
 
-      {/* Le bouton reste visible sans le droit — cet écran vit hors de la coquille et
-          sans menu d'accès, le masquer rendrait l'application impossible à démarrer.
-          Le raisonnement s'arrêtait là, et « la garde réclame le code au moment de
-          créer » était précisément le mur : sur une installation vierge, le tout
-          premier bénévole recevait une demande de code administrateur que personne ne
-          lui a donné, pour la seule action qui rend l'application utilisable. Un
-          bouton visible qui ouvre une porte fermée à clé ne vaut pas mieux qu'un
-          bouton masqué.
-          La fondation ne demande donc rien : aucune équipe n'existe, il n'y a aucune
-          donnée à protéger, et le code administrateur défend des données et non un
-          accès. Dès la deuxième équipe, la garde reprend son travail. */}
+      {/* The button stays visible without the right — this screen lives outside the
+          shell and without an access menu, so hiding it would make the application
+          impossible to start. The reasoning used to stop there, and "the gate asks for
+          the code at create time" was precisely the wall: on a blank install, the very
+          first volunteer got an administrator-code prompt nobody had given them, for
+          the one action that makes the application usable. A visible button that opens
+          a locked door is no better than a hidden one.
+          Founding therefore asks for nothing: no team exists, there is no data to
+          protect, and the administrator code defends data rather than access. From the
+          second team on, the gate goes back to work. */}
       <div className="mt-6 flex justify-end gap-3">
         <Link to="/teams" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('commun.annuler')}</Link>
         <button onClick={() => (founding ? create() : guard('manage', create))} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>

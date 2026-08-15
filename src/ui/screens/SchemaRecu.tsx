@@ -1,18 +1,18 @@
 /**
- * La combinaison arrivée par un lien. Tout le schéma est dans le fragment de
- * l'URL : rien à installer, rien à synchroniser, aucun serveur à interroger.
- * D'où la place de cet écran — hors de la coquille et **hors du garde de club** :
- * celui qui reçoit le lien n'a peut-être jamais ouvert l'application, et le
- * renvoyer vers l'écran de bienvenue lui cacherait ce qu'on lui a envoyé.
+ * A play that arrived by link. The whole play is in the URL's fragment: nothing to
+ * install, nothing to synchronise, no server to ask. Hence this screen's place —
+ * outside the shell and **outside the club gate**: whoever receives the link may
+ * never have opened the application, and sending them to the welcome screen would
+ * hide from them the very thing they were sent.
  *
- * Lire est libre. Seul « Ajouter à ma bibliothèque » écrit, et passe donc par le
- * code administrateur.
+ * Reading is ungated. Only "Add to my library" writes, and so goes through the
+ * administrator code.
  *
- * C'est le seul bouton d'écriture du dépôt qui reste visible sans le droit, et
- * c'est délibéré : cet écran vit hors de la coquille, il n'a donc pas le menu
- * d'accès sous la main. Le masquer condamnerait l'import — un coach qui reçoit
- * le lien sur un téléphone où sa session est neuve n'aurait plus aucune porte
- * pour saisir son code. Ici, le bouton EST la porte.
+ * It is the one write button in the repo that stays visible without the right, and
+ * that is deliberate: this screen lives outside the shell, so it has no access menu
+ * to hand. Hiding it would condemn the import — a coach who receives the link on a
+ * phone where their session is new would have no door left to enter their code.
+ * Here, the button IS the door.
  */
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -35,18 +35,18 @@ export function SchemaRecu() {
   const [schema, setSchema] = useState<Play | null | undefined>(undefined)
   const [index, setIndex] = useState(0)
 
-  // `useLocation().hash` porte le « # » : le code commence au caractère suivant.
+  // `useLocation().hash` carries the "#": the code starts at the next character.
   const code = hash.slice(1)
 
   useEffect(() => {
-    let vivant = true
-    decode(code).then((s) => { if (vivant) setSchema(s) })
-    return () => { vivant = false }
+    let alive = true
+    decode(code).then((s) => { if (alive) setSchema(s) })
+    return () => { alive = false }
   }, [code])
 
-  if (schema === undefined) return <Ecran><p style={{ color: C.muted }}>{translate('recu.ouverture')}</p></Ecran>
+  if (schema === undefined) return <Screen><p style={{ color: C.muted }}>{translate('recu.ouverture')}</p></Screen>
   if (schema === null) return (
-    <Ecran>
+    <Screen>
       <div className="grid min-h-dvh place-items-center p-6 text-center">
         <div>
           <p className="text-lg font-extrabold">{translate('recu.lienAbime')}</p>
@@ -58,29 +58,28 @@ export function SchemaRecu() {
           </Link>
         </div>
       </div>
-    </Ecran>
+    </Screen>
   )
 
   const last = schema.steps.length - 1
-  // Le défilement se borne, il ne boucle pas — même règle que la consultation.
-  const aller = (delta: number) => setIndex((i) => Math.min(last, Math.max(0, i + delta)))
+  // Stepping is clamped, it does not wrap — the same rule as the reading screen.
+  const go = (delta: number) => setIndex((i) => Math.min(last, Math.max(0, i + delta)))
 
-  // Un schéma neuf : nouvel identifiant, club de celui qui reçoit. L'import ne
-  // peut donc écraser aucun schéma existant, même si l'expéditeur et le
-  // destinataire partagent la même base.
-  const ajouter = () => guard('manage', async () => {
+  // A fresh play: new id, the recipient's club. The import therefore cannot
+  // overwrite any existing play, even when sender and recipient share a database.
+  const add = () => guard('manage', async () => {
     if (!clubId) return
     const s: Play = { ...schema, id: newId(), clubId }
     await savePlay(s)
     navigate(`/schemas/${s.id}`)
   })
 
-  // Même bornage de largeur que la consultation : c'est le rapport du viewBox
-  // qui doit tenir, le demi-terrain déborderait sinon sur un écran large.
-  const large = courtWidth(schema.court)
+  // The same width bound as the reading screen: it is the viewBox's ratio that must
+  // hold, otherwise the half court overflows on a wide screen.
+  const boardWidth = courtWidth(schema.court)
 
   return (
-    <Ecran>
+    <Screen>
       <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-3 p-4">
         <div>
           <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('recu.titre')}</p>
@@ -92,24 +91,24 @@ export function SchemaRecu() {
 
         {schema.note && <p className="rounded-2xl p-4 text-sm" style={{ background: C.card, border: bd, color: C.muted }}>{schema.note}</p>}
 
-        <div className="select-none" style={{ maxWidth: large }}>
+        <div className="select-none" style={{ maxWidth: boardWidth }}>
           <PlayBoard schema={schema} stepIndex={index} />
         </div>
 
-        <div className="flex select-none items-center gap-3" style={{ maxWidth: large }}>
-          <Pas label={translate('lecteur.precedent')} onClick={() => aller(-1)} disabled={index === 0}>◀</Pas>
+        <div className="flex select-none items-center gap-3" style={{ maxWidth: boardWidth }}>
+          <StepButton label={translate('lecteur.precedent')} onClick={() => go(-1)} disabled={index === 0}>◀</StepButton>
           <span className="flex-1 text-center text-sm font-extrabold">{translate('sch.temps', { n: index + 1, total: schema.steps.length })}</span>
-          <Pas label={translate('lecteur.suivant')} onClick={() => aller(1)} disabled={index === last}>▶</Pas>
+          <StepButton label={translate('lecteur.suivant')} onClick={() => go(1)} disabled={index === last}>▶</StepButton>
         </div>
 
-        {/* Tant que les équipes ne sont pas chargées, on ne sait pas si un club
-            est réglé : proposer l'un ou l'autre trop tôt ferait clignoter l'écran. */}
+        {/* Until the teams are loaded we do not know whether a club is set: offering
+            one or the other too early would make the screen flicker. */}
         {ready && (clubId ? (
-          <button onClick={ajouter} className="rounded-2xl py-3.5 text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: large }}>
+          <button onClick={add} className="rounded-2xl py-3.5 text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: boardWidth }}>
             {translate('recu.ajouter')}
           </button>
         ) : (
-          <Link to="/" className="rounded-2xl py-3.5 text-center text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: large }}>
+          <Link to="/" className="rounded-2xl py-3.5 text-center text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: boardWidth }}>
             {translate('recu.choisirClub')}
           </Link>
         ))}
@@ -118,17 +117,17 @@ export function SchemaRecu() {
           {translate('recu.rienAInstaller')}
         </p>
       </div>
-    </Ecran>
+    </Screen>
   )
 }
 
-/** Le fond plein du lecteur : ce lien s'ouvre le plus souvent sur un téléphone,
- *  hors de la coquille et de son menu. */
-function Ecran({ children }: { children: React.ReactNode }) {
+/** The viewer's full background: this link most often opens on a phone, outside the
+ *  shell and its menu. */
+function Screen({ children }: { children: React.ReactNode }) {
   return <div className="min-h-dvh" style={{ background: C.frame, color: C.text }}>{children}</div>
 }
 
-function Pas({ label, onClick, disabled, children }: {
+function StepButton({ label, onClick, disabled, children }: {
   label: string; onClick: () => void; disabled: boolean; children: React.ReactNode
 }) {
   return (

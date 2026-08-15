@@ -26,8 +26,8 @@ export function TeamsList() {
 
   return (
     <div>
-      {/* Créer une équipe s'écrit : le bouton ne se rend que pour qui en a le
-          droit, plutôt que de réclamer un code à qui le presse. */}
+      {/* Creating a team is a write: the button only renders for whoever has the
+          right, rather than demanding a code from whoever presses it. */}
       <PageTitle
         action={can('manage') && <Link to="/teams/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('equipes.nouvelle')}</Link>} />
 

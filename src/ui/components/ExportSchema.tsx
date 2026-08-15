@@ -295,9 +295,9 @@ const subBlocks = (bytes: number[]) => {
  *  then the last step, held a moment so it can be read. */
 function frames(s: Play) {
   const n = transitions(s)
-  const list: { steps: number; part: number }[] = []
-  for (let t = 0; t < n; t++) for (let i = 0; i < FRAMES_PER_TRANSITION; i++) list.push({ steps: t, part: i / FRAMES_PER_TRANSITION })
-  list.push({ steps: n, part: 0 })
+  const list: { step: number; part: number }[] = []
+  for (let t = 0; t < n; t++) for (let i = 0; i < FRAMES_PER_TRANSITION; i++) list.push({ step: t, part: i / FRAMES_PER_TRANSITION })
+  list.push({ step: n, part: 0 })
   return list
 }
 

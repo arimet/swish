@@ -538,6 +538,9 @@ export const en: Record<string, string> = {
   'equipe.fermerJoueur': 'close {name}',
   'equipe.modifierJoueur': 'edit {name}',
   'equipe.retirerJoueur': 'Remove {name}',
+  'apercu.reprendreRencontre': 'Resume the game →',
+  'apercu.rendezVous': 'Meeting {detail}',
+  'apercu.coach': 'Coach · {name}',
   'apercu.demarrerRencontre': '▶ Start the game',
   'match.numeroPlaceholder': 'e.g. 78',
   'sch.demiTerrain': 'Half court',
@@ -618,6 +621,13 @@ export const en: Record<string, string> = {
   'sync.refuseDetail': 'The server is refusing this device. Your entries are saved here and nothing is lost, but they no longer reach the other devices: check the token under Administration.',
 
   // ── Language and theme ────────────────────────────────────────────────────
+  'imprime.avantageMax': 'Largest lead',
+  'imprime.serieMax': 'Longest run',
+  'imprime.pointsDuBanc': 'Bench points',
+  'imprime.egalites': 'Ties',
+  'imprime.dureeAvantage': 'Time in front',
+  'imprime.scoreGlobal': '{name} — {score} points. Score entered as a total — the opposition has no roster to break down.',
+
   'tir.terrainSaisie': 'Half court — tap the shot spot',
 
   'partage.tropLong': 'This play is too heavy to fit in a link. Send the image or the PDF instead — a link truncated on the way would be worse than no link at all.',

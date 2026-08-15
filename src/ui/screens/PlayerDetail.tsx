@@ -13,12 +13,10 @@ import { C, NumBadge, Panel, TeamBadge, bd, fmtDate , useLeagueLabel } from '../
 import { useAuth } from '../../app/auth'
 import type { Match, Player, Team } from '../../domain/types'
 
-/** Moyenne par rencontre, à une décimale. `—` quand aucune rencontre n'a été jouée :
- *  un joueur qui n'a pas joué n'a pas « 0,0 passe », il n'a pas de moyenne. */
-const parMatch = (total: number, games: number) =>
+/** Per-game average, to one decimal. `—` when no game has been played: a player who
+ *  has not played does not have "0.0 assists", they have no average. */
+const perGame = (total: number, games: number) =>
   games ? (total / games).toFixed(1).replace('.', ',') : '—'
-
-/** Accord au pluriel pour les petits décomptes affichés en toutes lettres. */
 
 export function PlayerDetail() {
   const translate = useT()
@@ -41,7 +39,7 @@ export function PlayerDetail() {
         const [t, all] = await Promise.all([getTeam(p.teamId), listMatches()])
         if (cancelled) return
         setTeam(t ?? null)
-        // Rencontres où le joueur figure à l'effectif et qui ont commencé.
+        // Games where the player is on the roster and that have started.
         setMatches(all.filter((m) => m.status !== 'setup' && m.roster.includes(id)))
         setPlayer(p)
       })
@@ -77,8 +75,8 @@ export function PlayerDetail() {
         <div className="min-w-0 flex-1">
           <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
             <span className="truncate">{player.lastName} {player.firstName}</span>
-            {/* L'identité met en avant, elle ne protège rien : la fiche est
-                identique pour tout le monde, à cette mention près. */}
+            {/* Identity highlights, it protects nothing: the record is identical for
+                everyone, this mention aside. */}
             {playerId === player.id && (
               <span className="shrink-0 rounded-md px-2 py-0.5 text-[12px] font-black uppercase tracking-wide"
                 style={{ background: C.accentBg, color: C.accent }}>{translate('joueur.cestVous')}</span>
@@ -96,7 +94,7 @@ export function PlayerDetail() {
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard label={translate('equipe.rencontres')} value={String(played)} hint={translate('equipe.jouees')} />
-        <StatCard label={translate('joueur.pointsParMatch')} value={parMatch(career.points, played)} hint={translate('equipe.auTotal', { n: career.points })} />
+        <StatCard label={translate('joueur.pointsParMatch')} value={perGame(career.points, played)} hint={translate('equipe.auTotal', { n: career.points })} />
         <StatCard label={translate('joueur.reussiteTirs')} value={pct.fg === null ? '—' : `${pct.fg} %`} hint={translate('compte.tirLocalise', { count: shotsCareer.length })} accent={C.accent} />
         <StatCard label={translate('joueur.reussite3pts')} value={pct.three === null ? '—' : `${pct.three} %`} hint={translate('joueur.surLaCarriere')} />
         <StatCard label={translate('joueur.tempsJeuMoyen')} value={played ? fmt(Math.round(career.seconds / played)) : '—'} hint={translate('joueur.parMatchHint')} />
@@ -196,7 +194,7 @@ function StatRow({ label, total, games }: { label: string; total: number; games:
       <span style={{ color: C.muted }}>{label}</span>
       <span className="flex gap-4">
         <span className="nums w-8 text-right font-bold">{total}</span>
-        <span className="nums w-14 text-right text-xs font-semibold" style={{ color: C.faint }}>{parMatch(total, games)}</span>
+        <span className="nums w-14 text-right text-xs font-semibold" style={{ color: C.faint }}>{perGame(total, games)}</span>
       </span>
     </div>
   )

@@ -23,11 +23,11 @@ export function Summary({ match, players, teamNames }: { match: Match; players: 
       <section>
         <h3 className="font-bold mb-2">{translate('imprime.donneesRatios')}</h3>
         <ul className="text-sm grid grid-cols-2 gap-x-8 max-w-xl">
-          <li>Avantage max — A {ratios.A.maxLead} / B {ratios.B.maxLead}</li>
-          <li>Série max — A {ratios.A.maxRun} / B {ratios.B.maxRun}</li>
-          <li>Points du banc — A {teamTotals(match).bench.points}</li>
-          <li>Égalités — {ratios.ties}</li>
-          <li>Durée avantage — A {fmt(ratios.A.leadDurationSec)} / B {fmt(ratios.B.leadDurationSec)}</li>
+          <li>{translate('imprime.avantageMax')} — A {ratios.A.maxLead} / B {ratios.B.maxLead}</li>
+          <li>{translate('imprime.serieMax')} — A {ratios.A.maxRun} / B {ratios.B.maxRun}</li>
+          <li>{translate('imprime.pointsDuBanc')} — A {teamTotals(match).bench.points}</li>
+          <li>{translate('imprime.egalites')} — {ratios.ties}</li>
+          <li>{translate('imprime.dureeAvantage')} — A {fmt(ratios.A.leadDurationSec)} / B {fmt(ratios.B.leadDurationSec)}</li>
         </ul>
       </section>
       <section>
@@ -38,16 +38,15 @@ export function Summary({ match, players, teamNames }: { match: Match; players: 
   )
 }
 
-/** Pas de tableau joueur pour l'adversaire (roster vide), mais son score reste
- *  réel — l'écrire évite la contradiction avec le score final affiché en
- *  en-tête. */
+/** No player table for the opposition (their roster is empty), but their score is
+ *  real — writing it avoids contradicting the final score shown in the header. */
 function OpponentLine({ name, score }: { name: string; score: number }) {
   const translate = useT()
   return (
     <section>
       <h3 className="font-bold mb-2">{translate('imprime.visiteurs')}</h3>
       <p className="border border-black p-2 text-sm">
-        {name} — {score} points. Score saisi globalement — l’adversaire n’a pas d’effectif à détailler.
+        {translate('imprime.scoreGlobal', { name, score })}
       </p>
     </section>
   )

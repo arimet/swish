@@ -11,19 +11,19 @@ import { useClub } from '../../app/club'
 
 const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
-/** Planification d'une rencontre : notre club (celui suivi par l'appareil) est
- *  fixé d'avance, seul l'adversaire se choisit ici — il n'a pas d'effectif à
- *  détailler, son score se saisira globalement pendant le match. */
+/** Planning a game: our club (the one this device follows) is fixed in advance,
+ *  only the opposition is chosen here — they have no roster to break down, their
+ *  score is entered as a total during the game. */
 export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   const translate = useT()
   const { can, guard } = useAuth()
   const { clubId, club, ready } = useClub()
-  const [teams, setTeams] = useState<Team[] | null>(null) // null = pas encore chargé
+  const [teams, setTeams] = useState<Team[] | null>(null) // null = not loaded yet
   useEffect(() => { refresh().then(() => listTeams()).then(setTeams) }, [])
   const opponents = (teams ?? []).filter((t) => t.id !== clubId)
   const [championshipLabel, setChampionship] = useState('')
-  // La liste des équipes charge de façon asynchrone : un état initialisé une
-  // fois au montage figerait ce choix sur « aucun adversaire ».
+  // The team list loads asynchronously: a state initialised once on mount would
+  // freeze this choice on "no opposition".
   const [pickedOpponentId, setOpponentId] = useState('')
   const opponentId = pickedOpponentId || opponents[0]?.id || ''
   const [matchNumber, setNum] = useState(''); const [venue, setVenue] = useState('')
@@ -49,10 +49,10 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   }
   const canCreate = !!clubId && !!opponentId
 
-  // Cet écran n'existe que pour écrire une rencontre : les boutons qui y mènent
-  // ont disparu pour qui ne gère pas le club, et l'URL directe le renvoie au
-  // calendrier plutôt que de lui présenter un formulaire sans bouton d'envoi.
-  // La garde sur la création reste en place derrière ce renvoi.
+  // This screen exists only to write a game: the buttons that lead here have gone
+  // for anyone who does not manage the club, and the direct URL sends them back to
+  // the calendar rather than presenting a form with no submit. The gate on creation
+  // stays in place behind that redirect.
   if (!can('manage')) return <Navigate to="/calendrier" replace />
 
   if (!ready || teams === null) {
