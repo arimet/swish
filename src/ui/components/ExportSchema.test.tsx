@@ -19,7 +19,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExportSchema, deliver } from './ExportSchema'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
-import { decoder } from '../../domain/partage'
+import { decode } from '../../domain/partage'
 import { newPlay, nextStep, type Arrow, type Play } from '../../domain/plays'
 import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
@@ -82,7 +82,7 @@ describe('ExportSchema — le partage d’une combinaison', () => {
     expect(lien.search).toBe('')
     expect(lien.hash.length).toBeGreaterThan(1)
 
-    const recu = await decoder(lien.hash.slice(1))
+    const recu = await decode(lien.hash.slice(1))
     expect(recu).not.toBeNull()
     expect(recu!.name).toBe(original.name)
     expect(recu!.note).toBe(original.note)

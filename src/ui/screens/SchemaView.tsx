@@ -22,7 +22,7 @@ export function SchemaView() {
   const navigate = useNavigate()
   const [schema, setSchema] = useState<Play | null | undefined>(undefined)
   const [index, setIndex] = useState(0)
-  const [partage, setPartage] = useState(false)
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => { if (id) getPlay(id).then((s) => setSchema(s ?? null)) }, [id])
 
@@ -64,14 +64,14 @@ export function SchemaView() {
             il reste en contour, comme Modifier — qui garde son code administrateur
             et ne se rend que pour qui le possède. */}
         <div className="flex shrink-0 items-center gap-2">
-          <button onClick={() => setPartage(true)} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>{translate('sch.partager')}</button>
+          <button onClick={() => setSharing(true)} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>{translate('sch.partager')}</button>
           {can('manage') && <button onClick={modifier} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>{translate('commun.modifierMaj')}</button>}
           <Link to={`/schemas/${id}/lecteur`} className="flex h-11 items-center rounded-xl px-4 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('sch.jouer')}</Link>
         </div>
       </div>
 
       {/* Le temps affiché est celui que l'image reprendra : on partage ce qu'on regarde. */}
-      <ExportSchema schema={schema} stepIndex={index} open={partage} onClose={() => setPartage(false)} />
+      <ExportSchema schema={schema} stepIndex={index} open={sharing} onClose={() => setSharing(false)} />
 
       {schema.note && <p className="mb-4 rounded-2xl p-4 text-sm" style={{ background: C.card, border: bd, color: C.muted }}>{schema.note}</p>}
 

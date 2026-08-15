@@ -119,9 +119,9 @@ export function Calendrier() {
      séance, sans retour possible. Le message dit ce qui n'est **pas** supprimé — les
      schémas rattachés vivent dans la bibliothèque, seul le lien disparaît — parce que
      c'est la question qu'on se pose la main sur la croix. */
-  const [aSupprimer, setASupprimer] = useState<Training | null>(null)
-  const supprimer = () => { const t = aSupprimer; if (!t) return
-    guard('manage', async () => { await deleteTraining(t.id); setASupprimer(null); refreshTrainings() }) }
+  const [toDelete, setToDelete] = useState<Training | null>(null)
+  const supprimer = () => { const t = toDelete; if (!t) return
+    guard('manage', async () => { await deleteTraining(t.id); setToDelete(null); refreshTrainings() }) }
 
   // Attacher un schéma à une séance est administratif : garder d'abord, écrire
   // ensuite. Le va-et-vient lui-même est transactionnel (cf. `toggleTrainingPlay`),
@@ -244,7 +244,7 @@ export function Calendrier() {
                       ? <CarteRencontre key={it.key} m={it.match} teams={teams} gere={gere} />
                       : <TrainingCard key={it.key} t={it.training} schemas={schemas} gere={gere}
                           onToggleSchema={(playId) => basculerSchema(it.training.id, playId)}
-                          onDelete={() => setASupprimer(it.training)} />)}
+                          onDelete={() => setToDelete(it.training)} />)}
                   </div>
                 </section>
               </Fragment>
@@ -258,10 +258,10 @@ export function Calendrier() {
           limites différentes — la décision couvrait aussi bien les entraînements. */}
       {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('cal.entrainementsLocaux')}</p>}
 
-      <ConfirmDialog open={!!aSupprimer} onClose={() => setASupprimer(null)} onConfirm={supprimer}
+      <ConfirmDialog open={!!toDelete} onClose={() => setToDelete(null)} onConfirm={supprimer}
         title={translate('cal.supprimerSeanceTitre')}
-        message={aSupprimer
-          ? translate('cal.supprimerSeanceTexte', { date: fmtDate(aSupprimer.date).long || aSupprimer.date })
+        message={toDelete
+          ? translate('cal.supprimerSeanceTexte', { date: fmtDate(toDelete.date).long || toDelete.date })
           : ''}
         confirmLabel={translate('commun.supprimer')} danger />
     </div>
@@ -326,7 +326,7 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
   // citer un schéma supprimé (base antérieure à la cascade de `deletePlay`), et
   // le compter ferait mentir la ligne — la faute corrigée au projet 6 sur les
   // convocations et leurs joueurs retirés.
-  const attachés = schemas.filter((s) => t.playIds?.includes(s.id))
+  const attached = schemas.filter((s) => t.playIds?.includes(s.id))
   return (
     <div className="flex gap-3 rounded-2xl p-3" style={{ background: C.card, border: `1px solid ${ENTR_COLOR}55` }}>
       <div className="flex w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: ENTR_BG }}>
@@ -344,18 +344,18 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
         <details className="mt-2">
           <summary className="flex cursor-pointer items-center gap-2 text-[12px] font-bold" style={{ color: ENTR_COLOR }}>
             {translate('cal.schemasTravailles')}
-            {attachés.length > 0 && (
+            {attached.length > 0 && (
               <span className="rounded-md px-1.5 py-0.5 font-black" style={{ background: ENTR_BG, color: ENTR_COLOR }}>
-                {translate('cal.schemaCompte', { count: attachés.length })}
+                {translate('cal.schemaCompte', { count: attached.length })}
               </span>
             )}
           </summary>
           {!gere ? (
-            attachés.length === 0 ? (
+            attached.length === 0 ? (
               <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{translate('cal.aucunSchemaSeance')}</p>
             ) : (
               <div className="mt-2 grid gap-1.5">
-                {attachés.map((s) => (
+                {attached.map((s) => (
                   <span key={s.id} className="truncate rounded-lg px-2 py-1.5 text-[12px] font-semibold" style={{ background: C.panel }}>{s.name}</span>
                 ))}
               </div>
@@ -368,7 +368,7 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
                 const id = `schema-${t.id}-${s.id}`
                 return (
                   <label key={s.id} htmlFor={id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-semibold" style={{ background: C.panel }}>
-                    <input id={id} type="checkbox" checked={attachés.some((a) => a.id === s.id)} onChange={() => onToggleSchema(s.id)} />
+                    <input id={id} type="checkbox" checked={attached.some((a) => a.id === s.id)} onChange={() => onToggleSchema(s.id)} />
                     <span className="truncate">{s.name}</span>
                   </label>
                 )

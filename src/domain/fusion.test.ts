@@ -3,7 +3,7 @@ import { mergeMatches, furthest } from './fusion'
 import { undoLast, removeLastEvent } from './reducer'
 import type { GameEvent, Match } from './types'
 
-const panier = (id: string, wallClock: number): GameEvent =>
+const basket = (id: string, wallClock: number): GameEvent =>
   ({ id, wallClock, period: 1, gameClock: 600 - wallClock, type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' })
 
 const match = (events: GameEvent[], reste: Partial<Match> = {}): Match =>
@@ -16,8 +16,8 @@ describe('fusionnerMatchs', () => {
   it('ne perd aucun panier quand deux appareils marquent en même temps', () => {
     // La propriété fondatrice : le perdant de l'arbitrage n'a pas tort, il a noté
     // autre chose. L'écraser ferait disparaître des paniers.
-    const marqueur = match([panier('a', 10), panier('b', 20)])
-    const coach = match([panier('a', 10), panier('c', 15)])
+    const marqueur = match([basket('a', 10), basket('b', 20)])
+    const coach = match([basket('a', 10), basket('c', 15)])
 
     expect(journal(mergeMatches(marqueur, coach))).toEqual(['a', 'c', 'b'])
   })
@@ -25,15 +25,15 @@ describe('fusionnerMatchs', () => {
   it('donne le même journal quel que soit l’ordre d’arrivée', () => {
     // Sans commutativité, deux miroirs divergeraient en affichant chacun un
     // journal « correct » — et le score afficherait deux vérités.
-    const a = match([panier('a', 10), panier('b', 20)])
-    const b = match([panier('c', 15), panier('d', 5)])
+    const a = match([basket('a', 10), basket('b', 20)])
+    const b = match([basket('c', 15), basket('d', 5)])
 
     expect(journal(mergeMatches(a, b))).toEqual(journal(mergeMatches(b, a)))
   })
 
   it('départage deux évènements de même heure sur l’identifiant, pas sur l’arrivée', () => {
-    const a = match([panier('zzz', 10)])
-    const b = match([panier('aaa', 10)])
+    const a = match([basket('zzz', 10)])
+    const b = match([basket('aaa', 10)])
 
     expect(journal(mergeMatches(a, b))).toEqual(['aaa', 'zzz'])
     expect(journal(mergeMatches(b, a))).toEqual(['aaa', 'zzz'])
@@ -42,8 +42,8 @@ describe('fusionnerMatchs', () => {
   it('une annulation gagne sur la copie de l’autre appareil', () => {
     // Le coach annule le panier « b ». Le marqueur, qui l'a encore, repousse sa
     // version. Sans les ratures, l'union le ressusciterait.
-    const coach = undoLast(match([panier('a', 10), panier('b', 20)]))
-    const marqueur = match([panier('a', 10), panier('b', 20)])
+    const coach = undoLast(match([basket('a', 10), basket('b', 20)]))
+    const marqueur = match([basket('a', 10), basket('b', 20)])
 
     expect(journal(mergeMatches(marqueur, coach))).toEqual(['a'])
     expect(journal(mergeMatches(coach, marqueur))).toEqual(['a'])
@@ -52,16 +52,16 @@ describe('fusionnerMatchs', () => {
   it('un évènement annulé ne revient pas au vidage suivant', () => {
     // Deuxième tour : le marqueur repousse encore son journal périmé, contre un
     // état serveur qui porte déjà la rature.
-    const serveur = mergeMatches(match([panier('a', 10), panier('b', 20)]),
-                                    undoLast(match([panier('a', 10), panier('b', 20)])))
-    const marqueurEnRetard = match([panier('a', 10), panier('b', 20)])
+    const serveur = mergeMatches(match([basket('a', 10), basket('b', 20)]),
+                                    undoLast(match([basket('a', 10), basket('b', 20)])))
+    const marqueurEnRetard = match([basket('a', 10), basket('b', 20)])
 
     expect(journal(mergeMatches(serveur, marqueurEnRetard))).toEqual(['a'])
   })
 
   it('cumule les ratures des deux côtés', () => {
-    const coach = undoLast(match([panier('a', 10), panier('b', 20)]))
-    const marqueur = removeLastEvent(match([panier('a', 10), panier('c', 30)]), (e) => e.id === 'c')
+    const coach = undoLast(match([basket('a', 10), basket('b', 20)]))
+    const marqueur = removeLastEvent(match([basket('a', 10), basket('c', 30)]), (e) => e.id === 'c')
 
     const f = mergeMatches(coach, marqueur)
     expect(journal(f)).toEqual(['a'])
@@ -78,7 +78,7 @@ describe('fusionnerMatchs', () => {
   it('ne pose pas de champ `retires` quand il n’y a rien à rayer', () => {
     // Le document reste tel qu'il était avant ce chantier tant que personne
     // n'annule : rien n'oblige les bases existantes à gagner un champ vide.
-    expect(mergeMatches(match([panier('a', 10)]), match([panier('a', 10)])))
+    expect(mergeMatches(match([basket('a', 10)]), match([basket('a', 10)])))
       .not.toHaveProperty('retires')
   })
 })
@@ -102,19 +102,19 @@ describe('le statut ne recule jamais', () => {
 
 describe('le réducteur note ses ratures', () => {
   it('`undoLast` sort l’évènement du journal et garde son identifiant', () => {
-    const m = undoLast(match([panier('a', 10), panier('b', 20)]))
+    const m = undoLast(match([basket('a', 10), basket('b', 20)]))
     expect(journal(m)).toEqual(['a'])
     expect(m.retracted).toEqual(['b'])
   })
 
   it('`removeLastEvent` fait de même sur celui qu’il retire', () => {
-    const m = removeLastEvent(match([panier('a', 10), panier('b', 20)]), (e) => e.id === 'a')
+    const m = removeLastEvent(match([basket('a', 10), basket('b', 20)]), (e) => e.id === 'a')
     expect(journal(m)).toEqual(['b'])
     expect(m.retracted).toEqual(['a'])
   })
 
   it('n’invente pas de rature quand il n’y a rien à retirer', () => {
     expect(undoLast(match([])).retracted).toBeUndefined()
-    expect(removeLastEvent(match([panier('a', 10)]), () => false).retracted).toBeUndefined()
+    expect(removeLastEvent(match([basket('a', 10)]), () => false).retracted).toBeUndefined()
   })
 })

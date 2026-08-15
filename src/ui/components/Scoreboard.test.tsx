@@ -16,7 +16,7 @@ import { ScoreSide } from './Scoreboard'
 const mount = (score: number) =>
   render(<ScoreSide align="right" color="#fff" name="VIGNOT" score={score} lead />)
 
-const nombre = (valeur: number) => screen.getByText(String(valeur))
+const nombre = (value: number) => screen.getByText(String(value))
 
 describe('ScoreSide — l’accusé de réception du score', () => {
   it('ne bouge pas au premier rendu', () => {

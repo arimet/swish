@@ -58,8 +58,8 @@ export function Dashboard() {
   // Filtré sur le statut, pas sur l'identité de `live` : rien n'empêche deux
   // rencontres `live` à la fois (une seconde démarrée sans terminer la première),
   // et chacune doit rester exclue des échéances à venir.
-  const matchesPourEcheance = mine.filter((m) => m.status !== 'live')
-  const fixture = nextFixture(matchesPourEcheance, nosEntrainements, new Date())
+  const matchesOnDate = mine.filter((m) => m.status !== 'live')
+  const fixture = nextFixture(matchesOnDate, nosEntrainements, new Date())
   const fixtureMatchId = fixture?.kind === 'match' ? fixture.match.id : null
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export function Dashboard() {
           )}
         </div>
 
-        <MessageDuCoach clubId={clubId} />
+        <CoachMessage clubId={clubId} />
 
         {!seulementMiseEnPlace && (
           <>
@@ -165,7 +165,7 @@ export function Dashboard() {
             )}
           </>
         ) : enMiseEnPlace ? (
-          <PourCommencer roster={players.length} autresEquipes={autresEquipes} clubId={clubId} gere={gere} />
+          <GettingStarted roster={players.length} autresEquipes={autresEquipes} clubId={clubId} gere={gere} />
         ) : null}
 
         <div className={`${aJoue ? 'mt-6' : 'mt-5'} grid gap-5 lg:grid-cols-[1fr_420px] [&>*]:min-w-0`}>
@@ -232,7 +232,7 @@ const OUBLI_MS = 14 * 24 * 3600_000
  * relèvent de l'administration : leurs boutons ne s'affichent que pour elle, et
  * la garde reste derrière eux.
  */
-function MessageDuCoach({ clubId }: { clubId: string }) {
+function CoachMessage({ clubId }: { clubId: string }) {
   const translate = useT()
   const { lang } = useLang()
   const { can, guard } = useAuth()
@@ -249,16 +249,16 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
 
   // Un blanc n'est pas un message : il n'occupe pas le tableau de bord, et rien
   // ne se publie tant que le champ ne porte que des espaces.
-  const affiché = message && message.text.trim() ? message : null
+  const shown = message && message.text.trim() ? message : null
 
-  const ouvrir = () => guard('manage', () => { setTexte(affiché?.text ?? ''); setSaisieOuverte(true) })
-  const publier = () => guard('manage', async () => {
+  const ouvrir = () => guard('manage', () => { setTexte(shown?.text ?? ''); setSaisieOuverte(true) })
+  const publish = () => guard('manage', async () => {
     const written = { clubId, text: text.trim(), writtenAt: new Date().toISOString() }
     await saveMessage(written)
     setMessage(written)
     setSaisieOuverte(false)
   })
-  const effacer = () => guard('manage', async () => {
+  const erase = () => guard('manage', async () => {
     await deleteMessage(clubId)
     setMessage(null)
     setSaisieOuverte(false)
@@ -276,7 +276,7 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
         <textarea id="message-equipe" rows={3} value={text} onChange={(e) => setTexte(e.target.value)}
           placeholder={translate('bord.messagePlaceholder')}
           className="w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
-        <button onClick={publier} disabled={!text.trim()} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
+        <button onClick={publish} disabled={!text.trim()} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
           {translate('bord.publierMessage')}
         </button>
         {/* Comme les convocations, les entraînements et les schémas : même
@@ -288,7 +288,7 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
 
   // Pas de message et pas le droit d'en écrire : rien à montrer plutôt qu'un
   // bouton qui réclamerait un code.
-  if (!affiché) {
+  if (!shown) {
     if (!gere) return null
     return (
       <button onClick={ouvrir} className="mb-5 rounded-xl px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>
@@ -297,24 +297,24 @@ function MessageDuCoach({ clubId }: { clubId: string }) {
     )
   }
 
-  const oublié = Date.now() - Date.parse(affiché.writtenAt) > OUBLI_MS
+  const forgotten = Date.now() - Date.parse(shown.writtenAt) > OUBLI_MS
   return (
-    <section data-testid="team-message" className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${oublié ? C.amberBd : C.accentBd}` }}>
+    <section data-testid="team-message" className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${forgotten ? C.amberBd : C.accentBd}` }}>
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.messageEquipe')}</span>
         <span className="rounded-md px-2 py-0.5 text-[12px] font-black"
-          style={oublié ? { background: C.amberBg, color: C.amber } : { background: C.accentBg, color: C.accent }}>
-          {since(affiché.writtenAt, lang) ?? translate('commun.aLInstant')}
+          style={forgotten ? { background: C.amberBg, color: C.amber } : { background: C.accentBg, color: C.accent }}>
+          {since(shown.writtenAt, lang) ?? translate('commun.aLInstant')}
         </span>
         {gere && (
           <>
             <button onClick={ouvrir} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>{translate('commun.modifierMaj')}</button>
-            <button onClick={effacer} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.accent }}>{translate('commun.effacer')}</button>
+            <button onClick={erase} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.accent }}>{translate('commun.effacer')}</button>
           </>
         )}
       </div>
       {/* `whitespace-pre-wrap` : deux consignes sur deux lignes restent sur deux lignes. */}
-      <p className="whitespace-pre-wrap text-[15px] font-semibold">{affiché.text}</p>
+      <p className="whitespace-pre-wrap text-[15px] font-semibold">{shown.text}</p>
     </section>
   )
 }
@@ -385,20 +385,20 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
     const f = fmtDate(t.date)
     // Résolus dans la bibliothèque plutôt que pris tels quels : un identifiant qui
     // ne correspond à aucun schéma (supprimé depuis) n'ouvrirait qu'un lecteur vide.
-    const prévus = schemas.filter((s) => t.playIds?.includes(s.id))
+    const upcoming = schemas.filter((s) => t.playIds?.includes(s.id))
     return (
       <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.prochaineEcheance')}</span>
         <p className="mt-1 text-sm font-bold">{translate('bord.entrainement')}</p>
         <p className="text-sm" style={{ color: C.muted }}>{[f.long, t.time, t.place].filter(Boolean).join(' · ') || '—'}</p>
         <p className="mt-1 text-sm" style={{ color: C.muted }}>Thème : {t.theme ?? '—'}</p>
-        {prévus.length > 0 && (
+        {upcoming.length > 0 && (
           <div className="mt-3 border-t pt-3" style={{ borderColor: C.border }}>
             {/* Le chemin le plus court entre « c'est mardi » et « voilà ce qu'on
                 travaille » : chaque schéma prévu ouvre directement son lecteur. */}
             <p className="text-sm font-bold">{translate('bord.auProgramme')}</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {prévus.map((s) => (
+              {upcoming.map((s) => (
                 <Link key={s.id} to={`/schemas/${s.id}/lecteur`} className="rounded-lg px-2.5 py-1 text-[12px] font-bold"
                   style={{ background: C.accentBg, color: C.accent }}>
                   ▶ {s.name}
@@ -414,7 +414,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
   const m = fixture.match
   const f = fmtDate(m.meta.date)
   const opponent = teams[m.meta.opponentId]?.name ?? 'Adversaire'
-  const convoqués = (convocation?.playerIds ?? [])
+  const calledUp = (convocation?.playerIds ?? [])
     .map((id) => players.find((p) => p.id === id))
     .filter((p): p is Player => !!p)
   const rdv = [convocation?.meetTime, convocation?.meetPlace].filter(Boolean).join(' · ')
@@ -434,13 +434,13 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
         {/* `min-w-[180px]` : sur téléphone, plutôt que d'écraser « Personne n'est
             convoqué » sur trois lignes à côté du bouton, la ligne se casse en deux. */}
         <div className="min-w-[180px] flex-1">
-          {convoqués.length === 0 ? (
+          {calledUp.length === 0 ? (
             <p className="text-sm font-bold" style={{ color: C.amber }}>{translate('bord.personneConvoquee')}</p>
           ) : (
             <>
-              <p className="text-sm font-bold">{translate('compte.convoque', { count: convoqués.length })}</p>
+              <p className="text-sm font-bold">{translate('compte.convoque', { count: calledUp.length })}</p>
               {rdv && <p className="mt-0.5 text-sm" style={{ color: C.muted }}>Rendez-vous {rdv}</p>}
-              <p className="mt-1 text-sm" style={{ color: C.muted }}>{convoqués.map((p) => `${p.lastName} ${p.firstName}`).join(', ')}</p>
+              <p className="mt-1 text-sm" style={{ color: C.muted }}>{calledUp.map((p) => `${p.lastName} ${p.firstName}`).join(', ')}</p>
             </>
           )}
         </div>
@@ -448,8 +448,8 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
             juste à gauche, eux, restent lus par toute l'équipe. */}
         {gere && (
           <Link to={`/match/${m.id}#convocation`} className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
-            style={convoqués.length === 0 ? { background: C.brand, color: C.onBrand } : { border: bd, color: C.text }}>
-            {convoqués.length === 0 ? translate('bord.convoquerEquipe') : translate('bord.modifierConvocation')}
+            style={calledUp.length === 0 ? { background: C.brand, color: C.onBrand } : { border: bd, color: C.text }}>
+            {calledUp.length === 0 ? translate('bord.convoquerEquipe') : translate('bord.modifierConvocation')}
           </Link>
         )}
       </div>
@@ -482,7 +482,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
  * cinq joueurs ne sont pas une exigence de l'application — `StartingFiveGate` sait
  * démarrer avec moins — mais on ne met pas cinq joueurs sur le terrain avec quatre.
  */
-function PourCommencer({ roster, autresEquipes, clubId, gere }: { roster: number; autresEquipes: number; clubId: string; gere: boolean }) {
+function GettingStarted({ roster, autresEquipes, clubId, gere }: { roster: number; autresEquipes: number; clubId: string; gere: boolean }) {
   const translate = useT()
   const etapes = [
     {

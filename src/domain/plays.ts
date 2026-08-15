@@ -73,7 +73,7 @@ const POSITIONS: Position[] = [1, 2, 3, 4, 5]
 export const DEFAULT_PLAY_NAME = 'sch.nouveauNom'
 
 export function newPlay(clubId: string, court: Court, defense: boolean): Omit<Play, 'id'> {
-  const panier = BASKET[court][0]
+  const basket = BASKET[court][0]
   const offense: Marker[] = POSITIONS.map((position) => {
     const base = SETUP[position]
     return { side: 'offense', position, at: { x: base.x, y: court === 'full' ? base.y / 2 : base.y } }
@@ -82,7 +82,7 @@ export function newPlay(clubId: string, court: Court, defense: boolean): Omit<Pl
     ? [...offense, ...offense.map((a): Marker => ({
         side: 'defense',
         position: a.position,
-        at: { x: (a.at.x + panier.x) / 2, y: (a.at.y + panier.y) / 2 },
+        at: { x: (a.at.x + basket.x) / 2, y: (a.at.y + basket.y) / 2 },
       }))]
     : offense
   return {

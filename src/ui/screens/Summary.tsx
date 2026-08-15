@@ -47,7 +47,7 @@ function OpponentLine({ name, score }: { name: string; score: number }) {
     <section>
       <h3 className="font-bold mb-2">{translate('imprime.visiteurs')}</h3>
       <p className="border border-black p-2 text-sm">
-        {name} — {score} points. Score saisi globalement — l'adversaire n'a pas d'roster à détailler.
+        {name} — {score} points. Score saisi globalement — l’adversaire n’a pas d’effectif à détailler.
       </p>
     </section>
   )

@@ -98,8 +98,8 @@ function avecDefense(t: Step, court: Court): Step {
   return {
     ...t,
     markers: [...offense, ...offense.map((a): Marker => {
-      const panier = paniers.reduce((meilleur, p) => (dist(a.at, p) < dist(a.at, meilleur) ? p : meilleur))
-      return { side: 'defense', position: a.position, at: { x: (a.at.x + panier.x) / 2, y: (a.at.y + panier.y) / 2 } }
+      const basket = paniers.reduce((meilleur, p) => (dist(a.at, p) < dist(a.at, meilleur) ? p : meilleur))
+      return { side: 'defense', position: a.position, at: { x: (a.at.x + basket.x) / 2, y: (a.at.y + basket.y) / 2 } }
     })],
   }
 }
@@ -121,18 +121,18 @@ function sansDefense(t: Step): Step {
  * désormais son propre segment, et le libellé — qui reste le nom accessible du
  * bouton — cède la place à un pictogramme.
  */
-const MANIPULER: { key: Outil; libelle: string; icone: string }[] = [
+const HANDLE: { key: Outil; libelle: string; icone: string }[] = [
   // La croix fléchée du curseur de déplacement, et la gomme du carnet.
   { key: 'deplacer', libelle: 'outil.deplacer', icone: 'M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3' },
   { key: 'gomme', libelle: 'outil.gomme', icone: 'm7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21M22 21H7M5 11l9 9' },
 ]
-const TRACER: { key: Stroke; libelle: string }[] = [
+const DRAW: { key: Stroke; libelle: string }[] = [
   { key: 'cut', libelle: 'outil.course' },
   { key: 'screen', libelle: 'outil.ecran' },
   { key: 'pass', libelle: 'outil.passe' },
   { key: 'dribble', libelle: 'outil.dribble' },
 ]
-const POSER: { key: Outil; libelle: string }[] = [
+const PLACE: { key: Outil; libelle: string }[] = [
   { key: 'ball', libelle: 'outil.ballon' },
   { key: 'objet', libelle: 'outil.objets' },
 ]
@@ -193,9 +193,9 @@ export function SchemaEdit() {
    * l'action gardée. Muter avant laisserait, sur un code refusé, un dessin affiché
    * que la base n'a pas — c'est exactement la faute que le projet 7 a corrigée.
    */
-  const modifier = (f: (s: Play) => Play, empiler = true) => guard('manage', () => {
+  const modifier = (f: (s: Play) => Play, pushUndo = true) => guard('manage', () => {
     const suivant = f(vivant)
-    if (empiler) setPile((p) => {
+    if (pushUndo) setPile((p) => {
       const copie = [...p]
       const avant: Etape = { step: structuredClone(step), props: structuredClone(vivant.props) }
       copie[index] = [...(copie[index] ?? []), avant].slice(-PILE_MAX)
@@ -336,7 +336,7 @@ export function SchemaEdit() {
   // descend pas sous une largeur utilisable : un terrain complet ne fait que 26vh
   // de large, et l'en-tête s'y replierait sur deux lignes pendant que les vignettes
   // se couperaient. Le `min(100%, …)` garde la promesse de ne jamais déborder.
-  const largeurBande = `min(100%, max(320px, ${courtWidth(vivant.court, 'edition')}))`
+  const stripWidth = `min(100%, max(320px, ${courtWidth(vivant.court, 'edition')}))`
 
   // Seul écran du dépôt à respirer moins large sur téléphone (`p-4` au lieu de
   // `p-6`) : les seize pixels rendus au terrain sont seize pixels de plus pour
@@ -373,21 +373,21 @@ export function SchemaEdit() {
               le libellé du bouton au lieu de le presser. */}
           <div className="mb-3 flex select-none flex-wrap items-center gap-2">
             <Famille titre={translate('edit.manipuler')}>
-              {MANIPULER.map((o) => (
+              {HANDLE.map((o) => (
                 <OutilBouton key={o.key} libelle={translate(o.libelle)} actif={outil === o.key} onClick={() => setOutil(o.key)}>
                   <Ic d={o.icone} className="h-[19px] w-[19px]" />
                 </OutilBouton>
               ))}
             </Famille>
             <Famille titre={translate('edit.tracer')}>
-              {TRACER.map((t) => (
+              {DRAW.map((t) => (
                 <OutilBouton key={t.key} libelle={translate(t.libelle)} actif={outil === t.key} onClick={() => setOutil(t.key)}>
                   <TraitDessine stroke={t.key} />
                 </OutilBouton>
               ))}
             </Famille>
             <Famille titre={translate('edit.poser')}>
-              {POSER.map((o) => (
+              {PLACE.map((o) => (
                 <OutilBouton key={o.key} libelle={translate(o.libelle)} actif={outil === o.key} onClick={() => setOutil(o.key)}>
                   <PoserDessine quoi={o.key} actif={outil === o.key} />
                 </OutilBouton>
@@ -441,7 +441,7 @@ export function SchemaEdit() {
               du téléphone les rattrapait. Ils tiennent maintenant dans l'en-tête de
               la bande, contre le numéro du temps qu'ils manipulent — et la bande
               entière se cale sur la largeur du terrain, dont elle montre les états. */}
-          <div className="mt-4 flex select-none items-center gap-2" style={{ maxWidth: largeurBande }}>
+          <div className="mt-4 flex select-none items-center gap-2" style={{ maxWidth: stripWidth }}>
             <p className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>
               {translate('sch.temps', { n: index + 1, total: vivant.steps.length })}
             </p>
@@ -454,7 +454,7 @@ export function SchemaEdit() {
           </div>
 
           {/* La bande des temps sous le terrain : on y lit la combinaison entière. */}
-          <div className="mt-2 flex select-none items-stretch gap-2 overflow-x-auto pb-1" style={{ maxWidth: largeurBande }}>
+          <div className="mt-2 flex select-none items-stretch gap-2 overflow-x-auto pb-1" style={{ maxWidth: stripWidth }}>
             {vivant.steps.map((_, i) => (
               <button
                 key={i} aria-label={translate('edit.tempsN', { n: i + 1 })} aria-pressed={i === index} onClick={() => setTempsIndex(i)}

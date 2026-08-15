@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { encoder, decoder, LIMITE_LIEN } from './partage'
+import { encoder, decode, LIMITE_LIEN } from './partage'
 import { newPlay, nextStep, type Play } from './plays'
 
 const full = (): Play => {
@@ -11,7 +11,7 @@ const full = (): Play => {
 describe('encoder / decoder', () => {
   it('rend un schéma équivalent après un aller-retour', async () => {
     const s = full()
-    const recu = await decoder(await encoder(s))
+    const recu = await decode(await encoder(s))
     expect(recu).not.toBeNull()
     expect(recu!.name).toBe(s.name)
     expect(recu!.note).toBe(s.note)
@@ -22,7 +22,7 @@ describe('encoder / decoder', () => {
   })
 
   it('retire ce qui n’a pas de sens ailleurs', async () => {
-    const recu = (await decoder(await encoder(full())))!
+    const recu = (await decode(await encoder(full())))!
     expect(recu.id).toBe('')
     expect(recu.clubId).toBe('')
     expect(recu.updatedAt).toBeUndefined()
@@ -40,16 +40,16 @@ describe('encoder / decoder', () => {
   })
 
   it('rend null sur un code vide, tronqué, ou qui n’est pas un schéma', async () => {
-    expect(await decoder('')).toBeNull()
-    expect(await decoder('pas-du-tout-un-code')).toBeNull()
+    expect(await decode('')).toBeNull()
+    expect(await decode('pas-du-tout-un-code')).toBeNull()
     const code = await encoder(full())
-    expect(await decoder(code.slice(0, Math.floor(code.length / 2)))).toBeNull()
+    expect(await decode(code.slice(0, Math.floor(code.length / 2)))).toBeNull()
   })
 
   it('rend null quand le contenu décompressé n’a pas la forme d’un schéma', async () => {
     // Un JSON valide mais qui n'est pas un schéma : la validation porte sur la
     // forme, pas seulement sur la décompression.
-    expect(await decoder(await coder({ bonjour: 'monde' }))).toBeNull()
+    expect(await decode(await coder({ bonjour: 'monde' }))).toBeNull()
   })
 
   it('refuse une charge à moitié valide, jusqu’au fond des tableaux', async () => {
@@ -64,21 +64,21 @@ describe('encoder / decoder', () => {
     }
 
     // Un pion sans position : `PlayBoard` lirait `at.x` sur `undefined`.
-    expect(await decoder(await abime((t) => { delete t.steps[0].markers[0].at }))).toBeNull()
+    expect(await decode(await abime((t) => { delete t.steps[0].markers[0].at }))).toBeNull()
     // Une position qui n'est pas un nombre fini : `NaN` traverse `typeof`.
-    expect(await decoder(await abime((t) => { t.steps[0].markers[0].at.x = null }))).toBeNull()
+    expect(await decode(await abime((t) => { t.steps[0].markers[0].at.x = null }))).toBeNull()
     // Un objet posé sans position.
-    expect(await decoder(await abime((t) => { delete t.props[0].at }))).toBeNull()
+    expect(await decode(await abime((t) => { delete t.props[0].at }))).toBeNull()
     // Un ballon qui n'est ni porté ni posé.
-    expect(await decoder(await abime((t) => { t.steps[0].ball = {} }))).toBeNull()
+    expect(await decode(await abime((t) => { t.steps[0].ball = {} }))).toBeNull()
     // Une flèche sans tracé exploitable.
-    expect(await decoder(await abime((t) => { t.steps[0].arrows[0].points = [{ x: 0.1, y: 0.1 }] }))).toBeNull()
+    expect(await decode(await abime((t) => { t.steps[0].arrows[0].points = [{ x: 0.1, y: 0.1 }] }))).toBeNull()
     // Un poste hors de l'effectif.
-    expect(await decoder(await abime((t) => { t.steps[0].markers[0].position = 9 }))).toBeNull()
+    expect(await decode(await abime((t) => { t.steps[0].markers[0].position = 9 }))).toBeNull()
 
     // Le témoin : la même charge, intacte, passe. Sans lui, un `estTransport`
     // qui refuserait tout ferait passer ce test pour la mauvaise raison.
-    expect(await decoder(await coder(bon))).not.toBeNull()
+    expect(await decode(await coder(bon))).not.toBeNull()
   })
 })
 
@@ -99,7 +99,7 @@ async function coder(v: unknown): Promise<string> {
 
 /** Ce que `encoder` met réellement dans le lien, relu par `decoder`. */
 async function transportDe(s: Play): Promise<Record<string, unknown>> {
-  const recu = (await decoder(await encoder(s)))!
+  const recu = (await decode(await encoder(s)))!
   const { id: _id, clubId: _clubId, ...reste } = recu
   return reste as unknown as Record<string, unknown>
 }

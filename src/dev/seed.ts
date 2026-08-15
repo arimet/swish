@@ -177,11 +177,11 @@ interface Repartiteur {
 function repartiteur(poids: (id: string) => number): Repartiteur {
   const servi = new Map<string, number>()
   const count = (id: string) => servi.get(id) ?? 0
-  const valeur = (id: string) => poids(id) / (count(id) + 1)
+  const value = (id: string) => poids(id) / (count(id) + 1)
   return {
     count,
     prochain(candidats) {
-      const gagnant = candidats.reduce((meilleur, id) => (valeur(id) > valeur(meilleur) ? id : meilleur))
+      const gagnant = candidats.reduce((meilleur, id) => (value(id) > value(meilleur) ? id : meilleur))
       servi.set(gagnant, count(gagnant) + 1)
       return gagnant
     },
@@ -189,9 +189,9 @@ function repartiteur(poids: (id: string) => number): Repartiteur {
 }
 
 /** Les six répartiteurs d'une rencontre. */
-type Repartition = Record<'panier' | StatKind | 'faute', Repartiteur>
+type Repartition = Record<'basket' | StatKind | 'faute', Repartiteur>
 const nouvelleRepartition = (): Repartition => ({
-  panier: repartiteur(weightFor),
+  basket: repartiteur(weightFor),
   assist: repartiteur((id) => POIDS_STAT.assist[roleDe(id)]),
   reb_off: repartiteur((id) => POIDS_STAT.reb_off[roleDe(id)]),
   reb_def: repartiteur((id) => POIDS_STAT.reb_def[roleDe(id)]),
@@ -230,7 +230,7 @@ function baskets(points: number, clock: () => number, period: Period, onCourtIds
     // des entiers le permettent.
     const troisPoints = Math.floor(((k + 1) * n3) / tirs) > Math.floor((k * n3) / tirs)
     const shot = troisPoints ? SPOTS_3[i3++ % SPOTS_3.length] : SPOTS_2[i2++ % SPOTS_2.length]
-    const playerId = r.panier.prochain(onCourtIds)
+    const playerId = r.basket.prochain(onCourtIds)
     out.push(ev({ type: 'SCORE', team: 'A', playerId, kind: kindAt(shot.x, shot.y), shot, period, gameClock: clock() }))
 
     // Une passe décisive sur un panier sur deux, créditée à un coéquipier **présent
@@ -248,7 +248,7 @@ function baskets(points: number, clock: () => number, period: Period, onCourtIds
   }
   // Le point impair : un lancer franc, pour le joueur que le répartiteur sert
   // ensuite — c'est celui qui attaque le plus le cercle qu'on envoie sur la ligne.
-  if (nLf) out.push(ev({ type: 'SCORE', team: 'A', playerId: r.panier.prochain(onCourtIds), kind: 'lf' as ScoreKind, period, gameClock: clock() }))
+  if (nLf) out.push(ev({ type: 'SCORE', team: 'A', playerId: r.basket.prochain(onCourtIds), kind: 'lf' as ScoreKind, period, gameClock: clock() }))
   return out
 }
 
@@ -679,8 +679,8 @@ function buildMessage(): TeamMessage {
  * Le hachage est un djb2 en base 36 : on ne cherche pas à résister à une collision
  * malveillante, seulement à repérer qu'une constante a bougé.
  */
-export function empreinte(valeur: unknown): string {
-  const text = JSON.stringify(valeur)
+export function empreinte(value: unknown): string {
+  const text = JSON.stringify(value)
   let h = 5381
   for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0
   return h.toString(36)

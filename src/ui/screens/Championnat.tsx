@@ -71,7 +71,7 @@ export function Championnat() {
    * ici. */
   const [matches, setMatches] = useState<Match[] | null>(null)
   const [results, setResults] = useState<ReportedResult[] | null>(null)
-  const [erreur, setErreur] = useState('')
+  const [error, setError] = useState('')
 
   const teamsById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams])
 
@@ -99,8 +99,8 @@ export function Championnat() {
     return (results ?? [])[0]?.championshipLabel ?? ''
   }, [matches, clubId, results])
 
-  const rafraichir = () => Promise.all([listMatches(), listResults()]).then(([m, r]) => { setMatches(m); setResults(r) })
-  useEffect(() => { rafraichir() }, [])
+  const refresh = () => Promise.all([listMatches(), listResults()]).then(([m, r]) => { setMatches(m); setResults(r) })
+  useEffect(() => { refresh() }, [])
 
   const groups = useMemo(() => standings(matches ?? [], results ?? [], teamsById), [matches, results, teamsById])
 
@@ -108,7 +108,7 @@ export function Championnat() {
   // est ce qu'on vient lire, la saisie d'un résultat extérieur est l'exception.
   const [saisieOuverte, setSaisieOuverte] = useState(false)
   const [champ, setChamp] = useState('')
-  const [champTouché, setChampTouché] = useState(false)
+  const [fieldTouched, setFieldTouched] = useState(false)
   const [homeId, setHomeId] = useState('')
   const [awayId, setAwayId] = useState('')
   const [homeScore, setHomeScore] = useState('')
@@ -120,7 +120,7 @@ export function Championnat() {
   // nécessaire ici : depuis que la valeur par défaut peut elle-même être non vide (repli
   // sur le championnat du premier résultat saisi), se fier au champ vide comme indice
   // « pas encore touché » réinstallerait le défaut au milieu d'un effacement volontaire.
-  useEffect(() => { if (!champTouché) setChamp(notreChamp) }, [notreChamp, champTouché])
+  useEffect(() => { if (!fieldTouched) setChamp(notreChamp) }, [notreChamp, fieldTouched])
   useEffect(() => {
     if (!homeId && teams[0]) setHomeId(teams[0].id)
     if (!awayId && teams[1]) setAwayId(teams[1].id)
@@ -128,12 +128,12 @@ export function Championnat() {
 
   // Un message d'erreur qui survit à la correction du formulaire accuserait à tort une
   // saisie qui ne pose plus problème : il s'efface dès que l'un des champs change.
-  const changeChamp = (v: string) => { setErreur(''); setChamp(v); setChampTouché(true) }
-  const changeHomeId = (v: string) => { setErreur(''); setHomeId(v) }
-  const changeAwayId = (v: string) => { setErreur(''); setAwayId(v) }
-  const changeHomeScore = (v: string) => { setErreur(''); setHomeScore(v) }
-  const changeAwayScore = (v: string) => { setErreur(''); setAwayScore(v) }
-  const changeDate = (v: string) => { setErreur(''); setDate(v) }
+  const changeChamp = (v: string) => { setError(''); setChamp(v); setFieldTouched(true) }
+  const changeHomeId = (v: string) => { setError(''); setHomeId(v) }
+  const changeAwayId = (v: string) => { setError(''); setAwayId(v) }
+  const changeHomeScore = (v: string) => { setError(''); setHomeScore(v) }
+  const changeAwayScore = (v: string) => { setError(''); setAwayScore(v) }
+  const changeDate = (v: string) => { setError(''); setDate(v) }
 
   // Signal informatif, calculé en direct pendant la saisie : la confrontation en cours
   // de saisie correspond déjà à une de nos rencontres terminées, le classement l'ignorera.
@@ -147,13 +147,13 @@ export function Championnat() {
   // La date entre dans la clé de confrontation (aller/retour) : sans elle, une même
   // rencontre saisie deux fois — une fois datée, une fois vide — produirait deux clés
   // distinctes et compterait double au classement. On l'exige donc dès la saisie.
-  const peutAjouter = !!homeId && !!awayId && homeId !== awayId && scoresValides && !!date
+  const canAdd = !!homeId && !!awayId && homeId !== awayId && scoresValides && !!date
 
   const ajouter = () => {
-    if (!peutAjouter) return
+    if (!canAdd) return
     // Au basket, il y a prolongation : un match nul n'existe pas.
     if (Number(homeScore) === Number(awayScore)) {
-      setErreur(translate('champ.nulImpossible'))
+      setError(translate('champ.nulImpossible'))
       return
     }
     const champLbl = champ.trim() || FRIENDLY
@@ -161,31 +161,31 @@ export function Championnat() {
     // Deux saisies de la même confrontation — même dans l'ordre inverse — compteraient
     // deux fois au classement : rien côté domaine ne s'en protège, c'est ici qu'il faut l'empêcher.
     if ((results ?? []).some((r) => fixtureKey(r.championshipLabel, r.homeId, r.awayId, r.date) === clé)) {
-      setErreur(translate('champ.dejaSaisi'))
+      setError(translate('champ.dejaSaisi'))
       return
     }
-    setErreur('')
+    setError('')
     guard('manage', async () => {
       await saveResult({
         id: newId(), championshipLabel: champLbl, date,
         homeId, awayId, homeScore: Number(homeScore), awayScore: Number(awayScore),
       })
       setHomeScore(''); setAwayScore('')
-      rafraichir()
+      refresh()
     })
   }
 
-  const majScore = (r: ReportedResult, patch: Partial<ReportedResult>) => guard('manage', async () => {
+  const setScore = (r: ReportedResult, patch: Partial<ReportedResult>) => guard('manage', async () => {
     await saveResult({ ...r, ...patch })
-    rafraichir()
+    refresh()
   })
   // Corriger un score est administratif : sans le droit, le résultat s'affiche en
   // toutes lettres plutôt que dans un champ. Un champ ouvert à la frappe puis
   // refusé à l'envoi laisserait à l'écran une valeur que la base n'a pas (les
   // champs ne sont pas contrôlés, React ne réinitialise pas un `defaultValue`),
   // sous un classement qui continue de compter l'ancienne.
-  const peutCorriger = can('manage')
-  const supprimer = (id: string) => guard('manage', async () => { await deleteResult(id); rafraichir() })
+  const canCorrect = can('manage')
+  const supprimer = (id: string) => guard('manage', async () => { await deleteResult(id); refresh() })
 
   return (
     <div className="p-6">
@@ -251,7 +251,7 @@ export function Championnat() {
           rems de marge autour d'un seul bouton n'élevait rien, elle occupait
           juste le tiers de l'écran resté libre sous le classement. Elle
           réapparaît dès que le formulaire s'ouvre, où elle groupe six champs. */}
-      {peutCorriger && (
+      {canCorrect && (
       <section className={saisieOuverte ? 'mt-8 rounded-2xl p-5' : 'mt-6'} style={saisieOuverte ? { background: C.card, border: bd } : undefined}>
         {!saisieOuverte ? (
           <button onClick={() => guard('manage', () => setSaisieOuverte(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
@@ -279,11 +279,11 @@ export function Championnat() {
         )}
         {/* Un refus se dit en danger, pas en couleur de marque : sur un fond
             d'accent, le message ressemblait à une mise en avant. */}
-        {erreur && (
-          <p className="mt-3 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: C.dangerBg, color: C.danger }}>{erreur}</p>
+        {error && (
+          <p className="mt-3 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: C.dangerBg, color: C.danger }}>{error}</p>
         )}
 
-        <button onClick={ajouter} disabled={!peutAjouter} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
+        <button onClick={ajouter} disabled={!canAdd} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
           {translate('champ.ajouterResultat')}
         </button>
         </>
@@ -335,15 +335,15 @@ export function Championnat() {
                   <LigneEquipe
                     id={r.homeId} name={teamsById[r.homeId]?.name ?? '—'} score={r.homeScore}
                     gagne={r.homeScore > r.awayScore} champId={`score-home-${r.id}`}
-                    modifiable={peutCorriger} onScore={(n) => majScore(r, { homeScore: n })}
+                    modifiable={canCorrect} onScore={(n) => setScore(r, { homeScore: n })}
                   />
                   <LigneEquipe
                     id={r.awayId} name={teamsById[r.awayId]?.name ?? '—'} score={r.awayScore}
                     gagne={r.awayScore > r.homeScore} champId={`score-away-${r.id}`}
-                    modifiable={peutCorriger} onScore={(n) => majScore(r, { awayScore: n })}
+                    modifiable={canCorrect} onScore={(n) => setScore(r, { awayScore: n })}
                   />
                 </div>
-                {peutCorriger && (
+                {canCorrect && (
                   <button onClick={() => supprimer(r.id)} aria-label={translate('champ.supprimerResultat')}
                     className="shrink-0 rounded-lg p-1.5" style={{ color: C.danger }}>
                     <X className="h-4 w-4" strokeWidth={2.5} />
