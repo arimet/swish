@@ -7,37 +7,35 @@ import { LangProvider } from './i18n'
 import { db } from './persistence/db'
 import { remoteEnabled, hydrate, flush } from './persistence/remote'
 
-// Base UI ne démonte ses popups (Dialog, Select…) qu'après avoir attendu un
-// requestAnimationFrame puis la fin des animations CSS de sortie. Dans un onglet
-// qui ne peint pas (onglet d'arrière-plan, panneau d'aperçu, webview bridée),
-// ni la frame ni la timeline d'animation n'avancent : la boîte de dialogue reste
-// montée indéfiniment avec son voile modal, et l'écran devient inutilisable.
-// Ce drapeau public de Base UI court-circuite cette attente et démonte
-// immédiatement. On y perd l'animation de sortie, on y gagne des dialogues
-// qui se ferment toujours.
-// Pas de test : jsdom n'implémente ni `Element.getAnimations` ni les animations
-// CSS, donc Base UI y prend d'emblée son court-circuit et démonte toujours. Le
-// défaut est structurellement invisible en test ; il ne se voit qu'au navigateur,
-// dans un onglet qui ne peint pas. Un test devrait simuler à la main et
-// `getAnimations` et un rAF qui ne se déclenche jamais : il passerait avec ou
-// sans cette ligne, donc il ne prouverait rien.
-// (le transtypage évite de dépendre de l'augmentation globale du paquet, que
-// notre tsconfig ne charge pas)
+// Base UI only unmounts its popups (Dialog, Select…) after waiting for a
+// requestAnimationFrame and then for the CSS exit animations to finish. In a tab that
+// does not paint (a background tab, a preview pane, a throttled webview), neither the
+// frame nor the animation timeline advances: the dialog stays mounted indefinitely
+// with its modal veil, and the screen becomes unusable.
+// This public Base UI flag short-circuits that wait and unmounts immediately. We lose
+// the exit animation, we gain dialogs that always close.
+// No test: jsdom implements neither `Element.getAnimations` nor CSS animations, so
+// Base UI takes its short-circuit there from the start and always unmounts. The defect
+// is structurally invisible under test; it only shows in a browser, in a tab that does
+// not paint. A test would have to fake both `getAnimations` and a rAF that never
+// fires: it would pass with or without this line, so it would prove nothing.
+// (the cast avoids depending on the package's global augmentation, which our tsconfig
+// does not load)
 ;(globalThis as { BASE_UI_ANIMATIONS_DISABLED?: boolean }).BASE_UI_ANIMATIONS_DISABLED = true
 
 async function bootstrap() {
-  // Base partagée : on hydrate d'abord le cache local depuis le serveur.
+  // Shared database: hydrate the local mirror from the server first.
   if (remoteEnabled()) await hydrate()
 
-  // Données de démo : en dev, ou en prod si VITE_SEED=1. En mode partagé, on ne
-  // seed que si le serveur est vide (sinon on écraserait les données partagées).
+  // Demo data: in dev, or in prod if VITE_SEED=1. In shared mode we only seed when the
+  // server is empty (otherwise we would overwrite the shared data).
   const empty = (await db.teams.count()) === 0
   if ((import.meta.env.DEV || import.meta.env.VITE_SEED === '1') && (!remoteEnabled() || empty)) {
     const { seedDevData } = await import('./dev/seed')
     await seedDevData()
   }
 
-  if (remoteEnabled()) flush(0) // pousse le seed / la file en attente
+  if (remoteEnabled()) flush(0) // push the seed / whatever is queued
 
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
