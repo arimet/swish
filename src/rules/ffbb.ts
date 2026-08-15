@@ -5,11 +5,11 @@ export const PERIOD_COUNT = 4
 export const TEAM_FOUL_BONUS = 5
 export const PLAYER_FOUL_OUT = 5
 
-/** Total de temps-morts autorisés cumulés jusqu'à la fin de `period`. */
+/** Total timeouts allowed, cumulative to the end of `period`. */
 export function timeoutsAllowed(period: Period): number {
-  let total = 2 // 1ère mi-temps (périodes 1-2)
-  if (period >= 3) total += 3 // 2ème mi-temps (périodes 3-4)
-  if (period >= 5) total += period - 4 // +1 par prolongation
+  let total = 2 // first half (periods 1-2)
+  if (period >= 3) total += 3 // second half (periods 3-4)
+  if (period >= 5) total += period - 4 // +1 per overtime
   return total
 }
 
@@ -31,8 +31,8 @@ export function liveState(match: Match): LiveState {
   const score = { a: 0, b: 0 }
   const teamFouls = { A: 0, B: 0 }
   const timeoutsUsed = { A: 0, B: 0 }
-  // Cinq sur le terrain, dans l'ordre d'affichage : un remplaçant prend la place
-  // exacte du joueur sortant (on remplace en place, sans réordonner).
+  // Five on the court, in display order: a substitute takes the exact slot of the
+  // player going off (we replace in place, without reordering).
   const onCourt: { A: string[]; B: string[] } = { A: [], B: [] }
   const playerFouls = new Map<string, number>()
 
@@ -66,7 +66,7 @@ export function liveState(match: Match): LiveState {
     }
   }
 
-  // Seul notre club (côté A) a un effectif : l'adversaire ne peut pas être « sorti sur fautes ».
+  // Only our club (side A) has a roster: the opposition cannot foul out.
   const fouledOutOf = (side: TeamSide) =>
     (side === 'A' ? match.roster : []).filter((id) => (playerFouls.get(id) ?? 0) >= PLAYER_FOUL_OUT)
   const allowed = timeoutsAllowed(period)
@@ -77,7 +77,7 @@ export function liveState(match: Match): LiveState {
     bonus: { A: teamFouls.A >= TEAM_FOUL_BONUS, B: teamFouls.B >= TEAM_FOUL_BONUS },
     timeoutsUsed,
     timeoutsRemaining: { A: Math.max(0, allowed - timeoutsUsed.A), B: Math.max(0, allowed - timeoutsUsed.B) },
-    onCourt: { A: [...onCourt.A], B: [...onCourt.B] },  // ordre d'affichage préservé
+    onCourt: { A: [...onCourt.A], B: [...onCourt.B] },  // display order preserved
     fouledOut: { A: fouledOutOf('A'), B: fouledOutOf('B') },
   }
 }

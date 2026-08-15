@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { EMPREINTE_DONNEES, empreinte, seedDevData } from './seed'
+import { DATA_FINGERPRINT, fingerprint, seedDevData } from './seed'
 import { db } from '../persistence/db'
 import { getConvocation, listMatches, listPlayers, listPlays, listResults, listTeams, listTrainings, saveConvocation, savePlayer, saveTraining } from '../persistence/repositories'
 import { playingTimes } from '../domain/playingtime'
@@ -147,10 +147,10 @@ describe('données de démonstration', () => {
       // servent à rien : le meilleur passeur est un meneur, le meilleur rebondeur un
       // intérieur. C'est ce qui manquait quand la statistique suivait l'indice du
       // joueur dans le cinq.
-      const meilleur = (lire: (s: (typeof stats)[number]) => number) =>
+      const best = (lire: (s: (typeof stats)[number]) => number) =>
         numero([...stats].sort((a, b) => lire(b) - lire(a))[0].playerId)
-      expect([2, 5]).toContain(meilleur((s) => s.assists))
-      expect([15, 17, 20, 8]).toContain(meilleur((s) => s.defRebounds))
+      expect([2, 5]).toContain(best((s) => s.assists))
+      expect([15, 17, 20, 8]).toContain(best((s) => s.defRebounds))
     }
 
     // Le total composé retombe **exactement** sur les scores annoncés. Le seed
@@ -286,21 +286,21 @@ describe('la garde de version du seed', () => {
     const base = [[[2, 'CAUTENET', 'Louis']], { 11: 6 }]
     const autreJoueur = [[[2, 'CAUTENET', 'Louise']], { 11: 6 }]
     const autrePoids = [[[2, 'CAUTENET', 'Louis']], { 11: 7 }]
-    expect(empreinte(base)).not.toBe(empreinte(autreJoueur))
-    expect(empreinte(base)).not.toBe(empreinte(autrePoids))
-    expect(empreinte(base)).toBe(empreinte(base))   // et stable à données égales
+    expect(fingerprint(base)).not.toBe(fingerprint(autreJoueur))
+    expect(fingerprint(base)).not.toBe(fingerprint(autrePoids))
+    expect(fingerprint(base)).toBe(fingerprint(base))   // et stable à données égales
   })
 
   it('l’empreinte ne dépend pas de la date du jour', () => {
     // Les dates du seed sont ancrées sur aujourd'hui. Les inclure ferait tout
     // régénérer chaque nuit, effaçant ce qu'un développeur a saisi la veille.
-    expect(EMPREINTE_DONNEES).toBe(EMPREINTE_DONNEES)
-    expect(EMPREINTE_DONNEES).not.toMatch(new RegExp(String(new Date().getFullYear())))
+    expect(DATA_FINGERPRINT).toBe(DATA_FINGERPRINT)
+    expect(DATA_FINGERPRINT).not.toMatch(new RegExp(String(new Date().getFullYear())))
   })
 
   it('un re-seed suit la version, et ne rejoue rien à version égale', async () => {
     const version = localStorage.getItem('seed-version')
-    expect(version).toContain(EMPREINTE_DONNEES)
+    expect(version).toContain(DATA_FINGERPRINT)
     // À version identique, un second appel ne touche pas la base : on n'écrase pas
     // ce qu'un développeur vient de saisir à la main.
     await savePlayer({ id: 'ajout-main', teamId: (await listMatches())[0].meta.clubId, number: 99, lastName: 'TEST', firstName: 'Manuel' })

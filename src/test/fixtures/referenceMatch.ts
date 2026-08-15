@@ -1,7 +1,7 @@
 import { newId } from '../../domain/ids'
 import type { GameEvent, Match, ScoreKind } from '../../domain/types'
 
-// Reproduit la ligne MILAS (n°20) : 1×3pts, 5×2int, 2×2ext, 4×LF → 21 pts, 8 tirs.
+// Reproduces the MILAS line (no. 20): 1×3pt, 5×2in, 2×2out, 4×FT → 21 pts, 8 shots.
 const scores: ScoreKind[] = ['3', '2int', '2int', '2int', '2int', '2int', '2ext', '2ext', 'lf', 'lf', 'lf', 'lf']
 
 export function referenceMatch(): Match {

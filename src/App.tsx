@@ -15,15 +15,14 @@ import { ClubProvider, useClub } from './app/club'
 import { Welcome } from './ui/screens/Welcome'
 import { useT } from './i18n'
 
-/* Les écrans chargés à la demande. Le paquet était d'un seul morceau : ouvrir le
- * tableau de bord téléchargeait aussi l'éditeur de schémas, le lecteur de
- * combinaisons, la table de marque et tout le chemin d'export — 657 ko pour
- * afficher un score. Ces neuf écrans partagent deux traits : ils sont lourds, et
- * aucun n'est la première chose qu'on ouvre.
+/* The screens loaded on demand. The bundle used to be one piece: opening the
+ * dashboard also downloaded the play editor, the play viewer, the scorer's table and
+ * the whole export path — 657 kB to display a score. These nine screens share two
+ * traits: they are heavy, and none of them is the first thing anyone opens.
  *
- * Le reste — tableau de bord, calendrier, championnat, équipes — arrive dans le
- * paquet initial : ce sont les quatre entrées du menu, les découper ne ferait
- * qu'ajouter un aller-retour au geste le plus courant. */
+ * The rest — dashboard, calendar, standings, teams — arrives in the initial bundle:
+ * they are the menu's four entries, and splitting them would only add a round trip to
+ * the most common gesture. */
 const SchemaEdit = lazy(() => import('./ui/screens/SchemaEdit').then((m) => ({ default: m.SchemaEdit })))
 const SchemaList = lazy(() => import('./ui/screens/SchemaList').then((m) => ({ default: m.SchemaList })))
 const SchemaView = lazy(() => import('./ui/screens/SchemaView').then((m) => ({ default: m.SchemaView })))
@@ -63,19 +62,19 @@ function SpectatorRoute() {
   return <SpectatorMatch matchId={id} />
 }
 
-/** Tant qu'aucun club valide n'est réglé, l'application est l'écran de bienvenue.
- *  Le suivi spectateur reste accessible sans club : il se partage à des gens qui
- *  n'ont pas l'application réglée. */
-/** Le repli d'attente, en un seul endroit : la garde club et le découpage des
- *  routes l'utilisent tous les deux. */
-function Chargement() {
+/** The waiting fallback, in one place: the club gate and the route splitting both
+ *  use it. */
+function Loading() {
   const translate = useT()
   return <div className="grid min-h-dvh place-items-center text-muted-foreground" role="status" aria-live="polite">{translate('commun.chargement')}</div>
 }
 
+/** As long as no valid club is set, the application is the welcome screen. The
+ *  spectator view stays reachable without a club: it is shared with people who have
+ *  not set the application up. */
 function ClubGate() {
   const { clubId, ready } = useClub()
-  if (!ready) return <Chargement />
+  if (!ready) return <Loading />
   if (!clubId) return <Welcome />
   return <OliveShell />
 }
@@ -85,31 +84,31 @@ export default function App() {
     <BrowserRouter>
       <ClubProvider>
         <AuthProvider>
-          {/* Un seul `Suspense`, autour de toutes les routes : le repli est le
-              même que celui de `ClubGate`, si bien qu'attendre un écran découpé
-              et attendre la résolution du club se ressemblent — le pire repli est
-              celui qui change d'aspect selon ce qu'on attend. */}
-          <Suspense fallback={<Chargement />}>
+          {/* One `Suspense`, around every route: the fallback is the same as
+              `ClubGate`'s, so that waiting for a split screen and waiting for the club
+              to resolve look alike — the worst fallback is the one that changes
+              appearance depending on what you are waiting for. */}
+          <Suspense fallback={<Loading />}>
           <Routes>
-            {/* Suivi spectateur : plein écran, hors du shell (projetable) */}
+            {/* The spectator view: full screen, outside the shell (projectable) */}
             <Route path="/match/:id/watch" element={<SpectatorRoute />} />
-            {/* La table de marque : plein écran elle aussi. Dans la coquille, le
-                titre, le menu d'accès et la barre du bas prenaient une centaine
-                de pixels que l'effectif n'avait pas — on ne voyait que quatre des
-                cinq joueurs sur le terrain sans faire défiler, et un pouce égaré
-                sur « Calendrier » quittait la saisie en cours. */}
+            {/* The scorer's table: full screen too. Inside the shell, the title, the
+                access menu and the bottom bar took a hundred-odd pixels the roster did
+                not have — only four of the five players on the court were visible
+                without scrolling, and a thumb straying onto "Calendar" walked out of
+                the recording in progress. */}
             <Route path="/match/:id/live" element={<LiveRoute />} />
-            {/* Le lecteur du temps-mort : plein écran, hors du shell et hors de
-                la garde club — un joueur ouvre la combinaison chez lui. */}
+            {/* The time-out viewer: full screen, outside the shell and outside the club
+                gate — a player opens the play at home. */}
             <Route path="/schemas/:id/lecteur" element={<SchemaPlayer />} />
-            {/* Une combinaison reçue par lien : hors du shell et hors de la garde
-                club, puisque tout le schéma est dans le fragment de l'URL — celui
-                qui reçoit le lien n'a peut-être jamais ouvert l'application. */}
+            {/* A play received by link: outside the shell and outside the club gate,
+                since the whole play is in the URL's fragment — whoever receives the
+                link may never have opened the application. */}
             <Route path="/schemas/recu" element={<SchemaRecu />} />
-            {/* Création d'équipe : hors garde, c'est l'issue proposée par l'écran de
-                bienvenue quand aucune équipe n'existe encore pour choisir un club. */}
+            {/* Team creation: outside the gate, it is the way out the welcome screen
+                offers when no team exists yet to choose a club from. */}
             <Route path="/teams/new" element={<TeamCreate />} />
-            {/* Toute l'app dans le shell Olive, derrière le choix du club */}
+            {/* The whole app inside the Olive shell, behind the club choice */}
             <Route element={<ClubGate />}>
               <Route index element={<Dashboard />} />
               <Route path="/calendrier" element={<Calendrier />} />
@@ -117,13 +116,13 @@ export default function App() {
               <Route path="/teams" element={<Padded><TeamsList /></Padded>} />
               <Route path="/teams/:id" element={<TeamDetail />} />
               <Route path="/players/:id" element={<PlayerDetail />} />
-              {/* Le tableau tactique : la bibliothèque, la consultation (libre),
-                  puis l'éditeur — la route la plus précise d'abord. */}
+              {/* The playbook: the library, the reading screen (ungated), then the
+                  editor — the most specific route first. */}
               <Route path="/schemas" element={<SchemaList />} />
               <Route path="/schemas/:id/edit" element={<SchemaEdit />} />
               <Route path="/schemas/:id" element={<SchemaView />} />
-              {/* Le ménage des données : dans la coquille, chaque opération gardée
-                  par le code administrateur. */}
+              {/* Data cleanup: inside the shell, every operation guarded by the
+                  administrator code. */}
               <Route path="/admin" element={<Admin />} />
               <Route path="/match/new" element={<Padded><MatchSetupRoute /></Padded>} />
               <Route path="/match/:id/summary" element={<SummaryRoute />} />
