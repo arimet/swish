@@ -56,6 +56,28 @@ export type Etat = 'inactif' | 'ok' | 'jeton' | 'reseau'
 let dernierEtat: Etat = 'inactif'
 export const etatSync = (): Etat => dernierEtat
 
+/** Ce qu'un écran a besoin de savoir : où en est l'envoi, et combien d'actions
+ *  attendent encore. Le compte est la mesure honnête — il grossit si ça coince. */
+export interface Sante { etat: Etat; enAttente: number }
+
+/* On prévient plutôt que de faire interroger. Un sondage sur la table Dexie
+   marcherait, mais `doFlush` sait exactement quand l'état change : le faire dire
+   coûte moins et ne fabrique pas de latence entre l'échec et son affichage. */
+const ecoutes = new Set<(s: Sante) => void>()
+
+/** S'abonne à la santé de la synchronisation. Renvoie de quoi se désabonner. */
+export function surSante(f: (s: Sante) => void): () => void {
+  ecoutes.add(f)
+  void annoncer()
+  return () => { ecoutes.delete(f) }
+}
+
+async function annoncer(): Promise<void> {
+  if (!ecoutes.size) return
+  const enAttente = await db.outbox.count()
+  for (const f of ecoutes) f({ etat: dernierEtat, enAttente })
+}
+
 async function lireEtat(): Promise<EtatDistant | null> {
   if (!BASE) return null
   const since = Number(localStorage.getItem(REV_KEY)) || 0
@@ -133,6 +155,7 @@ async function enqueue(op: Omit<OutboxItem, 'ts' | 'seq' | 'modifiedAt'>): Promi
   // plus récemment reçue : une file bloquée deux heures par un gymnase sans
   // réseau n'écrase pas une correction faite entre-temps sur un autre appareil.
   await db.outbox.add({ ...op, ts: Date.now(), modifiedAt: new Date().toISOString() })
+  void annoncer()
   flush()
 }
 export const enqueuePut = (kind: Kind, id: string, doc: unknown) => enqueue({ kind, op: 'put', id, doc })
@@ -191,6 +214,7 @@ async function doFlush(): Promise<void> {
     }
   } catch { dernierEtat = 'reseau' } finally {
     flushing = false
+    await annoncer()
   }
 }
 

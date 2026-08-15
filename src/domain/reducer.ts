@@ -51,7 +51,13 @@ export function appendEvent(match: Match, event: GameEvent): Match {
 
 export function undoLast(match: Match): Match {
   if (match.events.length === 0) return match
-  return { ...match, events: match.events.slice(0, -1) }
+  return rayer(match, match.events[match.events.length - 1].id, match.events.slice(0, -1))
+}
+
+/** Sort l'évènement du journal et garde son identifiant en rature. Voir
+ *  `Match.retires` pour pourquoi les deux sont nécessaires. */
+function rayer(match: Match, id: string, events: GameEvent[]): Match {
+  return { ...match, events, retires: [...(match.retires ?? []), id] }
 }
 
 /** Retire le dernier évènement satisfaisant le prédicat (correction d'une erreur
@@ -60,7 +66,7 @@ export function undoLast(match: Match): Match {
 export function removeLastEvent(match: Match, predicate: (e: GameEvent) => boolean): Match {
   for (let i = match.events.length - 1; i >= 0; i--) {
     if (predicate(match.events[i]))
-      return { ...match, events: [...match.events.slice(0, i), ...match.events.slice(i + 1)] }
+      return rayer(match, match.events[i].id, [...match.events.slice(0, i), ...match.events.slice(i + 1)])
   }
   return match
 }

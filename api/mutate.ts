@@ -1,5 +1,50 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import type { PoolClient } from 'pg'
 import { pool, prelude, refuse } from './_db.js'
+import { fusionnerMatchs } from '../src/domain/fusion.js'
+import type { Match } from '../src/domain/types.js'
+
+/**
+ * La feuille de match ne s'écrase pas, elle se fusionne.
+ *
+ * C'est le seul document qui échappe à « la plus récente gagne », et ce n'est pas
+ * une exception de confort : quand deux appareils saisissent la même rencontre,
+ * le perdant de l'arbitrage n'a pas tort — il a noté d'autres évènements. Les
+ * écraser reviendrait à faire disparaître des paniers, ce que ce produit
+ * considère comme sa pire catégorie de défaut.
+ *
+ * L'arbitrage garde donc son rôle, mais seulement sur ce qui se remplace
+ * (`meta`, `roster`) : le vainqueur passe en second à `fusionnerMatchs`, dont
+ * l'étalement des champs le fait gagner. Les évènements, eux, s'unissent quel
+ * qu'il soit.
+ */
+async function ecrireMatch(client: PoolClient, id: string, entrant: Match, quand: Date) {
+  // `for update` verrouille la ligne le temps de la transaction : sans lui, deux
+  // envois simultanés liraient le même état et le second écraserait la fusion du
+  // premier — précisément le scénario que cette fonction existe pour empêcher.
+  const { rows } = await client.query<{ doc: Match; modified_at: Date }>(
+    "select doc, modified_at from documents where kind = 'match' and id = $1 for update", [id])
+
+  if (!rows.length) {
+    await client.query(
+      `insert into documents (kind, id, doc, modified_at, rev)
+       values ('match', $1, $2, $3, nextval('documents_rev'))`,
+      [id, entrant, quand])
+    return
+  }
+
+  const stocke = rows[0].doc
+  const gagnantEstEntrant = quand > rows[0].modified_at
+  const fusionne = gagnantEstEntrant
+    ? fusionnerMatchs(stocke, entrant)
+    : fusionnerMatchs(entrant, stocke)
+
+  await client.query(
+    `update documents
+        set doc = $2, modified_at = greatest(modified_at, $3), rev = nextval('documents_rev')
+      where kind = 'match' and id = $1`,
+    [id, fusionne, quand])
+}
 
 /** Les genres que la base accepte. Une opération d'un genre inconnu est ignorée
  *  plutôt que refusée : un appareil resté sur une version plus récente ne doit
@@ -50,7 +95,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const quand = o.modifiedAt ? new Date(o.modifiedAt) : null
       if (!quand || Number.isNaN(quand.getTime())) continue
 
-      if (o.op === 'put' && o.doc !== undefined) {
+      if (o.op === 'put' && o.doc !== undefined && o.kind === 'match') {
+        await ecrireMatch(client, o.id, o.doc as Match, quand)
+      } else if (o.op === 'put' && o.doc !== undefined) {
         await client.query(
           `insert into documents (kind, id, doc, modified_at, rev)
            values ($1, $2, $3, $4, nextval('documents_rev'))

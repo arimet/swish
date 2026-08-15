@@ -90,6 +90,12 @@ overwrites shared data. Remove the variable for real use.
 - **Deletions really delete the row.** Other devices learn about them because
   `GET /api/state` also returns the list of ids the database still holds;
   anything missing from it is dropped locally.
+- **Match sheets merge, they do not overwrite.** Two devices scoring the same game
+  keep every event: each one carries a stable id, and an undo travels as a
+  retraction so it cannot be resurrected by the other device's copy. `status`
+  never moves backwards, so a late queue cannot re-open a finished game.
+- **The spectator link is public and carries only what the page shows**: shirt
+  number and name. Licence numbers, birth dates and heights stay in the database.
 - **Live following**: spectators open `…/match/:id/watch` and receive updates
   over **SSE** (`GET /api/match/:id/stream`), falling back to polling if the
   stream is unavailable. The payload is derived from the database — nothing is
