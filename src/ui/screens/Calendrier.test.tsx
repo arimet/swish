@@ -18,8 +18,8 @@ const mk = (id: string, clubId: string, opponentId: string, date = '2026-01-10')
 
 const schema = (id: string, name: string): Play => ({ id, ...newPlay('ta', 'half', false), name })
 
-/** Une date relative au jour d'exécution : le passé et le futur du calendrier se
- *  jugent sur l'horloge, une date en dur finirait par basculer d'un côté. */
+/** A date relative to the day of the run: the calendar's past and future are judged
+ *  against the clock, and a hard-coded date would eventually tip to one side. */
 const jour = (décalage: number) => {
   const d = new Date()
   d.setDate(d.getDate() + décalage)
@@ -51,8 +51,8 @@ describe('Calendar', () => {
   it('shows a training in the same date group as that day\'s game', async () => {
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', time: '18:30', place: 'Gymnase Colette', theme: 'Défense sur écran' })
     renderCal()
-    // La rencontre m1 est déjà datée du 10 janvier : l'entraînement doit rejoindre
-    // son groupe, pas former une seconde liste à côté du calendrier.
+    // Game m1 is already dated 10 January: the training must join its group, not form
+    // a second list beside the calendar.
     const rencontre = await screen.findByText(/VERDUN/)
     const groupe = rencontre.closest('section')
     expect(groupe).not.toBeNull()
@@ -62,8 +62,8 @@ describe('Calendar', () => {
   })
 
   it('shows only the followed club\'s trainings', async () => {
-    // Un appareil qui a changé de club ne doit pas garder au calendrier les
-    // entraînements du club précédent, mêlés sans signal à ceux du club courant.
+    // A device that has changed club must not keep the previous club's trainings in the
+    // calendar, mixed in unmarked with the current club's.
     await saveTraining({ id: 't-nous', clubId: 'ta', date: '2026-01-10', theme: 'Notre séance' })
     await saveTraining({ id: 't-eux', clubId: 'tc', date: '2026-01-10', theme: 'Séance de METZ' })
     renderCal()
@@ -73,8 +73,8 @@ describe('Calendar', () => {
 
   it('at an equal time, the game comes before the training in the same group', async () => {
     // Départage explicite requis (cf. `nextFixture` dans src/domain/fixtures.ts) :
-    // sans lui, deux échéances de même date et sans heure se classeraient selon
-    // l'ordre d'insertion, correct par accident et fragile au premier réarrangement.
+    // without it, two fixtures on the same date with no time would be ordered by
+    // insertion, correct by accident and fragile at the first rearrangement.
     await saveMatch(mk('m3', 'ta', 'tc', '2026-03-01'))
     await saveTraining({ id: 't2', clubId: 'ta', date: '2026-03-01', theme: 'Départage' })
     renderCal()
@@ -87,16 +87,16 @@ describe('Calendar', () => {
   })
 
   it('fades the past, marks today, and leaves the future in full light', async () => {
-    // Le calendrier se lit du plus ancien au plus récent : sans ce partage, une
-    // saison entière de rencontres jouées disputerait l'œil à ce qui reste à jouer.
+    // The calendar reads from oldest to most recent: without this split, a whole
+    // season of games played would compete for the eye with what is left to play.
     await saveTraining({ id: 'hier', clubId: 'ta', date: jour(-3), theme: 'Séance passée' })
     await saveTraining({ id: 'auj', clubId: 'ta', date: jour(0), theme: 'Séance du jour' })
     renderCal()
 
-    // L'estompe vaut 0,75 et non 0,60 : à 0,60 le texte du jour écoulé tombait à
-    // 4,63:1 sur le cadre, trois pour cent au-dessus du seuil AA et 3,1:1 en
-    // pixels rendus. Ce que le test garde, c'est qu'il y a une estompe et que le
-    // jour même n'en a pas — pas sa valeur exacte, qui est un réglage.
+    // The fade is 0.75 and not 0.60: at 0.60 a past day's text fell to 4.63:1 on the
+    // frame, three per cent above the AA threshold and 3.1:1 in rendered pixels. What
+    // the test keeps is that there is a fade and that today has none — not its exact
+    // value, which is a setting.
     const passé = (await screen.findByText('Séance passée')).closest('section')
     expect(passé).toHaveClass('opacity-75')
 
@@ -106,8 +106,8 @@ describe('Calendar', () => {
   })
 
   it('points at the next fixture when nothing is scheduled today', async () => {
-    // Même règle qu'au tableau de bord : c'est `nextFixture` qui dit « la suite ».
-    await db.matches.clear() // les rencontres du jeu d'essai sont datées, elles fausseraient l'échéance
+    // The same rule as on the dashboard: `nextFixture` is what says "what comes next".
+    await db.matches.clear() // the fixture's games are dated and would skew the result
     await saveTraining({ id: 'plus-tard', clubId: 'ta', date: jour(10), theme: 'Séance à venir' })
     renderCal()
 
@@ -122,7 +122,7 @@ describe('Calendar', () => {
 
   it('creates a training from the form and adds it to the calendar', async () => {
     renderCal()
-    // Le formulaire est replié : il apparaît sur un clic, jamais d'emblée.
+    // The form is folded away: it appears on a click, never up front.
     await userEvent.click(await screen.findByRole('button', { name: /nouvel entraînement/i }))
     await userEvent.type(await screen.findByLabelText(/date de l'entraînement/i), '2026-02-03')
     await userEvent.type(screen.getByLabelText(/^heure$/i), '19:00')
@@ -137,21 +137,21 @@ describe('Calendar', () => {
   })
 
   it('deletes a training only after confirmation', async () => {
-    // Ce test affirmait l'inverse : que le clic sur la croix suffisait. C'était le
-    // comportement, et c'était le défaut — une séance disparaissait sur un clic unique
-    // alors que supprimer une rencontre, un schéma ou une équipe demande confirmation.
-    // La première moitié du test est donc la propriété nouvelle, et la seconde l'ancienne.
+    // This test used to assert the opposite: that a click on the cross was enough. That
+    // was the behaviour, and it was the defect — a session disappeared on a single click
+    // while deleting a game, a play or a team asks for confirmation. The first half of
+    // the test is therefore the new property, and the second the old one.
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })
     renderCal()
     await userEvent.click(await screen.findByRole('button', { name: /supprimer cet entraînement/i }))
 
-    // Le dialogue s'ouvre et la séance est toujours là.
+    // The dialog opens and the session is still there.
     expect(await screen.findByText(/supprimer cette séance/i)).toBeInTheDocument()
     expect(await listTrainings()).toHaveLength(1)
 
     await userEvent.click(screen.getByRole('button', { name: /^supprimer$/i }))
-    // La suppression passe par `guard()`, qui déclenche l'action sans l'attendre :
-    // l'effacement du DOM et de la base est asynchrone après le clic.
+    // Deletion goes through `guard()`, which fires the action without awaiting it: the
+    // erasure from the DOM and the store is asynchronous after the click.
     await waitFor(async () => expect(await listTrainings()).toHaveLength(0))
     expect(screen.queryByText('Défense sur écran')).not.toBeInTheDocument()
   })
@@ -168,22 +168,22 @@ describe('Calendar — the session\'s plays', () => {
     await ouvrirLesSchemas()
 
     await userEvent.click(await screen.findByRole('checkbox', { name: /pick and roll haut/i }))
-    // L'attache passe par `guard()`, qui déclenche l'action sans l'attendre.
+    // Attaching goes through `guard()`, which fires the action without awaiting it.
     await waitFor(async () => expect((await listTrainings())[0].playIds).toEqual(['s1']))
     expect(await screen.findByText(/1 schéma$/)).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('checkbox', { name: /pick and roll haut/i }))
     await waitFor(async () => expect((await listTrainings())[0].playIds).toEqual([]))
-    // La base gagne la course sur le re-rendu : interroger le DOM dans la foulée
-    // le lit parfois avant que React l'ait mis à jour. On attend l'écran, pas la
-    // base — c'est ce qu'on prétend vérifier ici.
+    // The store wins the race against the re-render: querying the DOM straight after
+    // sometimes reads it before React has updated it. We wait for the screen, not the
+    // store — that is what we claim to be checking here.
     await waitFor(() => expect(screen.queryByText(/1 schéma$/)).not.toBeInTheDocument())
   })
 
   it('counts and ticks only the plays that still exist', async () => {
-    // Un entraînement peut citer un schéma supprimé par une base plus ancienne que la
-    // cascade de `deletePlay` : la lecture filtre sur ce qui existe, sans quoi le
-    // compte affiché mentirait — la faute corrigée au projet 6 sur les convocations.
+    // A training may cite a play deleted by a store older than `deletePlay`'s cascade:
+    // the read filters on what exists, otherwise the count shown would lie — the same
+    // fault fixed earlier on the call-ups.
     await savePlay(schema('s1', 'Pick and roll haut'))
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Séance', playIds: ['s1', 'disparu'] })
     renderCal()
@@ -196,8 +196,8 @@ describe('Calendar — the session\'s plays', () => {
   })
 
   it('keeps both plays ticked in quick succession, without waiting for the reload', async () => {
-    // Au bord du terrain on coche vite : si chaque bascule partait de la séance telle
-    // qu'elle était au rendu, la seconde écriture effacerait la première.
+    // At the sideline people tick fast: if every toggle started from the session as it
+    // was at render time, the second write would erase the first.
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Séance' })
     await savePlay(schema('s1', 'Pick and roll haut'))
     await savePlay(schema('s2', 'Corner pour le 4'))
@@ -218,13 +218,13 @@ describe('Calendar — the session\'s plays', () => {
     renderCal()
     await ouvrirLesSchemas()
 
-    // Elle lit le programme de la séance — c'est ce qui l'intéresse — mais aucune
-    // case ne lui est offerte, donc plus aucune demande de code au clic.
+    // It reads the session's programme — that is what interests it — but no box is
+    // offered to it, hence no code prompt on a click.
     expect(await screen.findByText('Pick and roll haut')).toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
-    // Et la bibliothèque entière ne s'étale pas : seuls les schémas prévus.
+    // And the whole library does not spread out: only the plays scheduled.
     expect(screen.queryByText('Corner pour le 4')).not.toBeInTheDocument()
-    // Ce qui compte : la séance n'a pas bougé.
+    // What matters: the session has not moved.
     expect((await listTrainings())[0].playIds).toEqual(['s1'])
   })
 })
@@ -235,17 +235,17 @@ describe('Calendar — rights', () => {
     renderCal()
     await screen.findByText(/VERDUN/)
 
-    // Aucun des deux boutons de planification ne lui est proposé, donc plus de
-    // demande de code au clic. Le calendrier, lui, se lit entièrement.
+    // Neither planning button is offered to it, hence no code prompt on a click. The
+    // calendar itself reads in full.
     expect(screen.queryByRole('button', { name: /nouvel entraînement/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /nouvelle rencontre/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/date de l'entraînement/i)).not.toBeInTheDocument()
-    // Ce qui compte : rien n'est écrit en base.
+    // What matters: nothing is written to the store.
     expect(await listTrainings()).toHaveLength(0)
   })
 
   it('offers "New game" in the calendar, next to the new training', async () => {
-    // Le bouton a quitté l'en-tête : c'est au calendrier que vivent les choses datées.
+    // The button left the header: dated things live in the calendar.
     renderCal()
     expect(await screen.findByRole('link', { name: /nouvelle rencontre/i })).toHaveAttribute('href', '/match/new')
   })
@@ -260,8 +260,8 @@ describe('Calendar — rights', () => {
 
 
   it('gives access to the call-up from an upcoming game\'s card', async () => {
-    // Le coach regarde le calendrier, pas la fiche : c'est de là qu'il doit pouvoir
-    // convoquer, sans avoir à deviner que la convocation vit sur la fiche.
+    // The coach looks at the calendar, not the record: that is where they must be able
+    // to call up from, without having to guess that the call-up lives on the record.
     renderCal()
     expect(await screen.findByRole('link', { name: /convoquer/i })).toHaveAttribute('href', '/match/m1#convocation')
   })
@@ -281,7 +281,7 @@ describe('Calendar — rights', () => {
     expect(await screen.findByText('Défense sur écran')).toBeInTheDocument()
     expect(await screen.findByText(/VERDUN/)).toBeInTheDocument()
     expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
-    // Rien de ce qui écrit ne lui est montré : ni planifier, ni convoquer, ni
+    // Nothing that writes is shown to them: no planning, no calling up, no
     // supprimer une séance.
     expect(screen.queryByRole('link', { name: /convoquer/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /supprimer cet entraînement/i })).not.toBeInTheDocument()

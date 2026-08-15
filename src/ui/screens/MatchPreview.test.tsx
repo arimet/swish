@@ -10,7 +10,7 @@ import { db } from '../../persistence/db'
 import { saveTeam, savePlayer, saveMatch, getConvocation, saveConvocation } from '../../persistence/repositories'
 
 beforeEach(async () => {
-  sessionStorage.setItem(ROLE_KEY, 'admin') // actions protégées débloquées pour le test
+  sessionStorage.setItem(ROLE_KEY, 'admin') // guarded actions unlocked for the test
   localStorage.setItem('swish-club-id', 'ta')
   await db.teams.clear(); await db.players.clear(); await db.matches.clear(); await db.convocations.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
@@ -28,8 +28,9 @@ beforeEach(async () => {
 const renderPreview = () =>
   render(<MemoryRouter><ClubProvider><AuthProvider><MatchPreview matchId="m1" /></AuthProvider></ClubProvider></MemoryRouter>)
 
-/** Même écran, mais avec la route de saisie derrière : démarrer la rencontre y
- *  navigue, et c'est l'arrivée sur cet écran qui prouve que le geste est passé. */
+/** The same screen, but with the recording route behind it: starting the game
+ *  navigates there, and arriving on that screen is what proves the gesture went
+ *  through. */
 const renderAvecSaisie = () =>
   render(
     <MemoryRouter initialEntries={['/match/m1']}>
@@ -87,7 +88,7 @@ describe('MatchPreview — the call-up', () => {
 
   it('the number called up is shown and follows the boxes ticked', async () => {
     renderPreview()
-    await screen.findByLabelText(/ANTOINE/i) // attend le chargement de l'effectif avant de lire le compteur
+    await screen.findByLabelText(/ANTOINE/i) // wait for the roster to load before reading the counter
     expect(screen.getByText(/0 convoqué/i)).toBeInTheDocument()
     await userEvent.click(screen.getByLabelText(/ANTOINE/i))
     expect(await screen.findByText(/1 convoqué/i)).toBeInTheDocument()
@@ -110,10 +111,10 @@ describe('MatchPreview — the call-up', () => {
   })
 
   it('heals a call-up whose called-up player has since left the roster', async () => {
-    // Une convocation enregistrée avant la suppression du joueur peut encore le
-    // mentionner (la cascade de `deletePlayer` ne répare que l'avenir) : le compte
-    // affiché doit se limiter à l'effectif réel, et décocher le seul joueur restant
-    // ne doit jamais réenregistrer le joueur disparu.
+    // A call-up saved before the player was deleted may still mention them
+    // (`deletePlayer`'s cascade only repairs the future): the count shown must be
+    // limited to the real roster, and unticking the only remaining player must never
+    // re-save the vanished one.
     await saveConvocation({ matchId: 'm1', playerIds: ['p2', 'p9-supprimé'] })
     renderPreview()
     const caseBertrand = await screen.findByLabelText(/BERTRAND/i)
@@ -130,9 +131,9 @@ describe('MatchPreview — the call-up', () => {
   })
 
   it('carries the anchor the dashboard and the calendar lead to', async () => {
-    // Les deux écrans où le coach regarde pointent sur `/match/:id#convocation` :
-    // sans cette ancre, le lien tomberait en haut de la fiche, exactement le
-    // problème qu'il devait résoudre.
+    // The two screens the coach looks at point at `/match/:id#convocation`: without
+    // that anchor, the link would land at the top of the record, which is exactly the
+    // problem it was meant to solve.
     renderPreview()
     await screen.findByLabelText(/ANTOINE/i)
     expect(document.getElementById('convocation')).not.toBeNull()
@@ -144,9 +145,9 @@ describe('MatchPreview — the call-up', () => {
   })
 
   it("shows the game's club's roster, not the device setting's when they differ", async () => {
-    // Rencontre ancienne rouverte après un changement de club sur cet appareil : le
+    // An old game reopened after a club change on this device: the
     // réglage local pointe maintenant vers VERDUN, mais la rencontre appartient à
-    // VIGNOT — c'est son effectif qui doit apparaître, jamais celui de VERDUN.
+    // VIGNOT — it is that roster that must appear, never VERDUN's.
     await savePlayer({ id: 'p9', teamId: 'tb', number: 1, lastName: 'DUPONT', firstName: 'Zoé' })
     localStorage.setItem('swish-club-id', 'tb')
     renderPreview()
@@ -158,8 +159,8 @@ describe('MatchPreview — the call-up', () => {
 
 describe('MatchPreview — rights', () => {
   it('the scorer\'s table starts the game without being asked for any code', async () => {
-    // Le bénévole du samedi doit pouvoir lancer le match qu'il va tenir : démarrer
-    // relève de la table de marque, pas de l'administration du club.
+    // The Saturday volunteer must be able to start the game they are about to keep:
+    // starting belongs to the scorer's table, not to club administration.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderAvecSaisie()
     await userEvent.click(await screen.findByRole('button', { name: /démarrer la rencontre/i }))
@@ -173,17 +174,17 @@ describe('MatchPreview — rights', () => {
     renderPreview()
     await screen.findByText(/convocation/i)
 
-    // Ni cases à cocher, ni champs de rendez-vous, ni enregistrement : plus rien
-    // ne réclame le code administrateur à qui tient seulement la marque.
+    // No checkboxes, no meeting-point fields, no save: nothing demands the
+    // administrator code any more from someone who only keeps the score.
     expect(screen.queryByRole('button', { name: /enregistrer la convocation/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/ANTOINE/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/heure de rendez-vous/i)).not.toBeInTheDocument()
-    // Ce qui compte : rien n'est écrit en base.
+    // What matters: nothing is written to the store.
     expect(await getConvocation('m1')).toBeUndefined()
   })
 
   it('the scorer\'s table reads who is called up without being able to change it', async () => {
-    // Savoir qui est convoqué n'est pas écrire : la liste reste, en toutes lettres.
+    // Knowing who is called up is not writing: the list stays, spelled out.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveConvocation({ matchId: 'm1', playerIds: ['p1'], meetTime: '18:00', meetPlace: 'Gymnase' })
     renderPreview()
@@ -202,8 +203,8 @@ describe('MatchPreview — rights', () => {
   })
 
   it('a visitor is offered neither a start nor a deletion', async () => {
-    // Démarrer relève de la table de marque, supprimer de l'administration :
-    // le visiteur consulte la fiche, et rien de plus.
+    // Starting belongs to the scorer's table, deleting to administration: the visitor
+    // reads the record, and nothing more.
     sessionStorage.removeItem(ROLE_KEY)
     renderPreview()
     await screen.findByText(/convocation/i)

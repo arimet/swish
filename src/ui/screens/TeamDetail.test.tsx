@@ -31,15 +31,15 @@ describe('TeamDetail — the player details', () => {
   it('fills in the birth date without changing the player\'s id', async () => {
     renderTeam()
     await userEvent.click(await screen.findByRole('button', { name: /modifier MARTIN/i }))
-    // Libellé du bloc d'édition distinct de celui du formulaire d'ajout (« Date de
-    // naissance ») : les deux coexistent à l'écran, ils doivent rester attrapables
-    // sans ambiguïté chacun par leur propre nom accessible.
+    // The edit block's label differs from the add form's ("Date de naissance"): both
+    // coexist on screen, so each must stay unambiguously reachable by its own
+    // accessible name.
     await userEvent.type(screen.getByLabelText(/^naissance$/i), '2000-06-15')
     await userEvent.click(screen.getByRole('button', { name: /enregistrer/i }))
 
     await waitFor(async () => {
       const [p] = await listPlayers('ta')
-      // L'identifiant doit survivre : il porte tout l'historique de tirs du joueur.
+      // The id must survive: it carries the player's whole shot history.
       expect(p.id).toBe('p1')
       expect(p.birthDate).toBe('2000-06-15')
     })
@@ -71,7 +71,7 @@ describe('TeamDetail — the player details', () => {
 
   it('adds a player with their birth date and height', async () => {
     renderTeam()
-    // Le formulaire est replié : il apparaît sur un clic, jamais d'emblée.
+    // The form is folded away: it appears on a click, never up front.
     await userEvent.click(await screen.findByRole('button', { name: /ajouter un joueur/i }))
     await userEvent.type(await screen.findByPlaceholderText('N°'), '9')
     await userEvent.type(screen.getByPlaceholderText('Nom'), 'DUPONT')
@@ -93,23 +93,22 @@ describe('TeamDetail — rights', () => {
     renderTeam()
     await screen.findByText(/MARTIN/)
 
-    // Elle consulte la fiche entière — bilan, marqueurs, effectif — sans qu'aucune
-    // action d'écriture lui soit proposée, donc sans demande de code au clic.
+    // It reads the whole record — record, scorers, roster — with no write action
+    // offered to it, hence no code prompt on a click.
     expect(screen.queryByRole('button', { name: /ajouter un joueur/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^supprimer$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /modifier MARTIN/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /retirer/i })).not.toBeInTheDocument()
     expect(screen.queryByPlaceholderText('N°')).not.toBeInTheDocument()
-    // Ce qui compte : l'effectif n'a pas bougé.
-    expect(await listPlayers('ta')).toHaveLength(1) // MARTIN seul, DUPONT n'a pas été ajouté
+    // What matters: the roster has not moved.
+    expect(await listPlayers('ta')).toHaveLength(1) // MARTIN alone, DUPONT was not added
   })
 
   it('removes a player only after confirmation', async () => {
-    // Ce chemin n'était pas couvert, et c'est pour ça que le défaut a tenu : « retirer »
-    // supprimait le joueur sur un clic unique, depuis un bouton de vingt-quatre pixels
-    // collé à « modifier », alors que supprimer l'équipe juste au-dessus demandait
-    // confirmation. Aucun test n'a cassé quand j'ai ajouté le dialogue — preuve qu'il
-    // n'y avait rien là pour le dire.
+    // This path was not covered, and that is why the defect held: "remove" deleted the
+    // player on a single click, from a twenty-four-pixel button flush against "edit",
+    // while deleting the team just above asked for confirmation. No test broke when the
+    // dialog was added — proof that there was nothing here to say so.
     renderTeam()
     await userEvent.click(await screen.findByRole('button', { name: /retirer MARTIN/i }))
 
@@ -117,7 +116,8 @@ describe('TeamDetail — rights', () => {
     expect(await listPlayers('ta')).toHaveLength(1)
 
     await userEvent.click(screen.getByRole('button', { name: /^retirer$/i }))
-    // `guard()` déclenche l'action sans l'attendre : la base se vide après le clic.
+    // `guard()` fires the action without awaiting it: the store empties after the
+    // click.
     await waitFor(async () => expect(await listPlayers('ta')).toHaveLength(0))
   })
 
@@ -130,10 +130,10 @@ describe('TeamDetail — rights', () => {
   })
 
   it('does not let anyone type a coach the right will not let them save', async () => {
-    // Même exigence que sur le champ de score du championnat : ce que l'écran
-    // affiche et ce que contient la base doivent dire la même chose. Le champ ne
-    // s'affiche donc pas du tout sans le droit, plutôt que de s'ouvrir à la frappe
-    // pour se voir refuser à l'envoi.
+    // The same requirement as on the standings' score field: what the screen shows and
+    // what the store holds must say the same thing. The field therefore does not show
+    // at all without the right, rather than opening to typing only to be refused on
+    // submit.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderTeam()
     await screen.findByText(/MARTIN/)
@@ -144,7 +144,7 @@ describe('TeamDetail — rights', () => {
 })
 
 describe('TeamDetail — top scorers', () => {
-  /** Une rencontre jouée où MARTIN marque : sans points, le panneau reste vide. */
+  /** A game played where MARTIN scores: with no points, the panel stays empty. */
   const matchAvecPoints = async () => {
     await saveMatch({
       id: 'm1',
@@ -159,25 +159,25 @@ describe('TeamDetail — top scorers', () => {
   }
 
   it('every scorer leads to their record', async () => {
-    // Le même classement est cliquable au tableau de bord ; il était inerte ici, ce
-    // qui obligeait à retrouver le nom dans l'effectif de onze juste au-dessus.
+    // The same ranking is clickable on the dashboard; it was inert here, forcing
+    // people to find the name again in the roster of eleven just above.
     //
-    // La requête est **portée au panneau** et non à la page : l'effectif juste
-    // au-dessus contient déjà un lien vers la même fiche, si bien qu'un
-    // `getByRole('link')` global passait même quand la ligne du classement n'était
-    // pas un lien du tout. Un test qui ne peut pas échouer ne prouve rien.
+    // The query is **scoped to the panel** and not to the page: the roster just above
+    // already holds a link to the same record, so that a global `getByRole('link')`
+    // passed even when the ranking's row was not a link at all. A test that cannot fail
+    // proves nothing.
     await matchAvecPoints()
     renderTeam()
     const titre = await screen.findByRole('heading', { name: 'Meilleurs marqueurs' })
     const panneau = titre.closest('section')!
-    // `findByRole` et non `getByRole` : le panneau rend son **titre** dès le premier
-    // passage, y compris dans son état vide, alors que ses lignes attendent une
-    // lecture asynchrone de la base. Attendre le titre n'attendait donc pas les
-    // lignes, et ce test échouait environ une fois sur huit — sur l'état vide, jamais
-    // sur un vrai défaut.
+    // `findByRole` and not `getByRole`: the panel renders its **title** on the first
+    // pass, including in its empty state, while its rows wait on an asynchronous read
+    // from the store. Waiting for the title therefore did not wait for the rows, and
+    // this test failed about one time in eight — on the empty state, never on a real
+    // defect.
     const lien = await within(panneau).findByRole('link', { name: /MARTIN/ })
     expect(lien).toHaveAttribute('href', '/players/p1')
-    // Chercher le lien *dans* le panneau suffit à prouver qu'il n'est pas vide : sans
-    // point marqué, il rendrait son état vide et la requête échouerait.
+    // Looking for the link *inside* the panel is enough to prove it is not empty: with
+    // no point scored, it would render its empty state and the query would fail.
   })
 })
