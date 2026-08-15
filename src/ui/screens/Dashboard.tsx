@@ -9,7 +9,7 @@ import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { since, nextFixture, type Fixture } from '../../domain/fixtures'
 import { liveState } from '../../rules/ffbb'
 import { ShotChart } from '../components/ShotCourt'
-import { C, Panel, TeamBadge, Vous, bd, displayClock, fmtDate } from '../olive/kit'
+import { C, Panel, TeamBadge, You, bd, displayClock, fmtDate } from '../olive/kit'
 import type { Convocation, Match, TeamMessage, Player, Team, Training } from '../../domain/types'
 import type { Play } from '../../domain/plays'
 import { Check } from 'lucide-react'
@@ -185,7 +185,7 @@ export function Dashboard() {
                         <span className="w-4 text-center text-sm font-black" style={{ color: i === 0 ? C.accent : C.faint }}>{i + 1}</span>
                         <span className="grid h-8 w-8 place-items-center rounded-lg text-xs font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p?.number ?? '?'}</span>
                         <span className="min-w-0 flex-1 truncate text-sm font-bold">{p ? `${p.lastName} ${p.firstName}` : 'Joueur'}</span>
-                        {estMoi && <Vous />}
+                        {estMoi && <You />}
                         {/* Titre explicite : ce pourcentage ne porte que sur les tirs
                             localisés, alors que les points juste à côté comptent tout
                             (lancers francs compris) — cf. PlayerDetail. */}
@@ -201,7 +201,7 @@ export function Dashboard() {
 
           {/* La carte de tirs ne s'affiche que s'il y a des tirs : vide, c'est un
               terrain dessiné pour rien, et elle ne dit pas quoi faire. */}
-          {aJoue && <Panel title={openPlayer ? translate('bord.hotZoneJoueur', { nom: byId[openPlayer]?.lastName ?? translate('bord.joueur') }) : translate('bord.hotZoneEquipe')}>
+          {aJoue && <Panel title={openPlayer ? translate('bord.hotZoneJoueur', { name: byId[openPlayer]?.lastName ?? translate('bord.joueur') }) : translate('bord.hotZoneEquipe')}>
             <div className="mb-2 flex flex-wrap gap-1.5">
               <Chip active={!openPlayer} onClick={() => setOpenPlayer(null)}>{translate('bord.equipe')}</Chip>
               {players.map((p) => (
@@ -333,7 +333,7 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
         <span className="rounded-md px-2 py-0.5 text-[12px] font-black uppercase" style={{ background: C.greenFill, color: C.onGreen }}>{translate('bord.enDirect')}</span>
         <span className="nums text-3xl font-black tabular-nums">{mine} – {opp}</span>
-        <span className="text-sm font-bold" style={{ color: C.muted }}>{translate('bord.contre', { equipe: opponent(live) })}</span>
+        <span className="text-sm font-bold" style={{ color: C.muted }}>{translate('bord.contre', { team: opponent(live) })}</span>
         <span className="nums text-sm font-bold" style={{ color: C.faint }}>{dc.label} · {dc.clock}</span>
         {/* Le score en direct se lit par tout le monde ; ouvrir la table de marque
             est le geste de celui qui la tient, et lui seul y est invité. */}
@@ -350,7 +350,7 @@ function Banner({ live, next, teams, gere, tientLaMarque }: { live?: Match; next
     return (
       <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.prochaineRencontre')}</span>
-        <span className="text-sm font-bold">{translate('bord.contre', { equipe: opponent(next) })}</span>
+        <span className="text-sm font-bold">{translate('bord.contre', { team: opponent(next) })}</span>
         <span className="text-sm" style={{ color: C.muted }}>{[f.long, next.meta.time, next.meta.venue].filter(Boolean).join(' · ')}</span>
         <Link to={`/match/${next.id}`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>{translate('bord.voirFiche')}</Link>
       </div>
@@ -401,7 +401,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
               {prévus.map((s) => (
                 <Link key={s.id} to={`/schemas/${s.id}/lecteur`} className="rounded-lg px-2.5 py-1 text-[12px] font-bold"
                   style={{ background: C.accentBg, color: C.accent }}>
-                  ▶ {s.nom}
+                  ▶ {s.name}
                 </Link>
               ))}
             </div>
@@ -422,7 +422,7 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
   return (
     <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
       <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('bord.prochaineEcheance')}</span>
-      <p className="mt-1 text-sm font-bold">{translate('bord.contre', { equipe: opponent })}</p>
+      <p className="mt-1 text-sm font-bold">{translate('bord.contre', { team: opponent })}</p>
       <p className="text-sm" style={{ color: C.muted }}>{[f.long, m.meta.time, m.meta.venue].filter(Boolean).join(' · ') || '—'}</p>
       {/* La convocation vit sur la fiche de la rencontre, à sa place — mais c'est
           ici qu'on la regarde. Le lien y mène directement, à l'ancre : sans lui,

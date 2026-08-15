@@ -5,59 +5,60 @@ import { useT } from '../../i18n'
 import { C } from '../olive/kit'
 
 /**
- * Ce que le partage est en train de faire, quand il ne le fait pas.
+ * What sharing is doing, when it is not doing it.
  *
- * Le défaut qu'il répare : un envoi qui échoue était avalé en silence. Un
- * marqueur pouvait croire des spectateurs en train de suivre une rencontre qui
- * ne leur parvenait plus, et un coach croire son effectif partagé.
+ * The defect it repairs: a failed send was swallowed in silence. A scorer could
+ * believe spectators were following a game that no longer reached them, and a coach
+ * believe their roster shared.
  *
- * TROIS CHOIX QUI COMPTENT PLUS QUE LE PICTOGRAMME.
+ * THREE CHOICES THAT MATTER MORE THAN THE PICTOGRAM.
  *
- * **Ce n'est pas une alerte.** Rien n'est perdu quand un envoi échoue : la saisie
- * est en base locale et la file repartira seule. Annoncer un incident ferait
- * paniquer un bénévole en plein match pour un problème qui n'en est pas un — et
- * mentir, accessoirement. Le texte dit donc d'abord que la saisie est gardée.
+ * **This is not an alert.** Nothing is lost when a send fails: the entry is in the
+ * local store and the queue will leave on its own. Announcing an incident would
+ * panic a volunteer mid-game over a problem that is not one — and lie, incidentally.
+ * So the text says first that the entry is kept.
  *
- * **Ce n'est pas un toast.** Un toast s'efface ; la condition, elle, dure. Un
- * gymnase sans réseau, c'est deux heures. On montre un état tant qu'il est vrai,
- * et il disparaît de lui-même quand la file se vide.
+ * **This is not a toast.** A toast fades; the condition lasts. A gym with no
+ * coverage is two hours. We show a state for as long as it is true, and it
+ * disappears by itself when the queue empties.
  *
- * **Le compte est la mesure honnête.** « En attente » ne dit pas si ça avance ;
- * un nombre qui grossit, si. C'est aussi ce qui distingue un accroc d'une panne.
+ * **The count is the honest measure.** "Waiting" does not say whether it is
+ * progressing; a number that grows does. It is also what tells a hiccup from an
+ * outage.
  *
- * Rien ne s'affiche tant que tout va bien : sur cet écran, le silence est une
- * information, et une pastille verte permanente n'en serait pas une.
+ * Nothing shows while all is well: on this screen, silence is information, and a
+ * permanent green pill would not be.
  */
 export function SyncState({ compact = false }: { compact?: boolean }) {
   const translate = useT()
-  const [health, setSante] = useState<Health>({ state: 'idle', pending: 0 })
+  const [health, setHealth] = useState<Health>({ state: 'idle', pending: 0 })
 
-  useEffect(() => (remoteEnabled() ? onHealth(setSante) : undefined), [])
+  useEffect(() => (remoteEnabled() ? onHealth(setHealth) : undefined), [])
 
-  // Une file non vide juste après un geste est l'état NORMAL : elle se vide sous
-  // la seconde. Sans la condition sur l'état, la pastille clignoterait à chaque
-  // panier — au milieu de l'écran qu'on regarde le moins longtemps.
+  // A non-empty queue right after a gesture is the NORMAL state: it empties within
+  // the second. Without the condition on the state, the pill would flash on every
+  // basket — in the middle of the screen people look at least.
   if (!remoteEnabled() || health.pending === 0 || health.state === 'ok' || health.state === 'idle') return null
 
-  const bloque = health.state === 'token'
-  const Icone = bloque ? TriangleAlert : CloudOff
-  // Le jeton ne se réparera pas tout seul, le réseau si : deux couleurs, deux
-  // durées de vie. L'ambre dit « ça attend », le danger dit « ça demande un geste ».
-  const teinte = bloque ? { fond: C.dangerBg, encre: C.danger } : { fond: C.amberBg, encre: C.amber }
+  const blocked = health.state === 'token'
+  const Icon = blocked ? TriangleAlert : CloudOff
+  // The token will not fix itself, the network will: two colours, two lifetimes.
+  // Amber says "it is waiting", danger says "it needs a hand".
+  const tint = blocked ? { bg: C.dangerBg, ink: C.danger } : { bg: C.amberBg, ink: C.amber }
 
   return (
     <span
       role="status"
-      title={translate(bloque ? 'sync.refuseDetail' : 'sync.horsReseauDetail')}
-      aria-label={`${translate('sync.compte', { count: health.pending })} — ${translate(bloque ? 'sync.refuseDetail' : 'sync.horsReseauDetail')}`}
+      title={translate(blocked ? 'sync.refuseDetail' : 'sync.horsReseauDetail')}
+      aria-label={`${translate('sync.compte', { count: health.pending })} — ${translate(blocked ? 'sync.refuseDetail' : 'sync.horsReseauDetail')}`}
       className="flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-bold"
-      style={{ background: teinte.fond, color: teinte.encre }}
+      style={{ background: tint.bg, color: tint.ink }}
     >
-      <Icone className="h-[14px] w-[14px] shrink-0" strokeWidth={2.2} />
-      {/* Le compte seul quand la place manque — c'est lui qui porte l'information,
-          le libellé ne fait que la nommer. Le nom accessible reste entier. */}
+      <Icon className="h-[14px] w-[14px] shrink-0" strokeWidth={2.2} />
+      {/* The count alone when room is short — it is what carries the information, the
+          label only names it. The accessible name stays whole. */}
       <span className="nums">{health.pending}</span>
-      {!compact && <span>{translate(bloque ? 'sync.refuse' : 'sync.horsReseau')}</span>}
+      {!compact && <span>{translate(blocked ? 'sync.refuse' : 'sync.horsReseau')}</span>}
     </span>
   )
 }

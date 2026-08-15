@@ -29,12 +29,12 @@ export interface Prop { kind: 'cone' | 'ball' | 'ladder'; at: Point }
 export interface Play {
   id: string
   clubId: string
-  nom: string
+  name: string
   note?: string
   court: Court
   defense: boolean
   props: Prop[]                             // communs à tous les temps
-  temps: Step[]                                  // au moins un
+  steps: Step[]                                  // au moins un
   /** Étiquette de rangement. Absent = « Sans dossier ». Un seul niveau : la liste
    *  of folders is derived from the plays; there is no table and no entity. */
   folder?: string
@@ -87,11 +87,11 @@ export function newPlay(clubId: string, court: Court, defense: boolean): Omit<Pl
     : offense
   return {
     clubId,
-    nom: DEFAULT_PLAY_NAME,
+    name: DEFAULT_PLAY_NAME,
     court,
     defense,
     props: [],
-    temps: [{ markers, ball: { side: 'offense', position: 1 }, arrows: [] }],
+    steps: [{ markers, ball: { side: 'offense', position: 1 }, arrows: [] }],
   }
 }
 
@@ -144,7 +144,7 @@ function remapY(s: Play, court: Court, f: (y: number) => number): Play {
     ...s,
     court,
     props: s.props.map((o) => ({ ...o, at: pt(o.at) })),
-    temps: s.temps.map((t) => ({
+    steps: s.steps.map((t) => ({
       markers: t.markers.map((p) => ({ ...p, at: pt(p.at) })),
       ball: 'x' in t.ball ? pt(t.ball) : { ...t.ball },
       arrows: t.arrows.map((fl) => ({ ...fl, points: fl.points.map(pt) })),
@@ -154,16 +154,16 @@ function remapY(s: Play, court: Court, f: (y: number) => number): Play {
 
 /** What occupies the back court (y > 0.5), named by a translation key and the position
  *  number when there is one. The domain names, the interface writes. */
-export interface Occupant { cle: string; n?: number }
+export interface Occupant { key: string; n?: number }
 
 function backcourtOccupant(s: Play): Occupant | null {
-  for (const t of s.temps) {
-    for (const p of t.markers) if (p.at.y > 0.5) return { cle: 'sch.occPoste', n: p.position }
-    for (const fl of t.arrows) if (fl.points.some((p) => p.y > 0.5)) return { cle: 'sch.occFleche', n: fl.from.position }
+  for (const t of s.steps) {
+    for (const p of t.markers) if (p.at.y > 0.5) return { key: 'sch.occPoste', n: p.position }
+    for (const fl of t.arrows) if (fl.points.some((p) => p.y > 0.5)) return { key: 'sch.occFleche', n: fl.from.position }
   }
   const noms: Record<Prop['kind'], string> = { cone: 'sch.occPlot', ball: 'sch.occBallonPose', ladder: 'sch.occEchelle' }
-  for (const o of s.props) if (o.at.y > 0.5) return { cle: noms[o.kind] }
-  for (const t of s.temps) if ('x' in t.ball && t.ball.y > 0.5) return { cle: 'sch.occBallon' }
+  for (const o of s.props) if (o.at.y > 0.5) return { key: noms[o.kind] }
+  for (const t of s.steps) if ('x' in t.ball && t.ball.y > 0.5) return { key: 'sch.occBallon' }
   return null
 }
 
@@ -172,10 +172,10 @@ function backcourtOccupant(s: Play): Occupant | null {
  * full → half is refused while a marker, an arrow, a prop or the loose ball occupies
  * the back court — remapping in silence would lose half the drawing.
  */
-export function toCourt(s: Play, court: Court): { ok: Play } | { refus: Occupant } {
+export function toCourt(s: Play, court: Court): { ok: Play } | { refused: Occupant } {
   if (s.court === court) return { ok: s }
   if (court === 'full') return { ok: remapY(s, court, (y) => y / 2) }
   const occupant = backcourtOccupant(s)
-  if (occupant) return { refus: occupant }
+  if (occupant) return { refused: occupant }
   return { ok: remapY(s, court, (y) => y * 2) }
 }

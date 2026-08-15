@@ -29,7 +29,7 @@ type Prise = { kind: 'pion'; side: Side; position: Position } | { kind: 'objet';
  * objets, qui vivent hors des temps et que la gomme retire aussi — sans eux,
  * « annuler » ne rendrait pas le plot effacé.
  */
-type Etape = { temps: Step; props: Prop[] }
+type Etape = { step: Step; props: Prop[] }
 
 /** Rayon de prise, en unités normalisées : large au doigt, sans être ambigu —
  *  c'est le pion le plus proche qui l'emporte de toute façon. */
@@ -77,11 +77,11 @@ function flecheSous(t: Step, p: Point): number {
 
 /** Le schéma avec la prise posée à `at` : sert au rendu pendant le glisser et à
  *  l'écriture au relâcher, pour que l'aperçu et l'enregistré ne divergent pas. */
-function deplace(s: Play, tempsIndex: number, quoi: Prise, at: Point): Play {
+function deplace(s: Play, stepIndex: number, quoi: Prise, at: Point): Play {
   if (quoi.kind === 'objet') return { ...s, props: s.props.map((o, k) => (k === quoi.index ? { ...o, at } : o)) }
   return {
     ...s,
-    temps: s.temps.map((t, k) => (k !== tempsIndex ? t : {
+    steps: s.steps.map((t, k) => (k !== stepIndex ? t : {
       ...t,
       markers: t.markers.map((p) => (p.side === quoi.side && p.position === quoi.position ? { ...p, at } : p)),
     })),
@@ -121,25 +121,25 @@ function sansDefense(t: Step): Step {
  * désormais son propre segment, et le libellé — qui reste le nom accessible du
  * bouton — cède la place à un pictogramme.
  */
-const MANIPULER: { cle: Outil; libelle: string; icone: string }[] = [
+const MANIPULER: { key: Outil; libelle: string; icone: string }[] = [
   // La croix fléchée du curseur de déplacement, et la gomme du carnet.
-  { cle: 'deplacer', libelle: 'outil.deplacer', icone: 'M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3' },
-  { cle: 'gomme', libelle: 'outil.gomme', icone: 'm7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21M22 21H7M5 11l9 9' },
+  { key: 'deplacer', libelle: 'outil.deplacer', icone: 'M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3' },
+  { key: 'gomme', libelle: 'outil.gomme', icone: 'm7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21M22 21H7M5 11l9 9' },
 ]
-const TRACER: { cle: Stroke; libelle: string }[] = [
-  { cle: 'cut', libelle: 'outil.course' },
-  { cle: 'screen', libelle: 'outil.ecran' },
-  { cle: 'pass', libelle: 'outil.passe' },
-  { cle: 'dribble', libelle: 'outil.dribble' },
+const TRACER: { key: Stroke; libelle: string }[] = [
+  { key: 'cut', libelle: 'outil.course' },
+  { key: 'screen', libelle: 'outil.ecran' },
+  { key: 'pass', libelle: 'outil.passe' },
+  { key: 'dribble', libelle: 'outil.dribble' },
 ]
-const POSER: { cle: Outil; libelle: string }[] = [
-  { cle: 'ball', libelle: 'outil.ballon' },
-  { cle: 'objet', libelle: 'outil.objets' },
+const POSER: { key: Outil; libelle: string }[] = [
+  { key: 'ball', libelle: 'outil.ballon' },
+  { key: 'objet', libelle: 'outil.objets' },
 ]
-const SORTES: { cle: Prop['kind']; libelle: string }[] = [
-  { cle: 'cone', libelle: 'outil.plot' },
-  { cle: 'ball', libelle: 'outil.ballonPose' },
-  { cle: 'ladder', libelle: 'outil.echelle' },
+const SORTES: { key: Prop['kind']; libelle: string }[] = [
+  { key: 'cone', libelle: 'outil.plot' },
+  { key: 'ball', libelle: 'outil.ballonPose' },
+  { key: 'ladder', libelle: 'outil.echelle' },
 ]
 
 const champ: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
@@ -149,7 +149,7 @@ export function SchemaEdit() {
   const { id } = useParams<{ id: string }>()
   const { can, guard } = useAuth()
   const [schema, setSchema] = useState<Play | null | undefined>(undefined)
-  const [tempsIndex, setTempsIndex] = useState(0)
+  const [stepIndex, setTempsIndex] = useState(0)
   const [outil, setOutil] = useState<Outil>('deplacer')
   const [sorteObjet, setSorteObjet] = useState<Prop['kind']>('cone')
   // Gestes en cours : purement visuels, jamais enregistrés tels quels.
@@ -157,14 +157,14 @@ export function SchemaEdit() {
   const [trace, setTrace] = useState<{ from: Arrow['from']; points: Point[] } | null>(null)
   // Une pile par temps : annuler sur le deuxième temps ne défait pas le premier.
   const [pile, setPile] = useState<Etape[][]>([])
-  const [refus, setRefus] = useState('')
+  const [refused, setRefus] = useState('')
   const [askDefense, setAskDefense] = useState(false)
-  const [nom, setNom] = useState('')
+  const [name, setName] = useState('')
   const [note, setNote] = useState('')
 
   useEffect(() => {
     if (!id) return
-    getPlay(id).then((s) => { setSchema(s ?? null); setNom(s?.nom ?? ''); setNote(s?.note ?? '') })
+    getPlay(id).then((s) => { setSchema(s ?? null); setName(s?.name ?? ''); setNote(s?.note ?? '') })
   }, [id])
 
   if (!id) return null
@@ -184,8 +184,8 @@ export function SchemaEdit() {
   )
 
   const vivant = schema
-  const index = Math.min(tempsIndex, vivant.temps.length - 1)
-  const temps = vivant.temps[index]
+  const index = Math.min(stepIndex, vivant.steps.length - 1)
+  const step = vivant.steps[index]
   const hauteur = vivant.court === 'full' ? D * 2 : D
 
   /**
@@ -197,7 +197,7 @@ export function SchemaEdit() {
     const suivant = f(vivant)
     if (empiler) setPile((p) => {
       const copie = [...p]
-      const avant: Etape = { temps: structuredClone(temps), props: structuredClone(vivant.props) }
+      const avant: Etape = { step: structuredClone(step), props: structuredClone(vivant.props) }
       copie[index] = [...(copie[index] ?? []), avant].slice(-PILE_MAX)
       return copie
     })
@@ -206,13 +206,13 @@ export function SchemaEdit() {
   })
 
   const modifierTemps = (f: (t: Step) => Step) =>
-    modifier((s) => ({ ...s, temps: s.temps.map((t, i) => (i === index ? f(t) : t)) }))
+    modifier((s) => ({ ...s, steps: s.steps.map((t, i) => (i === index ? f(t) : t)) }))
 
   const annuler = () => {
     const etape = pile[index]?.at(-1)
     if (!etape) return
     guard('manage', () => {
-      const suivant = { ...vivant, props: etape.props, temps: vivant.temps.map((t, i) => (i === index ? etape.temps : t)) }
+      const suivant = { ...vivant, props: etape.props, steps: vivant.steps.map((t, i) => (i === index ? etape.step : t)) }
       setPile((p) => p.map((s, i) => (i === index ? s.slice(0, -1) : s)))
       setSchema(suivant)
       savePlay(suivant)
@@ -223,7 +223,7 @@ export function SchemaEdit() {
     const p = versSvg(e, e.currentTarget)
     // Sans capture, un doigt qui sort du terrain laisserait le geste en suspens.
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* pas de pointeur actif (jsdom) */ }
-    const pion = pionSous(temps, p)
+    const pion = pionSous(step, p)
     if (outil === 'deplacer') {
       if (pion) { setPrise({ quoi: { kind: 'pion', side: pion.side, position: pion.position }, depart: pion.at, at: pion.at }); return }
       const i = objetSous(vivant.props, p)
@@ -239,7 +239,7 @@ export function SchemaEdit() {
       return
     }
     if (outil === 'gomme') {
-      const f = flecheSous(temps, p)
+      const f = flecheSous(step, p)
       if (f >= 0) { modifierTemps((t) => ({ ...t, arrows: t.arrows.filter((_, k) => k !== f) })); return }
       const o = objetSous(vivant.props, p)
       if (o >= 0) modifier((s) => ({ ...s, props: s.props.filter((_, k) => k !== o) }))
@@ -278,7 +278,7 @@ export function SchemaEdit() {
 
   const changerTerrain = (court: Court) => guard('manage', () => {
     const r = toCourt(vivant, court)
-    if ('refus' in r) { setRefus(translate('sch.refusDemi', { occupant: translate(r.refus.cle, { n: r.refus.n ?? 0 }) })); return }
+    if ('refused' in r) { setRefus(translate('sch.refusDemi', { occupant: translate(r.refused.key, { n: r.refused.n ?? 0 }) })); return }
     setRefus('')
     // Le changement de terrain remappe toutes les coordonnées : les étapes empilées
     // sont dans l'ancienne échelle et les restaurer replacerait les pions n'importe
@@ -296,38 +296,38 @@ export function SchemaEdit() {
   // selon `defense` » cassée, et écrite en base.
   const changerDefense = (v: boolean) => {
     if (!v) { setAskDefense(true); return }
-    modifier((s) => { setPile([]); return { ...s, defense: true, temps: s.temps.map((t) => avecDefense(t, s.court)) } }, false)
+    modifier((s) => { setPile([]); return { ...s, defense: true, steps: s.steps.map((t) => avecDefense(t, s.court)) } }, false)
   }
-  const retirerDefense = () => modifier((s) => { setPile([]); return { ...s, defense: false, temps: s.temps.map(sansDefense) } }, false)
+  const retirerDefense = () => modifier((s) => { setPile([]); return { ...s, defense: false, steps: s.steps.map(sansDefense) } }, false)
 
   const ajouterTemps = () => modifier((s) => {
-    setTempsIndex(s.temps.length)          // le temps ajouté devient le temps courant
-    return { ...s, temps: [...s.temps, nextStep(s.temps[s.temps.length - 1])] }
+    setTempsIndex(s.steps.length)          // le temps ajouté devient le temps courant
+    return { ...s, steps: [...s.steps, nextStep(s.steps[s.steps.length - 1])] }
   }, false)
 
   // Réordonner ou supprimer déplace les rangs : la pile, indexée par rang, mentirait.
   // On la vide plutôt que de la faire pointer sur le mauvais temps.
   const bougerTemps = (delta: number) => {
     const j = index + delta
-    if (j < 0 || j >= vivant.temps.length) return
+    if (j < 0 || j >= vivant.steps.length) return
     modifier((s) => {
-      const t = [...s.temps]
+      const t = [...s.steps]
       ;[t[index], t[j]] = [t[j], t[index]]
       setTempsIndex(j)
       setPile([])
-      return { ...s, temps: t }
+      return { ...s, steps: t }
     }, false)
   }
   const supprimerTemps = () => modifier((s) => {
     setTempsIndex(Math.max(0, index - 1))
     setPile([])
-    return { ...s, temps: s.temps.filter((_, i) => i !== index) }
+    return { ...s, steps: s.steps.filter((_, i) => i !== index) }
   }, false)
 
   // Les champs n'ont plus à réclamer un code à la frappe : on n'entre dans
   // l'éditeur qu'avec le droit (cf. le renvoi ci-dessus). L'enregistrement reste
   // gardé — `modifier` est la seule porte vers la base.
-  const enregistrerNom = () => { if (nom.trim() && nom !== vivant.nom) modifier((s) => ({ ...s, nom: nom.trim() }), false) }
+  const saveName = () => { if (name.trim() && name !== vivant.name) modifier((s) => ({ ...s, name: name.trim() }), false) }
   const enregistrerNote = () => { if ((note.trim() || undefined) !== vivant.note) modifier((s) => ({ ...s, note: note.trim() || undefined }), false) }
 
   const affiche = prise ? deplace(vivant, index, prise.quoi, prise.at) : vivant
@@ -346,8 +346,8 @@ export function SchemaEdit() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Link to="/schemas" aria-label={translate('edit.retourSchemas')} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
         <input
-          aria-label={translate('edit.nomSchema')} value={nom} onChange={(e) => setNom(e.target.value)}
-          onBlur={enregistrerNom}
+          aria-label={translate('edit.nomSchema')} value={name} onChange={(e) => setName(e.target.value)}
+          onBlur={saveName}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           style={{ ...champ, flex: '1 1 180px', minWidth: 0, fontWeight: 800 }}
         />
@@ -374,22 +374,22 @@ export function SchemaEdit() {
           <div className="mb-3 flex select-none flex-wrap items-center gap-2">
             <Famille titre={translate('edit.manipuler')}>
               {MANIPULER.map((o) => (
-                <OutilBouton key={o.cle} libelle={translate(o.libelle)} actif={outil === o.cle} onClick={() => setOutil(o.cle)}>
+                <OutilBouton key={o.key} libelle={translate(o.libelle)} actif={outil === o.key} onClick={() => setOutil(o.key)}>
                   <Ic d={o.icone} className="h-[19px] w-[19px]" />
                 </OutilBouton>
               ))}
             </Famille>
             <Famille titre={translate('edit.tracer')}>
               {TRACER.map((t) => (
-                <OutilBouton key={t.cle} libelle={translate(t.libelle)} actif={outil === t.cle} onClick={() => setOutil(t.cle)}>
-                  <TraitDessine stroke={t.cle} />
+                <OutilBouton key={t.key} libelle={translate(t.libelle)} actif={outil === t.key} onClick={() => setOutil(t.key)}>
+                  <TraitDessine stroke={t.key} />
                 </OutilBouton>
               ))}
             </Famille>
             <Famille titre={translate('edit.poser')}>
               {POSER.map((o) => (
-                <OutilBouton key={o.cle} libelle={translate(o.libelle)} actif={outil === o.cle} onClick={() => setOutil(o.cle)}>
-                  <PoserDessine quoi={o.cle} actif={outil === o.cle} />
+                <OutilBouton key={o.key} libelle={translate(o.libelle)} actif={outil === o.key} onClick={() => setOutil(o.key)}>
+                  <PoserDessine quoi={o.key} actif={outil === o.key} />
                 </OutilBouton>
               ))}
             </Famille>
@@ -407,9 +407,9 @@ export function SchemaEdit() {
             <div className="mb-3 flex select-none flex-wrap gap-2">
               {SORTES.map((s) => (
                 <button
-                  key={s.cle} onClick={() => setSorteObjet(s.cle)} aria-pressed={sorteObjet === s.cle}
+                  key={s.key} onClick={() => setSorteObjet(s.key)} aria-pressed={sorteObjet === s.key}
                   className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
-                  style={sorteObjet === s.cle ? { background: C.amberBg, color: C.amber, border: `1px solid ${C.amber}` } : { background: C.card, border: bd, color: C.muted }}
+                  style={sorteObjet === s.key ? { background: C.amberBg, color: C.amber, border: `1px solid ${C.amber}` } : { background: C.card, border: bd, color: C.muted }}
                 >
                   {translate(s.libelle)}
                 </button>
@@ -424,7 +424,7 @@ export function SchemaEdit() {
               c'est `largeurTerrain` qui les tient.
               `select-none` : sans lui, un glisser sélectionne les numéros des pions. */}
           <div className="select-none" style={{ maxWidth: courtWidth(vivant.court, 'edition') }}>
-            <PlayBoard schema={affiche} tempsIndex={index} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
+            <PlayBoard schema={affiche} stepIndex={index} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
               {/* Le geste en cours, brut : il disparaît au relâcher, remplacé par la
                   flèche réduite — ou par rien du tout si le droit a été refusé. */}
               {trace && trace.points.length > 1 && (
@@ -443,25 +443,25 @@ export function SchemaEdit() {
               entière se cale sur la largeur du terrain, dont elle montre les états. */}
           <div className="mt-4 flex select-none items-center gap-2" style={{ maxWidth: largeurBande }}>
             <p className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>
-              {translate('sch.temps', { n: index + 1, total: vivant.temps.length })}
+              {translate('sch.temps', { n: index + 1, total: vivant.steps.length })}
             </p>
             <div className="ml-auto flex items-center gap-1.5">
               <CommandeTemps libelle={translate('edit.reculerTemps')} onClick={() => bougerTemps(-1)} disabled={index === 0}>◀</CommandeTemps>
-              <CommandeTemps libelle={translate('edit.avancerTemps')} onClick={() => bougerTemps(1)} disabled={index === vivant.temps.length - 1}>▶</CommandeTemps>
+              <CommandeTemps libelle={translate('edit.avancerTemps')} onClick={() => bougerTemps(1)} disabled={index === vivant.steps.length - 1}>▶</CommandeTemps>
               {/* Un schéma a toujours au moins un temps : le dernier ne se supprime pas. */}
-              <CommandeTemps libelle={translate('edit.supprimerTemps')} onClick={supprimerTemps} disabled={vivant.temps.length === 1} danger><X className="h-4 w-4" strokeWidth={2.5} /></CommandeTemps>
+              <CommandeTemps libelle={translate('edit.supprimerTemps')} onClick={supprimerTemps} disabled={vivant.steps.length === 1} danger><X className="h-4 w-4" strokeWidth={2.5} /></CommandeTemps>
             </div>
           </div>
 
           {/* La bande des temps sous le terrain : on y lit la combinaison entière. */}
           <div className="mt-2 flex select-none items-stretch gap-2 overflow-x-auto pb-1" style={{ maxWidth: largeurBande }}>
-            {vivant.temps.map((_, i) => (
+            {vivant.steps.map((_, i) => (
               <button
                 key={i} aria-label={translate('edit.tempsN', { n: i + 1 })} aria-pressed={i === index} onClick={() => setTempsIndex(i)}
                 className="w-20 shrink-0 rounded-xl p-1"
                 style={{ background: C.card, border: i === index ? `2px solid ${C.accent}` : bd }}
               >
-                <PlayBoard schema={vivant} tempsIndex={i} apercu />
+                <PlayBoard schema={vivant} stepIndex={i} apercu />
                 <span className="mt-1 block text-[12px] font-bold" style={{ color: i === index ? C.accent : C.muted }}>{i + 1}</span>
               </button>
             ))}
@@ -490,7 +490,7 @@ export function SchemaEdit() {
                 </button>
               ))}
             </div>
-            {refus && <p className="mt-2 text-[12px] font-semibold" style={{ color: C.accent }}>{refus}</p>}
+            {refused && <p className="mt-2 text-[12px] font-semibold" style={{ color: C.accent }}>{refused}</p>}
             {/* `-mx-2 px-2 py-2.5` : c'est le libellé qu'on touche, pas la case, et il
                 faisait vingt pixels de haut — pour une bascule qui redessine le schéma
                 entier et demande confirmation. La marge négative garde l'alignement

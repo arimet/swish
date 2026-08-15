@@ -10,8 +10,8 @@ import { savePlay } from '../../persistence/repositories'
 import { newPlay, nextStep, type Play } from '../../domain/plays'
 
 const deuxTemps = (): Play => {
-  const s: Play = { id: 's1', ...newPlay('ta', 'half', false), nom: 'Corner pour le 4' }
-  return { ...s, temps: [s.temps[0], nextStep(s.temps[0])] }
+  const s: Play = { id: 's1', ...newPlay('ta', 'half', false), name: 'Corner pour le 4' }
+  return { ...s, steps: [s.steps[0], nextStep(s.steps[0])] }
 }
 
 beforeEach(async () => {

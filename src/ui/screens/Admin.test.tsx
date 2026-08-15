@@ -35,7 +35,7 @@ beforeEach(async () => {
   await saveConvocation({ matchId: 'm3', playerIds: ['p1'] })
   await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'ta', homeScore: 70, awayScore: 60 })
   await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
-  await savePlay({ id: 's1', ...newPlay('ta', 'half', false), nom: 'PnR haut' })
+  await savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'PnR haut' })
   localStorage.setItem('swish-club-id', 'ta')
 })
 
@@ -185,8 +185,8 @@ describe('Administration — droits', () => {
       'Supprimer les schémas',
       'Tout effacer',
     ]
-    for (const nom of opérations) {
-      expect(screen.queryByRole('button', { name: nom })).not.toBeInTheDocument()
+    for (const name of opérations) {
+      expect(screen.queryByRole('button', { name: name })).not.toBeInTheDocument()
     }
     // Et aucune confirmation ne peut s'ouvrir derrière.
     expect(screen.queryByRole('button', { name: /supprimer définitivement/i })).not.toBeInTheDocument()

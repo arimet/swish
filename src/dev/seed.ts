@@ -41,7 +41,7 @@ const TEAMS: [string, string][] = [
  * l'écran gère leur absence — c'est d'ailleurs le cas que l'ancien seed vérifiait
  * avec son dernier joueur sans données. Ils se remplissent depuis la fiche d'équipe.
  */
-const EFFECTIF: [numero: number, nom: string, prenom: string][] = [
+const EFFECTIF: [numero: number, name: string, prenom: string][] = [
   [2, 'CAUTENET', 'Louis'],
   [5, 'DELEPEE', 'Mateo'],
   [6, 'SALAH', 'Ali'],
@@ -542,12 +542,12 @@ interface Etape { deplace?: Mvt[]; ball?: Step['ball']; arrows?: Arrow[] }
  * une combinaison qui ne se joue pas.
  */
 function schemaDemo(
-  idx: number, clubId: string, nom: string, note: string, folder: string,
+  idx: number, clubId: string, name: string, note: string, folder: string,
   court: Court, defense: boolean, etapes: Etape[],
 ): Play {
   const base = newPlay(clubId, court, defense)
-  let t = base.temps[0]
-  const temps = etapes.map((e, i) => {
+  let t = base.steps[0]
+  const steps = etapes.map((e, i) => {
     t = i === 0 ? t : nextStep(t)
     for (const [side, position, x, y] of e.deplace ?? []) {
       const pion = t.markers.find((p) => p.side === side && p.position === position)
@@ -557,7 +557,7 @@ function schemaDemo(
     t.arrows = e.arrows ?? []
     return t
   })
-  return { ...base, id: `seed-sch${idx}`, nom, note, folder, temps }
+  return { ...base, id: `seed-sch${idx}`, name, note, folder, steps }
 }
 
 function buildSchemas(clubId: string): Play[] {

@@ -33,9 +33,9 @@ describe('données de démonstration', () => {
 
   it('produit des rotations, donc un temps de jeu crédible', async () => {
     const joue = (await listMatches()).find((m) => m.status === 'finished')!
-    const temps = [...playingTimes(joue).values()].filter((t) => t > 0)
+    const steps = [...playingTimes(joue).values()].filter((t) => t > 0)
     // Sans SUBSTITUTION, seuls les cinq titulaires auraient du temps de jeu.
-    expect(temps.length).toBeGreaterThan(5)
+    expect(steps.length).toBeGreaterThan(5)
   })
 
   it('place l’Avenir de Vignot en tête, à égalité de rencontres jouées', async () => {
@@ -230,10 +230,10 @@ describe('données de démonstration', () => {
     expect(schemas).toHaveLength(3)
     expect(schemas.filter((s) => s.court === 'full')).toHaveLength(1)
     // Un ballon au sol est un Point ; porté, c'est un pion désigné.
-    expect(schemas.filter((s) => 'x' in s.temps[0].ball)).toHaveLength(1)
+    expect(schemas.filter((s) => 'x' in s.steps[0].ball)).toHaveLength(1)
     // Chaque temps garde son effectif complet — la défense n'apparaît que là où
     // le schéma la demande.
-    for (const s of schemas) for (const t of s.temps) expect(t.markers).toHaveLength(s.defense ? 10 : 5)
+    for (const s of schemas) for (const t of s.steps) expect(t.markers).toHaveLength(s.defense ? 10 : 5)
   })
 
   it('range les schémas de démonstration et en attache à la prochaine séance', async () => {
@@ -247,11 +247,11 @@ describe('données de démonstration', () => {
 
     // Le pick and roll va jusqu'au panier : le 5 arrive au bout de sa course et
     // reçoit le ballon, au lieu d'une finition qui n'existait qu'en flèches.
-    const pnr = schemas.find((s) => s.nom.includes('Pick and roll'))!
-    expect(pnr.temps).toHaveLength(4)
-    const fin = pnr.temps[3]
+    const pnr = schemas.find((s) => s.name.includes('Pick and roll'))!
+    expect(pnr.steps).toHaveLength(4)
+    const fin = pnr.steps[3]
     expect(fin.ball).toEqual({ side: 'offense', position: 5 })
-    const cinqAvant = pnr.temps[2].markers.find((p) => p.side === 'offense' && p.position === 5)!
+    const cinqAvant = pnr.steps[2].markers.find((p) => p.side === 'offense' && p.position === 5)!
     const cinqApres = fin.markers.find((p) => p.side === 'offense' && p.position === 5)!
     expect(cinqApres.at.y).toBeLessThan(cinqAvant.at.y)
     // Près du panier (y = 0 à la ligne de fond), et non à mi-chemin.

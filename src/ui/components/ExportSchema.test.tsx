@@ -26,12 +26,12 @@ import { savePlay } from '../../persistence/repositories'
 import { SchemaView } from '../screens/SchemaView'
 
 const deuxTemps = (): Play => {
-  const s: Play = { id: 's1', ...newPlay('ta', 'half', true), nom: 'Pick and roll haut', note: 'Écran au meneur' }
+  const s: Play = { id: 's1', ...newPlay('ta', 'half', true), name: 'Pick and roll haut', note: 'Écran au meneur' }
   const t0 = {
-    ...s.temps[0],
+    ...s.steps[0],
     arrows: [{ from: { side: 'offense' as const, position: 5 as const }, stroke: 'screen' as const, points: [{ x: 0.7, y: 0.2 }, { x: 0.55, y: 0.5 }] }],
   }
-  return { ...s, temps: [t0, nextStep(t0)] }
+  return { ...s, steps: [t0, nextStep(t0)] }
 }
 
 /**
@@ -46,11 +46,11 @@ const troisMilleGestes = (): Play => {
     stroke: 'cut' as const,
     points: Array.from({ length: 150 }, () => ({ x: Math.random(), y: Math.random() })),
   }))
-  return { ...s, temps: [{ ...s.temps[0], arrows }, s.temps[1]] }
+  return { ...s, steps: [{ ...s.steps[0], arrows }, s.steps[1]] }
 }
 
 const ouvrir = (schema: Play) =>
-  render(<ExportSchema schema={schema} tempsIndex={0} open onClose={() => {}} />)
+  render(<ExportSchema schema={schema} stepIndex={0} open onClose={() => {}} />)
 
 /** Le lien tel que le dialogue le donne à copier. */
 const lienAffiche = async () =>
@@ -84,10 +84,10 @@ describe('ExportSchema — le partage d’une combinaison', () => {
 
     const recu = await decoder(lien.hash.slice(1))
     expect(recu).not.toBeNull()
-    expect(recu!.nom).toBe(original.nom)
+    expect(recu!.name).toBe(original.name)
     expect(recu!.note).toBe(original.note)
     expect(recu!.defense).toBe(true)
-    expect(recu!.temps).toEqual(original.temps)
+    expect(recu!.steps).toEqual(original.steps)
   })
 
   it('au-delà de la limite, aucun lien n’est proposé et l’écran dit pourquoi', async () => {

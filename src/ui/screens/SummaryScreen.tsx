@@ -259,7 +259,7 @@ function OpponentCard({ teamId, name, score }: { teamId: string; name: string; s
     <section className="flex items-center gap-4 overflow-hidden rounded-2xl px-5 py-4" style={{ background: C.card, border: bd }}>
       <TeamBadge id={teamId} name={name} size="h-11 w-11 text-xs" />
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-extrabold uppercase tracking-wide">{translate('resume.visiteurs', { nom: name })}</h3>
+        <h3 className="truncate text-sm font-extrabold uppercase tracking-wide">{translate('resume.visiteurs', { name: name })}</h3>
         <p className="mt-0.5 text-[12px] font-semibold" style={{ color: C.faint }}>{translate('resume.scoreGlobal')}</p>
       </div>
       <span className="text-3xl font-black tabular-nums" style={{ color: C.accent }}>{score}</span>
@@ -283,7 +283,7 @@ function TeamTable({ match, players, name, onPick }: { match: Match; players: Re
     <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: bd, ...(onPick ? { boxShadow: `0 0 0 1px ${C.accentBd}` } : {}) }}>
       <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: `1px solid ${C.border}` }}>
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: C.brand }} />
-        <h3 className="text-sm font-extrabold uppercase tracking-wide">{translate('resume.locaux', { nom: name })}</h3>
+        <h3 className="text-sm font-extrabold uppercase tracking-wide">{translate('resume.locaux', { name: name })}</h3>
         {onPick && <span className="ml-auto text-[12px] font-bold" style={{ color: C.accent }}><Pencil className="mr-1 inline h-3 w-3 align-[-1px]" strokeWidth={2} />{translate('resume.cliquezLigne')}</span>}
       </div>
       <div className="overflow-x-auto">

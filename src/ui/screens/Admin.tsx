@@ -75,7 +75,7 @@ export function Admin() {
 
   const supprimerRencontres = (libellé: string, filtre: (m: Match) => boolean, n: number) => demander({
     titre: translate('admin.supprimerRencontresTitre'),
-    message: translate('admin.supprimerRencontresTexte', { count: translate('compte.rencontre', { count: n }), libelle: libellé }),
+    message: translate('admin.supprimerRencontresTexte', { count: translate('compte.rencontre', { count: n }), label: libellé }),
     executer: () => deleteMatchesWhere(filtre),
   })
 
@@ -103,7 +103,7 @@ export function Admin() {
             const n = matches.filter(ofLeague(champ)).length
             return (
               <Row key={champ} libelle={leagueName(champ)} count={translate('compte.rencontre', { count: n })} action={translate('commun.supprimer')}
-                aria={translate('admin.supprimerRencontresDe', { quoi: leagueName(champ) })} desactive={n === 0}
+                aria={translate('admin.supprimerRencontresDe', { what: leagueName(champ) })} desactive={n === 0}
                 onClick={() => supprimerRencontres(`« ${leagueName(champ)} »`, ofLeague(champ), n)} />
             )
           })}
@@ -111,12 +111,12 @@ export function Admin() {
         </Bloc>
 
         <Bloc titre={translate('admin.parAnnee')} aide={translate('admin.aideAnnee')}>
-          {years(matches).map((an) => {
-            const n = matches.filter(ofYear(an)).length
+          {years(matches).map((year) => {
+            const n = matches.filter(ofYear(year)).length
             return (
-              <Row key={an} libelle={translate('admin.annee', { an })} count={translate('compte.rencontre', { count: n })} action={translate('commun.supprimer')}
-                aria={translate('admin.supprimerRencontresAnnee', { an })} desactive={n === 0}
-                onClick={() => supprimerRencontres(translate('admin.anneeCivile', { an }), ofYear(an), n)} />
+              <Row key={year} libelle={translate('admin.annee', { year })} count={translate('compte.rencontre', { count: n })} action={translate('commun.supprimer')}
+                aria={translate('admin.supprimerRencontresAnnee', { year })} desactive={n === 0}
+                onClick={() => supprimerRencontres(translate('admin.anneeCivile', { year }), ofYear(year), n)} />
             )
           })}
           {years(matches).length === 0 && <Vide>{translate('admin.aucuneRencontreDatee')}</Vide>}
@@ -127,10 +127,10 @@ export function Admin() {
             const n = matches.filter(hasEvents(id)).length
             return (
               <Row key={id} libelle={teamName(id)} count={translate('admin.aVider', { count: translate('compte.feuille', { count: n }) })} action={translate('admin.vider')}
-                aria={translate('admin.viderFeuillesDe', { nom: teamName(id) })} desactive={n === 0}
+                aria={translate('admin.viderFeuillesDe', { name: teamName(id) })} desactive={n === 0}
                 onClick={() => demander({
                   titre: translate('admin.viderTitre'),
-                  message: translate('admin.viderTexte', { count: translate('compte.rencontre', { count: n }), nom: teamName(id) }),
+                  message: translate('admin.viderTexte', { count: translate('compte.rencontre', { count: n }), name: teamName(id) }),
                   executer: () => clearClubStats(id),
                 })} />
             )
@@ -146,18 +146,18 @@ export function Admin() {
               message: translate('admin.supprimerResultatsTexte', { count: translate('compte.resultat', { count: results.length }) }),
               executer: deleteAllResults,
             })} />
-          <Row libelle={translate('admin.entrainementsDe', { nom: club?.name ?? translate('admin.ceClub') })} count={translate('compte.seance', { count: sessions.length })} action={translate('commun.supprimer')}
+          <Row libelle={translate('admin.entrainementsDe', { name: club?.name ?? translate('admin.ceClub') })} count={translate('compte.seance', { count: sessions.length })} action={translate('commun.supprimer')}
             aria={translate('admin.supprimerEntrainements')} desactive={sessions.length === 0}
             onClick={() => demander({
               titre: translate('admin.supprimerEntrainementsTitre'),
-              message: translate('admin.supprimerEntrainementsTexte', { count: translate('compte.seance', { count: sessions.length }), nom: club?.name ?? translate('admin.ceClub') }),
+              message: translate('admin.supprimerEntrainementsTexte', { count: translate('compte.seance', { count: sessions.length }), name: club?.name ?? translate('admin.ceClub') }),
               executer: () => deleteTrainingsOfClub(clubId),
             })} />
-          <Row libelle={translate('admin.schemasDe', { nom: club?.name ?? translate('admin.ceClub') })} count={translate('compte.schema', { count: plays.length })} action={translate('commun.supprimer')}
+          <Row libelle={translate('admin.schemasDe', { name: club?.name ?? translate('admin.ceClub') })} count={translate('compte.schema', { count: plays.length })} action={translate('commun.supprimer')}
             aria={translate('admin.supprimerSchemas')} desactive={plays.length === 0}
             onClick={() => demander({
               titre: translate('admin.supprimerSchemasTitre'),
-              message: translate('admin.supprimerSchemasTexte', { count: translate('compte.schema', { count: plays.length }), nom: club?.name ?? translate('admin.ceClub') }),
+              message: translate('admin.supprimerSchemasTexte', { count: translate('compte.schema', { count: plays.length }), name: club?.name ?? translate('admin.ceClub') }),
               executer: () => deletePlaysOfClub(clubId),
             })} />
         </Bloc>
@@ -175,7 +175,7 @@ export function Admin() {
             action={translate('admin.toutEffacer')} aria={translate('admin.toutEffacer')} desactive={teams.length === 0 && matches.length === 0}
             onClick={() => demander({
               titre: translate('admin.toutEffacerTitre'),
-              message: translate('admin.toutEffacerTexte', { teams: translate('compte.equipe', { count: teams.length }), rencontres: translate('compte.rencontre', { count: matches.length }), resultats: translate('compte.resultat', { count: results.length }), seances: translate('compte.seance', { count: trainings.length }) }),
+              message: translate('admin.toutEffacerTexte', { teams: translate('compte.equipe', { count: teams.length }), games: translate('compte.rencontre', { count: matches.length }), results: translate('compte.resultat', { count: results.length }), sessions: translate('compte.seance', { count: trainings.length }) }),
               // Le nom du club, recopié à l'identique. Le repli n'arrive pas dans la
               // coquille (le club est résolu) : il est là pour qu'aucun chemin ne laisse
               // la remise à zéro se confirmer d'un seul clic.

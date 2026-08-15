@@ -1,39 +1,38 @@
-/* Les jetons de couleur de l'application, en un seul endroit.
+/* The application's colour tokens, in one place.
  *
- * Le monde est **sombre d'abord** : un canevas encre et un seul accent citron.
- * C'est un choix d'identité, pas un mode d'économie — et c'est ce qui autorise les
- * couleurs à être vives, parce qu'aucune n'a plus à se défendre contre du blanc.
+ * The world is **dark first**: an ink canvas and a single lemon accent. That is an
+ * identity choice, not an economy mode — and it is what lets the colours be vivid,
+ * because none of them has to defend itself against white any more.
  *
- * Le bloc clair reste posé sur `:root` nu, donc il s'applique dès la première
- * peinture ; le script en tête d'`index.html` bascule aussitôt en sombre, qui est
- * le défaut. Le jour existe et il est composé, pas hérité : voir son bloc.
+ * The light block stays on bare `:root`, so it applies from the very first paint;
+ * the script at the top of `index.html` switches immediately to dark, which is the
+ * default. Daylight exists and it is composed, not inherited: see its block.
  *
- * Deux familles de jetons, et la distinction est délibérée :
+ * Two families of tokens, and the distinction is deliberate:
  *
- * — `--c-*` : le chrome de l'application (fonds, textes, bordures, accents).
- *   Il bascule avec le thème.
- * — `--t-*` : le terrain. Sa **surface** bascule avec le thème, sa **convention de
- *   teintes** non : le rouge dit « attaque », le bleu « défense », l'or « ballon ».
- *   Un tableau tactique est un carnet de coach, et retourner cette convention
- *   reviendrait à réapprendre à lire à celui qui la connaît. Voir son bloc, en bas.
+ * — `--c-*`: the application chrome (backgrounds, text, borders, accents). It
+ *   switches with the theme.
+ * — `--t-*`: the court. Its **surface** switches with the theme, its **colour
+ *   convention** does not: red says "attack", blue "defence", gold "ball". A
+ *   playbook is a coach's notebook, and flipping that convention would amount to
+ *   teaching someone who knows it to read again. See its block, at the bottom.
  */
 
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
 
-  /* Six plans, et l'ordre compte : la carte blanche est le point haut, tout le
-     reste s'enfonce derrière elle.
-       carte #fff > cadre > panneau > carte2 > bordure > page (la gouttière).
-     Deux défauts corrigés, dans cet ordre. Les six valeurs tenaient d'abord dans
-     une fourchette de dix pour cent de clarté : l'écran devenait un seul
-     brouillard où les cartes ne se distinguaient plus de leur fond. Elles sont
-     écartées, la gouttière franchement sous le cadre, la bordure assez soutenue
-     pour dessiner un vrai bord.
-     Puis elles étaient **gris-bleu** (teinte 225°) : la couleur d'un tableur, dans
-     une application de parquet et de ballon. Elles sont passées au gris chaud
-     (teinte ~45°, chroma minuscule), ce qui fait cohésion avec l'orange de marque
-     sans virer au beige — le blanc de la carte reste un vrai blanc. */
+  /* Six planes, and the order matters: the white card is the high point, everything
+     else sinks behind it.
+       card #fff > frame > panel > card2 > border > page (the gutter).
+     Two defects fixed, in this order. The six values at first sat within a ten per
+     cent band of lightness: the screen became a single fog where cards no longer
+     separated from their background. They are spread apart, the gutter clearly below
+     the frame, the border strong enough to draw a real edge.
+     Then they were **blue-grey** (hue 225°): the colour of a spreadsheet, in an
+     application of hardwood and basketballs. They moved to a warm grey (hue ~45°,
+     tiny chroma), which coheres with the brand hue without turning beige — the
+     card's white stays a real white. */
   --c-page: #c3cbd6;
   --c-frame: #f7f9fb;
   --c-panel: #eef2f6;
@@ -41,45 +40,43 @@
   --c-card2: #e6ecf2;
   --c-border: #d8e0e8;
 
-  /* Trois niveaux de texte, chauds comme leurs fonds. Les rapports mesurés vivent
-     dans `contrast.test.ts` et non ici : les chiffres qu'un commentaire annonce
-     se périment au premier ajustement de teinte, et personne ne les recalcule. */
+  /* Three levels of text, warm like their backgrounds. The measured ratios live in
+     `contrast.test.ts` and not here: figures announced by a comment go stale at the
+     first hue adjustment, and nobody recomputes them. */
   --c-text: #0d1117;
   --c-muted: #48525e;
   --c-faint: #5a6470;
 
-  /* Le citron, en deux rôles — et c'est le thème clair qui les sépare le plus.
+  /* Lemon, in two roles — and it is the light theme that separates them most.
    *
-   * Un accent citron est ingérable comme **encre** sur du blanc : `#d3f24b` y donne
-   * 1,15:1. Le jour ne peut donc pas porter l'accent du monde tel quel, et le
-   * réflexe qui consiste à l'assombrir jusqu'à ce qu'il passe donne une olive
-   * sourde — c'est exactement ce qui rendait les palettes précédentes ternes.
+   * A lemon accent is unmanageable as **ink** on white: `#d3f24b` gives 1.15:1
+   * there. Daylight therefore cannot carry the world's accent as it is, and the
+   * reflex of darkening it until it passes yields a dull olive — which is exactly
+   * what made the previous palettes drab.
    *
-   * — `--c-brand` **remplit** : boutons, pastilles, écusson, ligne active. Il garde
-   *   le citron, à peine approfondi pour tenir comme aplat, et porte de l'encre
-   *   sombre. C'est là que vit la couleur du produit.
-   * — `--c-accent` **écrit**, et seulement là où une pastille serait ridicule (un
-   *   chiffre dans un tableau). En clair c'est une olive profonde, assumée comme
-   *   discrète : le jour tire sa vie de ses aplats, pas de son texte coloré.
+   * — `--c-brand` **fills**: buttons, pills, crest, active line. It keeps the lemon,
+   *   barely deepened so it holds as a flat area, and carries dark ink. That is
+   *   where the product's colour lives.
+   * — `--c-accent` **writes**, and only where a pill would be ridiculous (a figure
+   *   in a table). On light it is a deep olive, deliberately discreet: daylight
+   *   draws its life from its flat areas, not from coloured text.
    *
-   * En sombre les deux se rejoignent sur le citron pur : sur un canevas encre, il
-   * est à la fois le meilleur texte et le meilleur bouton. Les rapports mesurés
-   * vivent dans `contrast.test.ts`. */
+   * On dark the two rejoin on pure lemon: on an ink canvas, it is at once the best
+   * text and the best button. The measured ratios live in `contrast.test.ts`. */
   --c-brand: #a8c400;
   --c-on-brand: #12190a;
   --c-accent: #4a5600;
   --c-accent-bg: #f2f9d4;
   --c-accent-bd: rgba(168, 196, 0, 0.6);
-  /* Ce qui s'écrit sur l'encre-accent quand elle sert de fond, ce qui reste le cas
-     des boutons shadcn `bg-primary`. */
+  /* What is written on the accent ink when it serves as a background, which remains
+     the case for shadcn `bg-primary` buttons. */
   --c-on-accent: #ffffff;
 
-  /* Le vert (victoire) et l'or (à venir). Chacun en trois pièces : un remplissage
-     avec son encre, pour les pastilles, et une encre approfondie avec sa teinte
-     pâle pour les rares chiffres colorés. Noter que l'encre portée change de sens
-     d'un thème à l'autre : sombre sur les aplats du thème sombre, claire sur ceux
-     du thème clair, qui sont plus profonds. C'est le test qui le vérifie, pas
-     l'intuition. */
+  /* Green (a win) and gold (upcoming). Each in three pieces: a fill with its ink,
+     for the pills, and a deepened ink with its pale tint for the rare coloured
+     figures. Note that the ink carried reverses meaning from one theme to the other:
+     dark on the dark theme's flat areas, light on the light theme's, which are
+     deeper. It is the test that checks this, not intuition. */
   --c-green: #08753f;
   --c-green-bg: #dcf7e9;
   --c-green-fill: #0a7f47;
@@ -90,36 +87,36 @@
   --c-gold-fill: #f2b104;
   --c-on-gold: #231800;
 
-  /* Le bleu des entraînements dans le calendrier. */
+  /* The blue of training sessions in the calendar. */
   --c-info: #1257b0;
   --c-info-bg: #e2eeff;
   --c-info-fill: #1668d6;
   --c-on-info: #f1f7ff;
 
-  /* La faute, l'effacement, le refus. Un jeton plutôt que les rouges 400-500 de
-     Tailwind : ceux-là sont calibrés pour du charcoal, il fallait les approfondir
-     en clair, ce qui les crevait en sombre. C'est le seul remplissage qui porte du
-     **blanc** et non une encre sombre — le rouge est assez foncé pour ça, et le
-     vérifier plutôt que le supposer est tout l'objet du test. */
+  /* The foul, the erasure, the refusal. A token rather than Tailwind's 400-500 reds:
+     those are calibrated for charcoal, they had to be deepened on light, which blew
+     them out on dark. It is the only fill that carries **white** rather than a dark
+     ink — red is dark enough for that, and checking it rather than assuming it is the
+     whole point of the test. */
   --c-danger: #b30f24;
   --c-danger-bg: #ffe3e8;
   --c-danger-fill: #d4142c;
   --c-on-danger: #fff1f3;
 
-  /* Le voile neutre (survol, pastille « Final ») : il assombrit en clair, il
-     éclaircit en sombre. Un `rgba(255,255,255,…)` en dur faisait donc
-     disparaître ces fonds dès que la page passait au blanc. */
+  /* The neutral veil (hover, the "Final" pill): it darkens on light, it lightens on
+     dark. A hard-coded `rgba(255,255,255,…)` therefore made these backgrounds vanish
+     as soon as the page turned white. */
   --c-hover: rgba(0, 0, 0, 0.05);
   --c-neutral-bg: rgba(0, 0, 0, 0.06);
 
   /* --- shadcn / Base UI ---
-     Les mêmes couleurs que ci-dessus, sous les noms que réclament les composants
-     shadcn. `--primary` pointe la **marque** et non l'encre-accent : un
-     `bg-primary` doit être le même bouton orange que partout ailleurs dans
-     l'application, pas une seconde variante plus sombre.
-     Les surfaces **pointent** les plans `--c-*` : une seule échelle de plans par
-     thème, pas deux familles qui décrivent les mêmes à un pour cent près et qu'il
-     faut ensuite corriger deux fois. */
+     The same colours as above, under the names the shadcn components demand.
+     `--primary` points at the **brand** and not at the accent ink: a `bg-primary`
+     must be the same button as everywhere else in the application, not a second,
+     darker variant.
+     The surfaces **point at** the `--c-*` planes: one scale of planes per theme, not
+     two families describing the same ones to within a per cent and then needing to be
+     corrected twice. */
   --background: var(--c-panel);
   --foreground: var(--c-text);
   --card: var(--c-card);
@@ -139,9 +136,9 @@
   --border: var(--c-border);
   --input: var(--c-card2);
   --ring: var(--c-brand);
-  /* Les séries de graphique : l'orange de marque, l'encre, l'or, un gris, le
-     vert. Elles se suivent par la teinte autant que par la clarté, donc restent
-     lisibles côte à côte en noir et blanc (impression de la feuille de match). */
+  /* The chart series: the brand hue, ink, gold, a grey, green. They follow one
+     another by hue as much as by lightness, so they stay legible side by side in
+     black and white (printing the match sheet). */
   --chart-1: var(--c-brand);
   --chart-2: oklch(0.18 0.008 265);
   --chart-3: var(--c-amber);
@@ -157,61 +154,59 @@
   --sidebar-border: var(--c-border);
   --sidebar-ring: var(--c-brand);
 
-  /* Ici vivait une famille `--sb-*` : le bandeau de la table de marque était tenu
-   * pour une surface qui **ne bascule pas**, « le panneau d'affichage d'un gymnase,
-   * pas une carte de plus », et il avait donc sa propre palette en valeurs
-   * littérales sombres.
+  /* A `--sb-*` family used to live here: the scorer's table banner was treated as a
+   * surface that **does not switch**, "a gym's scoreboard, not one more card", and it
+   * therefore had its own palette in dark literal values.
    *
-   * C'était faux, et le thème clair le disait sans détour : un bandeau charbon
-   * arrivait de nulle part en haut d'une application blanche, avec des liserés noirs
-   * (`--team-a` valait un presque-noir) qui ne ressemblaient à rien d'autre dans le
-   * produit. Pire, la page spectateur emprunte ces jetons hors du bandeau : son
-   * score « nous » y était blanc, posé sur un fond clair, donc illisible.
+   * That was wrong, and the light theme said so bluntly: a charcoal banner arrived
+   * out of nowhere at the top of a white application, with black hairlines
+   * (`--team-a` was a near-black) that resembled nothing else in the product. Worse,
+   * the spectator page borrows these tokens outside the banner: its "us" score was
+   * white there, sitting on a light background, hence illegible.
    *
-   * La famille est supprimée, et rien ne la remplace — c'est tout l'intérêt. Le
-   * bandeau est une carte comme les autres (`--c-card` sur `--c-frame`), son encre
-   * est `--c-text`, ses commandes sont celles de l'application : `--c-card2` au
-   * repos, la marque au survol. Ses trois couleurs de sens existaient déjà et
-   * basculent correctement : `--c-green-fill` pour démarrer, `--c-danger-fill` pour
-   * arrêter, `--c-danger` pour le chrono sous la minute.
+   * The family is deleted, and nothing replaces it — that is the whole point. The
+   * banner is a card like the others (`--c-card` on `--c-frame`), its ink is
+   * `--c-text`, its controls are the application's: `--c-card2` at rest, the brand on
+   * hover. Its three colours of meaning already existed and switch correctly:
+   * `--c-green-fill` to start, `--c-danger-fill` to stop, `--c-danger` for the clock
+   * under a minute.
    *
-   * Les deux équipes gardent leur code — nous en encre, l'adversaire en accent —
-   * mais en jetons de thème : plus rien à synchroniser à la main entre deux blocs,
-   * ce qui est précisément ce qui avait laissé un orange du monde précédent traîner
-   * ici après le passage au citron. */
+   * The two teams keep their code — us in ink, the opposition in accent — but as
+   * theme tokens: nothing left to synchronise by hand between two blocks, which is
+   * precisely what had left an orange from the previous world lying around here after
+   * the move to lemon. */
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  /* Les six plans, écartés. Deux défauts corrigés, dans cet ordre.
+  /* The six planes, spread apart. Two defects fixed, in this order.
    *
-   * La gouttière était restée claire (#b9bcc4) : l'application flottait dans un
-   * cadre gris pâle qui n'appartenait à aucun des deux thèmes. Elle est passée sous
-   * le cadre, comme en clair — l'ordre est le même, seule la direction s'inverse.
+   * The gutter had stayed light (#b9bcc4): the application floated in a pale grey
+   * frame that belonged to neither theme. It moved below the frame, as on light — the
+   * order is the same, only the direction inverts.
    *
-   * Puis les quatre plans du milieu tenaient dans un intervalle d'un demi pour cent
-   * de clarté : la carte ne se détachait pas de son fond, tout l'écran était un seul
-   * charbon avec des filets dessus. La carte remonte à trois fois la clarté de son
-   * cadre, et la seconde carte suit.
+   * Then the four middle planes sat within half a per cent of lightness: the card did
+   * not detach from its background, the whole screen was a single charcoal with lines
+   * drawn on it. The card rises to three times its frame's lightness, and the second
+   * card follows.
    *
-   * La gouttière, elle, **change de côté** selon le thème, et il a fallu deux essais
-   * pour l'admettre. Elle était descendue sous le cadre, par symétrie avec le thème
-   * clair où elle est plus foncée que le papier. Puis relevée d'un cran, toujours
-   * sous le cadre — et l'écart restait invisible, parce qu'entre deux presque-noirs
-   * il n'y a rien à voir : de 0,002 à 0,004 de clarté, l'œil ne lit que « noir ».
+   * The gutter, for its part, **changes side** depending on the theme, and it took two
+   * attempts to admit it. It had gone below the frame, by symmetry with the light
+   * theme where it is darker than the paper. Then raised a notch, still below the
+   * frame — and the gap stayed invisible, because between two near-blacks there is
+   * nothing to see: from 0.002 to 0.004 lightness, the eye only reads "black".
    *
-   * Le rapport qui compte n'est pas « la gouttière est plus foncée » mais « la
-   * gouttière est un autre plan que l'application ». En clair, il y a de la place
-   * sous le papier, donc elle descend. En sombre, il n'y en a pas sous le noir, donc
-   * elle **monte** — au-dessus du cadre, sans jamais atteindre la carte, qui reste le
-   * plan haut. Ce n'est pas la gouttière gris pâle d'avant (#b9bcc4, dans laquelle
-   * l'application flottait) : c'est une ardoise d'un cran, le bureau sur lequel la
-   * feuille est posée.
+   * The relation that matters is not "the gutter is darker" but "the gutter is a
+   * different plane from the application". On light there is room below the paper, so
+   * it goes down. On dark there is none below the black, so it **goes up** — above the
+   * frame, never reaching the card, which stays the high plane. This is not the pale
+   * grey gutter of before (#b9bcc4, in which the application floated): it is a slate a
+   * notch up, the desk the sheet is laid on.
    *
-   * Les rapports de contraste mentent à ces niveaux — 1,1:1 pour deux plans qu'un
-   * œil sépare sans peine — donc le test vérifie des **relations** entre plans, et
-   * l'écart se règle à l'œil, sur l'écran, thème sombre affiché. */
+   * Contrast ratios lie at these levels — 1.1:1 for two planes an eye separates
+   * without effort — so the test checks **relations** between planes, and the gap is
+   * tuned by eye, on screen, with the dark theme showing. */
   --c-page: #151c26;
   --c-panel: #0c1119;
   --c-frame: #0f141c;
@@ -219,22 +214,22 @@
   --c-card2: #2b3547;
   --c-border: #3a475c;
 
-  /* Éclaircis deux fois. D'abord parce que l'ancien gris secondaire ne donnait que
-     3,3:1 et le tertiaire 2,9:1 ; puis parce que la carte a remonté sous eux, ce qui
-     leur a repris ce qu'ils venaient de gagner. Les rapports vivent dans le test. */
+  /* Lightened twice. First because the old secondary grey only gave 3.3:1 and the
+     tertiary 2.9:1; then because the card rose beneath them, which took back what they
+     had just gained. The ratios live in the test. */
   --c-text: #eef2f7;
   --c-muted: #a8b6c8;
   --c-faint: #96a4b6;
 
-  /* L'orange vif, ici : sur la carte (#17171b) il donne 7,7:1, là où l'orange
-     brûlé du thème clair se serait noyé. En contrepartie il ne peut plus porter
-     du blanc — d'où `--c-on-accent` en presque-noir. C'est la seule règle que le
-     sombre inverse, et elle est inévitable : aucune valeur ne se lit à la fois
-     *sur* un fond sombre et *sous* du texte blanc. */
-  /* En sombre, l'encre et le remplissage se rejoignent sur la même valeur vive, et
-     ce n'est pas une facilité : c'est le fond clair qui les séparait. Sur du
-     charbon, un orange lumineux est à la fois le meilleur texte et le meilleur
-     bouton. Il porte de l'encre sombre dans les deux cas. */
+  /* The vivid lemon, here: on the card it clears AA comfortably, where the light
+     theme's deep olive would have drowned. In return it can no longer carry white —
+     hence `--c-on-accent` in near-black. It is the one rule the dark theme inverts,
+     and it is unavoidable: no value reads both *on* a dark background and *under*
+     white text.
+     On dark, the ink and the fill rejoin on the same vivid value, and that is not a
+     shortcut: it was the light background that separated them. On charcoal, a
+     luminous lemon is at once the best text and the best button. It carries dark ink
+     in both cases. */
   --c-brand: #dcff33;
   --c-on-brand: #0f1a05;
   --c-accent: #dcff33;
@@ -242,8 +237,8 @@
   --c-accent-bd: rgba(220, 255, 51, 0.45);
   --c-on-accent: #0f1a05;
 
-  /* L'or, franchement jaune, pour rester séparable de l'orange d'à côté :
-     l'ancien #ffb44d était le même orange à un cheveu près. */
+  /* Gold, frankly yellow, so it stays separable from the accent next to it: the old
+     #ffb44d was the same hue to within a hair. */
   --c-green: #22e08a;
   --c-green-bg: rgba(34, 224, 138, 0.15);
   --c-green-fill: #22e08a;
@@ -259,11 +254,11 @@
   --c-info-fill: #46b6ff;
   --c-on-info: #04122e;
 
-  /* Le rouge est le seul cas où le sombre doit **séparer** l'encre du remplissage,
-     là où le vert et l'or s'en dispensent : le rose vif tombe à 4,0:1 sur la carte
-     remontée, sous le seuil AA. L'encre s'éclaircit, l'aplat garde sa valeur pleine
-     — c'est exactement la distinction des rôles que ce fichier défend partout
-     ailleurs, appliquée là où elle finit par compter. */
+  /* Red is the one case where dark must **separate** the ink from the fill, where
+     green and gold do without: the vivid pink falls to 4.0:1 on the raised card, below
+     the AA threshold. The ink lightens, the flat area keeps its full value — exactly
+     the role distinction this file defends everywhere else, applied where it ends up
+     mattering. */
   --c-danger: #ff8a9c;
   --c-danger-bg: rgba(255, 84, 112, 0.17);
   --c-danger-fill: #ff5470;
@@ -273,12 +268,12 @@
   --c-neutral-bg: rgba(255, 255, 255, 0.08);
 
   /* --- shadcn / Base UI ---
-     Les surfaces **pointent** les plans `--c-*` au lieu de redéclarer des `oklch`
-     voisins. C'est la seconde moitié de la carte qui ne se détachait pas : deux
-     familles décrivaient les mêmes plans à un ou deux pour cent près, si bien qu'un
-     `bg-card` et un `C.card` côte à côte ne donnaient ni la même surface ni la même
-     séparation, et corriger l'une laissait l'autre en place. Il n'y a plus qu'un
-     escalier de plans, celui du haut du bloc. */
+     The surfaces **point at** the `--c-*` planes instead of redeclaring neighbouring
+     `oklch` values. This is the second half of the card that would not detach: two
+     families described the same planes to within one or two per cent, so that a
+     `bg-card` and a `C.card` side by side gave neither the same surface nor the same
+     separation, and fixing one left the other in place. There is now a single
+     staircase of planes, the one at the top of the block. */
   --background: var(--c-panel);
   --foreground: var(--c-text);
   --card: var(--c-card);
@@ -314,31 +309,28 @@
 
 }
 
-/* Le terrain : du **parquet**, et non plus un panneau de charbon.
+/* The court: **hardwood**, and no longer a charcoal panel.
  *
- * Deux défauts corrigés. Il ne basculait pas avec le thème, si bien qu'un panneau
- * de charbon se posait au milieu d'une application claire comme un trou. Et
- * surtout : sa **raquette était remplie à cinq pour cent d'opacité**, ses lignes
- * principales à soixante-dix. Aucune surface, aucune ligne franche — une dalle nue
- * avec des marques posées dessus. C'était ça, et non la teinte du bois, qui lui
- * donnait son air de brouillon.
+ * Two defects fixed. It did not switch with the theme, so a charcoal panel sat in the
+ * middle of a light application like a hole. And above all: its **paint was filled at
+ * five per cent opacity**, its main lines at seventy. No surface, no crisp line — a
+ * bare slab with markings laid on top. That, and not the wood's hue, was what gave it
+ * its draft-like look.
  *
- * Ce qui change et ce qui ne change pas, précisément :
- * — la **surface**, la **raquette peinte** et l'**encre des trajets** basculent
- *   avec le thème : le terrain suit la lumière de la pièce.
- * — la raquette reste toujours du **bon côté** de tous les repères : plus claire
- *   qu'eux en clair, plus sombre en sombre. Une raquette saturée avait donné un
- *   disque d'attaque rouge sur du bleu roi à 1,54:1, alors que les postes bas y
- *   stationnent en permanence.
- * — la **convention de teintes** ne bascule pas. Le rouge dit toujours
- *   « attaque », le bleu « défense », l'ambre « ballon ». Seule leur clarté
- *   s'adapte au fond, ce qui était déjà le cas d'un thème à l'autre partout
- *   ailleurs dans ce fichier.
+ * What changes and what does not, precisely:
+ * — the **surface**, the **painted key** and the **ink of the paths** switch with the
+ *   theme: the court follows the light in the room.
+ * — the key always stays on the **right side** of every marker: lighter than them on
+ *   light, darker on dark. A saturated key had produced a red attack disc on royal
+ *   blue at 1.54:1, while the low posts stand there permanently.
+ * — the **colour convention** does not switch. Red always says "attack", blue
+ *   "defence", amber "ball". Only their lightness adapts to the background, which was
+ *   already the case from one theme to the other everywhere else in this file.
  *
- * Les quatre repères restent distincts par la **forme** — disque plein, anneau
- * ouvert, petit disque, trait — donc lisibles aussi en noir et blanc, et c'est ce
- * qui autorise attaque, défense et ballon à se rapprocher en clarté. Les rapports
- * mesurés vivent dans `contrast.test.ts`. */
+ * The four markers stay distinct by **shape** — filled disc, open ring, small disc,
+ * stroke — hence legible in black and white too, and that is what lets attack,
+ * defence and ball come closer in lightness. The measured ratios live in
+ * `contrast.test.ts`. */
 :root,
 :root[data-theme='light'] {
   --t-court: #e7eef4;

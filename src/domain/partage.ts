@@ -15,12 +15,12 @@ export const LIMITE_LIEN = 8000
 /** What travels. `id`, `clubId`, `updatedAt` and `folder` stay with the sender: a
  *  received play is a brand-new play, so it cannot overwrite anyone's. */
 interface Transport {
-  nom: string
+  name: string
   note?: string
   court: Court
   defense: boolean
   props: Prop[]
-  temps: Step[]
+  steps: Step[]
 }
 
 const versB64url = (octets: Uint8Array) =>
@@ -42,7 +42,7 @@ const enFlux = (octets: Uint8Array<ArrayBuffer>) => new ReadableStream<Uint8Arra
 /** The play compressed and encoded, ready to place after a URL's `#`. */
 export async function encoder(s: Play): Promise<string> {
   const utile: Transport = {
-    nom: s.nom, note: s.note, court: s.court, defense: s.defense, props: s.props, temps: s.temps,
+    name: s.name, note: s.note, court: s.court, defense: s.defense, props: s.props, steps: s.steps,
   }
   const octets = new TextEncoder().encode(JSON.stringify(utile))
   const stream = enFlux(octets).pipeThrough(new CompressionStream('deflate-raw'))
@@ -71,12 +71,12 @@ const estPorteur = (v: unknown): boolean =>
  */
 function estTransport(v: unknown): v is Transport {
   if (!estObjet(v)) return false
-  if (typeof v.nom !== 'string') return false
+  if (typeof v.name !== 'string') return false
   if (v.note !== undefined && typeof v.note !== 'string') return false
   if (v.court !== 'half' && v.court !== 'full') return false
   if (!Array.isArray(v.props) || !v.props.every((o) => estObjet(o) && typeof o.kind === 'string' && estPoint(o.at))) return false
-  if (!Array.isArray(v.temps) || v.temps.length === 0) return false
-  return v.temps.every((t) =>
+  if (!Array.isArray(v.steps) || v.steps.length === 0) return false
+  return v.steps.every((t) =>
     estObjet(t)
     && Array.isArray(t.markers) && t.markers.length > 0
     && t.markers.every((p) => estPorteur(p) && estPoint((p as Record<string, unknown>).at))

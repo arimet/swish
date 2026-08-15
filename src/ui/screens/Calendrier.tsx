@@ -356,7 +356,7 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
             ) : (
               <div className="mt-2 grid gap-1.5">
                 {attachés.map((s) => (
-                  <span key={s.id} className="truncate rounded-lg px-2 py-1.5 text-[12px] font-semibold" style={{ background: C.panel }}>{s.nom}</span>
+                  <span key={s.id} className="truncate rounded-lg px-2 py-1.5 text-[12px] font-semibold" style={{ background: C.panel }}>{s.name}</span>
                 ))}
               </div>
             )
@@ -369,7 +369,7 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
                 return (
                   <label key={s.id} htmlFor={id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-semibold" style={{ background: C.panel }}>
                     <input id={id} type="checkbox" checked={attachés.some((a) => a.id === s.id)} onChange={() => onToggleSchema(s.id)} />
-                    <span className="truncate">{s.nom}</span>
+                    <span className="truncate">{s.name}</span>
                   </label>
                 )
               })}

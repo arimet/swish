@@ -1,28 +1,28 @@
 import { LANGS, useLang, useT } from './index'
 
 /**
- * Le sélecteur de langue, jumeau du sélecteur de thème et posé à côté de lui.
+ * The language switcher, twin of the theme switcher and placed next to it.
  *
- * Deux langues seulement, donc une **bascule** et non une liste déroulante : un menu
- * pour choisir entre deux valeurs demande deux gestes là où un seul suffit. Le bouton
- * affiche le code de la langue **courante** — c'est ce que fait un onglet de langue
- * partout ailleurs, et c'est ce qu'on cherche du regard pour savoir où l'on est. Son
- * nom accessible, lui, annonce la langue vers laquelle il mène, sinon un lecteur
- * d'écran annoncerait l'état sans dire ce que le bouton fait.
+ * Two languages only, so a **toggle** and not a dropdown: a menu to choose between
+ * two values asks for two gestures where one is enough. The button shows the
+ * **current** language's code — that is what a language tab does everywhere else,
+ * and that is what the eye looks for to know where it is. Its accessible name, on
+ * the other hand, announces the language it leads to, otherwise a screen reader
+ * would announce the state without saying what the button does.
  *
- * Le libellé reste en capitales à deux lettres pour tenir dans le même rond de 36 px
- * que le thème : un drapeau aurait été plus court encore, mais un drapeau désigne un
- * pays et non une langue — et ni le français ni l'anglais n'en ont qu'un.
+ * The label stays a two-letter capital to fit the same 36px circle as the theme: a
+ * flag would have been shorter still, but a flag designates a country and not a
+ * language — and neither French nor English has only one.
  */
 export function LangSwitcher() {
   const { lang, setLang } = useLang()
   const translate = useT()
-  const suivante = LANGS[(LANGS.findIndex((l) => l.code === lang) + 1) % LANGS.length]
+  const next = LANGS[(LANGS.findIndex((l) => l.code === lang) + 1) % LANGS.length]
   return (
     <button
-      onClick={() => setLang(suivante.code)}
-      aria-label={`${translate('lang.changer')} — ${suivante.nom}`}
-      title={suivante.nom}
+      onClick={() => setLang(next.code)}
+      aria-label={`${translate('lang.switch')} — ${next.name}`}
+      title={next.name}
       className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-[12px] font-black uppercase tracking-tight text-foreground transition hover:bg-muted active:scale-95"
     >
       {lang}
