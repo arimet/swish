@@ -2,8 +2,8 @@ import { BrowserRouter, Routes, Route, useNavigate, useParams, Navigate } from '
 import { Suspense, lazy, type ReactNode } from 'react'
 import { OliveShell } from './ui/olive/OliveShell'
 import { Dashboard } from './ui/screens/Dashboard'
-import { Calendrier } from './ui/screens/Calendrier'
-import { Championnat } from './ui/screens/Championnat'
+import { Calendar } from './ui/screens/Calendar'
+import { Standings } from './ui/screens/Standings'
 import { TeamsList } from './ui/screens/TeamsList'
 import { TeamCreate } from './ui/screens/TeamCreate'
 import { TeamDetail } from './ui/screens/TeamDetail'
@@ -23,11 +23,11 @@ import { useT } from './i18n'
  * The rest — dashboard, calendar, standings, teams — arrives in the initial bundle:
  * they are the menu's four entries, and splitting them would only add a round trip to
  * the most common gesture. */
-const SchemaEdit = lazy(() => import('./ui/screens/SchemaEdit').then((m) => ({ default: m.SchemaEdit })))
-const SchemaList = lazy(() => import('./ui/screens/SchemaList').then((m) => ({ default: m.SchemaList })))
-const SchemaView = lazy(() => import('./ui/screens/SchemaView').then((m) => ({ default: m.SchemaView })))
-const SchemaPlayer = lazy(() => import('./ui/screens/SchemaPlayer').then((m) => ({ default: m.SchemaPlayer })))
-const SchemaRecu = lazy(() => import('./ui/screens/SchemaRecu').then((m) => ({ default: m.SchemaRecu })))
+const PlayEdit = lazy(() => import('./ui/screens/PlayEdit').then((m) => ({ default: m.PlayEdit })))
+const PlayList = lazy(() => import('./ui/screens/PlayList').then((m) => ({ default: m.PlayList })))
+const PlayView = lazy(() => import('./ui/screens/PlayView').then((m) => ({ default: m.PlayView })))
+const PlayViewer = lazy(() => import('./ui/screens/PlayViewer').then((m) => ({ default: m.PlayViewer })))
+const PlayReceived = lazy(() => import('./ui/screens/PlayReceived').then((m) => ({ default: m.PlayReceived })))
 const SummaryScreen = lazy(() => import('./ui/screens/SummaryScreen').then((m) => ({ default: m.SummaryScreen })))
 const SpectatorMatch = lazy(() => import('./ui/screens/SpectatorMatch').then((m) => ({ default: m.SpectatorMatch })))
 const Admin = lazy(() => import('./ui/screens/Admin').then((m) => ({ default: m.Admin })))
@@ -100,27 +100,27 @@ export default function App() {
             <Route path="/match/:id/live" element={<LiveRoute />} />
             {/* The time-out viewer: full screen, outside the shell and outside the club
                 gate — a player opens the play at home. */}
-            <Route path="/schemas/:id/lecteur" element={<SchemaPlayer />} />
+            <Route path="/schemas/:id/lecteur" element={<PlayViewer />} />
             {/* A play received by link: outside the shell and outside the club gate,
                 since the whole play is in the URL's fragment — whoever receives the
                 link may never have opened the application. */}
-            <Route path="/schemas/recu" element={<SchemaRecu />} />
+            <Route path="/schemas/recu" element={<PlayReceived />} />
             {/* Team creation: outside the gate, it is the way out the welcome screen
                 offers when no team exists yet to choose a club from. */}
             <Route path="/teams/new" element={<TeamCreate />} />
             {/* The whole app inside the Olive shell, behind the club choice */}
             <Route element={<ClubGate />}>
               <Route index element={<Dashboard />} />
-              <Route path="/calendrier" element={<Calendrier />} />
-              <Route path="/championnat" element={<Championnat />} />
+              <Route path="/calendrier" element={<Calendar />} />
+              <Route path="/championnat" element={<Standings />} />
               <Route path="/teams" element={<Padded><TeamsList /></Padded>} />
               <Route path="/teams/:id" element={<TeamDetail />} />
               <Route path="/players/:id" element={<PlayerDetail />} />
               {/* The playbook: the library, the reading screen (ungated), then the
                   editor — the most specific route first. */}
-              <Route path="/schemas" element={<SchemaList />} />
-              <Route path="/schemas/:id/edit" element={<SchemaEdit />} />
-              <Route path="/schemas/:id" element={<SchemaView />} />
+              <Route path="/schemas" element={<PlayList />} />
+              <Route path="/schemas/:id/edit" element={<PlayEdit />} />
+              <Route path="/schemas/:id" element={<PlayView />} />
               {/* Data cleanup: inside the shell, every operation guarded by the
                   administrator code. */}
               <Route path="/admin" element={<Admin />} />

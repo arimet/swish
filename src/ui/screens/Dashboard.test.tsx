@@ -11,7 +11,7 @@ import { getMessage, saveConvocation, saveMatch, saveMessage, savePlay, savePlay
 import { newPlay, type Play } from '../../domain/plays'
 import type { GameEvent, Match } from '../../domain/types'
 
-const schema = (id: string, name: string): Play => ({ id, ...newPlay('ta', 'half', false), name })
+const play = (id: string, name: string): Play => ({ id, ...newPlay('ta', 'half', false), name })
 
 const TOP3 = { x: 0.5, y: 0.65 }
 
@@ -206,8 +206,8 @@ describe('Dashboard — the next session\'s plays', () => {
 
   it('leads to the viewer of every play scheduled for the next session', async () => {
     // The shortest path between "it is Tuesday" and "here is what we are working on".
-    await savePlay(schema('s1', 'Pick and roll haut'))
-    await savePlay(schema('s2', 'Corner pour le 4'))
+    await savePlay(play('s1', 'Pick and roll haut'))
+    await savePlay(play('s2', 'Corner pour le 4'))
     await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes', playIds: ['s1', 's2'] })
     renderDash()
 
@@ -217,7 +217,7 @@ describe('Dashboard — the next session\'s plays', () => {
   })
 
   it('ignores a deleted play the session still cites', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(play('s1', 'Pick and roll haut'))
     await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes', playIds: ['disparu', 's1'] })
     renderDash()
 
@@ -227,7 +227,7 @@ describe('Dashboard — the next session\'s plays', () => {
   })
 
   it('announces no play when the session carries none', async () => {
-    await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(play('s1', 'Pick and roll haut'))
     await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes' })
     renderDash()
 

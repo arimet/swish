@@ -1,6 +1,6 @@
 import { db } from './db'
 import { enqueuePut, enqueueDel, remoteEnabled, hydrate } from './remote'
-import { hasEvents } from '../domain/menage'
+import { hasEvents } from '../domain/cleanup'
 import type { Team, Player, Match, ReportedResult, Convocation, Training, TeamMessage } from '../domain/types'
 import type { Play } from '../domain/plays'
 

@@ -223,28 +223,28 @@ describe('demo data', () => {
 
   it('the demo holds three plays, one of them on a full court and one with a loose ball', async () => {
     const matches = await listMatches()
-    const schemas = await listPlays(matches[0].meta.clubId)
-    expect(schemas).toHaveLength(3)
-    expect(schemas.filter((s) => s.court === 'full')).toHaveLength(1)
+    const plays = await listPlays(matches[0].meta.clubId)
+    expect(plays).toHaveLength(3)
+    expect(plays.filter((s) => s.court === 'full')).toHaveLength(1)
     // A ball on the floor is a Point; carried, it names a marker.
-    expect(schemas.filter((s) => 'x' in s.steps[0].ball)).toHaveLength(1)
+    expect(plays.filter((s) => 'x' in s.steps[0].ball)).toHaveLength(1)
     // Every step keeps its full complement — the defence only appears where the play
     // asks for it.
-    for (const s of schemas) for (const t of s.steps) expect(t.markers).toHaveLength(s.defense ? 10 : 5)
+    for (const s of plays) for (const t of s.steps) expect(t.markers).toHaveLength(s.defense ? 10 : 5)
   })
 
   it('files the demo plays and attaches some to the next session', async () => {
     const matches = await listMatches()
     const clubId = matches[0].meta.clubId
-    const schemas = await listPlays(clubId)
+    const plays = await listPlays(clubId)
     // Two distinct folders: otherwise the library's bar would have a single tab and
     // would not show what it can do.
-    expect(folders(schemas)).toEqual(['Attaque placée', 'Remises en jeu'])
-    expect(schemas.every((s) => !!s.folder)).toBe(true)
+    expect(folders(plays)).toEqual(['Attaque placée', 'Remises en jeu'])
+    expect(plays.every((s) => !!s.folder)).toBe(true)
 
     // The pick and roll runs all the way to the basket: the 5 reaches the end of their
     // cut and receives the ball, instead of a finish that existed only as arrows.
-    const pnr = schemas.find((s) => s.name.includes('Pick and roll'))!
+    const pnr = plays.find((s) => s.name.includes('Pick and roll'))!
     expect(pnr.steps).toHaveLength(4)
     const fin = pnr.steps[3]
     expect(fin.ball).toEqual({ side: 'offense', position: 5 })
@@ -260,7 +260,7 @@ describe('demo data', () => {
     const jour = `${aujourdHui.getFullYear()}-${String(aujourdHui.getMonth() + 1).padStart(2, '0')}-${String(aujourdHui.getDate()).padStart(2, '0')}`
     const prochaine = (await listTrainings()).filter((t) => t.date >= jour).sort((a, b) => a.date.localeCompare(b.date))[0]
     expect(prochaine.playIds).toHaveLength(2)
-    const existants = new Set(schemas.map((s) => s.id))
+    const existants = new Set(plays.map((s) => s.id))
     expect(prochaine.playIds!.every((id) => existants.has(id))).toBe(true)
   })
 

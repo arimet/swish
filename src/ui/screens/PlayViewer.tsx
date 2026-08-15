@@ -9,7 +9,7 @@ import { Link, useParams } from 'react-router-dom'
 import { snapshot, transitions } from '../../domain/anim'
 import type { Play } from '../../domain/plays'
 import { getPlay } from '../../persistence/repositories'
-import { ExportSchema } from '../components/ExportSchema'
+import { SharePlay } from '../components/SharePlay'
 import { courtWidth, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
 import { useT } from '../../i18n'
@@ -27,10 +27,10 @@ const TICK_MS = 50
  *  comfort, it is the only correct way to treat someone motion disturbs. */
 const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-export function SchemaPlayer() {
+export function PlayViewer() {
   const translate = useT()
   const { id } = useParams<{ id: string }>()
-  const [schema, setSchema] = useState<Play | null | undefined>(undefined)
+  const [play, setPlay] = useState<Play | null | undefined>(undefined)
   // Progress, in fractional steps: 1.5 is halfway from the second step to the
   // third. One number for the slider, the half-screens and the animation.
   const [pos, setPos] = useState(0)
@@ -44,9 +44,9 @@ export function SchemaPlayer() {
   const [paths, setPaths] = useState(false)
   const [sharing, setSharing] = useState(false)
 
-  useEffect(() => { if (id) getPlay(id).then((s) => setSchema(s ?? null)) }, [id])
+  useEffect(() => { if (id) getPlay(id).then((s) => setPlay(s ?? null)) }, [id])
 
-  const last = schema ? transitions(schema) : 0
+  const last = play ? transitions(play) : 0
 
   useEffect(() => {
     if (!playing) return
@@ -76,8 +76,8 @@ export function SchemaPlayer() {
   }, [])
 
   if (!id) return null
-  if (schema === undefined) return <Screen><p style={{ color: C.muted }}>{translate('common.loading')}</p></Screen>
-  if (schema === null) return (
+  if (play === undefined) return <Screen><p style={{ color: C.muted }}>{translate('common.loading')}</p></Screen>
+  if (play === null) return (
     <Screen>
       <p style={{ color: C.muted }}>
         {translate('play.notFound')} <Link to="/schemas" className="font-bold" style={{ color: C.accent }}>{translate('team.back')}</Link>
@@ -98,7 +98,7 @@ export function SchemaPlayer() {
     const target = delta > 0 ? Math.floor(pos) + 1 : Math.ceil(pos) - 1
     setPos(Math.min(last, Math.max(0, target)))
   }
-  const play = () => {
+  const startPlayback = () => {
     // Restarting from the end means replaying: otherwise the button would do
     // nothing.
     if (pos >= last) setPos(0)
@@ -116,14 +116,14 @@ export function SchemaPlayer() {
   // The paths toggle lifts that reservation: the path it draws is refitted onto the
   // real positions, so it reads mid-gesture too.
   const step = !playing && Number.isInteger(pos)
-    ? schema.steps[pos]
-    : snapshot(schema, { step: Math.floor(pos), part: pos - Math.floor(pos) }, paths)
+    ? play.steps[pos]
+    : snapshot(play, { step: Math.floor(pos), part: pos - Math.floor(pos) }, paths)
   // The viewer takes the room available, but no more than `courtWidth` allows: on a
   // phone held at arm's length every centimetre counts, on a desktop screen a
   // thousand-pixel court does not read better, it reads worse. The SVG fits itself in
   // its box (`preserveAspectRatio`), without distortion, and nothing here converts
   // coordinates — we read, we do not draw.
-  const boardWidth = courtWidth(schema.court)
+  const boardWidth = courtWidth(play.court)
 
   return (
     <Screen>
@@ -139,7 +139,7 @@ export function SchemaPlayer() {
           >
             <X className="h-4 w-4" strokeWidth={2.5} />
           </Link>
-          <h1 className="min-w-0 flex-1 truncate text-sm font-extrabold tracking-tight">{schema.name}</h1>
+          <h1 className="min-w-0 flex-1 truncate text-sm font-extrabold tracking-tight">{play.name}</h1>
           {/* Playback stops during a share: we do not build an image of the step we
               are in the middle of leaving. */}
           <button
@@ -149,14 +149,14 @@ export function SchemaPlayer() {
             {translate('play.share')}
           </button>
         </div>
-        <ExportSchema schema={schema} stepIndex={current} open={sharing} onClose={() => setSharing(false)} />
+        <SharePlay play={play} stepIndex={current} open={sharing} onClose={() => setSharing(false)} />
 
         {/* The court, and over it the two half-screens: during a time-out nobody aims
             at a forty-pixel button. They stop above the controls, which stay
             reachable. */}
         <div className="relative flex min-h-0 flex-1 items-center justify-center">
           <div className="h-full w-full select-none" style={{ maxWidth: boardWidth }}>
-            <PlayBoard schema={schema} stepIndex={0} step={step} remplit />
+            <PlayBoard play={play} stepIndex={0} step={step} remplit />
           </div>
           <HalfScreen side="left" label={translate('viewer.previous')} chevron="‹" onClick={() => go(-1)} disabled={current === 0} />
           <HalfScreen side="right" label={translate('viewer.next')} chevron="›" onClick={() => go(1)} disabled={current === last} />
@@ -164,7 +164,7 @@ export function SchemaPlayer() {
 
         <div className="mx-auto flex w-full shrink-0 flex-col gap-2" style={{ maxWidth: boardWidth }}>
           <div className="flex items-center gap-3">
-            <span className="w-24 shrink-0 text-sm font-extrabold">{translate('play.step', { n: current + 1, total: schema.steps.length })}</span>
+            <span className="w-24 shrink-0 text-sm font-extrabold">{translate('play.step', { n: current + 1, total: play.steps.length })}</span>
             <input
               type="range" aria-label={translate('play.progress')} min={0} max={last || 1} step={0.01} value={pos}
               disabled={last === 0}
@@ -179,7 +179,7 @@ export function SchemaPlayer() {
               therefore takes the full width, the settings share the next row equally —
               and a fourth setting, some day, will break nothing. */}
           <button
-            onClick={() => (playing ? setPlaying(false) : play())} disabled={last === 0}
+            onClick={() => (playing ? setPlaying(false) : startPlayback())} disabled={last === 0}
             aria-label={translate(playing ? 'play.pause' : 'play.playback')}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-[var(--c-on-brand)] disabled:opacity-40"
             style={{ background: C.brand }}

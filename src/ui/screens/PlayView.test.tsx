@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { SchemaView } from './SchemaView'
+import { PlayView } from './PlayView'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
@@ -25,7 +25,7 @@ const renderView = () =>
     <MemoryRouter initialEntries={['/schemas/s1']}>
       <AuthProvider>
         <Routes>
-          <Route path="/schemas/:id" element={<SchemaView />} />
+          <Route path="/schemas/:id" element={<PlayView />} />
           <Route path="/schemas/:id/edit" element={<p>éditeur</p>} />
         </Routes>
       </AuthProvider>

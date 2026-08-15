@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Calendrier } from './Calendrier'
+import { Calendar } from './Calendar'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
@@ -16,7 +16,7 @@ const mk = (id: string, clubId: string, opponentId: string, date = '2026-01-10')
   roster: [], events: [], status: 'setup',
 })
 
-const schema = (id: string, name: string): Play => ({ id, ...newPlay('ta', 'half', false), name })
+const play = (id: string, name: string): Play => ({ id, ...newPlay('ta', 'half', false), name })
 
 /** A date relative to the day of the run: the calendar's past and future are judged
  *  against the clock, and a hard-coded date would eventually tip to one side. */
@@ -39,7 +39,7 @@ beforeEach(async () => {
 })
 
 const renderCal = () =>
-  render(<MemoryRouter><ClubProvider><AuthProvider><Calendrier /></AuthProvider></ClubProvider></MemoryRouter>)
+  render(<MemoryRouter><ClubProvider><AuthProvider><Calendar /></AuthProvider></ClubProvider></MemoryRouter>)
 
 describe('Calendar', () => {
   it('shows only the club\'s games', async () => {
@@ -163,7 +163,7 @@ describe('Calendar — the session\'s plays', () => {
 
   it('attaches a play to the training, announces it on the row, and unticking removes it', async () => {
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })
-    await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(play('s1', 'Pick and roll haut'))
     renderCal()
     await ouvrirLesSchemas()
 
@@ -184,7 +184,7 @@ describe('Calendar — the session\'s plays', () => {
     // A training may cite a play deleted by a store older than `deletePlay`'s cascade:
     // the read filters on what exists, otherwise the count shown would lie — the same
     // fault fixed earlier on the call-ups.
-    await savePlay(schema('s1', 'Pick and roll haut'))
+    await savePlay(play('s1', 'Pick and roll haut'))
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Séance', playIds: ['s1', 'disparu'] })
     renderCal()
     await ouvrirLesSchemas()
@@ -199,8 +199,8 @@ describe('Calendar — the session\'s plays', () => {
     // At the sideline people tick fast: if every toggle started from the session as it
     // was at render time, the second write would erase the first.
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Séance' })
-    await savePlay(schema('s1', 'Pick and roll haut'))
-    await savePlay(schema('s2', 'Corner pour le 4'))
+    await savePlay(play('s1', 'Pick and roll haut'))
+    await savePlay(play('s2', 'Corner pour le 4'))
     renderCal()
     await ouvrirLesSchemas()
 
@@ -213,8 +213,8 @@ describe('Calendar — the session\'s plays', () => {
   it('attaching a play is administrative: the scorer\'s table gets no checkbox, and nothing is saved', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran', playIds: ['s1'] })
-    await savePlay(schema('s1', 'Pick and roll haut'))
-    await savePlay(schema('s2', 'Corner pour le 4'))
+    await savePlay(play('s1', 'Pick and roll haut'))
+    await savePlay(play('s2', 'Corner pour le 4'))
     renderCal()
     await ouvrirLesSchemas()
 

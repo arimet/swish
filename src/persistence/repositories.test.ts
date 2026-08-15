@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import { saveTeam, listTeams, saveMatch, getMatch, listMatches, deleteMatch, deleteTeam, saveResult, listResults, savePlayer, deletePlayer, saveTraining, listTrainings, saveConvocation, getConvocation, savePlay, listPlays, getPlay, deletePlay, deleteMatchesWhere, clearClubStats, deleteAllResults, deleteTrainingsOfClub, deletePlaysOfClub, wipeAll, getMessage, saveMessage, deleteMessage } from './repositories'
 import { newPlay } from '../domain/plays'
-import { hasEvents, ofYear, ofLeague } from '../domain/menage'
+import { hasEvents, ofYear, ofLeague } from '../domain/cleanup'
 import type { GameEvent, Match } from '../domain/types'
 
 beforeEach(async () => {

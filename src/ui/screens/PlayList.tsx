@@ -36,13 +36,13 @@ const folderOf = (s: Play) => s.folder?.trim() ?? ''
 
 const DATALIST = 'dossiers-connus'
 
-export function SchemaList() {
+export function PlayList() {
   const translate = useT()
   const { clubId } = useClub()
   const { can, guard } = useAuth()
   const manages = can('manage')
   const navigate = useNavigate()
-  const [schemas, setSchemas] = useState<Play[] | null>(null)
+  const [plays, setPlays] = useState<Play[] | null>(null)
   // The play whose deletion has been asked for: the right is checked when the dialog
   // opens, as on the team record.
   const [toDelete, setToDelete] = useState<Play | null>(null)
@@ -53,7 +53,7 @@ export function SchemaList() {
   const [pickingFolder, setPickingFolder] = useState<{ id: string; value: string } | null>(null)
 
   const reload = useCallback(() => {
-    if (clubId) listPlays(clubId).then(setSchemas)
+    if (clubId) listPlays(clubId).then(setPlays)
   }, [clubId])
   useEffect(() => { reload() }, [reload])
 
@@ -89,7 +89,7 @@ export function SchemaList() {
     reload()
   })
 
-  const all = useMemo(() => schemas ?? [], [schemas])
+  const all = useMemo(() => plays ?? [], [plays])
   const folderList = useMemo(() => folders(all), [all])
   const hasUnfiled = all.some((s) => !folderOf(s))
 
@@ -115,9 +115,9 @@ export function SchemaList() {
         )}
       />
 
-      {schemas === null ? (
+      {plays === null ? (
         <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
-      ) : schemas.length === 0 ? (
+      ) : plays.length === 0 ? (
         // The empty state says what is filed here and what you get out of it, not
         // merely that there is nothing: "no plays" has never made anyone want to draw
         // one. And you have to be able to draw one: to someone without the write
@@ -192,7 +192,7 @@ export function SchemaList() {
                         appears narrower, which reads perfectly well. No pointer conversion
                         here: `remplit` is safe. */}
                     <div className="h-[150px] sm:h-[200px]">
-                      <PlayBoard schema={s} stepIndex={0} apercu remplit />
+                      <PlayBoard play={s} stepIndex={0} apercu remplit />
                     </div>
                     <h3 className="mt-2.5 truncate text-[15px] font-extrabold tracking-tight">{s.name}</h3>
                     <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold" style={{ color: C.muted }}>

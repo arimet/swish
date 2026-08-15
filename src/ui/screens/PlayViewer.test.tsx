@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { SchemaPlayer } from './SchemaPlayer'
+import { PlayViewer } from './PlayViewer'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
@@ -55,7 +55,7 @@ async function ouvrir() {
     <MemoryRouter initialEntries={['/schemas/s1/lecteur']}>
       <AuthProvider>
         <Routes>
-          <Route path="/schemas/:id/lecteur" element={<SchemaPlayer />} />
+          <Route path="/schemas/:id/lecteur" element={<PlayViewer />} />
           <Route path="/schemas/:id" element={<p>consultation</p>} />
         </Routes>
       </AuthProvider>

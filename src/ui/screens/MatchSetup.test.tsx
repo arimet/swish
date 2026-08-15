@@ -53,7 +53,7 @@ describe('MatchSetup — rights', () => {
         <ClubProvider><AuthProvider>
           <Routes>
             <Route path="/match/new" element={<MatchSetup onCreated={onCreated} />} />
-            <Route path="/calendrier" element={<p>Calendrier</p>} />
+            <Route path="/calendrier" element={<p>Calendar</p>} />
           </Routes>
         </AuthProvider></ClubProvider>
       </MemoryRouter>,
@@ -61,7 +61,7 @@ describe('MatchSetup — rights', () => {
 
     // This screen exists only to write: without the right, the direct URL redirects to
     // the calendar rather than opening a form with no submit.
-    expect(await screen.findByText('Calendrier')).toBeInTheDocument()
+    expect(await screen.findByText('Calendar')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /planifier la rencontre/i })).not.toBeInTheDocument()
     // What matters: no game is created.
     expect(await db.matches.count()).toBe(0)

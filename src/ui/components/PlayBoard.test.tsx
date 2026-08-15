@@ -7,7 +7,7 @@ const half = { id: 'x', ...newPlay('c1', 'half', true) }
 
 describe('PlayBoard', () => {
   it('renders the ten markers and the ball of the step asked for', () => {
-    const { container } = render(<PlayBoard schema={half} stepIndex={0} />)
+    const { container } = render(<PlayBoard play={half} stepIndex={0} />)
     // Five attackers, five defenders, the same digits on either side: it is the side
     // marker that separates them. Both have a disc of the same radius — filled for the
     // attack, open for the defence — which also tells them apart
@@ -29,7 +29,7 @@ describe('PlayBoard', () => {
     s.steps = [{ ...s.steps[0], arrows: (['cut', 'screen', 'pass', 'dribble'] as const).map((stroke, i) => ({
       from: { side: 'offense' as const, position: (i + 1) as 1|2|3|4|5 }, points: [{ x: 0.1 + i * 0.2, y: 0.7 }, { x: 0.1 + i * 0.2, y: 0.3 }], stroke,
     })) }]
-    const { container } = render(<PlayBoard schema={s} stepIndex={0} />)
+    const { container } = render(<PlayBoard play={s} stepIndex={0} />)
     expect(container.querySelectorAll('[data-stroke="cut"]')).toHaveLength(1)
     expect(container.querySelectorAll('[data-stroke="screen"]')).toHaveLength(1)
     expect(container.querySelectorAll('[data-stroke="pass"]')).toHaveLength(1)
@@ -38,7 +38,7 @@ describe('PlayBoard', () => {
 
   it('doubles the viewBox\'s depth on a full court', () => {
     const s = { id: 'y', ...newPlay('c1', 'full', false) }
-    const { container } = render(<PlayBoard schema={s} stepIndex={0} />)
+    const { container } = render(<PlayBoard play={s} stepIndex={0} />)
     expect(container.querySelector('svg')!.getAttribute('viewBox')).toBe('0 0 1500 2800')
   })
 })

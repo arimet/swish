@@ -231,8 +231,8 @@ function DrawnProp({ o, h }: { o: Prop; h: number }) {
  * first — a play always has at least one step, and a thumbnail must never render an
  * empty court. `apercu` cuts all interaction (thumbnails).
  */
-export function PlayBoard({ schema, stepIndex, step, onPointerDown, onPointerMove, onPointerUp, children, apercu, remplit }: {
-  schema: Play
+export function PlayBoard({ play, stepIndex, step, onPointerDown, onPointerMove, onPointerUp, children, apercu, remplit }: {
+  play: Play
   stepIndex: number
   /** A computed step — the player's snapshot — to display instead of the play's own.
    *  The rendering does not change: an animation is only a sequence of states. */
@@ -248,14 +248,14 @@ export function PlayBoard({ schema, stepIndex, step, onPointerDown, onPointerMov
   remplit?: boolean
 }) {
   const translate = useT()
-  const h = depth(schema)
-  const t = step ?? schema.steps[stepIndex] ?? schema.steps[0]
+  const h = depth(play)
+  const t = step ?? play.steps[stepIndex] ?? play.steps[0]
   const interactive = !apercu && !!(onPointerDown || onPointerMove || onPointerUp)
   return (
     <svg
       viewBox={`0 0 ${W} ${h}`}
       role={interactive ? 'application' : 'img'}
-      aria-label={translate('play.board', { name: schema.name })}
+      aria-label={translate('play.board', { name: play.name })}
       onPointerDown={apercu ? undefined : onPointerDown}
       onPointerMove={apercu ? undefined : onPointerMove}
       onPointerUp={apercu ? undefined : onPointerUp}
@@ -266,8 +266,8 @@ export function PlayBoard({ schema, stepIndex, step, onPointerDown, onPointerMov
           units, it follows the board's size and always coincides with the drawn
           frame. */}
       <rect x={2} y={2} width={W - 4} height={h - 4} rx={RAYON} fill={T.court} />
-      <CourtLines bord={schema.court === 'half'} />
-      {schema.court === 'full' && (
+      <CourtLines bord={play.court === 'half'} />
+      {play.court === 'full' && (
         <>
           <g transform={`translate(0 ${D * 2}) scale(1 -1)`}>
             <CourtLines bord={false} />
@@ -275,7 +275,7 @@ export function PlayBoard({ schema, stepIndex, step, onPointerDown, onPointerMov
           <Midcourt />
         </>
       )}
-      {schema.props.map((o, i) => <DrawnProp key={i} o={o} h={h} />)}
+      {play.props.map((o, i) => <DrawnProp key={i} o={o} h={h} />)}
       {/* Arrows first: a marker must never be struck through by a stroke. */}
       {t.arrows.map((f, i) => <DrawnArrow key={i} f={f} h={h} />)}
       {t.markers.map((p) => <DrawnMarker key={`${p.side}${p.position}`} marker={p} h={h} />)}

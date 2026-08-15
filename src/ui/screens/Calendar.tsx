@@ -28,7 +28,7 @@ const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, c
 
 type CalItem = { key: string; time: string } & ({ kind: 'match'; match: Match } | { kind: 'training'; training: Training })
 
-export function Calendrier() {
+export function Calendar() {
   const translate = useT()
   const { clubId } = useClub()
   const { can, guard } = useAuth()
@@ -38,7 +38,7 @@ export function Calendrier() {
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [trainings, setTrainings] = useState<Training[] | null>(null)
   // The club's library: it is what says which plays still exist.
-  const [schemas, setSchemas] = useState<Play[]>([])
+  const [plays, setPlays] = useState<Play[]>([])
 
   const refreshTrainings = () => listTrainings().then(setTrainings)
 
@@ -56,9 +56,9 @@ export function Calendrier() {
   // The plays follow the device's club, like the trainings below: a separate effect,
   // because the one above does not depend on `clubId`.
   useEffect(() => {
-    if (!clubId) { setSchemas([]); return }
+    if (!clubId) { setPlays([]); return }
     let cancel = false
-    listPlays(clubId).then((s) => { if (!cancel) setSchemas(s) })
+    listPlays(clubId).then((s) => { if (!cancel) setPlays(s) })
     return () => { cancel = true }
   }, [clubId])
 
@@ -240,7 +240,7 @@ export function Calendrier() {
                   <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
                     {items.map((it) => it.kind === 'match'
                       ? <GameCard key={it.key} m={it.match} teams={teams} manages={manages} />
-                      : <TrainingCard key={it.key} t={it.training} schemas={schemas} manages={manages}
+                      : <TrainingCard key={it.key} t={it.training} plays={plays} manages={manages}
                           onToggleSchema={(playId) => togglePlay(it.training.id, playId)}
                           onDelete={() => setToDelete(it.training)} />)}
                   </div>
@@ -318,12 +318,12 @@ function Field({ id, label, value, onChange, type = 'text' }: { id: string; labe
  *  there — the same checkboxes as a game's call-up, for whoever can tick them.
  *  Everyone else reads the session's programme without being able to change it: that
  *  is what interests them. */
-function TrainingCard({ t, schemas, manages, onToggleSchema, onDelete }: { t: Training; schemas: Play[]; manages: boolean; onToggleSchema: (playId: string) => void; onDelete: () => void }) {
+function TrainingCard({ t, plays, manages, onToggleSchema, onDelete }: { t: Training; plays: Play[]; manages: boolean; onToggleSchema: (playId: string) => void; onDelete: () => void }) {
   const translate = useT()
   // The count shown is of the plays that exist: a training may cite a deleted play (a
   // store predating `deletePlay`'s cascade), and counting it would make the row lie —
   // the same fault fixed earlier on call-ups and their removed players.
-  const attached = schemas.filter((s) => t.playIds?.includes(s.id))
+  const attached = plays.filter((s) => t.playIds?.includes(s.id))
   return (
     <div className="flex gap-3 rounded-2xl p-3" style={{ background: C.card, border: `1px solid ${TRAINING_INK}55` }}>
       <div className="flex w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: TRAINING_BG }}>
@@ -357,11 +357,11 @@ function TrainingCard({ t, schemas, manages, onToggleSchema, onDelete }: { t: Tr
                 ))}
               </div>
             )
-          ) : schemas.length === 0 ? (
+          ) : plays.length === 0 ? (
             <p className="mt-2 text-[12px]" style={{ color: C.faint }}>{translate('calendar.emptyLibrary')}</p>
           ) : (
             <div className="mt-2 grid gap-1.5">
-              {schemas.map((s) => {
+              {plays.map((s) => {
                 const id = `schema-${t.id}-${s.id}`
                 return (
                   <label key={s.id} htmlFor={id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] font-semibold" style={{ background: C.panel }}>

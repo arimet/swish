@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Championnat } from './Championnat'
+import { Standings } from './Standings'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
@@ -20,7 +20,7 @@ beforeEach(async () => {
 })
 
 const renderChamp = () =>
-  render(<MemoryRouter><ClubProvider><AuthProvider><Championnat /></AuthProvider></ClubProvider></MemoryRouter>)
+  render(<MemoryRouter><ClubProvider><AuthProvider><Standings /></AuthProvider></ClubProvider></MemoryRouter>)
 
 /** Selects the teams and scores in the entry form, without submitting.
  *  The form is folded away: it has to be opened first — an entry form appears on a

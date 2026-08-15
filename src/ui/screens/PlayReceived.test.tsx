@@ -3,12 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { SchemaRecu } from './SchemaRecu'
+import { PlayReceived } from './PlayReceived'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { db } from '../../persistence/db'
 import { listPlays, savePlay, saveTeam } from '../../persistence/repositories'
-import { encoder } from '../../domain/partage'
+import { encoder } from '../../domain/share'
 import { newPlay, nextStep, type Play } from '../../domain/plays'
 
 /** Two steps: the point guard goes down from 0.62 to 0.20. The same play as the
@@ -54,7 +54,7 @@ const ouvrir = (code: string) =>
       <ClubProvider>
         <AuthProvider>
           <Routes>
-            <Route path="/schemas/recu" element={<SchemaRecu />} />
+            <Route path="/schemas/recu" element={<PlayReceived />} />
             {/* The record is beside the point here: a marker is enough to see that we
                 get there. */}
             <Route path="/schemas/:id" element={<p>fiche</p>} />
@@ -110,14 +110,14 @@ describe('SchemaRecu — the play that arrived by link', () => {
     await userEvent.click(screen.getByRole('button', { name: /Ajouter à ma bibliothèque/ }))
 
     await waitFor(async () => expect(await listPlays('ta')).toHaveLength(2))
-    const schemas = await listPlays('ta')
-    const ajoute = schemas.find((s) => s.id !== 's1')!
+    const plays = await listPlays('ta')
+    const ajoute = plays.find((s) => s.id !== 's1')!
     expect(ajoute.id).not.toBe('')
     expect(ajoute.clubId).toBe('ta')
     expect(ajoute.name).toBe('Corner pour le 4')
     expect(ajoute.steps).toEqual(original.steps)
     // The original is intact, and it is the created play's record that opens.
-    expect(schemas.find((s) => s.id === 's1')!.name).toBe('Corner pour le 4')
+    expect(plays.find((s) => s.id === 's1')!.name).toBe('Corner pour le 4')
     expect(await screen.findByText('fiche')).toBeInTheDocument()
   })
 

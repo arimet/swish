@@ -20,19 +20,19 @@ import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
 import { newId } from '../../domain/ids'
-import { decode } from '../../domain/partage'
+import { decode } from '../../domain/share'
 import type { Play } from '../../domain/plays'
 import { savePlay } from '../../persistence/repositories'
 import { courtWidth, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
 
-export function SchemaRecu() {
+export function PlayReceived() {
   const translate = useT()
   const { hash } = useLocation()
   const { guard } = useAuth()
   const { clubId, ready } = useClub()
   const navigate = useNavigate()
-  const [schema, setSchema] = useState<Play | null | undefined>(undefined)
+  const [play, setPlay] = useState<Play | null | undefined>(undefined)
   const [index, setIndex] = useState(0)
 
   // `useLocation().hash` carries the "#": the code starts at the next character.
@@ -40,12 +40,12 @@ export function SchemaRecu() {
 
   useEffect(() => {
     let alive = true
-    decode(code).then((s) => { if (alive) setSchema(s) })
+    decode(code).then((s) => { if (alive) setPlay(s) })
     return () => { alive = false }
   }, [code])
 
-  if (schema === undefined) return <Screen><p style={{ color: C.muted }}>{translate('received.opening')}</p></Screen>
-  if (schema === null) return (
+  if (play === undefined) return <Screen><p style={{ color: C.muted }}>{translate('received.opening')}</p></Screen>
+  if (play === null) return (
     <Screen>
       <div className="grid min-h-dvh place-items-center p-6 text-center">
         <div>
@@ -61,7 +61,7 @@ export function SchemaRecu() {
     </Screen>
   )
 
-  const last = schema.steps.length - 1
+  const last = play.steps.length - 1
   // Stepping is clamped, it does not wrap — the same rule as the reading screen.
   const go = (delta: number) => setIndex((i) => Math.min(last, Math.max(0, i + delta)))
 
@@ -69,35 +69,35 @@ export function SchemaRecu() {
   // overwrite any existing play, even when sender and recipient share a database.
   const add = () => guard('manage', async () => {
     if (!clubId) return
-    const s: Play = { ...schema, id: newId(), clubId }
+    const s: Play = { ...play, id: newId(), clubId }
     await savePlay(s)
     navigate(`/schemas/${s.id}`)
   })
 
   // The same width bound as the reading screen: it is the viewBox's ratio that must
   // hold, otherwise the half court overflows on a wide screen.
-  const boardWidth = courtWidth(schema.court)
+  const boardWidth = courtWidth(play.court)
 
   return (
     <Screen>
       <div className="mx-auto flex min-h-dvh w-full max-w-3xl flex-col gap-3 p-4">
         <div>
           <p className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('received.title')}</p>
-          <h1 className="truncate text-2xl font-extrabold tracking-tight">{schema.name}</h1>
+          <h1 className="truncate text-2xl font-extrabold tracking-tight">{play.name}</h1>
           <p className="text-sm" style={{ color: C.muted }}>
-            {translate(schema.court === 'half' ? 'play.halfCourt' : 'play.fullCourt')} · {translate('play.stepCount', { count: schema.steps.length })}{schema.defense ? ` ${translate('play.defence')}` : ''}
+            {translate(play.court === 'half' ? 'play.halfCourt' : 'play.fullCourt')} · {translate('play.stepCount', { count: play.steps.length })}{play.defense ? ` ${translate('play.defence')}` : ''}
           </p>
         </div>
 
-        {schema.note && <p className="rounded-2xl p-4 text-sm" style={{ background: C.card, border: bd, color: C.muted }}>{schema.note}</p>}
+        {play.note && <p className="rounded-2xl p-4 text-sm" style={{ background: C.card, border: bd, color: C.muted }}>{play.note}</p>}
 
         <div className="select-none" style={{ maxWidth: boardWidth }}>
-          <PlayBoard schema={schema} stepIndex={index} />
+          <PlayBoard play={play} stepIndex={index} />
         </div>
 
         <div className="flex select-none items-center gap-3" style={{ maxWidth: boardWidth }}>
           <StepButton label={translate('viewer.previous')} onClick={() => go(-1)} disabled={index === 0}>◀</StepButton>
-          <span className="flex-1 text-center text-sm font-extrabold">{translate('play.step', { n: index + 1, total: schema.steps.length })}</span>
+          <span className="flex-1 text-center text-sm font-extrabold">{translate('play.step', { n: index + 1, total: play.steps.length })}</span>
           <StepButton label={translate('viewer.next')} onClick={() => go(1)} disabled={index === last}>▶</StepButton>
         </div>
 

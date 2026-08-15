@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { years, hasEvents, leagues, clubsOfGames, ofYear, ofLeague } from './menage'
+import { years, hasEvents, leagues, clubsOfGames, ofYear, ofLeague } from './cleanup'
 import type { GameEvent, Match } from './types'
 
 const ev: GameEvent = { id: 'e1', type: 'PERIOD_START', wallClock: 0, period: 1, gameClock: 600 }

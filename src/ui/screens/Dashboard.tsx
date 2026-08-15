@@ -27,7 +27,7 @@ export function Dashboard() {
   const [teams, setTeams] = useState<Record<string, Team>>({})
   const [players, setPlayers] = useState<Player[]>([])
   const [trainings, setTrainings] = useState<Training[]>([])
-  const [schemas, setSchemas] = useState<Play[]>([])
+  const [plays, setPlays] = useState<Play[]>([])
   const [convocation, setConvocation] = useState<Convocation | null>(null)
   const [openPlayer, setOpenPlayer] = useState<string | null>(null)
 
@@ -42,7 +42,7 @@ export function Dashboard() {
         setPlayers(ps)
         setMatches(ms)
         setTrainings(trs)
-        setSchemas(sch)
+        setPlays(sch)
       })
     return () => { cancelled = true }
   }, [clubId])
@@ -134,7 +134,7 @@ export function Dashboard() {
         {!onlySettingUp && (
           <>
             <Banner live={live} next={next} teams={teams} manages={manages} keepsScore={can('score')} />
-            <NextFixture fixture={fixture} teams={teams} players={players} convocation={convocation} schemas={schemas} manages={manages} />
+            <NextFixture fixture={fixture} teams={teams} players={players} convocation={convocation} plays={plays} manages={manages} />
           </>
         )}
 
@@ -367,7 +367,7 @@ function Banner({ live, next, teams, manages, keepsScore }: { live?: Match; next
 /** The "next fixture" block: game or training, call-up included. `fixture` already
  *  excludes the live game (see the computation in `Dashboard`), so this component
  *  never has to worry about it — it simply shows what it is given. */
-function NextFixture({ fixture, teams, players, convocation, schemas, manages }: { fixture: Fixture | null; teams: Record<string, Team>; players: Player[]; convocation: Convocation | null; schemas: Play[]; manages: boolean }) {
+function NextFixture({ fixture, teams, players, convocation, plays, manages }: { fixture: Fixture | null; teams: Record<string, Team>; players: Player[]; convocation: Convocation | null; plays: Play[]; manages: boolean }) {
   const translate = useT()
   if (!fixture) {
     return (
@@ -384,7 +384,7 @@ function NextFixture({ fixture, teams, players, convocation, schemas, manages }:
     const f = fmtDate(t.date)
     // Resolved against the library rather than taken as is: an id matching no play
     // (deleted since) would only open an empty viewer.
-    const upcoming = schemas.filter((s) => t.playIds?.includes(s.id))
+    const upcoming = plays.filter((s) => t.playIds?.includes(s.id))
     return (
       <div className="mt-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('dashboard.nextFixture')}</span>
