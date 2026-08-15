@@ -20,7 +20,7 @@ const court = () => screen.getByLabelText('Demi-terrain — toucher le point de 
 
 beforeEach(() => {
   vi.useFakeTimers()
-  // jsdom ne calcule pas de mise en page : on fixe la boîte du SVG à 300×280.
+  // jsdom computes no layout: we pin the SVG's box to 300×280.
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
     left: 0, top: 0, width: 300, height: 280, right: 300, bottom: 280, x: 0, y: 0, toJSON: () => ({}),
   } as DOMRect)

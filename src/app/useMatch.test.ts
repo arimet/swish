@@ -15,18 +15,18 @@ beforeEach(async () => { await db.matches.clear(); await saveMatch(seed()) })
 
 describe('useMatch', () => {
   /**
-   * L'écriture échoue : l'écran doit revenir à l'état d'avant.
+   * The write fails: the screen must return to its previous state.
    *
-   * L'affichage précédait l'écriture sans jamais la vérifier — et pour trois des cinq
-   * chemins (`undo`, `removeLast`, `finish`), l'écriture n'avait même pas de `catch` :
-   * une promesse rejetée dans le vide. Le tableau d'affichage pouvait donc annoncer un
-   * panier que la base n'avait pas, et le point disparaissait au rechargement. Sur un
-   * score officiel, un état qui mente est plus grave qu'une action refusée.
+   * The display preceded the write without ever checking it — and for three of the five
+   * paths (`undo`, `removeLast`, `finish`), the write did not even have a `catch`: a
+   * promise rejected into the void. The scoreboard could therefore announce a basket
+   * the store did not have, and the point vanished on reload. On an official score, a
+   * state that lies is worse than an action refused.
    */
   it('rolls back and says so when the save fails', async () => {
     const { result } = renderHook(() => useMatch('m1'))
     await waitFor(() => expect(result.current.match).not.toBeNull())
-    // Un évènement valide d'abord, pour partir d'un état non vide.
+    // A valid event first, so as to start from a non-empty state.
     await act(async () => { await result.current.dispatch({ type: 'PERIOD_START', period: 1, gameClock: 600 }) })
     await act(async () => { await result.current.dispatch({ type: 'CLOCK_START', period: 1, gameClock: 600 }) })
     expect(result.current.match!.events).toHaveLength(2)
@@ -37,8 +37,8 @@ describe('useMatch', () => {
     })
     put.mockRestore()
 
-    // Le panier n'est ni à l'écran ni en base, et l'échec est annoncé — sans exposer
-    // le message technique de l'exception.
+    // The basket is neither on screen nor in the store, and the failure is announced —
+    // without exposing the exception's technical message.
     expect(result.current.match!.events).toHaveLength(2)
     expect((await db.matches.get('m1'))!.events).toHaveLength(2)
     expect(result.current.error).toMatch(/enregistrement impossible/i)
@@ -58,7 +58,7 @@ describe('useMatch', () => {
     expect(result.current.match!.status).toBe('live')
     expect((await db.matches.get('m1'))!.status).toBe('live')
 
-    // Et le cas nominal renvoie bien `true`, sinon on ne quitterait jamais.
+    // And the nominal case does return `true`, otherwise we would never leave.
     await act(async () => { issue = await result.current.finish() })
     expect(issue).toBe(true)
     expect((await db.matches.get('m1'))!.status).toBe('finished')

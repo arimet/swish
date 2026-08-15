@@ -43,7 +43,7 @@ describe('nextStep', () => {
 
 describe('simplifyPath', () => {
   it('keeps the corner of an L-shaped stroke', () => {
-    // Un L : descente verticale puis départ horizontal, échantillonné en 41 points
+    // An L: a vertical descent then a horizontal run, sampled at 41 points
     const pts = [
       ...Array.from({ length: 21 }, (_, i) => ({ x: 0.2, y: 0.2 + i * 0.02 })),
       ...Array.from({ length: 20 }, (_, i) => ({ x: 0.2 + (i + 1) * 0.02, y: 0.6 })),

@@ -6,7 +6,7 @@ import type { Shot } from '../../domain/shotchart'
 import { C } from '../olive/kit'
 
 beforeEach(() => {
-  // jsdom ne calcule pas de mise en page : on fixe la boîte du SVG à 300×280.
+  // jsdom computes no layout: we pin the SVG's box to 300×280.
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
     left: 0, top: 0, width: 300, height: 280, right: 300, bottom: 280, x: 0, y: 0, toJSON: () => ({}),
   } as DOMRect)
@@ -41,14 +41,14 @@ describe('ShotPicker', () => {
 describe('ShotPicker — confirmation', () => {
   it('reserves the pill\'s room even without a confirmation, so as not to shift the buttons', () => {
     render(<ShotPicker onPick={vi.fn()} />)
-    // `visibility: hidden` retire l'élément de l'arbre d'accessibilité — RTL
-    // l'exclut donc de getByRole par défaut, d'où `hidden: true` ici. Ce même
-    // retrait garantit qu'un lecteur d'écran n'annonce rien à vide : pas
-    // besoin d'aria-hidden en plus.
+    // `visibility: hidden` removes the element from the accessibility tree — RTL
+    // therefore excludes it from getByRole by default, hence `hidden: true` here. That
+    // same removal guarantees a screen reader announces nothing when empty: no need for
+    // an extra aria-hidden.
     const status = screen.getByRole('status', { hidden: true })
     expect(status).toBeInTheDocument()
-    // Une chaîne vide ne crée aucune boîte de ligne : le contenu de repli doit
-    // rester un caractère — l'espace insécable U+00A0 — pas ''.
+    // An empty string creates no line box: the fallback content must stay a character
+    // — the non-breaking space U+00A0 — not ''.
     expect(status.textContent).toBe(' ')
   })
 
@@ -95,9 +95,9 @@ describe('ShotPicker — confirmation', () => {
 })
 
 describe('ZONE_PATH', () => {
-  // Ces chemins ont été vérifiés point par point contre zoneAt par lancer de rayons.
-  // Les modifier désalignerait les zones colorées des zones réellement calculées :
-  // un tir compté dans la raquette pourrait s'afficher en mi-distance.
+  // These paths were checked point by point against zoneAt by ray casting. Changing
+  // them would misalign the coloured zones from the ones actually computed: a shot
+  // counted in the key could be shown as mid-range.
   it('stays literally unchanged', () => {
     expect(ZONE_PATH).toEqual({
       paint: 'M 505 0 H 995 V 580 H 505 Z',
@@ -112,9 +112,9 @@ describe('ZONE_PATH', () => {
 })
 
 describe('clipping the zones to the court\'s frame', () => {
-  // `corner3_left` part de (0,0), le cadre est rentré de 4 et arrondi de RAYON :
-  // sans découpe, le remplissage bavait dans les coins arrondis. Les deux usages
-  // — la confirmation après un tir et la carte des zones — doivent la porter.
+  // `corner3_left` starts at (0,0), the frame is inset by 4 and rounded by RAYON:
+  // without a clip, the fill spilled into the rounded corners. Both uses — the
+  // confirmation after a shot and the zone chart — must carry it.
   const zonesDecoupees = (c: HTMLElement) =>
     [...c.querySelectorAll('g[clip-path] path[d]')].map((p) => p.getAttribute('d'))
 

@@ -20,9 +20,9 @@ const schema = (id: string, name: string): Play => ({ id, ...newPlay('ta', 'half
 
 /** A date relative to the day of the run: the calendar's past and future are judged
  *  against the clock, and a hard-coded date would eventually tip to one side. */
-const jour = (décalage: number) => {
+const jour = (offset: number) => {
   const d = new Date()
-  d.setDate(d.getDate() + décalage)
+  d.setDate(d.getDate() + offset)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 

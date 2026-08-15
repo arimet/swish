@@ -75,7 +75,7 @@ describe('PlayerDetail', () => {
   it('shows the secondary statistics as a per-game average', async () => {
     renderAt('p1')
     await screen.findByText('MARTIN Lucas')
-    // Une passe décisive sur une rencontre → 1,0 par match, jamais « 1 ».
+    // One assist in one game → 1.0 per game, never "1".
     const ligne = screen.getByText('Passes décisives').closest('div')!
     expect(within(ligne).getByText('1,0')).toBeInTheDocument()
   })
@@ -102,8 +102,8 @@ describe('PlayerDetail', () => {
   })
 
   it('says nothing when the saved id matches nobody', async () => {
-    // Le joueur identifié a été retiré de l'effectif : sa fiche n'existe plus,
-    // et celle des autres ne doit surtout pas hériter de la mention.
+    // The identified player has been removed from the roster: their record no longer
+    // exists, and nobody else's must inherit the mention.
     localStorage.setItem(PLAYER_ID_KEY, 'parti')
     renderAt('p1')
     expect(await screen.findByText('MARTIN Lucas')).toBeInTheDocument()

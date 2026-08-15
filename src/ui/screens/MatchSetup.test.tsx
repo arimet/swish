@@ -10,8 +10,8 @@ import { db } from '../../persistence/db'
 import { saveTeam, savePlayer } from '../../persistence/repositories'
 
 beforeEach(async () => {
-  sessionStorage.setItem(ROLE_KEY, 'admin') // actions protégées débloquées pour le test
-  localStorage.setItem('swish-club-id', 'ta') // notre club est déjà réglé (écran derrière la garde club)
+  sessionStorage.setItem(ROLE_KEY, 'admin') // guarded actions unlocked for the test
+  localStorage.setItem('swish-club-id', 'ta') // our club is already set (this screen sits behind the club gate)
   await db.teams.clear(); await db.players.clear(); await db.matches.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' }); await saveTeam({ id: 'tb', name: 'VERDUN' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'A', firstName: 'x' })
@@ -40,7 +40,7 @@ describe('MatchSetup', () => {
     const created = await db.matches.get(onCreated.mock.calls[0][0])
     expect(created!.meta.clubId).toBe('ta')
     expect(created!.meta.opponentId).toBe('tb')
-    expect(created!.roster).toEqual(['p1']) // notre effectif seulement, l'adversaire n'en a pas
+    expect(created!.roster).toEqual(['p1']) // our roster only, the opposition has none
   })
 })
 
@@ -59,11 +59,11 @@ describe('MatchSetup — rights', () => {
       </MemoryRouter>,
     )
 
-    // Cet écran n'existe que pour écrire : sans le droit, l'URL directe renvoie au
-    // calendrier plutôt que d'ouvrir un formulaire sans bouton d'envoi.
+    // This screen exists only to write: without the right, the direct URL redirects to
+    // the calendar rather than opening a form with no submit.
     expect(await screen.findByText('Calendrier')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /planifier la rencontre/i })).not.toBeInTheDocument()
-    // Ce qui compte : aucune rencontre n'est créée.
+    // What matters: no game is created.
     expect(await db.matches.count()).toBe(0)
     expect(onCreated).not.toHaveBeenCalled()
   })

@@ -35,8 +35,8 @@ const renderView = () =>
 describe('SchemaView — reading a play', () => {
   it('a visitor reads a play without a code', async () => {
     renderView()
-    // Aucun rôle en session : le tableau s'affiche quand même, et rien ne demande
-    // de code — l'invariant du projet 7, la lecture n'est jamais protégée.
+    // No role in the session: the board shows all the same, and nothing asks for a
+    // code — the rights invariant, reading is never gated.
     expect(await screen.findByRole('img', { name: 'tableau tactique — Corner pour le 4' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: /Accès .* requis/ })).not.toBeInTheDocument()
   })
@@ -45,9 +45,9 @@ describe('SchemaView — reading a play', () => {
     renderView()
     expect(await screen.findByText('Temps 1 / 2')).toBeInTheDocument()
 
-    // Au premier temps, reculer ne fait rien : boucler jusqu'au dernier ferait
-    // croire qu'il reste des temps devant. On vérifie ce que le doigt obtient —
-    // le bouton est éteint, et le presser laisse le même temps affiché.
+    // On the first step, going back does nothing: wrapping to the last would suggest
+    // there are steps ahead. We check what the finger gets — the button is dark, and
+    // pressing it leaves the same step displayed.
     const precedent = screen.getByRole('button', { name: 'Temps précédent' })
     expect(precedent).toBeDisabled()
     await userEvent.click(precedent)
@@ -57,7 +57,7 @@ describe('SchemaView — reading a play', () => {
     await userEvent.click(suivant)
     expect(await screen.findByText('Temps 2 / 2')).toBeInTheDocument()
 
-    // Au dernier temps, avancer ne fait rien non plus.
+    // On the last step, going forward does nothing either.
     expect(suivant).toBeDisabled()
     await userEvent.click(suivant)
     expect(screen.getByText('Temps 2 / 2')).toBeInTheDocument()
@@ -69,7 +69,7 @@ describe('SchemaView — reading a play', () => {
 
     expect(screen.queryByRole('button', { name: 'Modifier' })).not.toBeInTheDocument()
     expect(screen.queryByText('éditeur')).not.toBeInTheDocument()
-    // Ce qui reste libre le reste : jouer et partager ne modifient rien.
+    // What stays ungated stays so: playing and sharing modify nothing.
     expect(screen.getByRole('link', { name: /jouer/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Partager' })).toBeInTheDocument()
   })

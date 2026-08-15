@@ -11,7 +11,7 @@ import type { Match } from '../../domain/types'
 const MATCH_ID = 'match-finished'
 
 beforeEach(async () => {
-  sessionStorage.clear() // le résumé se consulte sans rôle : chaque test repart visiteur
+  sessionStorage.clear() // the summary reads without a role: each test starts as a visitor
   await db.matches.clear(); await db.players.clear(); await db.teams.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await saveTeam({ id: 'tb', name: 'VERDUN' })
@@ -24,7 +24,7 @@ beforeEach(async () => {
     events: [
       { id: 'e0', wallClock: 0, period: 1, gameClock: 600, type: 'STARTING_FIVE', team: 'A', playerIds: ['p1'] },
       { id: 'e1', wallClock: 1, period: 1, gameClock: 590, type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' },
-      // Panier adverse saisi globalement : pas de playerId, l'adversaire n'a pas d'effectif.
+      // An opposition basket entered as a total: no playerId, they have no roster.
       { id: 'e2', wallClock: 2, period: 1, gameClock: 580, type: 'SCORE', team: 'B', kind: '3' },
       { id: 'e3', wallClock: 3, period: 1, gameClock: 570, type: 'SCORE', team: 'B', kind: '3' },
     ],
@@ -42,16 +42,17 @@ describe('SummaryScreen', () => {
       </AuthProvider>,
     )
 
-    // L'encart adverse remplace le tableau (la feuille imprimable, cachée mais présente dans le
-    // DOM, porte le même message : on cible donc précisément l'encart écran par son en-tête).
+    // The opposition panel replaces the table (the printable sheet, hidden but present
+    // in the DOM, carries the same message: we therefore target the on-screen panel
+    // precisely, by its heading).
     const heading = await screen.findByText('Visiteurs · VERDUN')
     const card = heading.closest('section')
     expect(card).not.toBeNull()
     expect(within(card as HTMLElement).getByText(/Score saisi globalement/)).toBeInTheDocument()
-    // Score réel (6 pts = 2 x 3pts), pas un total à 0.
+    // The real score (6 pts = 2 × 3pts), not a total of 0.
     expect(within(card as HTMLElement).getByText('6')).toBeInTheDocument()
 
-    // Une seule ligne « Total équipe » (celle des locaux) : pas de tableau visiteurs vide.
+    // A single "Total équipe" row (the home side's): no empty visitors' table.
     expect(screen.getAllByText('Total équipe')).toHaveLength(1)
   })
 })
@@ -82,8 +83,8 @@ describe('SummaryScreen — the shooting percentage column', () => {
     )
 
     await screen.findByText('DUPONT Marc')
-    // Le joueur a marqué son seul tir (fieldGoalsMade=1, misses=0) : sans MISS suivi
-    // sur ce match, on ne peut pas savoir si c'est 100 % ou juste « pas suivi ».
+    // The player made their only shot (fieldGoalsMade=1, misses=0): with no MISS
+    // tracked in this game, there is no telling 100% from "not tracked".
     expect(screen.queryByText('100 %')).not.toBeInTheDocument()
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
   })
@@ -94,8 +95,8 @@ describe('SummaryScreen — rights', () => {
     render(<AuthProvider><MemoryRouter><SummaryScreen matchId={MATCH_ID} onHome={vi.fn()} /></MemoryRouter></AuthProvider>)
 
   it('post-game correction is refused to the scorer\'s table: no button, no correction mode', async () => {
-    // Corriger une feuille close n'est pas le travail du bénévole du samedi : les
-    // deux boutons de correction ne lui sont pas proposés, et le mode ne s'ouvre pas.
+    // Correcting a closed sheet is not the Saturday volunteer's job: neither correction
+    // button is offered to them, and the mode does not open.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderRésumé()
     await screen.findByText('Visiteurs · VERDUN')
@@ -109,7 +110,7 @@ describe('SummaryScreen — rights', () => {
     renderRésumé()
     await screen.findByText('Visiteurs · VERDUN')
     expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
-    // Lire, suivre et exporter n'écrivent rien : ces trois-là restent à tous.
+    // Reading, following and exporting write nothing: those three stay open to all.
     expect(screen.getByRole('button', { name: /exporter en pdf/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /suivi/i })).toBeInTheDocument()
   })

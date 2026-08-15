@@ -88,7 +88,7 @@ describe('the full run', () => {
     const onFinish = vi.fn()
     renderE2E(onFinish)
 
-    // 1. Porte du cinq de départ : cinq titulaires puis démarrage
+    // 1. The starting-five gate: five starters, then the start
     await waitFor(() => screen.getByText(/Cinq de départ/i))
     await screen.findByRole('button', { name: /NOM0/ })
     for (let i = 0; i < 5; i++)
@@ -101,13 +101,13 @@ describe('the full run', () => {
       expect(s!.events.filter((e) => e.type === 'STARTING_FIVE')).toHaveLength(1)
     })
 
-    // 2. L'écran live remplace la porte
+    // 2. The live screen replaces the gate
     await waitFor(() => expect(screen.queryByText(/Cinq de départ/i)).not.toBeInTheDocument())
 
-    // Le chrono doit tourner pour qu'un SCORE/MISS soit accepté par les règles
+    // The clock must run for a SCORE or MISS to be accepted by the rules
     await userEvent.click(screen.getByRole('button', { name: /Démarrer$/ }))
 
-    // 3. Panier à 2 points intérieur d'un de nos joueurs, avec sa position de tir
+    // 3. A two-point basket inside from one of our players, with its shot spot
     await userEvent.click(screen.getByRole('button', { name: /NOM0/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Raquette' }))
     await waitFor(async () => {
@@ -119,8 +119,8 @@ describe('the full run', () => {
       kind: '2int', playerId: 'p0', shot: { x: expect.any(Number), y: expect.any(Number) },
     })
 
-    // 4. Panier à 3 points d'un autre joueur, position de tir enregistrée
-    await userEvent.keyboard('{Escape}') // ferme le dialogue avant d'en ouvrir un autre
+    // 4. A three-pointer from another player, shot spot recorded
+    await userEvent.keyboard('{Escape}') // closes the dialog before opening another
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /NOM1/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Aile / axe à 3 pts' }))
@@ -133,7 +133,7 @@ describe('the full run', () => {
       kind: '3', shot: { x: expect.any(Number), y: expect.any(Number) },
     })
 
-    // 5. Tir manqué d'un troisième joueur : aucun changement de score
+    // 5. A missed shot from a third player: no change to the score
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     const scoreBefore = (await getMatch(ID))!.events.filter((e) => e.type === 'SCORE').length
@@ -147,7 +147,7 @@ describe('the full run', () => {
     const afterMiss = await getMatch(ID)
     expect(afterMiss!.events.filter((e) => e.type === 'SCORE')).toHaveLength(scoreBefore)
 
-    // 6. Changement depuis le dialogue de substitution
+    // 6. A substitution from the substitution dialog
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /Changement VIGNOT/i }))
@@ -171,7 +171,7 @@ describe('the full run', () => {
 
 describe('LiveMatch — rights', () => {
   it('the scorer\'s table records the game without being asked for any code', async () => {
-    // Le cœur du modèle : le bénévole tient la feuille sans détenir le code admin.
+    // The heart of the model: the volunteer keeps the sheet without holding the admin code.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderLive()
     await userEvent.click(await screen.findByRole('button', { name: 'Ajouter 2 points à VERDUN' }))

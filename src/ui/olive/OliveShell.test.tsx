@@ -24,15 +24,15 @@ const renderShell = () =>
     </MemoryRouter>,
   )
 
-/** Le point d'entrée des accès existe en deux exemplaires (en-tête mobile et
- *  barre latérale) : on passe toujours par celui de la barre latérale. */
+/** The access entry point exists in two copies (mobile header and sidebar): we always
+ *  go through the sidebar's. */
 const ouvrirLesAcces = async () => {
   const aside = await screen.findByRole('complementary')
   await userEvent.click(within(aside).getByRole('button', { name: /accès/i }))
 }
 
-/** Le dialogue d'accès est modal : ce qui est derrière lui reste inatteignable
- *  aux requêtes par rôle tant qu'il n'est pas refermé. */
+/** The access dialog is modal: whatever is behind it stays unreachable to role
+ *  queries until it is closed. */
 const fermerLesAcces = async () => {
   await userEvent.keyboard('{Escape}')
   await waitFor(() => expect(screen.queryByLabelText(/code d.accès/i)).not.toBeInTheDocument())
@@ -79,23 +79,23 @@ describe('the access entry point', () => {
     await ouvrirLesAcces()
     await saisirLeCode('joueur')
     expect(await screen.findByRole('button', { name: /MARTIN Lucas/ })).toBeInTheDocument()
-    // Deux axes indépendants : s'identifier ne fait pas monter en droits.
+    // Two independent axes: identifying yourself does not raise your rights.
     expect(screen.getByText(/accès en cours : visiteur/i)).toBeInTheDocument()
   })
 })
 
 describe('the administration entry', () => {
   it('stays invisible to a visitor and to the scorer\'s table', async () => {
-    // Une porte qu'on ne peut pas ouvrir n'a pas à s'afficher : le ménage des
-    // données est réservé à l'administrateur.
+    // A door you cannot open has no business showing: data cleanup is reserved for the
+    // administrator.
     renderShell()
     const aside = await screen.findByRole('complementary')
     expect(within(aside).queryByRole('link', { name: /administration/i })).not.toBeInTheDocument()
 
     await ouvrirLesAcces()
     await saisirLeCode('marque')
-    // Le dialogue est modal : tant qu'il est ouvert, le reste de la page est
-    // masqué aux requêtes par rôle et l'absence du lien ne prouverait rien.
+    // The dialog is modal: while it is open, the rest of the page is hidden from role
+    // queries and the link's absence would prove nothing.
     await fermerLesAcces()
     expect(within(await screen.findByRole('complementary')).queryByRole('link', { name: /administration/i })).not.toBeInTheDocument()
   })
@@ -113,9 +113,9 @@ describe('the administration entry', () => {
 
 describe('the player\'s identity in the roster', () => {
   it('remembers the player chosen, without listing the roster in the sidebar', async () => {
-    // L'effectif a quitté le menu : treize noms y poussaient la navigation hors de
-    // l'écran. Choisir son nom enregistre bien l'identité — c'est le tableau de
-    // bord et la fiche du joueur qui la montrent désormais.
+    // The roster left the menu: thirteen names pushed the navigation off screen there.
+    // Choosing a name does save the identity — it is the dashboard and the player's
+    // record that show it now.
     renderShell()
     await ouvrirLesAcces()
     await saisirLeCode('joueur')
@@ -128,9 +128,10 @@ describe('the player\'s identity in the roster', () => {
   })
 
   it('forgets an id matching no player in the roster', async () => {
-    // Le joueur a été retiré de l'effectif, mais son identifiant survit dans le
-    // localStorage : l'application doit se comporter comme sans identité. L'effectif
-    // reste chargé par la coquille pour le choix du nom, même s'il n'est plus affiché.
+    // The player has been removed from the roster, but their id survives in
+    // localStorage: the application must behave as if there were no identity. The
+    // roster stays loaded by the shell for the name picker, even though it is no longer
+    // displayed.
     localStorage.setItem(PLAYER_ID_KEY, 'parti')
     renderShell()
 
