@@ -1,6 +1,6 @@
 import type { Match, Training } from './types'
 
-/** Une échéance de l'équipe : une rencontre à jouer, ou un entraînement. */
+/** Something on the team's horizon: a game to play, or a training session. */
 export type Fixture =
   | { kind: 'match'; id: string; date: string; match: Match }
   | { kind: 'training'; id: string; date: string; training: Training }
@@ -8,29 +8,27 @@ export type Fixture =
 /**
  * Le jour d'une date, au format ISO, lu sur l'horloge locale.
  *
- * `toISOString()` convertit en UTC : entre minuit et l'heure du décalage local
- * (ex. 0h-2h en France), elle renvoie encore la veille. On dérive donc le jour
- * des composantes locales, pas de la représentation UTC.
+ * `toISOString()` converts to UTC: between midnight and the local offset (0:00–2:00
+ * in France, say), it still returns the previous day. So the day is derived from the
+ * local components, not from the UTC representation.
  */
 export const isoDay = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
-/** Les âges en toutes lettres, dans la langue de l'application et non dans celle du
- *  navigateur : un club français lit « il y a 3 semaines » sur une machine en anglais,
- *  comme le calendrier écrit ses mois lui-même. `numeric: 'always'` plutôt que `'auto'` :
- *  « il y a 2 jours » se compare d'un coup d'œil à « il y a 3 semaines », là où
- *  « avant-hier » demande de convertir. */
+/** Ages in words, in the app's language rather than the browser's: a French club reads
+ *  "il y a 3 semaines" on an English machine, the same way the calendar writes its own
+ *  months. `numeric: 'always'` rather than `'auto'`: "2 days ago" compares at a glance
+ *  with "3 weeks ago", where "the day before yesterday" needs converting. */
 const relatif = (lang: string) => new Intl.RelativeTimeFormat(lang, { numeric: 'always' })
 
 /**
- * L'âge d'une date, en toutes lettres : « il y a 2 jours » n'a pas le même poids
- * que « il y a 3 semaines », et un message oublié depuis un mois doit se lire
- * comme tel.
+ * A date's age, in words: "2 days ago" does not weigh the same as "3 weeks ago", and a
+ * message forgotten for a month should read as such.
  *
- * Renvoie `null` en deçà d'une minute, à charge pour l'appelant d'écrire « à l'instant » :
- * `Intl` ne sait formater qu'un écart, et « dans 0 minute » n'est pas une phrase. C'est
- * aussi le cas d'une date à venir — horloge de l'appareil reculée depuis l'écriture —
- * ramenée là, car « dans deux heures » n'a aucun sens sous un texte déjà écrit.
+ * Returns `null` below a minute, leaving the caller to write "just now": `Intl` can only
+ * format a gap, and "in 0 minutes" is not a sentence. The same goes for a future date —
+ * the device clock moved back since writing — folded in here, because "in two hours"
+ * makes no sense under a text already written.
  */
 export function since(iso: string, lang = 'fr', maintenant = new Date()): string | null {
   const sec = Math.max(0, Math.round((maintenant.getTime() - new Date(iso).getTime()) / 1000))
@@ -44,33 +42,32 @@ export function since(iso: string, lang = 'fr', maintenant = new Date()): string
 }
 
 /**
- * Prochaine échéance à venir, rencontres et entraînements confondus.
- * `null` quand rien n'est prévu.
+ * The next thing coming up, games and trainings together. `null` when nothing is
+ * planned.
  *
- * La comparaison se fait sur la date seule, au format ISO : une échéance du jour
- * compte encore, car le matin d'un match on veut voir le match du jour et non celui
- * de la semaine suivante.
+ * The comparison runs on the date alone, in ISO form: today still counts, because on
+ * the morning of a game you want to see that game and not next week's.
  */
 export function nextFixture(matches: Match[], trainings: Training[], today: Date): Fixture | null {
   const jour = isoDay(today)
   const echeances: Fixture[] = []
-  // Les entraînements sont ajoutés avant les rencontres : le tri ci-dessous est stable,
-  // donc si l'ordre d'insertion décidait des égalités de date, il faudrait qu'il coïncide
-  // par hasard avec la règle voulue. En les mettant dans l'ordre « inverse », c'est bien
-  // le départage explicite qui décide, et non un ordre d'insertion accidentel.
+  // Trainings are added before games: the sort below is stable, so if insertion order
+  // decided ties on date, it would have to coincide with the intended rule by accident.
+  // Inserting them the "wrong" way round makes the explicit tie-break decide, rather
+  // than an accidental insertion order.
   for (const t of trainings) {
     if (t.date >= jour) echeances.push({ kind: 'training', id: t.id, date: t.date, training: t })
   }
   for (const m of matches) {
-    // Une rencontre terminée n'est plus une échéance ; une rencontre sans date
-    // n'est pas planifiée et ne peut pas être annoncée comme prochaine.
+    // A finished game is no longer upcoming; a game with no date is not scheduled and
+    // cannot be announced as next.
     if (m.status === 'finished' || !m.meta.date) continue
     if (m.meta.date >= jour) echeances.push({ kind: 'match', id: m.id, date: m.meta.date, match: m })
   }
-  // À égalité de date, la rencontre passe avant : c'est elle qui compte. Entre deux
-  // échéances de même nature, rien ne les départage : renvoyer 0 (et non -1 des deux
-  // côtés) évite un comparateur incohérent — un sort() ainsi mal formé a un résultat
-  // indéfini, qui peut varier d'un moteur ou d'une version à l'autre.
+  // On an equal date the game comes first: it is the one that counts. Between two
+  // items of the same kind nothing separates them: returning 0 (rather than -1 on both
+  // sides) avoids an inconsistent comparator — a sort() malformed that way has an
+  // undefined result that can vary between engines or versions.
   echeances.sort((a, b) =>
     a.date.localeCompare(b.date) || (a.kind === b.kind ? 0 : a.kind === 'match' ? -1 : 1))
   return echeances[0] ?? null

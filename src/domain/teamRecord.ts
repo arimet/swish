@@ -9,16 +9,15 @@ export interface TeamRecord {
 }
 
 /**
- * Bilan d'une équipe sur les rencontres terminées (V/D, points pour/contre).
+ * A team's record over finished games (W/L, points for and against).
  *
- * Notre club est toujours le côté A des évènements (construction du modèle) :
- * `sideOf` n'a donc plus lieu d'être en tant que fonction à part. Il reste
- * cependant deux façons de lire une rencontre selon l'identité demandée :
- * - `teamId` est notre club (`meta.clubId`) : la rencontre compte à notre
- *   compte, lue côté A.
- * - `teamId` est un adversaire (`meta.opponentId`) : on n'a jamais que nos
- *   confrontations avec lui, lues côté B — c'est un bilan « contre nous »,
- *   pas son bilan général sur sa saison.
+ * Our club is always side A of the events (by construction of the model), so `sideOf`
+ * no longer needs to exist as a separate function. There remain two ways of reading a
+ * game, depending on whose record is asked for:
+ * - `teamId` is our club (`meta.clubId`): the game counts towards us, read from side A.
+ * - `teamId` is an opponent (`meta.opponentId`): we only ever hold our own meetings
+ *   with them, read from side B — this is a record "against us", not their overall
+ *   record for the season.
  */
 export function teamRecord(teamId: string, matches: Match[]): TeamRecord {
   let played = 0, wins = 0, losses = 0, pf = 0, pa = 0
@@ -44,7 +43,7 @@ export interface TeamMatchLine {
   scored: number | null; conceded: number | null; result: 'V' | 'D' | null
 }
 
-/** Rencontres d'une équipe, la plus récente d'abord (tous statuts). */
+/** A team's games, most recent first (any status). */
 export function teamMatches(teamId: string, matches: Match[]): TeamMatchLine[] {
   return matches
     .map((m): TeamMatchLine | null => {
@@ -62,8 +61,8 @@ export function teamMatches(teamId: string, matches: Match[]): TeamMatchLine[] {
     .sort((a, b) => (b.match.meta.date ?? '').localeCompare(a.match.meta.date ?? ''))
 }
 
-/** Cumul de points par joueur pour notre club (rencontres jouées ou terminées).
- *  Un adversaire n'a pas d'effectif saisi : son cumul est toujours vide. */
+/** Points per player for our club (games played or finished). An opponent has no
+ *  roster entered, so its total is always empty. */
 export function teamScorers(teamId: string, matches: Match[]): Map<string, number> {
   const agg = new Map<string, number>()
   for (const m of matches) {

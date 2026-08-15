@@ -1,17 +1,17 @@
 /**
- * Géométrie d'un demi-terrain FIBA (15 × 14 m), cotée en mètres en interne.
- * Les coordonnées publiques sont normalisées : x 0..1 de la touche gauche à la
- * touche droite, y 0..1 de la ligne de fond à la ligne médiane.
+ * Geometry of a FIBA half court (15 × 14 m), measured in metres internally.
+ * Public coordinates are normalised: x 0..1 from the left sideline to the right,
+ * y 0..1 from the baseline to the half-way line.
  */
 const COURT_W = 15
 const COURT_D = 14
 const BASKET_X = 7.5
 const BASKET_Y = 1.575
 const ARC_R = 6.75
-const CORNER_X = 0.9        // distance entre la ligne de corner et la touche
+const CORNER_X = 0.9        // distance from the corner line to the sideline
 const PAINT_HALF_W = 2.45
 const PAINT_D = 5.8
-/** Ordonnée de la jonction entre la ligne de corner et l'arc (≈ 2,99 m). */
+/** Y of the junction between the corner line and the arc (≈ 2.99 m). */
 const CORNER_Y = BASKET_Y + Math.sqrt(ARC_R ** 2 - (BASKET_X - CORNER_X) ** 2)
 
 export type ShotZone =
@@ -22,9 +22,9 @@ export const ZONES: ShotZone[] = [
   'paint', 'mid_left', 'mid_center', 'mid_right', 'corner3_left', 'top3', 'corner3_right',
 ]
 
-/** Les **clefs** de traduction des zones, pas leur texte : la géométrie est du code
- *  pur, appelée hors de React, qui ne connaît pas la langue courante. L'appelant
- *  traduit — c'est la même règle que pour les messages de règle du domaine. */
+/** The zones' translation **keys**, not their text: the geometry is pure code, called
+ *  outside React, with no knowledge of the current language. The caller translates —
+ *  the same rule as for the domain's rule messages. */
 export const ZONE_LABELS: Record<ShotZone, string> = {
   paint: 'zone.raquette',
   mid_left: 'zone.midGauche',
@@ -36,8 +36,8 @@ export const ZONE_LABELS: Record<ShotZone, string> = {
 }
 
 /**
- * Centre visuel de chaque zone. Sert d'ancre aux libellés de la carte, et de
- * position enregistrée quand le tir est saisi au clavier (zone sans point précis).
+ * Each zone's visual centre. Anchors the chart's labels, and is the position stored
+ * when a shot is entered from the keyboard (a zone with no precise point).
  */
 export const ZONE_CENTROID: Record<ShotZone, { x: number; y: number }> = {
   paint: { x: 0.5, y: 0.21 },
@@ -53,10 +53,10 @@ export function zoneAt(x: number, y: number): ShotZone {
   const mx = x * COURT_W
   const my = y * COURT_D
 
-  // Un tir sur une ligne vaut 2 points : il faut être strictement au-delà.
+  // A shot on the line is worth 2: you must be strictly beyond it.
   if (my <= CORNER_Y) {
-    // Sous la jonction, c'est la ligne de corner (6,60 m du panier) qui délimite
-    // les 3 points, et non l'arc (6,75 m) qui passe plus loin à cet endroit.
+    // Below the junction it is the corner line (6.60 m from the basket) that bounds
+    // the 3-point area, not the arc (6.75 m), which runs further out there.
     if (mx < CORNER_X) return 'corner3_left'
     if (mx > COURT_W - CORNER_X) return 'corner3_right'
   } else if (Math.hypot(mx - BASKET_X, my - BASKET_Y) > ARC_R) {

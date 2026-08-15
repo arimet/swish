@@ -1,6 +1,6 @@
 import type { Match } from './types'
 
-/** Temps de jeu de notre effectif (côté A). L'adversaire n'a pas de joueurs saisis. */
+/** Our roster's playing time (side A). No players are entered for the opponent. */
 export function playingTimes(match: Match): Map<string, number> {
   const times = new Map<string, number>()
   for (const id of match.roster) times.set(id, 0)

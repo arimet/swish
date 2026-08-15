@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { instantane, transitions } from '../../domain/anim'
+import { snapshot, transitions } from '../../domain/anim'
 import type { Play } from '../../domain/plays'
 import { getPlay } from '../../persistence/repositories'
 import { ExportSchema } from '../components/ExportSchema'
@@ -115,11 +115,11 @@ export function SchemaPlayer() {
   // instant, et le décalage se lirait comme une erreur. Un arrêt à mi-geste montre
   // où les joueurs en sont ; c'est déjà ce qu'on est venu voir.
   // Arrêté **entre** deux temps, on ne remontrait pas non plus les flèches, faute
-  // de pouvoir les ancrer. La bascule lève cette réserve : le trajet qu'elle trace
+  // de pouvoir les ancrer. La bascule lève cette réserve : le path qu'elle trace
   // est recalé sur les positions réelles, donc il se lit à mi-geste aussi.
   const temps = !enLecture && Number.isInteger(pos)
     ? schema.temps[pos]
-    : instantane(schema, { temps: Math.floor(pos), part: pos - Math.floor(pos) }, trajets)
+    : snapshot(schema, { temps: Math.floor(pos), part: pos - Math.floor(pos) }, trajets)
   // Le lecteur prend la place disponible, mais pas plus que `TERRAIN_MAX` : sur un
   // téléphone tenu à bout de bras chaque centimètre compte, sur un écran de bureau
   // un terrain de mille pixels ne se lit pas mieux, il se lit moins bien. Le SVG se

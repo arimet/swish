@@ -1,20 +1,19 @@
 /**
- * Le lien porte le schéma. Une combinaison compressée tient dans une URL : pas
- * de serveur, pas de compte, pas de base partagée, et le lien ne périme jamais.
- * Le code se pose dans le **fragment** (`#…`), qui n'est envoyé à aucun serveur
- * et n'atterrit dans aucun journal d'accès.
+ * The link carries the play. A compressed play fits inside a URL: no server, no
+ * account, no shared database, and the link never expires. The payload sits in the
+ * **fragment** (`#…`), which is sent to no server and lands in no access log.
  *
  * La compression est celle de la plateforme — `CompressionStream('deflate-raw')`,
- * présent partout depuis 2023 —, donc aucune dépendance.
+ * available everywhere since 2023 — so there is no dependency.
  */
 import type { Prop, Play, Step, Court } from './plays'
 
-/** Au-delà, une URL devient fragile dans les messageries : mieux vaut proposer
+/** Beyond this, a URL becomes fragile in messaging apps: better to offer
  *  l'image ou le PDF qu'un lien qui se tronquerait en silence. */
 export const LIMITE_LIEN = 8000
 
-/** Ce qui voyage. `id`, `clubId`, `majLe` et `dossier` restent chez l'expéditeur :
- *  un schéma reçu est un schéma neuf, il ne peut donc écraser personne. */
+/** What travels. `id`, `clubId`, `updatedAt` and `folder` stay with the sender: a
+ *  received play is a brand-new play, so it cannot overwrite anyone's. */
 interface Transport {
   nom: string
   note?: string
@@ -33,14 +32,14 @@ const depuisB64url = (code: string) => {
   return Uint8Array.from(binaire, (c) => c.charCodeAt(0))
 }
 
-/** Les octets en flux d'une seule bouchée. On passe par `ReadableStream` plutôt
- *  que par `Blob.stream()` : jsdom n'implémente pas le second, et les tests du
- *  domaine ne doivent pas dépendre de ce que le navigateur a de plus que lui. */
+/** The bytes streamed in one go. We go through `ReadableStream` rather than
+ *  `Blob.stream()`: jsdom does not implement the latter, and the domain's tests must
+ *  not depend on what a browser has that jsdom lacks. */
 const enFlux = (octets: Uint8Array<ArrayBuffer>) => new ReadableStream<Uint8Array<ArrayBuffer>>({
   start(c) { c.enqueue(octets); c.close() },
 })
 
-/** Le schéma compressé et encodé, prêt à mettre après le `#` d'une URL. */
+/** The play compressed and encoded, ready to place after a URL's `#`. */
 export async function encoder(s: Play): Promise<string> {
   const utile: Transport = {
     nom: s.nom, note: s.note, court: s.court, defense: s.defense, props: s.props, temps: s.temps,
@@ -57,19 +56,18 @@ const estObjet = (v: unknown): v is Record<string, unknown> => typeof v === 'obj
 const estPoint = (v: unknown): boolean =>
   estObjet(v) && Number.isFinite(v.x) && Number.isFinite(v.y)
 
-/** Un pion, ou le porteur du ballon : un camp connu et un poste de 1 à 5. */
+/** A marker, or the ball's carrier: a known side and a position from 1 to 5. */
 const estPorteur = (v: unknown): boolean =>
   estObjet(v) && (v.side === 'offense' || v.side === 'defense')
   && typeof v.position === 'number' && v.position >= 1 && v.position <= 5
 
 /**
- * La forme, vraiment vérifiée, **jusqu'au fond des tableaux**. C'est la seule
- * frontière par laquelle des données venues d'ailleurs entrent dans
- * l'application : un lien tronqué à un endroit qui laisse le JSON valide, ou
- * retouché à la main, décompresse en un objet à moitié bon. S'arrêter aux
- * conteneurs le laisserait passer, et le rendu lèverait sur un pion sans
- * position — sans limite d'erreur pour rattraper, React démonte tout et l'on
- * obtient l'écran blanc que ce décodeur existe précisément pour éviter.
+ * The shape, genuinely checked, **all the way down the arrays**. This is the only
+ * boundary through which data from elsewhere enters the app: a link truncated at a
+ * point that leaves the JSON valid, or edited by hand, decompresses into a
+ * half-correct object. Stopping at the containers would let it through, and rendering
+ * would throw on a marker with no position — with no error boundary to catch it, React
+ * unmounts everything and you get the blank screen this decoder exists to prevent.
  */
 function estTransport(v: unknown): v is Transport {
   if (!estObjet(v)) return false
@@ -82,7 +80,7 @@ function estTransport(v: unknown): v is Transport {
     estObjet(t)
     && Array.isArray(t.markers) && t.markers.length > 0
     && t.markers.every((p) => estPorteur(p) && estPoint((p as Record<string, unknown>).at))
-    // Le ballon est porté par un pion, ou posé quelque part : les deux formes,
+    // The ball is carried by a marker, or resting somewhere: both shapes,
     // et rien d'autre.
     && (estPoint(t.ball) || estPorteur(t.ball))
     && Array.isArray(t.arrows)
@@ -94,15 +92,15 @@ function estTransport(v: unknown): v is Transport {
   )
 }
 
-/** L'inverse. Rend `null` sur un texte qui n'est pas un schéma valide. */
+/** The inverse. Returns `null` on text that is not a valid play. */
 export async function decoder(code: string): Promise<Play | null> {
   if (!code) return null
   try {
     const stream = enFlux(depuisB64url(code)).pipeThrough(new DecompressionStream('deflate-raw'))
     const lu: unknown = JSON.parse(await new Response(stream).text())
     if (!estTransport(lu)) return null
-    // Les champs absents du transport reviennent à leur valeur neutre : sans
-    // identifiant ni club, le schéma reçu est neuf.
+    // Fields absent from the payload return to their neutral value: with no id and no
+    // club, the received play is a new one.
     return { id: '', clubId: '', ...lu, defense: !!lu.defense }
   } catch {
     return null
