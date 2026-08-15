@@ -13,8 +13,8 @@ const Label = ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: str
 
 export function TeamCreate() {
   const navigate = useNavigate()
-  const { guard } = useAuth()
-  const { clubId, setClub } = useClub()
+  const { guard, fonder } = useAuth()
+  const { clubId, teams, setClub } = useClub()
   const [name, setName] = useState(''); const [coach, setCoach] = useState('')
   const [roster, setRoster] = useState<Draft[]>([])
   const [num, setNum] = useState(''); const [ln, setLn] = useState(''); const [fn, setFn] = useState('')
@@ -24,6 +24,13 @@ export function TeamCreate() {
     setRoster((r) => [...r, { number: Number(num), lastName: ln.trim().toUpperCase(), firstName: fn.trim() }])
     setNum(''); setLn(''); setFn('')
   }
+  /* La fondation du club : aucune équipe n'existe encore. C'est le seul instant où
+     l'application se crée un premier administrateur sans code — voir `fonder()` dans
+     `app/auth.tsx` pour la justification, et le bouton plus bas pour ce que ça change.
+     La condition est bien « aucune équipe » et non « aucun club suivi » : celui qui a
+     simplement effacé son choix de club n'est pas un fondateur. */
+  const fondation = teams.length === 0
+
   const create = async () => {
     if (!name.trim()) return
     const teamId = newId()
@@ -32,12 +39,17 @@ export function TeamCreate() {
     // Aucun club suivi : l'équipe qu'on vient de créer le devient, sinon la
     // garde renvoie droit vers l'écran de bienvenue qu'on quitte à peine.
     if (!clubId) setClub(teamId)
+    // Le fondateur devient administrateur, sur cet appareil et pour cette session.
+    // Sans cela, le bénévole qui vient de saisir son effectif restait « Visiteur » :
+    // plus un seul bouton de création sur cinq écrans, et rien ne lui disait que
+    // « Accès » dans la barre latérale était le passage.
+    if (fondation) fonder()
     navigate(`/teams/${teamId}`)
   }
 
   return (
     <div className="p-6">
-      <Link to="/teams" className="text-sm font-semibold" style={{ color: C.muted }}>← Équipes</Link>
+      <Link to="/teams" className="-mx-2 inline-block px-2 py-1.5 text-sm font-semibold" style={{ color: C.muted }}>← Équipes</Link>
       {/* Un vrai titre, et non plus le sous-titre qui en tenait lieu : cet écran
           vit hors de la coquille, son en-tête ne le nomme donc pas à sa place. */}
       <h1 className="mb-6 mt-2 text-2xl font-extrabold tracking-tight">Nouvelle équipe</h1>
@@ -81,15 +93,22 @@ export function TeamCreate() {
         </div>
       </div>
 
-      {/* Le bouton de création reste visible sans le droit, contrairement au reste
-          du dépôt : c'est le premier lancement qui passe par ici, quand aucune
-          équipe n'existe et qu'aucun accès n'a encore été saisi. Cet écran vit
-          hors de la coquille, sans menu d'accès — masquer le bouton rendrait
-          l'application impossible à démarrer. La garde fait le travail : elle
-          réclame le code au moment de créer. */}
+      {/* Le bouton reste visible sans le droit — cet écran vit hors de la coquille et
+          sans menu d'accès, le masquer rendrait l'application impossible à démarrer.
+          Le raisonnement s'arrêtait là, et « la garde réclame le code au moment de
+          créer » était précisément le mur : sur une installation vierge, le tout
+          premier bénévole recevait une demande de code administrateur que personne ne
+          lui a donné, pour la seule action qui rend l'application utilisable. Un
+          bouton visible qui ouvre une porte fermée à clé ne vaut pas mieux qu'un
+          bouton masqué.
+          La fondation ne demande donc rien : aucune équipe n'existe, il n'y a aucune
+          donnée à protéger, et le code administrateur défend des données et non un
+          accès. Dès la deuxième équipe, la garde reprend son travail. */}
       <div className="mt-6 flex justify-end gap-3">
         <Link to="/teams" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>Annuler</Link>
-        <button onClick={() => guard('manage', create)} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>Créer l'équipe →</button>
+        <button onClick={() => (fondation ? create() : guard('manage', create))} disabled={!name.trim()} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
+          {fondation ? 'Créer mon équipe →' : "Créer l'équipe →"}
+        </button>
       </div>
     </div>
   )

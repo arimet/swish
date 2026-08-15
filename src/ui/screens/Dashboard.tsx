@@ -12,6 +12,7 @@ import { ShotChart } from '../components/ShotCourt'
 import { C, Panel, TeamBadge, Vous, bd, displayClock, fmtDate } from '../olive/kit'
 import type { Convocation, Match, MessageEquipe, Player, Team, Training } from '../../domain/types'
 import type { Schema } from '../../domain/plays'
+import { Check } from 'lucide-react'
 
 export function Dashboard() {
   const { clubId, club } = useClub()
@@ -80,6 +81,23 @@ export function Dashboard() {
   const rec = teamRecord(clubId, mine)
   const lines = teamMatches(clubId, mine).filter((l) => l.result)
   const diff = rec.pointsFor - rec.pointsAgainst
+  /* Trois états et non deux. Les chiffres de saison n'existent qu'après une rencontre
+     **jouée** ; le bloc de mise en route ne vaut que pour un club qui n'a aucune
+     rencontre **du tout**. Entre les deux — une rencontre planifiée, pas encore jouée
+     — aucun des deux ne s'affiche, et c'est juste : le bloc « prochaine échéance »
+     au-dessus dit déjà tout ce qu'il y a à dire à ce moment-là. */
+  const aJoue = rec.played > 0
+  const enMiseEnPlace = mine.length === 0
+  /* Le bandeau et le bloc d'échéance se taisent pendant la mise en place, sinon
+     l'écran invitait **trois fois** à planifier une rencontre : « Aucune rencontre
+     prévue · Planifier », « Rien de planifié · Planifier », et la troisième étape du
+     bloc ci-dessous. Répéter la même issue trois fois ne la rend pas plus claire, et
+     les deux premières envoient droit dans le mur — sans adversaire enregistré,
+     `/match/new` n'a rien à proposer. Le bloc de mise en route, lui, connaît l'ordre.
+     La condition retient `fixture`, qui couvre aussi les séances : un club sans
+     rencontre mais avec un entraînement au calendrier a bien quelque chose à annoncer. */
+  const seulementMiseEnPlace = enMiseEnPlace && !fixture
+  const autresEquipes = Object.keys(teams).filter((id) => id !== clubId).length
 
   const rosterIds = players.map((p) => p.id)
   const clubShots = rosterIds.flatMap((id) => shotsOf(matches, id))
@@ -111,30 +129,44 @@ export function Dashboard() {
 
         <MessageDuCoach clubId={clubId} />
 
-        <Banner live={live} next={next} teams={teams} gere={gere} tientLaMarque={can('score')} />
+        {!seulementMiseEnPlace && (
+          <>
+            <Banner live={live} next={next} teams={teams} gere={gere} tientLaMarque={can('score')} />
+            <Echeance fixture={fixture} teams={teams} players={players} convocation={convocation} schemas={schemas} gere={gere} />
+          </>
+        )}
 
-        <Echeance fixture={fixture} teams={teams} players={players} convocation={convocation} schemas={schemas} gere={gere} />
+        {/* Rien de joué : les chiffres de saison n'ont rien à dire, et six blocs vides
+            valent moins qu'un seul bloc qui indique la suite. C'était l'état d'arrivée
+            du bénévole qui vient de saisir son équipe — quatre tuiles à « — », une
+            forme à « — », deux panneaux vides, et pas un bouton. */}
+        {aJoue ? (
+          <>
+            <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Stat label="Bilan" value={`${rec.wins}V – ${rec.losses}D`} hint={`${rec.played} rencontre${rec.played > 1 ? 's' : ''}`} accent={rec.wins >= rec.losses ? C.green : C.accent} />
+              <Stat label="Points marqués" value={String(rec.avgFor)} hint="par match" />
+              <Stat label="Points encaissés" value={String(rec.avgAgainst)} hint="par match" />
+              <Stat label="Différentiel" value={diff > 0 ? `+${diff}` : String(diff)} hint="sur la saison" accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
+            </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat label="Bilan" value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? `${rec.played} rencontres` : 'aucune'} accent={rec.wins >= rec.losses ? C.green : C.accent} />
-          <Stat label="Points marqués" value={rec.played ? String(rec.avgFor) : '—'} hint="par match" />
-          <Stat label="Points encaissés" value={rec.played ? String(rec.avgAgainst) : '—'} hint="par match" />
-          <Stat label="Différentiel" value={rec.played ? (diff > 0 ? `+${diff}` : String(diff)) : '—'} hint="sur la saison" accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
-        </div>
+            {lines.length > 0 && (
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Forme</span>
+                {lines.slice(0, 5).map((l) => (
+                  <span key={l.match.id} className="grid h-6 w-6 place-items-center rounded-md text-[12px] font-black"
+                    style={{ background: l.result === 'V' ? C.greenBg : C.dangerBg, color: l.result === 'V' ? C.green : C.danger }}>
+                    {l.result}
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        ) : enMiseEnPlace ? (
+          <PourCommencer effectif={players.length} autresEquipes={autresEquipes} clubId={clubId} gere={gere} />
+        ) : null}
 
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>Forme</span>
-          {lines.slice(0, 5).map((l) => (
-            <span key={l.match.id} className="grid h-6 w-6 place-items-center rounded-md text-[12px] font-black"
-              style={{ background: l.result === 'V' ? C.greenBg : C.dangerBg, color: l.result === 'V' ? C.green : C.danger }}>
-              {l.result}
-            </span>
-          ))}
-          {lines.length === 0 && <span className="text-sm" style={{ color: C.muted }}>—</span>}
-        </div>
-
-        <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_420px] [&>*]:min-w-0">
-          <Panel title="Meilleurs marqueurs">
+        <div className={`${aJoue ? 'mt-6' : 'mt-5'} grid gap-5 lg:grid-cols-[1fr_420px] [&>*]:min-w-0`}>
+          {aJoue && <Panel title="Meilleurs marqueurs">
             {scorers.length === 0 ? (
               <Empty>Pas encore de points marqués.</Empty>
             ) : (
@@ -162,9 +194,11 @@ export function Dashboard() {
                 })}
               </ul>
             )}
-          </Panel>
+          </Panel>}
 
-          <Panel title={openPlayer ? `Hot zone — ${byId[openPlayer]?.lastName ?? 'joueur'}` : 'Hot zone — équipe'}>
+          {/* La carte de tirs ne s'affiche que s'il y a des tirs : vide, c'est un
+              terrain dessiné pour rien, et elle ne dit pas quoi faire. */}
+          {aJoue && <Panel title={openPlayer ? `Hot zone — ${byId[openPlayer]?.lastName ?? 'joueur'}` : 'Hot zone — équipe'}>
             <div className="mb-2 flex flex-wrap gap-1.5">
               <Chip active={!openPlayer} onClick={() => setOpenPlayer(null)}>Équipe</Chip>
               {players.map((p) => (
@@ -172,7 +206,7 @@ export function Dashboard() {
               ))}
             </div>
             {shownShots.length === 0 ? <Empty>Aucun tir localisé pour l’instant.</Empty> : <ShotChart shots={shownShots} minAttempts={openPlayer ? 1 : 3} />}
-          </Panel>
+          </Panel>}
         </div>
       </div>
     </div>
@@ -413,6 +447,105 @@ function Echeance({ fixture, teams, players, convocation, schemas, gere }: { fix
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * La mise en route, pour un club qui n'a encore aucune rencontre.
+ *
+ * Ce qu'elle remplace : quatre tuiles de statistiques à « — », une frise de forme à
+ * « — », et deux panneaux annonçant qu'il n'y a ni marqueur ni tir. Six blocs pour
+ * dire six fois la même chose — que rien n'a commencé — et pas un seul bouton. Le
+ * bénévole qui venait de saisir son effectif arrivait là et n'avait rien à cliquer.
+ *
+ * Trois partis pris.
+ *
+ * Un seul bloc, et une liste ordonnée. Trois cartes de même taille auraient répété
+ * la structure qu'on vient de retirer, et l'ordre porte ici une vraie contrainte :
+ * on ne planifie pas une rencontre sans adversaire enregistré. Les numéros sont donc
+ * mérités, ils ne décorent pas une séquence arbitraire.
+ *
+ * L'état de chaque étape est **lu dans les données**, jamais mémorisé. Rien à
+ * stocker, rien à réinitialiser, et le bloc disparaît de lui-même dès la première
+ * rencontre créée — sans bouton « ne plus afficher », parce qu'il n'y a rien à
+ * congédier.
+ *
+ * L'effectif est le premier palier et il s'annonce comme atteint : c'est le moment
+ * où l'application cesse d'être vide et commence à décrire une vraie équipe. Les
+ * cinq joueurs ne sont pas une exigence de l'application — `StartingFiveGate` sait
+ * démarrer avec moins — mais on ne met pas cinq joueurs sur le terrain avec quatre.
+ */
+function PourCommencer({ effectif, autresEquipes, clubId, gere }: { effectif: number; autresEquipes: number; clubId: string; gere: boolean }) {
+  const etapes = [
+    {
+      fait: effectif >= 5,
+      titre: effectif === 0 ? 'Ajoutez vos joueurs' : `Votre effectif — ${effectif} joueur${effectif > 1 ? 's' : ''}`,
+      detail: effectif >= 5 ? 'De quoi aligner un cinq.' : 'Il en faut cinq pour aligner une équipe sur le terrain.',
+      lien: `/teams/${clubId}`,
+      action: 'Compléter l’effectif',
+    },
+    {
+      fait: autresEquipes > 0,
+      titre: 'Enregistrez un adversaire',
+      detail: 'Une rencontre se joue contre une équipe : il faut la créer une fois, elle resservira toute la saison.',
+      lien: '/teams/new',
+      action: 'Nouvelle équipe',
+    },
+    {
+      fait: false,
+      titre: 'Planifiez la première rencontre',
+      detail: 'Date, adversaire, et la table de marque est prête à saisir.',
+      lien: '/match/new',
+      action: 'Nouvelle rencontre',
+    },
+  ]
+  const courante = etapes.findIndex((e) => !e.fait)
+
+  return (
+    <section className="mt-5 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
+      <h2 className="text-base font-extrabold tracking-tight">
+        {effectif >= 5 ? 'Votre effectif est prêt' : 'Pour commencer'}
+      </h2>
+      <p className="mt-1 text-[13px]" style={{ color: C.muted }}>
+        {gere
+          ? 'Trois étapes, une fois pour la saison. Ce bloc disparaît dès votre première rencontre.'
+          : 'Le club n’a pas encore de rencontre. Ces étapes demandent l’accès administrateur.'}
+      </p>
+
+      <ol className="mt-4 space-y-2">
+        {etapes.map((e, i) => (
+          /* Empilé sous `sm`, en rangée au-delà. En rangée à toute largeur, le bouton
+             réservait sa place et le texte se laissait comprimer à un mot par ligne :
+             « Enregistrez un adversaire » tenait sur trois lignes et son explication
+             sur dix. Un bouton qui ne cède rien n'a pas sa place à côté du texte sur
+             trois cent soixante-quinze pixels. */
+          <li key={e.titre} className="flex flex-col gap-2.5 rounded-xl px-3 py-3 sm:flex-row sm:items-center sm:gap-3" style={{ background: C.panel }}>
+            <span className="flex min-w-0 items-start gap-3 sm:items-center">
+              {/* Le repère d'étape : la coche pour ce qui est fait, le numéro sinon. Un
+                  caractère « ✓ » aurait tenu lieu d'icône — il ne s'accorde ni à la
+                  graisse ni au tracé du reste, et dépend de la police installée. */}
+              <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full text-[12px] font-black sm:mt-0"
+                style={e.fait
+                  ? { background: C.greenFill, color: C.onGreen }
+                  : i === courante ? { background: C.brand, color: C.onBrand } : { background: C.neutralBg, color: C.faint }}>
+                {e.fait ? <Check className="h-4 w-4" strokeWidth={3} /> : i + 1}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold" style={{ color: e.fait ? C.muted : C.text }}>{e.titre}</span>
+                <span className="block text-[12px]" style={{ color: C.faint }}>{e.detail}</span>
+              </span>
+            </span>
+            {/* L'action ne s'affiche que sur l'étape courante : trois boutons à la fois
+                laisseraient choisir un ordre qui ne marche pas. */}
+            {gere && i === courante && (
+              <Link to={e.lien} className="shrink-0 rounded-xl px-3.5 py-2.5 text-center text-[13px] font-bold text-[var(--c-on-brand)] sm:ml-auto" style={{ background: C.brand }}>
+                {e.action} →
+              </Link>
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
   )
 }
 

@@ -57,9 +57,15 @@ describe('premier lancement (appareil vierge)', () => {
     // aucun club réglé, et aucune équipe en base pour en proposer un.
     localStorage.clear()
     await db.teams.clear()
-    // La création d'équipe est une action admin (guard) : on la déverrouille
-    // pour tester le parcours plutôt que la boîte de mot de passe.
-    sessionStorage.setItem(ROLE_KEY, 'admin')
+    // Aucun rôle déverrouillé, et c'est tout l'objet du test.
+    //
+    // Il s'accordait `admin` d'avance, « pour tester le parcours plutôt que la boîte
+    // de mot de passe » — et cette boîte était précisément le mur du premier
+    // lancement : un bénévole sur une installation vierge se voyait réclamer un code
+    // administrateur que personne ne lui avait donné. Le contournement du test
+    // décrivait le défaut sans le signaler. La fondation du club ne demande plus rien
+    // (cf. `TeamCreate.test.tsx`), donc le parcours se joue en visiteur.
+    sessionStorage.removeItem(ROLE_KEY)
   })
 
   it('mène de l’écran de bienvenue jusqu’au tableau de bord, en passant par la création d’équipe', async () => {
@@ -72,12 +78,16 @@ describe('premier lancement (appareil vierge)', () => {
     expect(screen.queryByText(/bienvenue sur swish/i)).not.toBeInTheDocument()
 
     await userEvent.type(screen.getByLabelText(/nom de l.équipe/i), 'NOUVEAU CLUB')
-    await userEvent.click(screen.getByRole('button', { name: /créer l.équipe/i }))
+    await userEvent.click(screen.getByRole('button', { name: /^créer /i }))
 
     // L'équipe tout juste créée doit devenir le club suivi et mener à
     // l'application — pas de retour à l'écran de bienvenue faute de
     // revalidation de la liste des équipes par ClubProvider.
     expect(await screen.findByRole('heading', { name: /nouveau club/i })).toBeInTheDocument()
     expect(screen.queryByText(/bienvenue sur swish/i)).not.toBeInTheDocument()
+    // Et il arrive administrateur, donc devant une application où quelque chose se
+    // laisse faire : sans ce droit, les cinq écrans de la coquille n'offrent aucun
+    // bouton de création et le parcours s'arrête là, en silence.
+    expect(sessionStorage.getItem(ROLE_KEY)).toBe('admin')
   })
 })

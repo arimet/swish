@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev", "--port", "5280", "--strictPort"],
       "port": 5280
+    },
+    {
+      "name": "scoresheet-vide",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["preview", "--port", "5281", "--strictPort"],
+      "port": 5281
     }
   ]
 }

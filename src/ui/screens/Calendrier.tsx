@@ -7,6 +7,7 @@ import type { Match, Team, Training } from '../../domain/types'
 import type { Schema } from '../../domain/plays'
 import { jourISO, nextFixture } from '../../domain/fixtures'
 import { C, bd, Ic, ICON, MatchCard, PageTitle, fmtDate } from '../olive/kit'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useClub } from '../../app/club'
 import { useAuth } from '../../app/auth'
 import { X } from 'lucide-react'
@@ -111,7 +112,14 @@ export function Calendrier() {
       refreshTrainings()
     })
   }
-  const supprimer = (id: string) => guard('manage', async () => { await deleteTraining(id); refreshTrainings() })
+  /* Supprimer une séance passe par une confirmation, comme supprimer une rencontre,
+     un schéma ou un joueur. Elle manquait ici : un clic sur la croix effaçait la
+     séance, sans retour possible. Le message dit ce qui n'est **pas** supprimé — les
+     schémas rattachés vivent dans la bibliothèque, seul le lien disparaît — parce que
+     c'est la question qu'on se pose la main sur la croix. */
+  const [aSupprimer, setASupprimer] = useState<Training | null>(null)
+  const supprimer = () => { const t = aSupprimer; if (!t) return
+    guard('manage', async () => { await deleteTraining(t.id); setASupprimer(null); refreshTrainings() }) }
 
   // Attacher un schéma à une séance est administratif : garder d'abord, écrire
   // ensuite. Le va-et-vient lui-même est transactionnel (cf. `toggleTrainingPlay`),
@@ -234,7 +242,7 @@ export function Calendrier() {
                       ? <CarteRencontre key={it.key} m={it.match} teams={teams} gere={gere} />
                       : <TrainingCard key={it.key} t={it.training} schemas={schemas} gere={gere}
                           onToggleSchema={(playId) => basculerSchema(it.training.id, playId)}
-                          onDelete={() => supprimer(it.training.id)} />)}
+                          onDelete={() => setASupprimer(it.training)} />)}
                   </div>
                 </section>
               </Fragment>
@@ -247,6 +255,13 @@ export function Calendrier() {
           les écrans Championnat et fiche de rencontre, pour ne pas laisser croire à deux
           limites différentes — la décision couvrait aussi bien les entraînements. */}
       <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>Ces entraînements restent sur cet appareil : ils ne sont pas synchronisés avec vos autres appareils.</p>
+
+      <ConfirmDialog open={!!aSupprimer} onClose={() => setASupprimer(null)} onConfirm={supprimer}
+        title="Supprimer cette séance ?"
+        message={aSupprimer
+          ? `La séance du ${fmtDate(aSupprimer.date).long || aSupprimer.date} est retirée du calendrier. Les schémas qui y étaient rattachés restent dans la bibliothèque.`
+          : ''}
+        confirmLabel="Supprimer" danger />
     </div>
   )
 }
@@ -359,7 +374,11 @@ function TrainingCard({ t, schemas, gere, onToggleSchema, onDelete }: { t: Train
 
         <div className="mt-2.5 flex items-center justify-between border-t pt-2.5 text-[12px] font-semibold" style={{ borderColor: C.border, color: C.faint }}>
           <span className="truncate">{t.place || '—'}</span>
-          {gere && <button onClick={onDelete} aria-label="Supprimer cet entraînement" className="shrink-0 rounded-lg px-1.5 py-0.5 font-black" style={{ color: C.accent }}><X className="h-3.5 w-3.5" strokeWidth={2.5} /></button>}
+          {/* `grid h-9 w-9` et non `px-1.5 py-0.5` : la cible faisait 26 × 18, sous le
+              minimum de vingt-quatre pixels — et c'est une **suppression**, la
+              combinaison la plus fâcheuse entre une cible qu'on rate et un geste qu'on
+              ne défait pas. */}
+          {gere && <button onClick={onDelete} aria-label="Supprimer cet entraînement" className="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-black transition hover:bg-[var(--c-danger-bg)] hover:text-[var(--c-danger)]" style={{ color: C.accent }}><X className="h-4 w-4" strokeWidth={2.5} /></button>}
         </div>
       </div>
     </div>

@@ -169,8 +169,7 @@ export function SchemaPlayer() {
               type="range" aria-label="Avancement" min={0} max={dernier || 1} step={0.01} value={pos}
               disabled={dernier === 0}
               onChange={(e) => { setEnLecture(false); setPos(Number(e.target.value)) }}
-              className="h-2 min-w-0 flex-1 cursor-pointer appearance-none rounded-full disabled:opacity-40"
-              style={{ background: C.card2, accentColor: C.accent }}
+              className="piste min-w-0 flex-1 cursor-pointer appearance-none disabled:opacity-40"
             />
           </div>
           {/* Deux rangées, et non plus une. À trois réglages, la rangée unique

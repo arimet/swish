@@ -86,6 +86,64 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* La case à cocher, une fois pour toutes.
+ *
+ * L'application n'en a qu'un aspect, et il était déclaré en ligne sur un site
+ * (l'éditeur de schéma : accent, dix-huit pixels) et absent des deux autres — la
+ * convocation et les schémas attachés à une séance gardaient donc la case native de
+ * treize pixels, en gris système, qui ignore la palette et disparaît en thème sombre.
+ * Une règle vaut mieux que trois styles en ligne dont deux manquent. */
+input[type='checkbox'] {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+  accent-color: var(--c-brand);
+  cursor: pointer;
+}
+
+/* Le curseur de lecture d'un schéma : la piste reste fine, la **zone de saisie** fait
+ * la hauteur d'un doigt.
+ *
+ * En `h-2`, l'élément entier mesurait huit pixels de haut : la piste était jolie et
+ * introuvable au pouce, alors que c'est la seule commande du lecteur qu'on fait
+ * glisser. On ne peut pas simplement grandir l'élément — son fond servait de piste,
+ * il serait devenu une pastille de quarante-quatre pixels. La piste passe donc au
+ * pseudo-élément, et l'élément prend la hauteur du doigt.
+ *
+ * Les deux préfixes sont nécessaires et ne peuvent pas fusionner : un sélecteur
+ * inconnu invalide toute la règle qui le contient, donc `::-webkit-…` et `::-moz-…`
+ * doivent rester dans des blocs séparés. */
+input[type='range'].piste {
+  height: 2.75rem;
+  background: transparent;
+}
+input[type='range'].piste::-webkit-slider-runnable-track {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--c-card2);
+}
+input[type='range'].piste::-moz-range-track {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--c-card2);
+}
+input[type='range'].piste::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 1.25rem;
+  width: 1.25rem;
+  margin-top: -0.375rem;
+  border-radius: 9999px;
+  background: var(--c-brand);
+}
+input[type='range'].piste::-moz-range-thumb {
+  height: 1.25rem;
+  width: 1.25rem;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--c-brand);
+}
+
 /* Le score qui répond au doigt.
  *
  * C'est le seul mouvement authorial de la table de marque, et il porte une

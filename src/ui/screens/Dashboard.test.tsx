@@ -134,8 +134,40 @@ describe('Dashboard', () => {
   })
 
   it('invite à planifier quand aucune échéance n’est prévue', async () => {
+    // Une rencontre jouée, et c'est la prémisse qui manquait : « aucune échéance
+    // prévue » décrit un club **en saison** qui n'a rien devant lui. Un club sans
+    // aucune rencontre est un autre état — la mise en route — et c'est le test suivant.
+    await saveMatch(finished('m1', 10, 4))
     renderDash()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
+  })
+
+  /**
+   * L'arrivée du fondateur, juste après avoir saisi son effectif.
+   *
+   * Ce que cet écran affichait : quatre tuiles de statistiques à « — », une frise de
+   * forme à « — », deux panneaux annonçant l'absence de marqueur et de tir, et deux
+   * invitations à planifier une rencontre — dont aucune ne dit qu'il faut d'abord un
+   * adversaire enregistré, si bien que les deux menaient à un écran de cul-de-sac.
+   * Six blocs pour dire six fois que rien n'a commencé, et pas un chemin praticable.
+   */
+  it('un club sans aucune rencontre reçoit la mise en route, et non les chiffres vides', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'admin')
+    renderDash()
+
+    expect(await screen.findByText(/pour commencer|votre effectif est prêt/i)).toBeInTheDocument()
+    // L'étape courante est l'effectif : un seul joueur au fixture, on n'aligne pas un
+    // cinq avec ça. C'est bien l'état des données qui décide, et non un compteur
+    // mémorisé — l'adversaire « VERDUN » existe déjà, son étape est donc acquise.
+    expect(await screen.findByRole('link', { name: /compléter l.effectif/i })).toBeInTheDocument()
+    // Une seule action à la fois : proposer les trois laisserait choisir un ordre qui
+    // ne marche pas — planifier une rencontre avant d'avoir un adversaire mène au
+    // cul-de-sac de `/match/new`.
+    expect(screen.queryByRole('link', { name: /nouvelle rencontre/i })).not.toBeInTheDocument()
+    // Et rien des chiffres de saison, ni les deux invitations redondantes.
+    expect(screen.queryByText(/rien de planifié/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/points encaissés/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/pas encore de points marqués/i)).not.toBeInTheDocument()
   })
 
   it('n’annonce pas deux fois la même rencontre quand elle est déjà en direct', async () => {

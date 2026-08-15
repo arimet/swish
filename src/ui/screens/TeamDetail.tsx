@@ -30,6 +30,9 @@ export function TeamDetail() {
   const gere = can('manage')
   const { clubId, clear } = useClub()
   const [askDelete, setAskDelete] = useState(false)
+  // Le joueur lui-même et non un booléen : le dialogue doit pouvoir le nommer, sinon
+  // « Retirer ce joueur ? » ne dit pas lequel dans une liste de onze.
+  const [aRetirer, setARetirer] = useState<Player | null>(null)
   const [team, setTeam] = useState<Team | null | undefined>(undefined)
   const [players, setPlayers] = useState<Player[]>([])
   const [matches, setMatches] = useState<Match[]>([])
@@ -70,7 +73,19 @@ export function TeamDetail() {
     })
     setNum(''); setLn(''); setFn(''); setBirth(''); setHeight(''); refresh()
   })
-  const removePlayer = (pid: string) => guard('manage', async () => { await deletePlayer(pid); refresh() })
+  /**
+   * Retirer un joueur passe par une confirmation, comme supprimer l'équipe juste
+   * au-dessus et comme supprimer une rencontre ou un schéma ailleurs.
+   *
+   * Ça manquait, et c'était le seul défaut de cette revue qu'aucune mesure ne pouvait
+   * trouver : un clic unique, sur un bouton de vingt-quatre pixels collé à
+   * « modifier », supprimait le joueur sans rien demander. La conséquence annoncée est
+   * celle que fait réellement `deletePlayer` — il quitte l'effectif et les
+   * convocations, mais ses actions déjà saisies restent dans les rencontres jouées, où
+   * elles perdent son nom. C'est vérifié dans le dépôt, pas supposé.
+   */
+  const removePlayer = () => { const p = aRetirer; if (!p) return
+    guard('manage', async () => { await deletePlayer(p.id); setARetirer(null); refresh() }) }
   const startEdit = (p: Player) => { setEditingId(p.id); setEditBirth(p.birthDate ?? ''); setEditHeight(p.height ? String(p.height) : '') }
   // L'identifiant du joueur survit à la modification : c'est lui qui porte tout
   // son historique de tirs et de statistiques, le recréer le lui ferait perdre.
@@ -110,17 +125,27 @@ export function TeamDetail() {
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
         title="Supprimer l'équipe ?" message={`« ${team.name} » et tous ses joueurs seront supprimés. Cette action est définitive.`} confirmLabel="Supprimer" danger />
+      <ConfirmDialog open={!!aRetirer} onClose={() => setARetirer(null)} onConfirm={removePlayer}
+        title={aRetirer ? `Retirer ${aRetirer.lastName} ${aRetirer.firstName} ?` : ''}
+        message="Il quitte l'effectif et les convocations. Ses actions déjà saisies restent dans les rencontres jouées, mais sans son nom."
+        confirmLabel="Retirer" danger />
 
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* Les chiffres de saison ne s'affichent qu'à partir d'une rencontre jouée. Sinon
+          c'était quatre tuiles à « 0 » et « — », et deux panneaux annonçant l'absence
+          de match et de marqueur : six blocs pour dire six fois que la saison n'a pas
+          commencé — sur l'écran même où le bénévole vient de saisir son effectif, donc
+          le premier qu'il voit après avoir fondé son club. Ce qui reste, l'effectif,
+          est justement ce qu'il vient d'accomplir. */}
+      {rec.played > 0 && <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Rencontres" value={String(rec.played)} hint={upcoming.length ? `${upcoming.length} à venir` : 'jouées'} />
         <StatCard label="Bilan" value={`${rec.wins}V – ${rec.losses}D`} hint={rec.played ? `${Math.round((rec.wins / rec.played) * 100)}% de victoires` : '—'} accent={rec.wins >= rec.losses ? C.green : C.accent} />
         <StatCard label="Points marqués" value={rec.played ? String(rec.avgFor) : '—'} hint={rec.played ? `${rec.pointsFor} au total` : 'par match'} />
-        <StatCard label="Différentiel" value={rec.played ? (diff > 0 ? `+${diff}` : String(diff)) : '—'} hint={rec.played ? `${rec.avgAgainst} encaissés/match` : 'pour – contre'} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
-      </div>
+        <StatCard label="Différentiel" value={diff > 0 ? `+${diff}` : String(diff)} hint={`${rec.avgAgainst} encaissés/match`} accent={diff > 0 ? C.green : diff < 0 ? C.danger : undefined} />
+      </div>}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px] [&>*]:min-w-0">
         <div className="space-y-6">
-          <Panel title="Derniers matchs">
+          {lines.length > 0 && <Panel title="Derniers matchs">
             {lines.length === 0 ? (
               <Empty>Aucune rencontre pour cette équipe.</Empty>
             ) : (
@@ -144,9 +169,9 @@ export function TeamDetail() {
                 })}
               </ul>
             )}
-          </Panel>
+          </Panel>}
 
-          <Panel title="Meilleurs marqueurs">
+          {scorers.length > 0 && <Panel title="Meilleurs marqueurs">
             {scorers.length === 0 ? (
               <Empty>Pas encore de points marqués.</Empty>
             ) : (
@@ -175,7 +200,7 @@ export function TeamDetail() {
                 })}
               </ul>
             )}
-          </Panel>
+          </Panel>}
         </div>
 
         <div className="space-y-6">
@@ -210,12 +235,17 @@ export function TeamDetail() {
                     {gere && (
                       <>
                         <button aria-label={editingId === p.id ? `fermer ${p.lastName}` : `modifier ${p.lastName}`}
-                          onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.muted }}>
+                          onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold" style={{ color: C.muted }}>
                           {editingId === p.id ? 'fermer' : 'modifier'}
                         </button>
                         {/* Le retrait reste hors de la zone dépliée : c'est une action destructrice,
-                            elle ne doit pas se retrouver mêlée aux champs d'édition. */}
-                        <button onClick={() => removePlayer(p.id)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold" style={{ color: C.accent }}>retirer</button>
+                            elle ne doit pas se retrouver mêlée aux champs d'édition.
+                            Il portait l'accent — la couleur de la marque — à côté d'un « modifier »
+                            gris, et faisait vingt-quatre pixels de haut. Une destruction ne se
+                            signale pas avec la couleur des boutons ordinaires, et ne se vise pas au
+                            minimum tolérable. */}
+                        <button onClick={() => setARetirer(p)} aria-label={`Retirer ${p.lastName} ${p.firstName}`}
+                          className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold transition hover:bg-[var(--c-danger-bg)]" style={{ color: C.danger }}>retirer</button>
                       </>
                     )}
                   </div>

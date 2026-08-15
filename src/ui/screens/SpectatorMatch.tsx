@@ -223,7 +223,7 @@ function StatList({ name, match, players, openId, onToggle }: {
                   <tr style={{ borderTop: `1px solid ${C.border}`, background: isOpen ? C.panel : undefined }}>
                     <td className="px-3 py-2 font-black tabular-nums">{p?.number ?? '—'}</td>
                     <td className="px-2 py-2 font-semibold">
-                      <button onClick={() => onToggle(isOpen ? null : s.playerId)} className="text-left hover:underline">
+                      <button onClick={() => onToggle(isOpen ? null : s.playerId)} className="-my-1 py-1.5 text-left hover:underline">
                         {label} <span style={{ color: C.faint }}>{isOpen ? '▾' : '▸'}</span>
                       </button>
                     </td>
