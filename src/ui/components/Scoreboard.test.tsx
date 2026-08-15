@@ -18,28 +18,28 @@ const mount = (score: number) =>
 
 const nombre = (value: number) => screen.getByText(String(value))
 
-describe('ScoreSide — l’accusé de réception du score', () => {
-  it('ne bouge pas au premier rendu', () => {
+describe('ScoreSide — the score\'s acknowledgement', () => {
+  it('does not move on the first render', () => {
     // À l'ouverture, le score n'a pas changé : il était déjà là. Une chorégraphie
     // de chargement n'a rien à faire sur un écran de saisie.
     mount(38)
     expect(nombre(38).className).not.toMatch(/score-(up|down)/)
   })
 
-  it('monte quand on marque', () => {
+  it('rises when someone scores', () => {
     const { rerender } = mount(38)
     rerender(<ScoreSide align="right" color="#fff" name="VIGNOT" score={40} lead />)
     expect(nombre(40)).toHaveClass('score-up')
   })
 
-  it('descend quand on annule', () => {
+  it('falls when someone undoes', () => {
     // Une annulation qui se lirait comme un panier serait pire que pas de mouvement.
     const { rerender } = mount(40)
     rerender(<ScoreSide align="right" color="#fff" name="VIGNOT" score={38} lead />)
     expect(nombre(38)).toHaveClass('score-down')
   })
 
-  it('ne se redéclenche pas quand le score ne change pas', () => {
+  it('does not re-trigger when the score does not change', () => {
     // Le cas du tic de chrono : le parent rerend, le score est le même. Le nœud
     // doit être le *même* nœud — sinon le navigateur rejouerait le keyframe.
     const { rerender } = mount(38)
@@ -48,7 +48,7 @@ describe('ScoreSide — l’accusé de réception du score', () => {
     expect(nombre(38)).toBe(avant)
   })
 
-  it('rejoue le mouvement à chaque panier, même de même valeur', () => {
+  it('replays the motion on every basket, even of the same value', () => {
     // Deux lancers francs de suite : le nœud doit être remplacé les deux fois,
     // sinon le second panier passerait inaperçu.
     const { rerender } = mount(38)

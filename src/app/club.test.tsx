@@ -22,18 +22,18 @@ beforeEach(async () => {
 })
 
 describe('useClub', () => {
-  it('démarre sans club choisi', async () => {
+  it('starts with no club chosen', async () => {
     renderProbe()
     expect(await screen.findByText(/club: aucun/)).toBeInTheDocument()
   })
 
-  it('relit le club enregistré au démarrage', async () => {
+  it('reads the saved club back on start', async () => {
     localStorage.setItem('swish-club-id', 't1')
     renderProbe()
     expect(await screen.findByText(/club: t1 \/ VIGNOT/)).toBeInTheDocument()
   })
 
-  it('oublie un club dont l’équipe n’existe plus', async () => {
+  it('forgets a club whose team no longer exists', async () => {
     localStorage.setItem('swish-club-id', 'supprimee')
     renderProbe()
     // Sans ce garde, l'application resterait bloquée sur un tableau de bord vide.
@@ -42,7 +42,7 @@ describe('useClub', () => {
 })
 
 describe('Welcome', () => {
-  it('enregistre le club choisi', async () => {
+  it('saves the chosen club', async () => {
     const { Welcome } = await import('../ui/screens/Welcome')
     render(<ClubProvider><Welcome /></ClubProvider>)
     await userEvent.click(await screen.findByRole('button', { name: /VIGNOT/ }))

@@ -53,8 +53,8 @@ beforeEach(async () => {
   localStorage.setItem('swish-club-id', 'ta')
 })
 
-describe('point d’entrée des accès', () => {
-  it('indique le rôle en cours, en prend un autre sur saisie du code, et se verrouille', async () => {
+describe('the access entry point', () => {
+  it('states the current role, takes another on entering a code, and locks', async () => {
     renderShell()
     await ouvrirLesAcces()
     expect(await screen.findByText(/accès en cours : visiteur/i)).toBeInTheDocument()
@@ -66,7 +66,7 @@ describe('point d’entrée des accès', () => {
     expect(await screen.findByText(/accès en cours : visiteur/i)).toBeInTheDocument()
   })
 
-  it('refuse un code inconnu sans changer le rôle en cours', async () => {
+  it('refuses an unknown code without changing the current role', async () => {
     renderShell()
     await ouvrirLesAcces()
     await saisirLeCode('n-importe-quoi')
@@ -74,7 +74,7 @@ describe('point d’entrée des accès', () => {
     expect(screen.getByText(/accès en cours : visiteur/i)).toBeInTheDocument()
   })
 
-  it('le code joueur ouvre le choix du nom sans accorder le moindre droit d’écriture', async () => {
+  it('the player code opens the name picker without granting any write right', async () => {
     renderShell()
     await ouvrirLesAcces()
     await saisirLeCode('joueur')
@@ -84,8 +84,8 @@ describe('point d’entrée des accès', () => {
   })
 })
 
-describe('entrée d’administration', () => {
-  it('reste invisible pour un visiteur et pour la table de marque', async () => {
+describe('the administration entry', () => {
+  it('stays invisible to a visitor and to the scorer\'s table', async () => {
     // Une porte qu'on ne peut pas ouvrir n'a pas à s'afficher : le ménage des
     // données est réservé à l'administrateur.
     renderShell()
@@ -100,7 +100,7 @@ describe('entrée d’administration', () => {
     expect(within(await screen.findByRole('complementary')).queryByRole('link', { name: /administration/i })).not.toBeInTheDocument()
   })
 
-  it('apparaît sous le bouton d’accès dès que le code administrateur est saisi', async () => {
+  it('appears under the access button as soon as the administrator code is entered', async () => {
     renderShell()
     await ouvrirLesAcces()
     await saisirLeCode('admin')
@@ -111,8 +111,8 @@ describe('entrée d’administration', () => {
   })
 })
 
-describe('identité du joueur dans l’effectif', () => {
-  it('retient le joueur choisi, sans lister l’effectif dans la barre latérale', async () => {
+describe('the player\'s identity in the roster', () => {
+  it('remembers the player chosen, without listing the roster in the sidebar', async () => {
     // L'effectif a quitté le menu : treize noms y poussaient la navigation hors de
     // l'écran. Choisir son nom enregistre bien l'identité — c'est le tableau de
     // bord et la fiche du joueur qui la montrent désormais.
@@ -127,7 +127,7 @@ describe('identité du joueur dans l’effectif', () => {
     expect(within(aside).queryByText('Théo DURAND')).not.toBeInTheDocument()
   })
 
-  it('oublie un identifiant qui ne correspond à aucun joueur de l’effectif', async () => {
+  it('forgets an id matching no player in the roster', async () => {
     // Le joueur a été retiré de l'effectif, mais son identifiant survit dans le
     // localStorage : l'application doit se comporter comme sans identité. L'effectif
     // reste chargé par la coquille pour le choix du nom, même s'il n'est plus affiché.

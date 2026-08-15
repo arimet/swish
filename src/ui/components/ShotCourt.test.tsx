@@ -13,7 +13,7 @@ beforeEach(() => {
 })
 
 describe('ShotPicker', () => {
-  it('convertit un clic en coordonnées normalisées', () => {
+  it('converts a click into normalised coordinates', () => {
     const onPick = vi.fn()
     render(<ShotPicker onPick={onPick} />)
     fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 28 })
@@ -23,14 +23,14 @@ describe('ShotPicker', () => {
     expect(spot.y).toBeCloseTo(0.1, 2)
   })
 
-  it('borne un clic débordant dans les limites du terrain', () => {
+  it('clamps an overflowing click to the court\'s bounds', () => {
     const onPick = vi.fn()
     render(<ShotPicker onPick={onPick} />)
     fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 400, clientY: -20 })
     expect(onPick.mock.calls[0][0]).toEqual({ x: 1, y: 0 })
   })
 
-  it('offre un bouton par zone pour la saisie au clavier', async () => {
+  it('offers one button per zone for keyboard entry', async () => {
     const onPick = vi.fn()
     render(<ShotPicker onPick={onPick} />)
     await userEvent.click(screen.getByRole('button', { name: 'Corner gauche' }))
@@ -39,7 +39,7 @@ describe('ShotPicker', () => {
 })
 
 describe('ShotPicker — confirmation', () => {
-  it('réserve la place de la pastille même sans confirmation, pour ne pas décaler les boutons', () => {
+  it('reserves the pill\'s room even without a confirmation, so as not to shift the buttons', () => {
     render(<ShotPicker onPick={vi.fn()} />)
     // `visibility: hidden` retire l'élément de l'arbre d'accessibilité — RTL
     // l'exclut donc de getByRole par défaut, d'où `hidden: true` ici. Ce même
@@ -52,12 +52,12 @@ describe('ShotPicker — confirmation', () => {
     expect(status.textContent).toBe(' ')
   })
 
-  it('affiche le libellé du tir enregistré dans une zone d’état', () => {
+  it('shows the recorded shot\'s label in a status region', () => {
     render(<ShotPicker onPick={vi.fn()} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: '2 PTS · Raquette', made: true }} />)
     expect(screen.getByRole('status')).toHaveTextContent('2 PTS · Raquette')
   })
 
-  it('neutralise le terrain et les boutons de zone tant que la confirmation est affichée', async () => {
+  it('neutralises the court and the zone buttons while the confirmation shows', async () => {
     const onPick = vi.fn()
     render(<ShotPicker onPick={onPick} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: '2 PTS · Raquette', made: true }} />)
     fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 28 })
@@ -65,7 +65,7 @@ describe('ShotPicker — confirmation', () => {
     expect(onPick).not.toHaveBeenCalled()
   })
 
-  it('fait vibrer l’appareil quand le navigateur le permet', () => {
+  it('buzzes the device where the browser allows it', () => {
     const vibrate = vi.fn()
     Object.defineProperty(navigator, 'vibrate', { value: vibrate, configurable: true })
     render(<ShotPicker onPick={vi.fn()} />)
@@ -74,7 +74,7 @@ describe('ShotPicker — confirmation', () => {
     Reflect.deleteProperty(navigator, 'vibrate')
   })
 
-  it('ne remplit pas le cercle de confirmation en C.accent quand le tir est manqué', () => {
+  it('does not fill the confirmation circle with the attack colour on a missed shot', () => {
     const { container } = render(
       <ShotPicker onPick={vi.fn()} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: 'MANQUÉ · Raquette', made: false }} />,
     )
@@ -83,7 +83,7 @@ describe('ShotPicker — confirmation', () => {
     expect(missed).not.toHaveAttribute('fill', C.accent)
   })
 
-  it('dessine en fond les tirs déjà pris par le joueur', () => {
+  it('draws the player\'s earlier shots in the background', () => {
     const shots: Shot[] = [
       { matchId: 'm1', spot: { x: 0.5, y: 0.15 }, zone: 'paint', made: true },
       { matchId: 'm1', spot: { x: 0.5, y: 0.65 }, zone: 'top3', made: false },
@@ -98,7 +98,7 @@ describe('ZONE_PATH', () => {
   // Ces chemins ont été vérifiés point par point contre zoneAt par lancer de rayons.
   // Les modifier désalignerait les zones colorées des zones réellement calculées :
   // un tir compté dans la raquette pourrait s'afficher en mi-distance.
-  it('reste littéralement inchangé', () => {
+  it('stays literally unchanged', () => {
     expect(ZONE_PATH).toEqual({
       paint: 'M 505 0 H 995 V 580 H 505 Z',
       mid_left: 'M 90 0 H 505 V 786.5 A 675 675 0 0 1 90 299.01 Z',
@@ -111,28 +111,28 @@ describe('ZONE_PATH', () => {
   })
 })
 
-describe('Découpe des zones au cadre du terrain', () => {
+describe('clipping the zones to the court\'s frame', () => {
   // `corner3_left` part de (0,0), le cadre est rentré de 4 et arrondi de RAYON :
   // sans découpe, le remplissage bavait dans les coins arrondis. Les deux usages
   // — la confirmation après un tir et la carte des zones — doivent la porter.
   const zonesDecoupees = (c: HTMLElement) =>
     [...c.querySelectorAll('g[clip-path] path[d]')].map((p) => p.getAttribute('d'))
 
-  it('découpe le remplissage de confirmation', () => {
+  it('clips the confirmation fill', () => {
     const { container } = render(
       <ShotPicker onPick={vi.fn()} confirmation={{ spot: { x: 0.03, y: 0.12 }, label: '3 PTS · Corner gauche', made: true }} />,
     )
     expect(zonesDecoupees(container)).toContain(ZONE_PATH.corner3_left)
   })
 
-  it('découpe les sept zones de la carte des tirs', () => {
+  it('clips the shot chart\'s seven zones', () => {
     const { container } = render(<ShotChart shots={[]} />)
     const decoupees = zonesDecoupees(container)
     expect(decoupees).toHaveLength(7)
     expect(decoupees).toContain(ZONE_PATH.corner3_left)
   })
 
-  it('donne à la découpe le cadre dessiné, et non des valeurs recopiées', () => {
+  it('gives the clip the drawn frame, not values copied out', () => {
     const { container } = render(<ShotChart shots={[]} />)
     const decoupe = container.querySelector('clipPath rect')!
     for (const [attr, value] of Object.entries(cadre()))
@@ -141,7 +141,7 @@ describe('Découpe des zones au cadre du terrain', () => {
 })
 
 describe('CourtLines', () => {
-  it('donne un identifiant de dégradé distinct à chaque terrain rendu', () => {
+  it('gives each rendered court its own gradient id', () => {
     const { container } = render(<><ShotChart shots={[]} /><ShotChart shots={[]} /></>)
     const ids = [...container.querySelectorAll('radialGradient')].map((g) => g.id)
     expect(ids).toHaveLength(2)
@@ -154,17 +154,17 @@ describe('ShotChart', () => {
     matchId: 'm1', spot: { x: 0.5, y: zoneY }, zone: zoneY > 0.6 ? 'top3' : 'paint', made,
   })
 
-  it('affiche le ratio des zones ayant assez de tentatives', () => {
+  it('shows the ratio for zones with enough attempts', () => {
     render(<ShotChart shots={[shot(0.15, true), shot(0.15, true), shot(0.15, false)]} />)
     expect(screen.getByText('2/3')).toBeInTheDocument()
   })
 
-  it('masque le ratio des zones sous le seuil de tentatives', () => {
+  it('hides the ratio for zones under the attempts threshold', () => {
     render(<ShotChart shots={[shot(0.15, true)]} />)
     expect(screen.queryByText('1/1')).not.toBeInTheDocument()
   })
 
-  it('trace un point par tir', () => {
+  it('draws one dot per shot', () => {
     const { container } = render(<ShotChart shots={[shot(0.15, true), shot(0.65, false)]} />)
     expect(container.querySelectorAll('[data-shot]')).toHaveLength(2)
   })

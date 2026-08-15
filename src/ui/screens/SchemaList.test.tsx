@@ -39,8 +39,8 @@ const renderList = () =>
     </MemoryRouter>,
   )
 
-describe('SchemaList — la bibliothèque des combinaisons', () => {
-  it('liste les schémas du club en vignettes', async () => {
+describe('SchemaList — the playbook', () => {
+  it('lists the club\'s plays as thumbnails', async () => {
     await savePlay(schema('s1', 'Pick and roll haut'))
     await savePlay(schema('s2', 'Corner pour le 4'))
     // Un schéma d'un autre club n'a rien à faire dans la bibliothèque.
@@ -60,7 +60,7 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
     expect(screen.queryByText('Combinaison de Metz')).not.toBeInTheDocument()
   })
 
-  it('créer un schéma est administratif : la table de marque ne voit aucun bouton de création', async () => {
+  it('creating a play is administrative: the scorer\'s table sees no create button', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderList()
     await screen.findByText(/la bibliothèque est vide/i)
@@ -75,7 +75,7 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
     expect(screen.queryByText('éditeur')).not.toBeInTheDocument()
   })
 
-  it('l’administrateur crée un schéma et arrive dans l’éditeur', async () => {
+  it('the administrator creates a play and lands in the editor', async () => {
     renderList()
     await userEvent.click(await screen.findByRole('button', { name: /Nouveau schéma/ }))
 
@@ -85,7 +85,7 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
     expect(crees[0].steps).toHaveLength(1)
   })
 
-  it('dupliquer ajoute une copie nommée, sans toucher à l’original', async () => {
+  it('duplicating adds a named copy, without touching the original', async () => {
     await savePlay(schema('s1', 'Pick and roll haut'))
     renderList()
     await userEvent.click(within((await screen.findAllByRole('article'))[0]).getByRole('button', { name: 'Dupliquer' }))
@@ -95,7 +95,7 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
     expect(noms).toEqual(['Pick and roll haut', 'Pick and roll haut (copie)'])
   })
 
-  it('dupliquer et supprimer sont administratifs : la table de marque n’a que « Jouer », et rien n’est écrit', async () => {
+  it('duplicating and deleting are administrative: the scorer\'s table only gets "Play", and nothing is written', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await savePlay(schema('s1', 'Pick and roll haut'))
     renderList()
@@ -109,7 +109,7 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
     expect(await listPlays('ta')).toHaveLength(1)
   })
 
-  it('supprimer un schéma est confirmé puis effectif', async () => {
+  it('deleting a play is confirmed and then takes effect', async () => {
     await savePlay(schema('s1', 'Pick and roll haut'))
     renderList()
     const carte = (await screen.findAllByRole('article'))[0]
@@ -125,8 +125,8 @@ describe('SchemaList — la bibliothèque des combinaisons', () => {
   })
 })
 
-describe('SchemaList — le rangement de la bibliothèque', () => {
-  it('déduit la barre de dossiers des schémas, « Sans dossier » en dernier', async () => {
+describe('SchemaList — filing the library', () => {
+  it('derives the folder bar from the plays, "Unfiled" last', async () => {
     await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     await savePlay(schema('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
     await savePlay(schema('s3', 'Brouillon'))
@@ -137,7 +137,7 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
       .toEqual(['Tous', 'Attaque placée', 'Remises en jeu', 'Sans dossier'])
   })
 
-  it('n’offre « Sans dossier » que s’il reste des schémas non rangés', async () => {
+  it('offers "Unfiled" only while unfiled plays remain', async () => {
     await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     renderList()
 
@@ -145,7 +145,7 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
     expect(within(barre).getAllByRole('button').map((b) => b.textContent)).toEqual(['Tous', 'Attaque placée'])
   })
 
-  it('choisir un dossier ne laisse que ses schémas dans la grille', async () => {
+  it('choosing a folder leaves only its plays in the grid', async () => {
     await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     await savePlay(schema('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))
     await savePlay(schema('s3', 'Brouillon'))
@@ -165,7 +165,7 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
     expect(screen.getAllByRole('article')).toHaveLength(3)
   })
 
-  it('la recherche filtre sur le nom', async () => {
+  it('the search filters on the name', async () => {
     await savePlay(schema('s1', 'Pick and roll haut'))
     await savePlay(schema('s2', 'Remise ligne de fond'))
     renderList()
@@ -175,7 +175,7 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
       .toEqual(['Pick and roll haut'])
   })
 
-  it('la recherche filtre aussi sur la note, sans se soucier des accents', async () => {
+  it('the search also filters on the note, ignoring accents', async () => {
     // Le mot cherché n'est dans aucun nom : seule la note peut le rendre.
     await savePlay(schema('s1', 'Pick and roll haut', { note: 'Sortie contre une défense en zone' }))
     await savePlay(schema('s2', 'Remise ligne de fond', { note: 'Sur panier encaissé' }))
@@ -186,7 +186,7 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
       .toEqual(['Pick and roll haut'])
   })
 
-  it('range du plus récemment modifié au plus ancien, les schémas jamais horodatés en dernier', async () => {
+  it('orders from most recently edited to oldest, plays never stamped last', async () => {
     // Écriture directe : `savePlay` horodate à l'instant, on ne pourrait pas
     // fabriquer trois dates distinctes ni un schéma d'avant l'horodatage.
     await db.plays.put(schema('s1', 'Ancien', { updatedAt: '2026-01-01T10:00:00.000Z' }))
@@ -199,7 +199,7 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
       .toEqual(['Récent', 'Ancien', 'Jamais horodaté'])
   })
 
-  it('l’administrateur range un schéma dans un dossier, qui apparaît dans la barre', async () => {
+  it('the administrator files a play into a folder, which appears in the bar', async () => {
     await savePlay(schema('s1', 'Pick and roll haut'))
     renderList()
 
@@ -212,7 +212,7 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
       .toBeInTheDocument()
   })
 
-  it('changer le dossier est administratif : la table de marque le lit sans pouvoir le changer', async () => {
+  it('changing the folder is administrative: the scorer\'s table reads it without being able to change it', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     renderList()
@@ -227,7 +227,7 @@ describe('SchemaList — le rangement de la bibliothèque', () => {
     expect((await listPlays('ta'))[0].folder).toBe('Attaque placée')
   })
 
-  it('un visiteur cherche et filtre sans qu’aucun code lui soit demandé', async () => {
+  it('a visitor searches and filters without being asked for any code', async () => {
     sessionStorage.removeItem(ROLE_KEY)
     await savePlay(schema('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     await savePlay(schema('s2', 'Remise ligne de fond', { folder: 'Remises en jeu' }))

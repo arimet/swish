@@ -6,7 +6,7 @@ import { newPlay } from '../../domain/plays'
 const half = { id: 'x', ...newPlay('c1', 'half', true) }
 
 describe('PlayBoard', () => {
-  it('rend les dix pions et le ballon du temps demandé', () => {
+  it('renders the ten markers and the ball of the step asked for', () => {
     const { container } = render(<PlayBoard schema={half} stepIndex={0} />)
     // Cinq attaquants, cinq défenseurs, mêmes chiffres de part et d'autre : c'est
     // le marqueur de camp qui les sépare. Les deux ont un disque de même rayon —
@@ -24,7 +24,7 @@ describe('PlayBoard', () => {
     expect(screen.getByLabelText('ballon')).toBeInTheDocument()
   })
 
-  it('distingue les quatre traits de flèche', () => {
+  it('tells the four arrow strokes apart', () => {
     const s = { ...half }
     s.steps = [{ ...s.steps[0], arrows: (['cut', 'screen', 'pass', 'dribble'] as const).map((stroke, i) => ({
       from: { side: 'offense' as const, position: (i + 1) as 1|2|3|4|5 }, points: [{ x: 0.1 + i * 0.2, y: 0.7 }, { x: 0.1 + i * 0.2, y: 0.3 }], stroke,
@@ -36,15 +36,15 @@ describe('PlayBoard', () => {
     expect(container.querySelectorAll('[data-stroke="dribble"]')).toHaveLength(1)
   })
 
-  it('double la profondeur du viewBox sur terrain complet', () => {
+  it('doubles the viewBox\'s depth on a full court', () => {
     const s = { id: 'y', ...newPlay('c1', 'full', false) }
     const { container } = render(<PlayBoard schema={s} stepIndex={0} />)
     expect(container.querySelector('svg')!.getAttribute('viewBox')).toBe('0 0 1500 2800')
   })
 })
 
-describe('courtWidth — la borne du tableau', () => {
-  it('borne d’abord par la largeur disponible, dans les quatre cas', () => {
+describe('courtWidth — the board\'s bound', () => {
+  it('bounds by the width available first, in all four cases', () => {
     // La faute mesurée : en édition, 52 % de 812 px de haut valent 422 px. Sans
     // `100%`, un téléphone de 375 px se voyait imposer un terrain plus large que
     // sa colonne, qui se faisait couper à droite. Une hauteur d'écran ne dit rien
@@ -54,7 +54,7 @@ describe('courtWidth — la borne du tableau', () => {
         expect(courtWidth(terrain, place)).toMatch(/^min\(100%, /)
   })
 
-  it('donne au terrain complet, deux fois plus profond, deux fois moins de largeur', () => {
+  it('gives the full court, twice as deep, half the width', () => {
     expect(courtWidth('half', 'edition')).toBe('min(100%, 52vh, 560px)')
     expect(courtWidth('full', 'edition')).toBe('min(100%, 26vh, 280px)')
     expect(courtWidth('half')).toBe('min(100%, 77vh, 840px)')

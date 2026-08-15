@@ -40,7 +40,7 @@ const renderAt = (id: string) =>
   )
 
 describe('PlayerDetail', () => {
-  it('affiche l’identité, les totaux et la réussite aux tirs', async () => {
+  it('shows the identity, the totals and the shooting percentages', async () => {
     renderAt('p1')
     expect(await screen.findByText('MARTIN Lucas')).toBeInTheDocument()
     expect(await screen.findByText('75 %')).toBeInTheDocument() // 3 tirs sur 4
@@ -48,31 +48,31 @@ describe('PlayerDetail', () => {
     expect(screen.getByText('Points / match').closest('div')).toHaveTextContent('8') // 2×3 + 1×2
   })
 
-  it('liste les rencontres du joueur', async () => {
+  it('lists the player\'s games', async () => {
     renderAt('p1')
     await waitFor(() => expect(screen.getByText(/Poule A/)).toBeInTheDocument())
   })
 
-  it('signale un joueur introuvable', async () => {
+  it('reports a player that cannot be found', async () => {
     renderAt('inconnu')
     expect(await screen.findByText(/introuvable/i)).toBeInTheDocument()
   })
 
-  it('affiche l’âge et la taille quand ils sont renseignés', async () => {
+  it('shows the age and the height when they are filled in', async () => {
     await savePlayer({ id: 'p1', teamId: 'ta', number: 7, lastName: 'MARTIN', firstName: 'Lucas', birthDate: '2000-06-15', height: 192 })
     renderAt('p1')
     expect(await screen.findByText(/192 cm/)).toBeInTheDocument()
     expect(screen.getByText(/ans/)).toBeInTheDocument()
   })
 
-  it('n’affiche aucun bloc signalétique quand rien n’est renseigné', async () => {
+  it('shows no details block when nothing is filled in', async () => {
     renderAt('p1')
     expect(await screen.findByText('MARTIN Lucas')).toBeInTheDocument()
     expect(screen.queryByText(/cm/)).not.toBeInTheDocument()
     expect(screen.queryByText(/ans/)).not.toBeInTheDocument()
   })
 
-  it('affiche les statistiques secondaires en moyenne par match', async () => {
+  it('shows the secondary statistics as a per-game average', async () => {
     renderAt('p1')
     await screen.findByText('MARTIN Lucas')
     // Une passe décisive sur une rencontre → 1,0 par match, jamais « 1 ».
@@ -80,20 +80,20 @@ describe('PlayerDetail', () => {
     expect(within(ligne).getByText('1,0')).toBeInTheDocument()
   })
 
-  it('affiche un tiret plutôt qu’un zéro pour un joueur sans rencontre', async () => {
+  it('shows a dash rather than a zero for a player with no game', async () => {
     await db.matches.clear()
     renderAt('p1')
     expect(await screen.findByText('MARTIN Lucas')).toBeInTheDocument()
     expect(screen.queryByText('0,0')).not.toBeInTheDocument()
   })
 
-  it('mentionne discrètement au joueur identifié que c’est sa fiche', async () => {
+  it('quietly tells the identified player that this is their record', async () => {
     localStorage.setItem(PLAYER_ID_KEY, 'p1')
     renderAt('p1')
     expect(await screen.findByText(/c’est vous/i)).toBeInTheDocument()
   })
 
-  it('ne mentionne rien sur la fiche d’un autre joueur que celui identifié', async () => {
+  it('says nothing on the record of a player other than the identified one', async () => {
     await savePlayer({ id: 'p2', teamId: 'ta', number: 9, lastName: 'DURAND', firstName: 'Théo' })
     localStorage.setItem(PLAYER_ID_KEY, 'p1')
     renderAt('p2')
@@ -101,7 +101,7 @@ describe('PlayerDetail', () => {
     expect(screen.queryByText(/c’est vous/i)).not.toBeInTheDocument()
   })
 
-  it('ne mentionne rien quand l’identifiant enregistré ne correspond à personne', async () => {
+  it('says nothing when the saved id matches nobody', async () => {
     // Le joueur identifié a été retiré de l'effectif : sa fiche n'existe plus,
     // et celle des autres ne doit surtout pas hériter de la mention.
     localStorage.setItem(PLAYER_ID_KEY, 'parti')

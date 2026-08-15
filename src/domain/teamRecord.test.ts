@@ -6,7 +6,7 @@ let seq = 0
 const ev = (e: Partial<GameEvent> & Pick<GameEvent, 'type'>): GameEvent =>
   ({ id: `e${seq++}`, wallClock: seq, period: 1, gameClock: 600, ...e } as GameEvent)
 
-// Match terminé où notre club (`clubId`) affronte `opponentId` : `sa` est notre
+// A finished game where our club (`clubId`) faces `opponentId`: `sa` is our
 // score, `sb` celui de l'adversaire (panier d'équipe, sans joueur identifié).
 const finished = (id: string, clubId: string, opponentId: string, sa: number, sb: number, date: string): Match => ({
   id, meta: { championshipLabel: 'PRM', clubId, opponentId, date },
@@ -20,7 +20,7 @@ const finished = (id: string, clubId: string, opponentId: string, sa: number, sb
 })
 
 describe('teamRecord', () => {
-  it('compte victoires, défaites et points pour/contre (notre club)', () => {
+  it('counts wins, losses and points for and against (our club)', () => {
     const matches = [
       finished('m1', 't1', 't2', 70, 60, '2026-01-10'), // t1 gagne
       finished('m2', 't1', 't3', 50, 80, '2026-01-17'), // t1 perd
@@ -30,18 +30,18 @@ describe('teamRecord', () => {
     expect(r.avgFor).toBe(60)
     expect(r.avgAgainst).toBe(70)
   })
-  it('ignore les rencontres où l\'équipe ne joue pas', () => {
+  it('ignores games the team does not play in', () => {
     expect(teamRecord('tX', [finished('m1', 't1', 't2', 70, 60, '2026-01-10')]).played).toBe(0)
   })
-  it('lu côté adversaire, le bilan est celui de nos confrontations avec lui', () => {
-    // t2 a perdu 60-70 contre nous : de son point de vue, une défaite.
+  it('read from the opposition\'s side, the record is that of our meetings with them', () => {
+    // t2 lost 60-70 to us: from their point of view, a defeat.
     const r = teamRecord('t2', [finished('m1', 't1', 't2', 70, 60, '2026-01-10')])
     expect(r).toMatchObject({ played: 1, wins: 0, losses: 1, pointsFor: 60, pointsAgainst: 70 })
   })
 })
 
 describe('teamMatches', () => {
-  it('renvoie les rencontres de l\'équipe, plus récente d\'abord, avec résultat', () => {
+  it('returns the team\'s games, most recent first, with the result', () => {
     const lines = teamMatches('t1', [
       finished('m1', 't1', 't2', 70, 60, '2026-01-10'),
       finished('m2', 't1', 't3', 50, 80, '2026-01-17'),
@@ -53,11 +53,11 @@ describe('teamMatches', () => {
 })
 
 describe('teamScorers', () => {
-  it('cumule les points par joueur pour notre club', () => {
+  it('sums the points per player for our club', () => {
     const s = teamScorers('t1', [finished('m1', 't1', 't2', 5, 3, '2026-01-10')])
     expect(s.get('h1')).toBe(5)
   })
-  it('l\'adversaire n\'a pas d\'effectif : son cumul est toujours vide', () => {
+  it('the opposition has no roster: their tally is always empty', () => {
     const s = teamScorers('t2', [finished('m1', 't1', 't2', 5, 3, '2026-01-10')])
     expect(s.size).toBe(0)
   })

@@ -19,7 +19,7 @@ beforeEach(async () => {
 })
 
 describe('MatchSetup', () => {
-  it('crée un match et notifie onCreated', async () => {
+  it('creates a game and notifies onCreated', async () => {
     const onCreated = vi.fn()
     render(<MemoryRouter><ClubProvider><AuthProvider><MatchSetup onCreated={onCreated} /></AuthProvider></ClubProvider></MemoryRouter>)
     await waitFor(() => expect(screen.getAllByText('VIGNOT').length).toBeGreaterThan(0))
@@ -31,7 +31,7 @@ describe('MatchSetup', () => {
     expect(created.status).toBe('setup') // planifié, pas démarré
   })
 
-  it('notre club est fixé d\'avance et l\'adversaire n\'a pas d\'effectif détaillé', async () => {
+  it('our club is fixed in advance and the opposition has no detailed roster', async () => {
     const onCreated = vi.fn()
     render(<ClubProvider><MemoryRouter><AuthProvider><MatchSetup onCreated={onCreated} /></AuthProvider></MemoryRouter></ClubProvider>)
     await waitFor(() => expect(screen.getAllByText('VIGNOT').length).toBeGreaterThan(0))
@@ -44,8 +44,8 @@ describe('MatchSetup', () => {
   })
 })
 
-describe('MatchSetup — droits', () => {
-  it('planifier une rencontre est administratif : la table de marque ne voit pas le formulaire, et rien n’est enregistré', async () => {
+describe('MatchSetup — rights', () => {
+  it('planning a game is administrative: the scorer\'s table does not see the form, and nothing is saved', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     const onCreated = vi.fn()
     render(

@@ -16,13 +16,13 @@ beforeEach(async () => {
 })
 
 describe('App', () => {
-  it('affiche la page d’accueil (dashboard)', async () => {
+  it('shows the home page (dashboard)', async () => {
     render(<App />)
     await waitFor(() => expect(screen.getAllByText(/Tableau de bord/i).length).toBeGreaterThan(0))
     expect(screen.getAllByText(/Swish/i).length).toBeGreaterThan(0)
   })
 
-  it('n’offre plus de changer de club : l’application est celle d’une équipe', async () => {
+  it('no longer offers to change club: the application is one team\'s', async () => {
     // Le club se règle une fois, au premier lancement. Le rechoisir n'a de sens
     // que s'il disparaît — c'est le test suivant.
     render(<App />)
@@ -30,7 +30,7 @@ describe('App', () => {
     expect(screen.queryByRole('button', { name: /changer de club/i })).not.toBeInTheDocument()
   })
 
-  it('supprimer sa propre équipe ramène à l’écran de bienvenue, pas à un club fantôme', async () => {
+  it('deleting your own team returns to the welcome screen, not to a ghost club', async () => {
     // ClubProvider ne revalide sa liste d'équipes qu'à un changement de club :
     // sans le clear() dans TeamDetail, le tableau de bord resterait épinglé
     // sur ce club supprimé avec un effectif vide.
@@ -51,7 +51,7 @@ describe('App', () => {
   })
 })
 
-describe('premier lancement (appareil vierge)', () => {
+describe('first launch (blank device)', () => {
   beforeEach(async () => {
     // Personne ne rejoue jamais ce parcours une fois des données de démo en place :
     // aucun club réglé, et aucune équipe en base pour en proposer un.
@@ -68,7 +68,7 @@ describe('premier lancement (appareil vierge)', () => {
     sessionStorage.removeItem(ROLE_KEY)
   })
 
-  it('mène de l’écran de bienvenue jusqu’au tableau de bord, en passant par la création d’équipe', async () => {
+  it('leads from the welcome screen to the dashboard, by way of team creation', async () => {
     render(<App />)
     const link = await screen.findByRole('link', { name: /créer ma première équipe/i })
     await userEvent.click(link)

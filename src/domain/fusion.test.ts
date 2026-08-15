@@ -9,29 +9,29 @@ const basket = (id: string, wallClock: number): GameEvent =>
 const match = (events: GameEvent[], reste: Partial<Match> = {}): Match =>
   ({ id: 'm1', meta: { clubId: 'ta', opponentId: 'tb' }, roster: ['p1'], status: 'live', events, ...reste })
 
-/** L'ordre du journal, en identifiants — la seule chose qu'on veut lire ici. */
+/** The log's order, as ids — the only thing worth reading here. */
 const journal = (m: Match) => m.events.map((e) => e.id)
 
-describe('fusionnerMatchs', () => {
-  it('ne perd aucun panier quand deux appareils marquent en même temps', () => {
-    // La propriété fondatrice : le perdant de l'arbitrage n'a pas tort, il a noté
+describe('mergeMatches', () => {
+  it('loses no basket when two devices score at the same time', () => {
+    // The founding property: the loser of the arbitration is not wrong, it recorded
     // autre chose. L'écraser ferait disparaître des paniers.
-    const marqueur = match([basket('a', 10), basket('b', 20)])
+    const scorer = match([basket('a', 10), basket('b', 20)])
     const coach = match([basket('a', 10), basket('c', 15)])
 
-    expect(journal(mergeMatches(marqueur, coach))).toEqual(['a', 'c', 'b'])
+    expect(journal(mergeMatches(scorer, coach))).toEqual(['a', 'c', 'b'])
   })
 
-  it('donne le même journal quel que soit l’ordre d’arrivée', () => {
+  it('gives the same log whatever the order of arrival', () => {
     // Sans commutativité, deux miroirs divergeraient en affichant chacun un
-    // journal « correct » — et le score afficherait deux vérités.
+    // a "correct" log — and the score would show two truths.
     const a = match([basket('a', 10), basket('b', 20)])
     const b = match([basket('c', 15), basket('d', 5)])
 
     expect(journal(mergeMatches(a, b))).toEqual(journal(mergeMatches(b, a)))
   })
 
-  it('départage deux évènements de même heure sur l’identifiant, pas sur l’arrivée', () => {
+  it('breaks a tie between two events at the same time on the id, not on arrival', () => {
     const a = match([basket('zzz', 10)])
     const b = match([basket('aaa', 10)])
 
@@ -39,19 +39,19 @@ describe('fusionnerMatchs', () => {
     expect(journal(mergeMatches(b, a))).toEqual(['aaa', 'zzz'])
   })
 
-  it('une annulation gagne sur la copie de l’autre appareil', () => {
-    // Le coach annule le panier « b ». Le marqueur, qui l'a encore, repousse sa
-    // version. Sans les ratures, l'union le ressusciterait.
+  it('a retraction wins over the other device\'s copy', () => {
+    // The coach retracts basket "b". The scorer, who still has it, pushes their
+    // version. Without the retractions, the union would resurrect it.
     const coach = undoLast(match([basket('a', 10), basket('b', 20)]))
-    const marqueur = match([basket('a', 10), basket('b', 20)])
+    const scorer = match([basket('a', 10), basket('b', 20)])
 
-    expect(journal(mergeMatches(marqueur, coach))).toEqual(['a'])
-    expect(journal(mergeMatches(coach, marqueur))).toEqual(['a'])
+    expect(journal(mergeMatches(scorer, coach))).toEqual(['a'])
+    expect(journal(mergeMatches(coach, scorer))).toEqual(['a'])
   })
 
-  it('un évènement annulé ne revient pas au vidage suivant', () => {
-    // Deuxième tour : le marqueur repousse encore son journal périmé, contre un
-    // état serveur qui porte déjà la rature.
+  it('a retracted event does not come back at the next flush', () => {
+    // Second round: the scorer pushes their stale log again, against a server state
+    // that already carries the retraction.
     const serveur = mergeMatches(match([basket('a', 10), basket('b', 20)]),
                                     undoLast(match([basket('a', 10), basket('b', 20)])))
     const marqueurEnRetard = match([basket('a', 10), basket('b', 20)])
@@ -59,61 +59,61 @@ describe('fusionnerMatchs', () => {
     expect(journal(mergeMatches(serveur, marqueurEnRetard))).toEqual(['a'])
   })
 
-  it('cumule les ratures des deux côtés', () => {
+  it('accumulates the retractions from both sides', () => {
     const coach = undoLast(match([basket('a', 10), basket('b', 20)]))
-    const marqueur = removeLastEvent(match([basket('a', 10), basket('c', 30)]), (e) => e.id === 'c')
+    const scorer = removeLastEvent(match([basket('a', 10), basket('c', 30)]), (e) => e.id === 'c')
 
-    const f = mergeMatches(coach, marqueur)
+    const f = mergeMatches(coach, scorer)
     expect(journal(f)).toEqual(['a'])
     expect(f.retracted?.sort()).toEqual(['b', 'c'])
   })
 
-  it('les champs qui se remplacent viennent du second — celui qui a gagné l’arbitrage', () => {
+  it('the fields that replace come from the second — the one that won arbitration', () => {
     const ancien = match([], { meta: { clubId: 'ta', opponentId: 'tb', venue: 'ANCIEN' } })
     const recent = match([], { meta: { clubId: 'ta', opponentId: 'tb', venue: 'RÉCENT' } })
 
     expect(mergeMatches(ancien, recent).meta.venue).toBe('RÉCENT')
   })
 
-  it('ne pose pas de champ `retires` quand il n’y a rien à rayer', () => {
-    // Le document reste tel qu'il était avant ce chantier tant que personne
-    // n'annule : rien n'oblige les bases existantes à gagner un champ vide.
+  it('sets no `retracted` field when there is nothing to strike out', () => {
+    // The document stays as it was before this work as long as nobody retracts:
+    // nothing forces existing stores to gain an empty field.
     expect(mergeMatches(match([basket('a', 10)]), match([basket('a', 10)])))
       .not.toHaveProperty('retires')
   })
 })
 
-describe('le statut ne recule jamais', () => {
-  it('une rencontre terminée ne se rouvre pas sous une file en retard', () => {
-    // L'appareil hors ligne depuis une heure vide sa file avec un `live` périmé.
-    // Une feuille rouverte donne à croire qu'on peut encore la corriger.
+describe('the status never moves backwards', () => {
+  it('a finished game does not reopen under a late queue', () => {
+    // A device offline for an hour empties its queue carrying a stale `live`. A
+    // reopened sheet suggests it can still be corrected.
     const serveur = match([], { status: 'finished' })
     const enRetard = match([], { status: 'live' })
 
     expect(mergeMatches(serveur, enRetard).status).toBe('finished')
   })
 
-  it('mais elle avance quand c’est le sens de la marche', () => {
+  it('but it advances when that is the direction of travel', () => {
     expect(mergeMatches(match([], { status: 'live' }), match([], { status: 'finished' })).status).toBe('finished')
     expect(furthest('setup', 'live')).toBe('live')
     expect(furthest('finished', 'setup')).toBe('finished')
   })
 })
 
-describe('le réducteur note ses ratures', () => {
-  it('`undoLast` sort l’évènement du journal et garde son identifiant', () => {
+describe('the reducer records its retractions', () => {
+  it('`undoLast` takes the event out of the log and keeps its id', () => {
     const m = undoLast(match([basket('a', 10), basket('b', 20)]))
     expect(journal(m)).toEqual(['a'])
     expect(m.retracted).toEqual(['b'])
   })
 
-  it('`removeLastEvent` fait de même sur celui qu’il retire', () => {
+  it('`removeLastEvent` does the same for the one it removes', () => {
     const m = removeLastEvent(match([basket('a', 10), basket('b', 20)]), (e) => e.id === 'a')
     expect(journal(m)).toEqual(['b'])
     expect(m.retracted).toEqual(['a'])
   })
 
-  it('n’invente pas de rature quand il n’y a rien à retirer', () => {
+  it('invents no retraction when there is nothing to remove', () => {
     expect(undoLast(match([])).retracted).toBeUndefined()
     expect(removeLastEvent(match([basket('a', 10)]), () => false).retracted).toBeUndefined()
   })

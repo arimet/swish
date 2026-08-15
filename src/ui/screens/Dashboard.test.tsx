@@ -57,14 +57,14 @@ beforeEach(async () => {
 })
 
 describe('Dashboard', () => {
-  it('affiche le bilan du club', async () => {
+  it('shows the club\'s record', async () => {
     await saveMatch(finished('m1', 10, 4))
     renderDash()
     expect(await screen.findByText('VIGNOT')).toBeInTheDocument()
     expect(await screen.findByText('1V – 0D')).toBeInTheDocument()
   })
 
-  it('met le match en direct en tête', async () => {
+  it('puts the live game at the top', async () => {
     // Le raccourci vers la table de marque est réservé à qui la tient : ce test se
     // place de son côté, le cas du visiteur est vérifié juste en dessous.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
@@ -73,7 +73,7 @@ describe('Dashboard', () => {
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
   })
 
-  it('un visiteur lit le score en direct sans se voir proposer d’ouvrir la table de marque', async () => {
+  it('a visitor reads the live score without being offered the scorer\'s table', async () => {
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live' })
     renderDash()
     // Le bandeau du direct reste entier — l'état, l'adversaire, le score : c'est
@@ -85,13 +85,13 @@ describe('Dashboard', () => {
     expect(screen.queryByRole('link', { name: /table de marque/i })).not.toBeInTheDocument()
   })
 
-  it('annonce la prochaine rencontre quand aucun match n’est en cours', async () => {
+  it('announces the next game when none is in progress', async () => {
     await saveMatch({ ...finished('m3', 0, 0), id: 'm3', status: 'setup', meta: { championshipLabel: 'Poule A', date: dansNJours(5), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByText(/prochaine rencontre/i)).toBeInTheDocument()
   })
 
-  it('n’annonce pas au bandeau une rencontre planifiée puis jamais jouée, alors que le bloc échéance l’écarte déjà', async () => {
+  it('does not announce in the banner a game planned and never played, when the fixture block already excludes it', async () => {
     // Statut resté à `setup` mais date passée : une rencontre planifiée puis jamais
     // jouée. Le bandeau doit appliquer la même règle que `nextFixture` (qui écarte le
     // passé), sans quoi il annoncerait « Prochaine rencontre » à côté d'un bloc
@@ -102,19 +102,19 @@ describe('Dashboard', () => {
     expect(screen.queryByText(/prochaine rencontre/i)).not.toBeInTheDocument()
   })
 
-  it('n’affiche pas de hot zone vide sans explication', async () => {
+  it('does not show an empty hot zone with no explanation', async () => {
     await saveMatch(finished('m1', 10, 4))
     renderDash()
     expect(await screen.findByText(/aucun tir localisé/i)).toBeInTheDocument()
   })
 
-  it('affiche la hot zone du club dès qu’un tir est localisé', async () => {
+  it('shows the club\'s hot zone as soon as one shot is located', async () => {
     await saveMatch(finished('m1', 10, 4, [{ type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 }]))
     renderDash()
     expect(await screen.findByLabelText('Carte des tirs')).toBeInTheDocument()
   })
 
-  it('n’annonce aucune rencontre jouée pour un club qui n’est le clubId d’aucun match', async () => {
+  it('announces no game played for a club that is no game\'s clubId', async () => {
     // 'tb' n'apparaît qu'en `opponentId` de m1 : ce n'est jamais « notre » rencontre.
     await saveMatch(finished('m1', 10, 4))
     localStorage.setItem('swish-club-id', 'tb')
@@ -122,7 +122,7 @@ describe('Dashboard', () => {
     expect(await screen.findByText('Aucune rencontre jouée')).toBeInTheDocument()
   })
 
-  it('affiche le nombre de convoqués et le rendez-vous de la prochaine échéance convoquée', async () => {
+  it('shows the number called up and the meeting point of the next fixture called up', async () => {
     await saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: dansNJours(5), clubId: 'ta', opponentId: 'tb' } })
     await saveConvocation({ matchId: 'm4', playerIds: ['p1'], meetTime: '18:00', meetPlace: 'Gymnase Colette' })
     renderDash()
@@ -133,7 +133,7 @@ describe('Dashboard', () => {
     expect(await screen.findByText(/MARTIN Lucas/)).toBeInTheDocument()
   })
 
-  it('invite à planifier quand aucune échéance n’est prévue', async () => {
+  it('invites planning when no fixture is scheduled', async () => {
     // Une rencontre jouée, et c'est la prémisse qui manquait : « aucune échéance
     // prévue » décrit un club **en saison** qui n'a rien devant lui. Un club sans
     // aucune rencontre est un autre état — la mise en route — et c'est le test suivant.
@@ -151,7 +151,7 @@ describe('Dashboard', () => {
    * adversaire enregistré, si bien que les deux menaient à un écran de cul-de-sac.
    * Six blocs pour dire six fois que rien n'a commencé, et pas un chemin praticable.
    */
-  it('un club sans aucune rencontre reçoit la mise en route, et non les chiffres vides', async () => {
+  it('a club with no game at all gets the getting-started block, not the empty figures', async () => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
     renderDash()
 
@@ -170,7 +170,7 @@ describe('Dashboard', () => {
     expect(screen.queryByText(/pas encore de points marqués/i)).not.toBeInTheDocument()
   })
 
-  it('n’annonce pas deux fois la même rencontre quand elle est déjà en direct', async () => {
+  it('does not announce the same game twice when it is already live', async () => {
     // Le match en direct a la date du jour (donc « à venir » pour `nextFixture` s'il
     // n'était pas explicitement exclu) : sans l'exclusion, ce test ne discriminerait
     // rien, `nextFixture` ignorant de toute façon une date passée comme '2026-01-10'.
@@ -183,7 +183,7 @@ describe('Dashboard', () => {
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
   })
 
-  it('écarte toutes les rencontres en direct de la prochaine échéance, pas seulement la première', async () => {
+  it('excludes every live game from the next fixture, not only the first', async () => {
     // Rien n'empêche une seconde rencontre `live` sans que la première soit terminée
     // (démarrée par erreur) : les deux doivent rester exclues des échéances à venir,
     // sans quoi la seconde serait annoncée comme « prochaine échéance » alors qu'elle
@@ -197,13 +197,13 @@ describe('Dashboard', () => {
   })
 })
 
-describe('Dashboard — les schémas de la prochaine séance', () => {
+describe('Dashboard — the next session\'s plays', () => {
   // `queryAll` et non `getAll` : sans droit d'écriture, un tableau de bord sans
   // rencontre à venir n'a plus le moindre lien — « + Planifier » est réservé à
   // qui gère le club — et `getAllByRole` lèverait au lieu de rendre une liste vide.
   const lecteurs = () => screen.queryAllByRole('link').filter((l) => l.getAttribute('href')?.endsWith('/lecteur'))
 
-  it('mène au lecteur de chaque schéma prévu à la prochaine séance', async () => {
+  it('leads to the viewer of every play scheduled for the next session', async () => {
     // Le chemin le plus court entre « c'est mardi » et « voilà ce qu'on travaille ».
     await savePlay(schema('s1', 'Pick and roll haut'))
     await savePlay(schema('s2', 'Corner pour le 4'))
@@ -215,7 +215,7 @@ describe('Dashboard — les schémas de la prochaine séance', () => {
     expect(screen.getByRole('link', { name: /corner pour le 4/i })).toHaveAttribute('href', '/schemas/s2/lecteur')
   })
 
-  it('ignore un schéma supprimé que la séance cite encore', async () => {
+  it('ignores a deleted play the session still cites', async () => {
     await savePlay(schema('s1', 'Pick and roll haut'))
     await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes', playIds: ['disparu', 's1'] })
     renderDash()
@@ -225,7 +225,7 @@ describe('Dashboard — les schémas de la prochaine séance', () => {
     expect(lecteurs()).toHaveLength(1)
   })
 
-  it('n’annonce aucun schéma quand la séance n’en porte pas', async () => {
+  it('announces no play when the session carries none', async () => {
     await savePlay(schema('s1', 'Pick and roll haut'))
     await saveTraining({ id: 't1', clubId: 'ta', date: dansNJours(2), theme: 'Systèmes' })
     renderDash()
@@ -235,8 +235,8 @@ describe('Dashboard — les schémas de la prochaine séance', () => {
   })
 })
 
-describe('identité du joueur', () => {
-  it('met en évidence la ligne du joueur identifié et propose un raccourci vers sa fiche', async () => {
+describe('the player\'s identity', () => {
+  it('highlights the identified player\'s row and offers a shortcut to their record', async () => {
     localStorage.setItem(PLAYER_ID_KEY, 'p1')
     await savePlayer({ id: 'p2', teamId: 'ta', number: 9, lastName: 'DURAND', firstName: 'Théo' })
     await saveMatch({ ...finished('m1', 10, 4, [{ type: 'SCORE', team: 'A', playerId: 'p2', kind: '2int' }]), roster: ['p1', 'p2'] })
@@ -252,7 +252,7 @@ describe('identité du joueur', () => {
     expect(await screen.findByRole('link', { name: /ma fiche/i })).toBeInTheDocument()
   })
 
-  it('ignore un identifiant qui ne correspond à aucun joueur de l’effectif', async () => {
+  it('ignores an id matching no player in the roster', async () => {
     // Joueur retiré de l'effectif, identifiant survivant dans le localStorage :
     // ni mise en évidence fantôme, ni raccourci vers une fiche inexistante.
     localStorage.setItem(PLAYER_ID_KEY, 'parti')
@@ -271,10 +271,10 @@ describe('identité du joueur', () => {
 // lu par tout le monde en ouvrant l'application, écrit et effacé par le seul
 // administrateur.
 
-describe('Dashboard — le message à l’équipe', () => {
+describe('Dashboard — the message to the team', () => {
   const ouvrirLaSaisie = async () => userEvent.click(await screen.findByRole('button', { name: /message à l’équipe/i }))
 
-  it('affiche le message écrit, avec son âge', async () => {
+  it('shows the message written, with its age', async () => {
     const avantHier = new Date(Date.now() - 2 * 86400_000).toISOString()
     await saveMessage({ clubId: 'ta', text: 'Pas d’entraînement mardi, gymnase fermé.', writtenAt: avantHier })
     renderDash()
@@ -283,13 +283,13 @@ describe('Dashboard — le message à l’équipe', () => {
     expect(await screen.findByText(/il y a 2 jours/i)).toBeInTheDocument()
   })
 
-  it('n’occupe pas le tableau de bord quand il n’y a pas de message', async () => {
+  it('does not occupy the dashboard when there is no message', async () => {
     renderDash()
     await screen.findByText('VIGNOT')
     expect(screen.queryByTestId('team-message')).not.toBeInTheDocument()
   })
 
-  it('n’occupe pas le tableau de bord pour un message vide : un blanc n’est pas un message', async () => {
+  it('does not occupy the dashboard for an empty message: whitespace is not a message', async () => {
     await saveMessage({ clubId: 'ta', text: '   ', writtenAt: new Date().toISOString() })
     renderDash()
     await screen.findByText('VIGNOT')
@@ -300,7 +300,7 @@ describe('Dashboard — le message à l’équipe', () => {
     expect(screen.queryByTestId('team-message')).not.toBeInTheDocument()
   })
 
-  it('un visiteur le lit sans qu’aucun code lui soit demandé', async () => {
+  it('a visitor reads it without being asked for any code', async () => {
     // C'est un message pour l'équipe, joueurs compris : lire est libre.
     await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: new Date().toISOString() })
     renderDash()
@@ -309,7 +309,7 @@ describe('Dashboard — le message à l’équipe', () => {
     expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
   })
 
-  it('n’affiche le formulaire qu’après un clic, et l’écrit rend le message visible', async () => {
+  it('shows the form only after a click, and writing makes the message visible', async () => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
     renderDash()
     await screen.findByText('VIGNOT')
@@ -327,7 +327,7 @@ describe('Dashboard — le message à l’équipe', () => {
     expect(await screen.findByText('Gymnase fermé mardi.', {}, { timeout: 5000 })).toBeInTheDocument()
   })
 
-  it('en écrire un second remplace le premier', async () => {
+  it('writing a second replaces the first', async () => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
     await saveMessage({ clubId: 'ta', text: 'Ancien message.', writtenAt: new Date(Date.now() - 3 * 86400_000).toISOString() })
     renderDash()
@@ -358,7 +358,7 @@ describe('Dashboard — le message à l’équipe', () => {
     expect(await db.messages.count()).toBe(1)
   })
 
-  it('l’effacer fait disparaître l’encart', async () => {
+  it('erasing it makes the panel disappear', async () => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
     await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: new Date().toISOString() })
     renderDash()
@@ -369,7 +369,7 @@ describe('Dashboard — le message à l’équipe', () => {
     expect(await getMessage('ta')).toBeUndefined()
   })
 
-  it('écrire est administratif : la table de marque ne voit pas le bouton, et rien n’est enregistré', async () => {
+  it('writing is administrative: the scorer\'s table does not see the button, and nothing is saved', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderDash()
     await screen.findByText('VIGNOT')
@@ -382,7 +382,7 @@ describe('Dashboard — le message à l’équipe', () => {
     expect(await getMessage('ta')).toBeUndefined()
   })
 
-  it('effacer est administratif : la table de marque ne voit pas le bouton, et le message reste', async () => {
+  it('erasing is administrative: the scorer\'s table does not see the button, and the message stays', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: new Date().toISOString() })
     renderDash()
@@ -395,7 +395,7 @@ describe('Dashboard — le message à l’équipe', () => {
     expect(await getMessage('ta')).toBeDefined()
   })
 
-  it('signale que le message reste sur cet appareil', async () => {
+  it('says that the message stays on this device', async () => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
     renderDash()
     await ouvrirLaSaisie()
@@ -403,7 +403,7 @@ describe('Dashboard — le message à l’équipe', () => {
   })
 })
 
-describe('Dashboard — atteindre la convocation', () => {
+describe('Dashboard — reaching the call-up', () => {
   const rencontreAVenir = async () =>
     saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: dansNJours(5), clubId: 'ta', opponentId: 'tb' } })
 
@@ -411,7 +411,7 @@ describe('Dashboard — atteindre la convocation', () => {
   // de son côté. L'affichage des convoqués, lui, est vérifié sans droit plus bas.
   beforeEach(() => sessionStorage.setItem(ROLE_KEY, 'admin'))
 
-  it('mène à la convocation de la prochaine rencontre depuis le bloc « prochaine échéance »', async () => {
+  it('leads to the next game\'s call-up from the "next fixture" block', async () => {
     await rencontreAVenir()
     await saveConvocation({ matchId: 'm4', playerIds: ['p1'], meetTime: '18:00' })
     renderDash()
@@ -419,7 +419,7 @@ describe('Dashboard — atteindre la convocation', () => {
     expect(await screen.findByRole('link', { name: /convocation/i })).toHaveAttribute('href', '/match/m4#convocation')
   })
 
-  it('un visiteur lit les convoqués sans se voir proposer de convoquer', async () => {
+  it('a visitor reads who is called up without being offered to call anyone up', async () => {
     await rencontreAVenir()
     await saveConvocation({ matchId: 'm4', playerIds: ['p1'], meetTime: '18:00' })
     sessionStorage.removeItem(ROLE_KEY)
@@ -431,7 +431,7 @@ describe('Dashboard — atteindre la convocation', () => {
     expect(screen.queryByRole('link', { name: /convocation|convoquer/i })).not.toBeInTheDocument()
   })
 
-  it('dit clairement que personne n’est convoqué, et propose de convoquer', async () => {
+  it('says plainly that nobody is called up, and offers to call up', async () => {
     // C'est justement le moment où l'on veut agir : « convocation à préparer » ne
     // se distinguait pas assez d'un simple libellé, et ne menait nulle part.
     await rencontreAVenir()
@@ -441,7 +441,7 @@ describe('Dashboard — atteindre la convocation', () => {
     expect(await screen.findByRole('link', { name: /convoquer/i })).toHaveAttribute('href', '/match/m4#convocation')
   })
 
-  it('traite une convocation enregistrée sans aucun joueur comme une absence de convoqués', async () => {
+  it('treats a saved call-up with no player as nobody being called up', async () => {
     // Une convocation vidée de ses joueurs (ou dont l'effectif a été supprimé) est
     // un enregistrement sans convoqué : l'écran doit le dire, pas afficher « 0 ».
     await rencontreAVenir()

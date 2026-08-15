@@ -9,7 +9,7 @@ const mk = (events: Partial<GameEvent>[]): Match => ({
 })
 
 describe("timeoutsAllowed", () => {
-  it("2 en 1ère mi-temps, 5 cumulés en 2ème, +1 par prolongation", () => {
+  it("2 in the first half, 5 cumulative in the second, +1 per overtime", () => {
     expect(timeoutsAllowed(1)).toBe(2)
     expect(timeoutsAllowed(2)).toBe(2)
     expect(timeoutsAllowed(3)).toBe(5)
@@ -19,7 +19,7 @@ describe("timeoutsAllowed", () => {
 })
 
 describe("liveState", () => {
-  it("bonus quand une équipe atteint 5 fautes dans la période", () => {
+  it("bonus when a team reaches 5 fouls in the period", () => {
     const events: Partial<GameEvent>[] = [
       { type: 'PERIOD_START' as const, period: 1 },
       ...Array(TEAM_FOUL_BONUS).fill(null).map(() => ({
@@ -31,7 +31,7 @@ describe("liveState", () => {
     expect(s.bonus.A).toBe(true)
     expect(s.bonus.B).toBe(false)
   })
-  it("réinitialise les fautes d'équipe au changement de période", () => {
+  it("resets the team fouls on a period change", () => {
     const s = liveState(mk([
       { type: 'FOUL' as const, team: 'A' as const, target: { kind: 'player' as const, playerId: 'p1' }, foulType: 'personal' as const, period: 1 },
       { type: 'PERIOD_START' as const, period: 2 },
@@ -39,13 +39,13 @@ describe("liveState", () => {
     expect(s.teamFoulsThisPeriod.A).toBe(0)
     expect(s.period).toBe(2)
   })
-  it("exclut un joueur à 5 fautes", () => {
+  it("fouls a player out at 5", () => {
     const events: Partial<GameEvent>[] = Array(5).fill(null).map(() => ({
       type: 'FOUL' as const, team: 'A' as const, target: { kind: 'player' as const, playerId: 'p1' }, foulType: 'personal' as const, period: 1,
     }))
     expect(liveState(mk(events)).fouledOut.A).toContain('p1')
   })
-  it("décompte les temps-morts restants", () => {
+  it("counts down the remaining timeouts", () => {
     const s = liveState(mk([
       { type: 'PERIOD_START' as const, period: 1 },
       { type: 'TIMEOUT' as const, team: 'A' as const, period: 1 },
@@ -53,7 +53,7 @@ describe("liveState", () => {
     expect(s.timeoutsUsed.A).toBe(1)
     expect(s.timeoutsRemaining.A).toBe(1) // 2 autorises - 1
   })
-  it("reflète l'état du chrono et le cinq sur le terrain", () => {
+  it("reflects the clock's state and the five on the court", () => {
     const s = liveState(mk([
       { type: 'STARTING_FIVE' as const, team: 'A' as const, playerIds: ['p1'] },
       { type: 'PERIOD_START' as const, period: 1 },
@@ -62,7 +62,7 @@ describe("liveState", () => {
     expect(s.clockRunning).toBe(true)
     expect(s.onCourt.A).toEqual(['p1'])
   })
-  it('le remplaçant prend la place exacte du sortant (ordre préservé)', () => {
+  it('the substitute takes the exact slot of the player going off (order preserved)', () => {
     const s = liveState(mk([
       { type: 'STARTING_FIVE' as const, team: 'A' as const, playerIds: ['p1', 'p2', 'p3', 'p4', 'p5'] },
       { type: 'PERIOD_START' as const, period: 1 },
@@ -71,7 +71,7 @@ describe("liveState", () => {
     // p9 remplace p2 à l'index 1, les autres ne bougent pas.
     expect(s.onCourt.A).toEqual(['p1', 'p9', 'p3', 'p4', 'p5'])
   })
-  it('l\'adversaire n\'a pas d\'effectif : jamais « sorti sur fautes », même à 5 fautes sur un joueur du roster', () => {
+  it('the opposition has no roster: never fouled out, even at 5 fouls on a roster player', () => {
     // 'p1' est dans le roster (côté A) : si fouledOutOf lisait match.roster des
     // deux côtés sans garde, il apparaîtrait à tort dans fouledOut.B.
     const events: Partial<GameEvent>[] = Array(5).fill(null).map(() => ({
@@ -79,7 +79,7 @@ describe("liveState", () => {
     }))
     expect(liveState(mk(events)).fouledOut.B).toEqual([])
   })
-  it('compte un panier sans joueur identifié dans le score de l’équipe', () => {
+  it('counts a basket with no player named in the team\'s score', () => {
     const m = mk([
       { type: 'CLOCK_START', period: 1, gameClock: 600 },
       { type: 'SCORE', team: 'B', kind: '3', period: 1, gameClock: 500 },

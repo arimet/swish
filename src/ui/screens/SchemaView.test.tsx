@@ -32,8 +32,8 @@ const renderView = () =>
     </MemoryRouter>,
   )
 
-describe('SchemaView — la consultation d’un schéma', () => {
-  it('un visiteur consulte un schéma sans code', async () => {
+describe('SchemaView — reading a play', () => {
+  it('a visitor reads a play without a code', async () => {
     renderView()
     // Aucun rôle en session : le tableau s'affiche quand même, et rien ne demande
     // de code — l'invariant du projet 7, la lecture n'est jamais protégée.
@@ -41,7 +41,7 @@ describe('SchemaView — la consultation d’un schéma', () => {
     expect(screen.queryByRole('heading', { name: /Accès .* requis/ })).not.toBeInTheDocument()
   })
 
-  it('le défilement des temps se borne aux extrémités', async () => {
+  it('stepping through is clamped at the ends', async () => {
     renderView()
     expect(await screen.findByText('Temps 1 / 2')).toBeInTheDocument()
 
@@ -63,7 +63,7 @@ describe('SchemaView — la consultation d’un schéma', () => {
     expect(screen.getByText('Temps 2 / 2')).toBeInTheDocument()
   })
 
-  it('« Modifier » est réservé à l’administration : un visiteur ne le voit pas et n’atteint pas l’éditeur', async () => {
+  it('"Edit" is reserved for administration: a visitor does not see it and does not reach the editor', async () => {
     renderView()
     await screen.findByRole('heading', { name: /corner pour le 4/i })
 
@@ -74,7 +74,7 @@ describe('SchemaView — la consultation d’un schéma', () => {
     expect(screen.getByRole('button', { name: 'Partager' })).toBeInTheDocument()
   })
 
-  it('l’administrateur, lui, atteint l’éditeur depuis « Modifier »', async () => {
+  it('the administrator, for their part, reaches the editor from "Edit"', async () => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
     renderView()
     await userEvent.click(await screen.findByRole('button', { name: 'Modifier' }))

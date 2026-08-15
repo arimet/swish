@@ -30,14 +30,14 @@ beforeEach(() => {
   localStorage.clear()
 })
 
-describe('table des droits', () => {
-  it('un visiteur ne peut ni saisir ni gérer', async () => {
+describe('the rights table', () => {
+  it('a visitor can neither record nor manage', async () => {
     renderProbe()
     expect(await screen.findByText('score : non')).toBeInTheDocument()
     expect(screen.getByText('manage : non')).toBeInTheDocument()
   })
 
-  it('la table de marque saisit mais ne gère pas', async () => {
+  it('the scorer\'s table records but does not manage', async () => {
     renderProbe()
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('marque')
@@ -46,7 +46,7 @@ describe('table des droits', () => {
     expect(screen.getByText('manage : non')).toBeInTheDocument()
   })
 
-  it("l'administrateur saisit et gère", async () => {
+  it("the administrator records and manages", async () => {
     renderProbe()
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('admin')
@@ -56,8 +56,8 @@ describe('table des droits', () => {
   })
 })
 
-describe('code inconnu', () => {
-  it("ne donne aucun rôle et laisse le rôle courant inchangé", async () => {
+describe('an unknown code', () => {
+  it("grants no role and leaves the current one unchanged", async () => {
     renderProbe()
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('n-importe-quoi')
@@ -67,8 +67,8 @@ describe('code inconnu', () => {
   })
 })
 
-describe('code joueur', () => {
-  it("ne donne ni score ni manage", async () => {
+describe('the player code', () => {
+  it("grants neither score nor manage", async () => {
     renderProbe()
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('joueur')
@@ -79,8 +79,8 @@ describe('code joueur', () => {
   })
 })
 
-describe('identité de joueur', () => {
-  it('survit à un remontage du provider dans un nouvel onglet, le rôle non', async () => {
+describe('player identity', () => {
+  it('survives a remount of the provider in a new tab; the role does not', async () => {
     const { unmount } = renderProbe()
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('admin')
@@ -99,7 +99,7 @@ describe('identité de joueur', () => {
 })
 
 describe('guard', () => {
-  it("n'exécute pas l'action quand le droit manque, et l'exécute quand il est acquis", async () => {
+  it("does not run the action when the right is missing, and runs it once it is held", async () => {
     const onGuardedManage = vi.fn()
     renderProbe({ onGuardedManage })
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))

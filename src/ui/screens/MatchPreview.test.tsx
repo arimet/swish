@@ -42,8 +42,8 @@ const renderAvecSaisie = () =>
     </MemoryRouter>,
   )
 
-describe('MatchPreview — convocation', () => {
-  it('cocher deux joueurs puis enregistrer crée une convocation contenant leurs deux identifiants', async () => {
+describe('MatchPreview — the call-up', () => {
+  it('ticking two players and saving creates a call-up holding both their ids', async () => {
     renderPreview()
     await userEvent.click(await screen.findByLabelText(/ANTOINE/i))
     await userEvent.click(screen.getByLabelText(/BERTRAND/i))
@@ -56,7 +56,7 @@ describe('MatchPreview — convocation', () => {
     })
   })
 
-  it('décocher un joueur déjà convoqué le retire de la convocation enregistrée', async () => {
+  it('unticking a player already called up removes them from the saved call-up', async () => {
     await saveConvocation({ matchId: 'm1', playerIds: ['p1', 'p2', 'p3'] })
     renderPreview()
     const caseBertrand = await screen.findByLabelText(/BERTRAND/i)
@@ -71,7 +71,7 @@ describe('MatchPreview — convocation', () => {
     })
   })
 
-  it("l'heure et le lieu de rendez-vous sont enregistrés", async () => {
+  it("the meeting time and place are saved", async () => {
     renderPreview()
     await screen.findByLabelText(/ANTOINE/i)
     await userEvent.type(screen.getByLabelText(/heure de rendez-vous/i), '18:30')
@@ -85,7 +85,7 @@ describe('MatchPreview — convocation', () => {
     })
   })
 
-  it('le nombre de convoqués s\'affiche et suit les cases cochées', async () => {
+  it('the number called up is shown and follows the boxes ticked', async () => {
     renderPreview()
     await screen.findByLabelText(/ANTOINE/i) // attend le chargement de l'effectif avant de lire le compteur
     expect(screen.getByText(/0 convoqué/i)).toBeInTheDocument()
@@ -97,7 +97,7 @@ describe('MatchPreview — convocation', () => {
     expect(await screen.findByText(/1 convoqué/i)).toBeInTheDocument()
   })
 
-  it('précharge une convocation déjà enregistrée', async () => {
+  it('preloads a call-up already saved', async () => {
     await saveConvocation({ matchId: 'm1', playerIds: ['p3'], meetTime: '17:00', meetPlace: 'Salle B', note: 'Tenue claire' })
     renderPreview()
     const caseCharrier = await screen.findByLabelText(/CHARRIER/i)
@@ -109,7 +109,7 @@ describe('MatchPreview — convocation', () => {
     expect(screen.getByText(/1 convoqué/i)).toBeInTheDocument()
   })
 
-  it('guérit une convocation dont un joueur convoqué a depuis été retiré de l’effectif', async () => {
+  it('heals a call-up whose called-up player has since left the roster', async () => {
     // Une convocation enregistrée avant la suppression du joueur peut encore le
     // mentionner (la cascade de `deletePlayer` ne répare que l'avenir) : le compte
     // affiché doit se limiter à l'effectif réel, et décocher le seul joueur restant
@@ -129,7 +129,7 @@ describe('MatchPreview — convocation', () => {
     })
   })
 
-  it('porte l’ancre où mènent le tableau de bord et le calendrier', async () => {
+  it('carries the anchor the dashboard and the calendar lead to', async () => {
     // Les deux écrans où le coach regarde pointent sur `/match/:id#convocation` :
     // sans cette ancre, le lien tomberait en haut de la fiche, exactement le
     // problème qu'il devait résoudre.
@@ -138,12 +138,12 @@ describe('MatchPreview — convocation', () => {
     expect(document.getElementById('convocation')).not.toBeNull()
   })
 
-  it('signale que la convocation reste sur cet appareil', async () => {
+  it('says that the call-up stays on this device', async () => {
     renderPreview()
     expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
   })
 
-  it("affiche l'effectif du club de la rencontre, pas celui du réglage d'appareil s'ils diffèrent", async () => {
+  it("shows the game's club's roster, not the device setting's when they differ", async () => {
     // Rencontre ancienne rouverte après un changement de club sur cet appareil : le
     // réglage local pointe maintenant vers VERDUN, mais la rencontre appartient à
     // VIGNOT — c'est son effectif qui doit apparaître, jamais celui de VERDUN.
@@ -156,8 +156,8 @@ describe('MatchPreview — convocation', () => {
   })
 })
 
-describe('MatchPreview — droits', () => {
-  it('la table de marque démarre la rencontre sans qu’aucun code lui soit demandé', async () => {
+describe('MatchPreview — rights', () => {
+  it('the scorer\'s table starts the game without being asked for any code', async () => {
     // Le bénévole du samedi doit pouvoir lancer le match qu'il va tenir : démarrer
     // relève de la table de marque, pas de l'administration du club.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
@@ -168,7 +168,7 @@ describe('MatchPreview — droits', () => {
     expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
   })
 
-  it('la convocation reste administrative : la table de marque n’a ni cases ni bouton, et rien n’est enregistré', async () => {
+  it('the call-up stays administrative: the scorer\'s table has neither boxes nor button, and nothing is saved', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderPreview()
     await screen.findByText(/convocation/i)
@@ -182,7 +182,7 @@ describe('MatchPreview — droits', () => {
     expect(await getConvocation('m1')).toBeUndefined()
   })
 
-  it('la table de marque lit les convoqués sans pouvoir les changer', async () => {
+  it('the scorer\'s table reads who is called up without being able to change it', async () => {
     // Savoir qui est convoqué n'est pas écrire : la liste reste, en toutes lettres.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveConvocation({ matchId: 'm1', playerIds: ['p1'], meetTime: '18:00', meetPlace: 'Gymnase' })
@@ -193,7 +193,7 @@ describe('MatchPreview — droits', () => {
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
   })
 
-  it('supprimer la rencontre est administratif : la table de marque ne voit pas le bouton', async () => {
+  it('deleting the game is administrative: the scorer\'s table does not see the button', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderPreview()
     await screen.findByText(/convocation/i)
@@ -201,7 +201,7 @@ describe('MatchPreview — droits', () => {
     expect(screen.queryByRole('button', { name: /^supprimer$/i })).not.toBeInTheDocument()
   })
 
-  it('un visiteur ne se voit proposer ni démarrage ni suppression', async () => {
+  it('a visitor is offered neither a start nor a deletion', async () => {
     // Démarrer relève de la table de marque, supprimer de l'administration :
     // le visiteur consulte la fiche, et rien de plus.
     sessionStorage.removeItem(ROLE_KEY)

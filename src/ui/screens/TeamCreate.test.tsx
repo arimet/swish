@@ -12,7 +12,7 @@ import { saveTeam } from '../../persistence/repositories'
 beforeEach(async () => { sessionStorage.setItem(ROLE_KEY, 'admin'); await db.teams.clear(); await db.players.clear() })
 
 describe('TeamCreate', () => {
-  it('crée une équipe (avec un joueur) et la persiste', async () => {
+  it('creates a team (with a player) and saves it', async () => {
     render(<MemoryRouter><ClubProvider><AuthProvider><TeamCreate /></AuthProvider></ClubProvider></MemoryRouter>)
 
     await userEvent.type(screen.getByLabelText(/nom de l.équipe/i), 'VIGNOT')
@@ -33,8 +33,8 @@ describe('TeamCreate', () => {
   })
 })
 
-describe('TeamCreate — droits', () => {
-  it('créer une équipe est administratif : la table de marque se voit demander le code admin', async () => {
+describe('TeamCreate — rights', () => {
+  it('creating a team is administrative: the scorer\'s table is asked for the admin code', async () => {
     // Une équipe existe déjà, et c'est la prémisse qui manquait à ce test : la règle
     // « créer une équipe est administratif » protège des données, donc elle ne
     // s'applique qu'à partir du moment où il y en a. Sur une base vide, la création
@@ -61,7 +61,7 @@ describe('TeamCreate — droits', () => {
    * s'accordant `admin` d'avance « pour tester le parcours plutôt que la boîte de mot
    * de passe » : le contournement était écrit noir sur blanc, et le mur avec lui.
    */
-  it('la première équipe se crée sans code, et son auteur devient administrateur', async () => {
+  it('the first team is created without a code, and its author becomes an administrator', async () => {
     sessionStorage.removeItem(ROLE_KEY) // visiteur, l'état par défaut
     render(<MemoryRouter><ClubProvider><AuthProvider><TeamCreate /></AuthProvider></ClubProvider></MemoryRouter>)
 

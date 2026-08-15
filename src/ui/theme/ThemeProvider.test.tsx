@@ -11,7 +11,7 @@ beforeEach(() => {
 })
 
 describe('ThemeProvider', () => {
-  it('démarre en sombre quand rien n’est enregistré', () => {
+  it('starts dark when nothing is saved', () => {
     // Le sombre est l'identité du produit et non un mode d'économie : un premier
     // lancement doit montrer le canevas encre et l'accent citron, qui est ce que le
     // monde visuel est. La préférence système n'est délibérément pas consultée —
@@ -21,7 +21,7 @@ describe('ThemeProvider', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 
-  it('un choix « clair » enregistré est respecté, malgré le défaut sombre', () => {
+  it('a saved "light" choice is honoured, despite the dark default', () => {
     // C'est ce qui rend acceptable d'ignorer la préférence système : le choix
     // explicite, lui, ne se discute pas.
     localStorage.setItem(THEME_KEY, 'light')
@@ -32,14 +32,14 @@ describe('ThemeProvider', () => {
 
   // La bascule vit maintenant dans l'en-tête, donc le choix peut se mémoriser :
   // un « Nuit » relu au démarrage n'enferme plus personne, on en sort d'un clic.
-  it('reprend le thème Nuit enregistré au démarrage', () => {
+  it('picks the saved dark theme back up on start', () => {
     localStorage.setItem(THEME_KEY, 'dark')
     render(<ThemeProvider><div>x</div></ThemeProvider>)
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark')
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 
-  it('bascule en mode Jour via le switcher, et l’enregistre', async () => {
+  it('switches to light mode through the switcher, and saves it', async () => {
     // On part du sombre, donc la bascule offerte est « Jour ».
     render(<ThemeProvider><ThemeSwitcher /></ThemeProvider>)
     await act(async () => {

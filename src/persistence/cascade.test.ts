@@ -41,8 +41,8 @@ beforeEach(async () => {
 })
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals() })
 
-describe('les cinq genres rejoignent la file', () => {
-  it('met en file chaque écriture, sous la bonne clef', async () => {
+describe('the five kinds reach the queue', () => {
+  it('queues every write, under the right key', async () => {
     const r = await depot()
     await r.saveResult({ id: 'r1', championshipLabel: 'Poule A', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
@@ -58,7 +58,7 @@ describe('les cinq genres rejoignent la file', () => {
     ])
   })
 
-  it('envoie le schéma tel qu’il est rangé, horodatage compris', async () => {
+  it('sends the play as it is stored, timestamp included', async () => {
     // `savePlay` ajoute `majLe` à l'objet écrit. Mettre en file l'argument reçu
     // enverrait une version sans horodatage, et la bibliothèque paraîtrait
     // mélangée sur les autres appareils — qui n'ont que l'ordre de la base.
@@ -69,8 +69,8 @@ describe('les cinq genres rejoignent la file', () => {
   })
 })
 
-describe('les cascades de suppression', () => {
-  it('retirer une équipe emporte tout ce qui en dépend', async () => {
+describe('the deletion cascades', () => {
+  it('removing a team takes everything that depends on it', async () => {
     const r = await depot()
     await r.saveTeam({ id: 'ta', name: 'VIGNOT' })
     await r.savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'L' })
@@ -88,7 +88,7 @@ describe('les cascades de suppression', () => {
     ])
   })
 
-  it('retirer un joueur envoie aussi les convocations élaguées', async () => {
+  it('removing a player also sends the pruned call-ups', async () => {
     const r = await depot()
     await r.savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'M', firstName: 'L' })
     await r.saveConvocation({ matchId: 'm1', playerIds: ['p1', 'p2'] })
@@ -102,7 +102,7 @@ describe('les cascades de suppression', () => {
     expect((op!.doc as { playerIds: string[] }).playerIds).toEqual(['p2'])
   })
 
-  it('retirer une rencontre emporte sa convocation', async () => {
+  it('removing a game takes its call-up', async () => {
     const r = await depot()
     await r.saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
     await vider()
@@ -112,7 +112,7 @@ describe('les cascades de suppression', () => {
     expect((await file()).sort()).toEqual(['convocation:del:m1', 'match:del:m1'])
   })
 
-  it('retirer un schéma envoie aussi les séances qui le citaient', async () => {
+  it('removing a play also sends the sessions that cited it', async () => {
     const r = await depot()
     await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05', playIds: ['s1'] })
@@ -125,7 +125,7 @@ describe('les cascades de suppression', () => {
     expect((op!.doc as { playIds: string[] }).playIds).toEqual([])
   })
 
-  it('cocher un schéma sur une séance envoie la séance', async () => {
+  it('ticking a play on a session sends the session', async () => {
     const r = await depot()
     await r.savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
@@ -137,8 +137,8 @@ describe('les cascades de suppression', () => {
   })
 })
 
-describe('le ménage groupé', () => {
-  it('emporte les convocations des rencontres supprimées', async () => {
+describe('the bulk cleanup', () => {
+  it('takes the call-ups of the deleted games', async () => {
     const r = await depot()
     await r.saveMatch({ id: 'm1', meta: { clubId: 'ta', opponentId: 'tb' }, roster: [], events: [], status: 'setup' })
     await r.saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
@@ -149,7 +149,7 @@ describe('le ménage groupé', () => {
     expect((await file()).sort()).toEqual(['convocation:del:m1', 'match:del:m1'])
   })
 
-  it('met en file chaque résultat, séance et schéma supprimé en bloc', async () => {
+  it('queues every result, session and play deleted in bulk', async () => {
     const r = await depot()
     await r.saveResult({ id: 'r1', championshipLabel: 'P', homeId: 'tb', awayId: 'tc', homeScore: 1, awayScore: 2 })
     await r.saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })

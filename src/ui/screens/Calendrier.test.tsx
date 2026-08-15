@@ -41,14 +41,14 @@ beforeEach(async () => {
 const renderCal = () =>
   render(<MemoryRouter><ClubProvider><AuthProvider><Calendrier /></AuthProvider></ClubProvider></MemoryRouter>)
 
-describe('Calendrier', () => {
-  it('n’affiche que les rencontres du club', async () => {
+describe('Calendar', () => {
+  it('shows only the club\'s games', async () => {
     renderCal()
     expect(await screen.findByText(/VERDUN/)).toBeInTheDocument()
     expect(screen.queryByText(/METZ/)).not.toBeInTheDocument()
   })
 
-  it('affiche un entraînement dans le même conteneur de date que la rencontre du jour', async () => {
+  it('shows a training in the same date group as that day\'s game', async () => {
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', time: '18:30', place: 'Gymnase Colette', theme: 'Défense sur écran' })
     renderCal()
     // La rencontre m1 est déjà datée du 10 janvier : l'entraînement doit rejoindre
@@ -61,7 +61,7 @@ describe('Calendrier', () => {
     expect(within(groupe!).getByText(/^entraînement$/i)).toBeInTheDocument()
   })
 
-  it('n’affiche que les entraînements du club suivi', async () => {
+  it('shows only the followed club\'s trainings', async () => {
     // Un appareil qui a changé de club ne doit pas garder au calendrier les
     // entraînements du club précédent, mêlés sans signal à ceux du club courant.
     await saveTraining({ id: 't-nous', clubId: 'ta', date: '2026-01-10', theme: 'Notre séance' })
@@ -71,7 +71,7 @@ describe('Calendrier', () => {
     expect(screen.queryByText('Séance de METZ')).not.toBeInTheDocument()
   })
 
-  it('à heure égale, la rencontre passe avant l’entraînement dans le même groupe', async () => {
+  it('at an equal time, the game comes before the training in the same group', async () => {
     // Départage explicite requis (cf. `nextFixture` dans src/domain/fixtures.ts) :
     // sans lui, deux échéances de même date et sans heure se classeraient selon
     // l'ordre d'insertion, correct par accident et fragile au premier réarrangement.
@@ -86,7 +86,7 @@ describe('Calendrier', () => {
     expect(text.indexOf('Départage')).toBeGreaterThan(text.indexOf('METZ'))
   })
 
-  it('estompe le passé, marque le jour même, et laisse le futur en pleine lumière', async () => {
+  it('fades the past, marks today, and leaves the future in full light', async () => {
     // Le calendrier se lit du plus ancien au plus récent : sans ce partage, une
     // saison entière de rencontres jouées disputerait l'œil à ce qui reste à jouer.
     await saveTraining({ id: 'hier', clubId: 'ta', date: jour(-3), theme: 'Séance passée' })
@@ -105,7 +105,7 @@ describe('Calendrier', () => {
     expect(within(jourMême!).getByText(/^aujourd/i)).toBeInTheDocument()
   })
 
-  it('désigne la prochaine échéance quand rien n’est prévu le jour même', async () => {
+  it('points at the next fixture when nothing is scheduled today', async () => {
     // Même règle qu'au tableau de bord : c'est `nextFixture` qui dit « la suite ».
     await db.matches.clear() // les rencontres du jeu d'essai sont datées, elles fausseraient l'échéance
     await saveTraining({ id: 'plus-tard', clubId: 'ta', date: jour(10), theme: 'Séance à venir' })
@@ -115,12 +115,12 @@ describe('Calendrier', () => {
     expect(within(groupe!).getByText(/prochaine échéance/i)).toBeInTheDocument()
   })
 
-  it('signale que les entraînements restent sur cet appareil', async () => {
+  it('says that the trainings stay on this device', async () => {
     renderCal()
     expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
   })
 
-  it('crée un entraînement depuis le formulaire et l’ajoute au calendrier', async () => {
+  it('creates a training from the form and adds it to the calendar', async () => {
     renderCal()
     // Le formulaire est replié : il apparaît sur un clic, jamais d'emblée.
     await userEvent.click(await screen.findByRole('button', { name: /nouvel entraînement/i }))
@@ -136,7 +136,7 @@ describe('Calendrier', () => {
     expect(enregistrés[0]).toMatchObject({ clubId: 'ta', date: '2026-02-03', time: '19:00', place: 'Gymnase des Tilleuls', theme: 'Tirs extérieurs' })
   })
 
-  it('ne supprime un entraînement qu’après confirmation', async () => {
+  it('deletes a training only after confirmation', async () => {
     // Ce test affirmait l'inverse : que le clic sur la croix suffisait. C'était le
     // comportement, et c'était le défaut — une séance disparaissait sur un clic unique
     // alors que supprimer une rencontre, un schéma ou une équipe demande confirmation.
@@ -157,11 +157,11 @@ describe('Calendrier', () => {
   })
 })
 
-describe('Calendrier — les schémas de la séance', () => {
+describe('Calendar — the session\'s plays', () => {
   const ouvrirLesSchemas = async () =>
     userEvent.click(await screen.findByText(/schémas travaillés/i))
 
-  it('attache un schéma à l’entraînement, l’annonce sur la ligne, et le décochage le retire', async () => {
+  it('attaches a play to the training, announces it on the row, and unticking removes it', async () => {
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })
     await savePlay(schema('s1', 'Pick and roll haut'))
     renderCal()
@@ -180,7 +180,7 @@ describe('Calendrier — les schémas de la séance', () => {
     await waitFor(() => expect(screen.queryByText(/1 schéma$/)).not.toBeInTheDocument())
   })
 
-  it('ne compte et ne coche que les schémas qui existent encore', async () => {
+  it('counts and ticks only the plays that still exist', async () => {
     // Un entraînement peut citer un schéma supprimé par une base plus ancienne que la
     // cascade de `deletePlay` : la lecture filtre sur ce qui existe, sans quoi le
     // compte affiché mentirait — la faute corrigée au projet 6 sur les convocations.
@@ -195,7 +195,7 @@ describe('Calendrier — les schémas de la séance', () => {
     expect(screen.getByRole('checkbox', { name: /pick and roll haut/i })).toBeChecked()
   })
 
-  it('garde les deux schémas cochés coup sur coup, sans attendre le rechargement', async () => {
+  it('keeps both plays ticked in quick succession, without waiting for the reload', async () => {
     // Au bord du terrain on coche vite : si chaque bascule partait de la séance telle
     // qu'elle était au rendu, la seconde écriture effacerait la première.
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Séance' })
@@ -210,7 +210,7 @@ describe('Calendrier — les schémas de la séance', () => {
     expect([...(await listTrainings())[0].playIds!].sort()).toEqual(['s1', 's2'])
   })
 
-  it('attacher un schéma est administratif : la table de marque n’a pas de case à cocher, et rien n’est enregistré', async () => {
+  it('attaching a play is administrative: the scorer\'s table gets no checkbox, and nothing is saved', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran', playIds: ['s1'] })
     await savePlay(schema('s1', 'Pick and roll haut'))
@@ -229,8 +229,8 @@ describe('Calendrier — les schémas de la séance', () => {
   })
 })
 
-describe('Calendrier — droits', () => {
-  it('planifier est administratif : la table de marque ne voit ni bouton ni formulaire, et rien n’est enregistré', async () => {
+describe('Calendar — rights', () => {
+  it('planning is administrative: the scorer\'s table sees neither button nor form, and nothing is saved', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     renderCal()
     await screen.findByText(/VERDUN/)
@@ -244,13 +244,13 @@ describe('Calendrier — droits', () => {
     expect(await listTrainings()).toHaveLength(0)
   })
 
-  it('propose « Nouvelle rencontre » au calendrier, à côté du nouvel entraînement', async () => {
+  it('offers "New game" in the calendar, next to the new training', async () => {
     // Le bouton a quitté l'en-tête : c'est au calendrier que vivent les choses datées.
     renderCal()
     expect(await screen.findByRole('link', { name: /nouvelle rencontre/i })).toHaveAttribute('href', '/match/new')
   })
 
-  it('n’affiche le formulaire d’entraînement qu’après un clic', async () => {
+  it('shows the training form only after a click', async () => {
     renderCal()
     await screen.findByRole('button', { name: /nouvel entraînement/i })
     expect(screen.queryByLabelText(/date de l'entraînement/i)).not.toBeInTheDocument()
@@ -259,14 +259,14 @@ describe('Calendrier — droits', () => {
   })
 
 
-  it('donne accès à la convocation depuis la carte d’une rencontre à venir', async () => {
+  it('gives access to the call-up from an upcoming game\'s card', async () => {
     // Le coach regarde le calendrier, pas la fiche : c'est de là qu'il doit pouvoir
     // convoquer, sans avoir à deviner que la convocation vit sur la fiche.
     renderCal()
     expect(await screen.findByRole('link', { name: /convoquer/i })).toHaveAttribute('href', '/match/m1#convocation')
   })
 
-  it('ne propose pas de convoquer pour une rencontre déjà jouée', async () => {
+  it('does not offer to call up for a game already played', async () => {
     await db.matches.clear()
     await saveMatch({ ...mk('m9', 'ta', 'tb'), status: 'finished' })
     renderCal()
@@ -274,7 +274,7 @@ describe('Calendrier — droits', () => {
     expect(screen.queryByRole('link', { name: /convoquer/i })).not.toBeInTheDocument()
   })
 
-  it('un visiteur consulte le calendrier sans qu’aucun code lui soit demandé', async () => {
+  it('a visitor reads the calendar without being asked for any code', async () => {
     sessionStorage.removeItem(ROLE_KEY)
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })
     renderCal()

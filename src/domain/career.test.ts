@@ -18,16 +18,16 @@ const mk = (id: string, roster: string[], events: Partial<GameEvent>[], stop = 3
 })
 
 describe('ageAt', () => {
-  it('donne l’âge révolu', () => {
+  it('gives the age reached', () => {
     expect(ageAt('2000-06-15', new Date('2026-06-15'))).toBe(26)
   })
 
-  it('n’ajoute l’année que le jour de l’anniversaire', () => {
+  it('adds the year only on the birthday itself', () => {
     expect(ageAt('2000-06-15', new Date('2026-06-14'))).toBe(25)
     expect(ageAt('2000-06-15', new Date('2026-06-16'))).toBe(26)
   })
 
-  it('gère un 29 février', () => {
+  it('handles a 29 February', () => {
     expect(ageAt('2004-02-29', new Date('2026-03-01'))).toBe(22)
   })
 })
@@ -45,7 +45,7 @@ describe('playerCareer', () => {
     { type: 'STAT', team: 'A', playerId: 'p1', stat: 'assist' },
   ])
 
-  it('cumule sur plusieurs rencontres', () => {
+  it('accumulates across several games', () => {
     const c = playerCareer([m1, m2], 'p1')
     expect(c.games).toBe(2)
     expect(c.points).toBe(5)
@@ -57,35 +57,35 @@ describe('playerCareer', () => {
     expect(c.misses).toBe(1)
   })
 
-  it('cumule le temps de jeu', () => {
-    // 600 → 300 sur chaque rencontre, le joueur étant titulaire tout du long.
+  it('accumulates court time', () => {
+    // 600 → 300 in each game, the player starting throughout.
     expect(playerCareer([m1, m2], 'p1').seconds).toBe(600)
   })
 
-  it('ignore les rencontres où le joueur n’est pas à l’effectif', () => {
+  it('ignores games where the player is not on the roster', () => {
     const autre = mk('m3', ['q1', 'q2', 'q3', 'q4', 'q5'], [])
     expect(playerCareer([m1, autre], 'p1').games).toBe(1)
   })
 
-  it('ne compte aucune rencontre pour un joueur qui n’a jamais joué', () => {
+  it('counts no game for a player who has never played', () => {
     const c = playerCareer([m1, m2], 'inconnu')
     expect(c.games).toBe(0)
     expect(c.points).toBe(0)
     expect(c.seconds).toBe(0)
   })
 
-  it('ignore les rencontres non commencées', () => {
+  it('ignores games that have not started', () => {
     const aVenir: Match = { ...mk('m4', ['p1'], []), status: 'setup', events: [] }
     expect(playerCareer([m1, aVenir], 'p1').games).toBe(1)
   })
 
-  it('ne compte pas une rencontre où le joueur est à l’effectif sans temps de jeu ni action', () => {
-    // p6 figure au roster mais ne fait partie ni des titulaires ni d’aucune entrée.
+  it('does not count a game where the player is on the roster with no court time and no action', () => {
+    // p6 is on the roster but is neither a starter nor part of any substitution.
     const banc = mk('m5', ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'], [])
     expect(playerCareer([banc], 'p6').games).toBe(0)
   })
 
-  it('compte une rencontre pour un joueur sans temps de jeu mais crédité d’un panier', () => {
+  it('counts a game for a player with no court time but credited with a basket', () => {
     const banc = mk('m6', ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'], [
       { type: 'SCORE', team: 'A', playerId: 'p6', kind: '2int', shot: { x: 0.5, y: 0.15 } },
     ])

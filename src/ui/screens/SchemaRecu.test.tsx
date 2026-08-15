@@ -64,8 +64,8 @@ const ouvrir = (code: string) =>
     </MemoryRouter>,
   )
 
-describe('SchemaRecu — la combinaison arrivée par un lien', () => {
-  it('affiche le schéma porté par le lien, nom et tableau', async () => {
+describe('SchemaRecu — the play that arrived by link', () => {
+  it('shows the play the link carries, name and board', async () => {
     ouvrir(await encoder(deuxTemps()))
 
     expect(await screen.findByRole('img', { name: 'tableau tactique — Corner pour le 4' })).toBeInTheDocument()
@@ -73,7 +73,7 @@ describe('SchemaRecu — la combinaison arrivée par un lien', () => {
     expect(screen.getByText('Sortie de balle')).toBeInTheDocument()
   })
 
-  it('se laisse parcourir : les temps défilent', async () => {
+  it('can be stepped through: the steps advance', async () => {
     ouvrir(await encoder(deuxTemps()))
     await screen.findByRole('img', { name: /tableau tactique/ })
 
@@ -88,7 +88,7 @@ describe('SchemaRecu — la combinaison arrivée par un lien', () => {
     expect(ordonneeDuMeneur()).toBeCloseTo(DEPART, 6)
   })
 
-  it('sur un lien abîmé, le dit clairement plutôt que de rendre une page blanche', async () => {
+  it('on a damaged link, says so plainly rather than rendering a blank page', async () => {
     ouvrir('ce-lien-a-ete-tronque-par-la-messagerie')
 
     expect(await screen.findByText(/Ce lien est incomplet ou abîmé/)).toBeInTheDocument()
@@ -97,7 +97,7 @@ describe('SchemaRecu — la combinaison arrivée par un lien', () => {
     expect(screen.getByRole('link', { name: /Swish/ })).toBeInTheDocument()
   })
 
-  it('« Ajouter à ma bibliothèque » crée un schéma neuf, sans toucher à l’original', async () => {
+  it('"Add to my library" creates a fresh play, without touching the original', async () => {
     // L'expéditeur et le destinataire partagent la même base : c'est le cas où
     // un import mal fait écraserait le schéma d'origine.
     const original = deuxTemps()
@@ -119,7 +119,7 @@ describe('SchemaRecu — la combinaison arrivée par un lien', () => {
     expect(await screen.findByText('fiche')).toBeInTheDocument()
   })
 
-  it('l’ajout est administratif : la table de marque se voit demander le code, et rien n’est écrit', async () => {
+  it('adding is administrative: the scorer\'s table is asked for the code, and nothing is written', async () => {
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     ouvrir(await encoder(deuxTemps()))
     await screen.findByRole('img', { name: /tableau tactique/ })
@@ -131,7 +131,7 @@ describe('SchemaRecu — la combinaison arrivée par un lien', () => {
     expect(screen.queryByText('fiche')).not.toBeInTheDocument()
   })
 
-  it('lire un schéma reçu ne demande aucun code, même sans aucun rôle', async () => {
+  it('reading a received play asks for no code, even with no role at all', async () => {
     sessionStorage.removeItem(ROLE_KEY)
     ouvrir(await encoder(deuxTemps()))
     await screen.findByRole('img', { name: /tableau tactique/ })
@@ -142,7 +142,7 @@ describe('SchemaRecu — la combinaison arrivée par un lien', () => {
     expect(screen.queryByRole('heading', { name: /Accès .* requis/ })).not.toBeInTheDocument()
   })
 
-  it('sans club réglé, mène au choix du club au lieu d’un bouton qui échouerait', async () => {
+  it('with no club set, leads to the club choice instead of a button that would fail', async () => {
     // Celui qui reçoit le lien n'a peut-être jamais ouvert l'application : le
     // schéma s'affiche quand même, seul l'ajout attend qu'un club soit choisi.
     localStorage.clear()

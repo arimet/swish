@@ -8,8 +8,8 @@ const full = (): Play => {
   return { ...s, steps: [t0, nextStep(t0)], props: [{ kind: 'cone', at: { x: 0.2, y: 0.3 } }], folder: 'Presse', updatedAt: '2026-08-01T10:00:00.000Z' }
 }
 
-describe('encoder / decoder', () => {
-  it('rend un schéma équivalent après un aller-retour', async () => {
+describe('encode / decode', () => {
+  it('returns an equivalent play after a round trip', async () => {
     const s = full()
     const recu = await decode(await encoder(s))
     expect(recu).not.toBeNull()
@@ -21,7 +21,7 @@ describe('encoder / decoder', () => {
     expect(recu!.props).toEqual(s.props)
   })
 
-  it('retire ce qui n’a pas de sens ailleurs', async () => {
+  it('strips what makes no sense elsewhere', async () => {
     const recu = (await decode(await encoder(full())))!
     expect(recu.id).toBe('')
     expect(recu.clubId).toBe('')
@@ -29,75 +29,75 @@ describe('encoder / decoder', () => {
     expect(recu.folder).toBeUndefined()
   })
 
-  it('produit un code sans caractère à échapper dans une URL', async () => {
+  it('produces a code with no character needing escaping in a URL', async () => {
     const code = await encoder(full())
     expect(code).toMatch(/^[A-Za-z0-9_-]+$/)
     expect(encodeURIComponent(code)).toBe(code)
   })
 
-  it('reste très en deçà de la limite pour un schéma ordinaire', async () => {
+  it('stays well under the limit for an ordinary play', async () => {
     expect((await encoder(full())).length).toBeLessThan(LIMITE_LIEN / 4)
   })
 
-  it('rend null sur un code vide, tronqué, ou qui n’est pas un schéma', async () => {
+  it('returns null on an empty or truncated code, or one that is not a play', async () => {
     expect(await decode('')).toBeNull()
     expect(await decode('pas-du-tout-un-code')).toBeNull()
     const code = await encoder(full())
     expect(await decode(code.slice(0, Math.floor(code.length / 2)))).toBeNull()
   })
 
-  it('rend null quand le contenu décompressé n’a pas la forme d’un schéma', async () => {
-    // Un JSON valide mais qui n'est pas un schéma : la validation porte sur la
-    // forme, pas seulement sur la décompression.
+  it('returns null when the decompressed content does not have a play\'s shape', async () => {
+    // Valid JSON that is not a play: the validation is about the shape, not only
+    // about the decompression.
     expect(await decode(await coder({ bonjour: 'monde' }))).toBeNull()
   })
 
-  it('refuse une charge à moitié valide, jusqu’au fond des tableaux', async () => {
-    // C'est la seule frontière par laquelle des données venues d'ailleurs entrent
-    // dans l'application. S'arrêter aux conteneurs laisserait passer ces charges,
-    // et le rendu lèverait sur un pion sans position — sans limite d'erreur pour
-    // rattraper, React démonte tout et l'on obtient l'écran blanc que ce décodeur
+  it('refuses a half-valid payload, down to the bottom of the arrays', async () => {
+    // This is the one boundary through which data from elsewhere enters the
+    // application. Stopping at the containers would let these payloads through, and
+    // rendering would throw on a marker with no position — with no error boundary to
+    // catch it, React unmounts everything and you get the blank screen this decoder
     // existe précisément pour éviter.
     const bon = await transportDe(full())
     const abime = (f: (t: Brut) => void) => {
       const t: Brut = JSON.parse(JSON.stringify(bon)); f(t); return coder(t)
     }
 
-    // Un pion sans position : `PlayBoard` lirait `at.x` sur `undefined`.
+    // A marker with no position: `PlayBoard` would read `at.x` on `undefined`.
     expect(await decode(await abime((t) => { delete t.steps[0].markers[0].at }))).toBeNull()
-    // Une position qui n'est pas un nombre fini : `NaN` traverse `typeof`.
+    // A position that is not a finite number: `NaN` gets through `typeof`.
     expect(await decode(await abime((t) => { t.steps[0].markers[0].at.x = null }))).toBeNull()
     // Un objet posé sans position.
     expect(await decode(await abime((t) => { delete t.props[0].at }))).toBeNull()
-    // Un ballon qui n'est ni porté ni posé.
+    // A ball that is neither carried nor placed.
     expect(await decode(await abime((t) => { t.steps[0].ball = {} }))).toBeNull()
     // Une flèche sans tracé exploitable.
     expect(await decode(await abime((t) => { t.steps[0].arrows[0].points = [{ x: 0.1, y: 0.1 }] }))).toBeNull()
-    // Un poste hors de l'effectif.
+    // A position outside the five.
     expect(await decode(await abime((t) => { t.steps[0].markers[0].position = 9 }))).toBeNull()
 
-    // Le témoin : la même charge, intacte, passe. Sans lui, un `estTransport`
-    // qui refuserait tout ferait passer ce test pour la mauvaise raison.
+    // The control: the same payload, intact, passes. Without it, a validator that
+    // refused everything would make this test pass for the wrong reason.
     expect(await decode(await coder(bon))).not.toBeNull()
   })
 })
 
-/** Une charge d'essai, volontairement sans type : ces tests fabriquent justement
- *  des structures qui ne respectent pas le modèle, c'est tout leur objet. */
+/** A test payload, deliberately untyped: these tests exist precisely to build
+ *  structures that do not respect the model. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Brut = any
 
-/** Compresse et encode n'importe quoi comme le ferait `encoder`, pour fabriquer
- *  des charges volontairement abîmées. `Blob.stream()` n'existe pas en jsdom. */
+/** Compresses and encodes anything the way `encode` would, in order to build
+ *  deliberately damaged payloads. `Blob.stream()` does not exist in jsdom. */
 async function coder(v: unknown): Promise<string> {
-  const octets = new TextEncoder().encode(JSON.stringify(v))
-  const source = new ReadableStream<Uint8Array<ArrayBuffer>>({ start(c) { c.enqueue(octets); c.close() } })
+  const bytes = new TextEncoder().encode(JSON.stringify(v))
+  const source = new ReadableStream<Uint8Array<ArrayBuffer>>({ start(c) { c.enqueue(bytes); c.close() } })
   const stream = source.pipeThrough(new CompressionStream('deflate-raw'))
-  const brut = new Uint8Array(await new Response(stream).arrayBuffer())
-  return btoa(String.fromCharCode(...brut)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  const raw = new Uint8Array(await new Response(stream).arrayBuffer())
+  return btoa(String.fromCharCode(...raw)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-/** Ce que `encoder` met réellement dans le lien, relu par `decoder`. */
+/** What `encode` actually puts in the link, read back by `decode`. */
 async function transportDe(s: Play): Promise<Record<string, unknown>> {
   const recu = (await decode(await encoder(s)))!
   const { id: _id, clubId: _clubId, ...reste } = recu

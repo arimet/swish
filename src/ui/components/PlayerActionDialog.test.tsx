@@ -27,15 +27,15 @@ beforeEach(() => {
 })
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
-describe('PlayerActionDialog — saisie du tir', () => {
-  it('enregistre un seul tir même si l’on touche le terrain deux fois', () => {
+describe('PlayerActionDialog — recording a shot', () => {
+  it('records a single shot even if the court is touched twice', () => {
     const { onScore } = renderDialog()
     fireEvent.click(court(), { clientX: 150, clientY: 42 })
     fireEvent.click(court(), { clientX: 40, clientY: 200 })
     expect(onScore).toHaveBeenCalledTimes(1)
   })
 
-  it('affiche les points et la zone avant de fermer', () => {
+  it('shows the points and the zone before closing', () => {
     const { onClose } = renderDialog()
     fireEvent.click(court(), { clientX: 150, clientY: 42 })
     expect(screen.getByRole('status')).toHaveTextContent('2 PTS · Raquette')
@@ -44,7 +44,7 @@ describe('PlayerActionDialog — saisie du tir', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('annonce un tir manqué sans compter de points', () => {
+  it('announces a missed shot without counting points', () => {
     const { onScore, onMiss } = renderDialog()
     fireEvent.click(screen.getByRole('button', { name: 'Manqué' }))
     fireEvent.click(court(), { clientX: 150, clientY: 42 })
