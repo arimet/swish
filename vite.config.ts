@@ -11,9 +11,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Swish — Feuille de match basket',
+        // Le même titre qu'`index.html`, et pour la même raison : il nomme le produit
+        // — le hub d'une équipe — et non l'un de ses neuf écrans.
+        name: 'Swish — Le hub de votre équipe de basket',
         short_name: 'Swish',
-        description: 'Table de marque basket : score, chrono, fautes, stats et export e-marque.',
+        description: 'Table de marque, statistiques, calendrier et schémas tactiques pour une équipe de basket amateur.',
         display: 'standalone',
         // L'écran de démarrage et la barre de l'application installée : le cadre
         // et la gouttière du thème clair, comme les `theme-color` de l'index.

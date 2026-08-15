@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -9,7 +9,12 @@
          comme une erreur. Les deux thèmes sont déclarés, le clair d'abord. -->
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#c3cbd6" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#07090c" />
-    <title>Swish — Feuille de match basket</title>
+    <!-- Le titre dit ce que le produit *est* — le hub d'une équipe — et non ce qu'il
+         affiche. « Feuille de match » nommait un écran parmi neuf, alors que le
+         positionnement du produit est ailleurs : une équipe, sa saison, ses données.
+         Ce titre sert d'onglet, de nom d'application installée et d'aperçu de lien
+         partagé ; il est le même que le `name` du manifeste, dans vite.config.ts. -->
+    <title>Swish — Le hub de votre équipe de basket</title>
     <!-- Le thème est posé avant la première peinture, et il faut que ce soit ici :
          les jetons clairs vivent sur `:root` nu, donc un appareil réglé en sombre
          aurait vu un éclair blanc le temps que React monte. Choix enregistré
@@ -22,6 +27,11 @@
           if (t !== 'light' && t !== 'dark') t = 'dark'
           document.documentElement.setAttribute('data-theme', t)
           document.documentElement.classList.toggle('dark', t === 'dark')
+          // Et la langue, pour la même raison : `lang` décide de la césure, des
+          // guillemets et de la voix d'un lecteur d'écran. Le document naissait en
+          // `lang="en"` alors que tout son contenu était français.
+          var l = localStorage.getItem('swish-lang')
+          document.documentElement.lang = (l === 'fr' || l === 'en') ? l : 'fr'
         } catch (e) { /* navigation privée : le thème clair par défaut fait l'affaire */ }
       })()
     </script>

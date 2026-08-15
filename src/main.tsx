@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ThemeProvider } from './ui/theme/ThemeProvider'
+import { LangProvider } from './i18n'
 import { db } from './persistence/db'
 import { remoteEnabled, hydrate, flush } from './persistence/remote'
 
@@ -41,7 +42,9 @@ async function bootstrap() {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <ThemeProvider>
-        <App />
+        <LangProvider>
+          <App />
+        </LangProvider>
       </ThemeProvider>
     </StrictMode>,
   )
