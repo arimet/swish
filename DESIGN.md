@@ -1,6 +1,6 @@
 ---
 name: Swish
-description: Feuille de match basket pour club amateur — table de marque, statistiques, schémas tactiques.
+description: Basketball match sheet for an amateur club — scorer's table, statistics, playbook.
 colors:
   page: "#151c26"
   panel: "#0c1119"
@@ -71,18 +71,18 @@ rounded:
   2xl: "1.53rem"
   full: "9999px"
 spacing:
-  serre: "0.5rem"
-  groupe: "0.75rem"
+  tight: "0.5rem"
+  group: "0.75rem"
   section: "1.25rem"
-  ecran: "1.5rem"
-  doigt: "2.75rem"
+  screen: "1.5rem"
+  finger: "2.75rem"
 components:
   button-primary:
     backgroundColor: "{colors.brand}"
     textColor: "{colors.on-brand}"
     rounded: "{rounded.xl}"
     padding: "0 1.5rem"
-    height: "{spacing.doigt}"
+    height: "{spacing.finger}"
     typography: "{typography.body}"
   button-primary-hover:
     backgroundColor: "{colors.brand}"
@@ -91,7 +91,7 @@ components:
     backgroundColor: "{colors.card-raised}"
     textColor: "{colors.text}"
     rounded: "{rounded.md}"
-    height: "{spacing.doigt}"
+    height: "{spacing.finger}"
   button-neutral-hover:
     backgroundColor: "{colors.brand}"
     textColor: "{colors.on-brand}"
@@ -99,7 +99,7 @@ components:
     backgroundColor: "{colors.card-raised}"
     textColor: "{colors.danger}"
     rounded: "{rounded.md}"
-    height: "{spacing.doigt}"
+    height: "{spacing.finger}"
   button-danger-hover:
     backgroundColor: "{colors.danger-fill}"
     textColor: "{colors.on-danger}"
@@ -118,7 +118,7 @@ components:
     textColor: "{colors.text}"
     rounded: "{rounded.md}"
     padding: "0 0.875rem"
-    height: "{spacing.doigt}"
+    height: "{spacing.finger}"
   chip-label:
     backgroundColor: "{colors.card-raised}"
     textColor: "{colors.muted}"
@@ -134,347 +134,329 @@ components:
 
 # Design System: Swish
 
-> Les titres de sections sont en anglais : le format DESIGN.md est analysé au
-> caractère près par l'outillage. La prose est en français, comme le reste du dépôt
-> (interface, commentaires, messages de commit).
+> The section headings follow the DESIGN.md format, which the tooling parses to the
+> character. Everything else — prose, comments, commit messages, identifiers — is in
+> English. The one thing that stays French is the interface itself: the product is a
+> French club's, and its words are its own.
 >
-> Les valeurs de ce fichier décrivent le **thème sombre**, qui est le monde par défaut.
-> Le thème clair est une composition à part entière : sa stratégie et ses valeurs
-> décisives sont dans `## Colors`, mais ses quarante jetons ne sont recopiés nulle part
-> — ils vivent dans `src/ui/theme/themes.css`, seule source de vérité, et une seconde
-> copie dériverait au premier ajustement. Ce fichier dit **pourquoi** ; le CSS dit quoi.
+> The values in this file describe the **dark theme**, which is the default world. The
+> light theme is a composition in its own right: its strategy and its decisive values
+> are in `## Colors`, but its forty tokens are copied nowhere — they live in
+> `src/ui/theme/themes.css`, the single source of truth, and a second copy would drift
+> at the first adjustment. This file says **why**; the CSS says what.
 
 ## Overview
 
-**Creative North Star: « La Nuit électrique »**
+**Creative North Star: "Electric night"**
 
-Un gymnase le soir. La salle est dans le noir, et ce qui éclaire, c'est le tableau
-d'affichage et les lignes du terrain. Swish est cette scène : un canevas encre presque
-noir, et un seul citron électrique qui porte tout ce qui compte — le score de
-l'adversaire, le bouton qu'on va toucher, la période en cours. La couleur est rare
-parce qu'elle est de la lumière, et une salle avec dix lampes n'éclaire rien.
+A gym in the evening. The hall is dark, and what gives light is the scoreboard and the
+court's lines. Swish is that scene: a near-black ink canvas, and a single electric lemon
+carrying everything that counts — the opposition's score, the button about to be
+touched, the current period. Colour is rare because it is light, and a hall with ten
+lamps lights nothing.
 
-Le produit est un outil, pas une vitrine. Il se tient à une main dans un gymnase, au
-pouce, pendant qu'un match se joue — et il se lit aussi de loin, projeté pour les
-spectateurs. Les chiffres sont donc l'objet principal : tabulaires, très lourds,
-énormes quand ils sont le score. Tout le reste s'efface derrière eux. La densité est
-moyenne et assumée : une table de marque doit montrer cinq joueurs, deux scores, un
-chrono, les fautes et les temps-morts sans jamais défiler.
+The product is a tool, not a showcase. It is held one-handed in a gym, under a thumb,
+while a game is being played — and it is also read from a distance, projected for
+spectators. The numbers are therefore the main object: tabular, very heavy, enormous
+when they are the score. Everything else recedes behind them. The density is medium and
+deliberate: a scorer's table has to show five players, two scores, a clock, the fouls
+and the timeouts without ever scrolling.
 
-Le monde est **sombre d'abord**, et c'est un choix d'identité, pas un mode d'économie.
-Le thème clair existe et il est composé, jamais hérité : il ne se déduit pas du sombre
-par inversion. Trois palettes ont été rejetées avant celle-ci, toutes pour la même
-raison — elles dérivaient chaque couleur d'une contrainte de contraste sur fond blanc,
-ce qui force l'assombrissement et la désaturation. Le résultat était terne. La règle du
-remplissage, plus bas, est la correction de cette erreur, et c'est la ligne la plus
-importante du fichier.
+The world is **dark first**, and that is a choice of identity, not an economy mode. The
+light theme exists and it is composed, never inherited: it is not derived from the dark
+one by inversion. Three palettes were rejected before this one, all for the same reason
+— they derived every colour from a contrast constraint against white, which forces
+darkening and desaturation. The result was drab. The fill rule, below, is the correction
+of that error, and it is the most important line in the file.
 
 **Key Characteristics:**
-- Canevas encre, un seul accent citron électrique (`#dcff33`)
-- Chiffres tabulaires, graisses 800–900, jusqu'à 6 rem pour un score
-- Aucune ombre : la profondeur vient d'un escalier de plans et d'un filet de 1 px
-- Toute commande fait 44 px de haut, sans exception
-- Deux thèmes composés séparément, jamais l'un dérivé de l'autre
-- Le terrain tactique a sa propre palette, dont la convention de teintes ne bascule pas
+- Ink canvas, a single electric lemon accent (`#dcff33`)
+- Tabular figures, weights 800–900, up to 6 rem for a score
+- No shadow: depth comes from a staircase of planes and a 1 px hairline
+- Every control is 44 px tall, without exception
+- Two themes composed separately, neither derived from the other
+- The playbook court has its own palette, whose colour convention does not switch
 
 ## Colors
 
-Un canevas presque noir, un accent citron, et quatre teintes sémantiques qui ne
-servent qu'à dire un état — jamais à décorer.
+A near-black canvas, a lemon accent, and four semantic hues that serve only to state a
+state — never to decorate.
 
 ### Primary
-- **Citron électrique** (`{colors.brand}`) : la seule couleur de marque. Elle
-  **remplit** — boutons d'action, période courante, écusson, anneau du numéro de
-  maillot, score adverse sur le tableau d'affichage. En thème sombre elle sert aussi
-  d'encre (`accent`), parce que sur du charbon un citron lumineux est à la fois le
-  meilleur texte et le meilleur bouton. En thème clair les deux rôles se séparent :
-  l'aplat reste citron (`#a8c400`), l'encre devient une olive profonde (`#4a5600`),
-  parce qu'un citron vif sur du blanc donne 1,15:1.
-- **Encre sur citron** (`{colors.on-brand}`) : le presque-noir olive que porte tout
-  aplat citron. Jamais du blanc.
+- **Electric lemon** (`{colors.brand}`): the only brand colour. It **fills** — action
+  buttons, the current period, the crest, the ring around a jersey number, the
+  opposition's score on the scoreboard. In the dark theme it also serves as ink
+  (`accent`), because on charcoal a luminous lemon is at once the best text and the best
+  button. In the light theme the two roles separate: the flat area stays lemon
+  (`#a8c400`), the ink becomes a deep olive (`#4a5600`), because a vivid lemon on white
+  gives 1.15:1.
+- **Ink on lemon** (`{colors.on-brand}`): the near-black olive that every lemon flat
+  area carries. Never white.
 
 ### Secondary
-Aucune. Swish n'a qu'un accent, et c'est délibéré — voir la règle d'une seule voix.
+None. Swish has one accent, and that is deliberate — see the one-voice rule.
 
 ### Tertiary
-Les quatre teintes de **sens**, chacune en couple aplat + encre portée :
-- **Vert vif** (`{colors.green-fill}` / `{colors.on-green}`) : victoire, direct,
-  démarrage du chrono.
-- **Rose alerte** (`{colors.danger-fill}` / `{colors.on-danger}`) : faute, bonus,
-  arrêt du chrono, suppression. Son **encre** est plus claire que son aplat
-  (`{colors.danger}`) — le seul cas où le sombre doit séparer les deux, l'aplat plein
-  tombant sous le seuil AA comme petit texte sur la carte.
-- **Or** (`{colors.gold-fill}` / `{colors.on-gold}`) : à venir, planifié.
-- **Bleu** (`{colors.info-fill}` / `{colors.on-info}`) : entraînement, seconde série
-  d'un graphique.
+The four hues of **meaning**, each as a fill + carried-ink pair:
+- **Vivid green** (`{colors.green-fill}` / `{colors.on-green}`): a win, live, starting
+  the clock.
+- **Alert pink** (`{colors.danger-fill}` / `{colors.on-danger}`): a foul, the bonus,
+  stopping the clock, deletion. Its **ink** is lighter than its fill
+  (`{colors.danger}`) — the one case where dark must separate the two, the full flat
+  area falling under the AA threshold as small text on the card.
+- **Gold** (`{colors.gold-fill}` / `{colors.on-gold}`): upcoming, scheduled.
+- **Blue** (`{colors.info-fill}` / `{colors.on-info}`): training, a chart's second
+  series.
 
 ### Neutral
-Six plans, et l'ordre est la profondeur du produit — il n'y a pas d'ombre pour la dire.
-De la carte vers le fond : `{colors.card-raised}` (pastille dans une carte) >
-`{colors.card}` (le plan haut, la carte) > `{colors.frame}` (le fond de
-l'application) > `{colors.panel}` (le puits creusé dans une carte). La carte est à
-trois fois la clarté de son cadre : plus serré, l'écran devient un seul charbon.
+Six planes, and their order is the product's depth — there is no shadow to state it.
+From the card down to the ground: `{colors.card-raised}` (a pill inside a card) >
+`{colors.card}` (the high plane, the card) > `{colors.frame}` (the application's
+background) > `{colors.panel}` (the well hollowed into a card). The card sits at three
+times its frame's lightness: any tighter and the screen becomes a single charcoal.
 
-`{colors.page}` est la **gouttière**, visible seulement au-delà de `lg`, et elle change
-de côté selon le thème — voir la règle du bureau.
+`{colors.page}` is the **gutter**, visible only above `lg`, and it changes side
+depending on the theme — see the desk rule.
 
-Trois niveaux d'encre : `{colors.text}` (le contenu), `{colors.muted}` (le secondaire),
-`{colors.faint}` (les étiquettes et les unités). Trois niveaux qui se confondraient ne
-seraient qu'un seul niveau avec trois noms.
+Three levels of ink: `{colors.text}` (the content), `{colors.muted}` (the secondary),
+`{colors.faint}` (the labels and the units). Three levels that blurred together would be
+one level with three names.
 
-### Le terrain
-Le tableau tactique a sa propre famille (`--t-*`), et la distinction est délibérée. Sa
-**surface** bascule avec le thème — parquet clair dans l'application claire, sombre
-dans la sombre. Sa **convention de teintes** ne bascule pas : le rouge dit toujours
-« attaque », le bleu « défense », l'or « ballon ». Un tableau tactique est un carnet de
-coach, et retourner cette convention reviendrait à réapprendre à lire à celui qui la
-connaît. Les quatre repères restent distincts par la **forme** — disque plein, anneau
-ouvert, petit disque, trait — donc lisibles aussi en noir et blanc.
+### The court
+The playbook has its own family (`--t-*`), and the distinction is deliberate. Its
+**surface** switches with the theme — light hardwood in the light application, dark in
+the dark one. Its **colour convention** does not switch: red always says "attack", blue
+"defence", gold "ball". A playbook is a coach's notebook, and flipping that convention
+would amount to teaching someone who knows it to read again. The four markers stay
+distinct by **shape** — filled disc, open ring, small disc, stroke — hence legible in
+black and white too.
 
 ### Named Rules
 
-**La règle du remplissage.** La couleur vit dans les **aplats**, avec leur encre
-appariée (`*-fill` + `on-*`) ; les encres restent presque noires ou presque blanches.
-Une couleur qui n'a pas à se lire comme petit texte sur du blanc n'a plus besoin
-d'être assombrie — et c'est l'assombrissement qui rendait l'ensemble terne. Corollaire
-opérationnel : `brand` **remplit**, `accent` **écrit**. Employer `brand` comme encre
-donne 1,77:1 sur une ligne claire ; c'est arrivé, et seule la passe en thème clair l'a
-trouvé.
+**The fill rule.** Colour lives in the **flat areas**, with their paired ink (`*-fill` +
+`on-*`); the inks stay near-black or near-white. A colour that does not have to read as
+small text on white no longer needs darkening — and it was the darkening that made the
+whole thing drab. Operational corollary: `brand` **fills**, `accent` **writes**. Using
+`brand` as ink gives 1.77:1 on a light row; that happened, and only the light-theme pass
+found it.
 
-**La règle d'une seule voix.** Un seul accent sur toute l'application. Un second
-accent ne double pas l'expressivité, il divise par deux la lisibilité du premier. Les
-teintes sémantiques ne sont pas des accents : elles disent un état et disparaissent
-quand l'état disparaît.
+**The one-voice rule.** One accent across the whole application. A second accent does
+not double the expressiveness, it halves the legibility of the first. The semantic hues
+are not accents: they state a state and disappear when the state does.
 
-**La règle du bureau.** La gouttière doit se **voir** et ne jamais **dominer** la
-carte. Le sens de l'écart suit la place disponible et non une symétrie : en clair il y
-a de la place sous le papier, donc elle descend ; en sombre il n'y en a pas sous le
-noir, donc elle monte au-dessus du cadre. Exiger « toujours plus foncée » a produit une
-gouttière invisible, et l'inverse naïf une gouttière gris pâle dans laquelle
-l'application flottait.
+**The desk rule.** The gutter must be **visible** and must never **dominate** the card.
+The direction of the gap follows the room available and not a symmetry: on light there
+is room under the paper, so it goes down; on dark there is none under the black, so it
+goes up above the frame. Demanding "always darker" produced an invisible gutter, and the
+naive converse a pale grey gutter in which the application floated.
 
-**La règle du hachage.** Une couleur tirée d'un hachage d'identifiant (`teamColor`) est
-juste pour un **écusson** dans une liste, et fausse partout ailleurs. Sur un tableau
-d'affichage la question n'est pas « laquelle des six équipes » mais « nous ou eux », et
-un hachage y a produit un marine à 2,1:1 sur carte sombre. Jamais de hachage comme
-encre, ni comme série de graphique.
+**The hash rule.** A colour drawn from a hash of an id (`teamColor`) is right for a
+**crest** in a list, and wrong everywhere else. On a scoreboard the question is not
+"which of the six teams" but "us or them", and a hash there produced a navy at 2.1:1 on
+a dark card. Never a hash as ink, nor as a chart series.
 
 ## Typography
 
-**Display / Body / Label :** Geist Variable (avec `sans-serif` en repli). Une seule
-famille pour tout, auto-hébergée via `@fontsource-variable/geist`.
+**Display / Body / Label:** Geist Variable (with `sans-serif` as fallback). One family
+for everything, self-hosted through `@fontsource-variable/geist`.
 
-**Character :** une grotesque neutre et très lisible en petit corps, dont les chiffres
-tabulaires sont la raison du choix. Le caractère du produit ne vient pas de la famille
-mais de la **graisse** — 800 et 900 dominent — et de l'échelle : un score à 6 rem à
-côté d'une étiquette à 12 px, sans rien entre les deux.
+**Character:** a neutral grotesque, very legible at small sizes, whose tabular figures
+are the reason for the choice. The product's character comes not from the family but
+from the **weight** — 800 and 900 dominate — and from the scale: a score at 6 rem next
+to a label at 12 px, with nothing in between.
 
 ### Hierarchy
-- **Display** (900, `clamp(2.75rem, 9vw, 6rem)`, `line-height: 1`, `-0.02em`,
-  tabulaire) : les scores et le chrono, et rien d'autre. Toujours via la classe `.nums`.
-- **Headline** (800, 1,5 rem, `tracking-tight`) : le titre d'un écran, une fois par page.
-- **Title** (800, 1 rem, souvent en majuscules) : le titre d'une carte ou d'une section.
-- **Body** (600, 0,875 rem) : tout le contenu courant. C'est le corps le plus utilisé du
-  dépôt, de loin.
-- **Body-compact** (600, 0,8125 rem) : le corps des **dialogues** et des panneaux
-  secondaires denses — le message d'une confirmation, l'explication d'un dialogue de
-  code, une aide d'administration, le panneau d'accès de la barre latérale. Employé
-  aussi par quelques commandes serrées (corrections de chrono, onglets de dossier).
-  Un dialogue est lu de près, sur une surface étroite : un cran sous le corps courant
-  y tient la mesure sans rétrécir la cible.
-- **Label** (900, 0,75 rem, `uppercase`, `tracking-wide`) : les micro-étiquettes —
-  « FAUTES », « PROCHAINE ÉCHÉANCE », « POINTS MARQUÉS ». Le second corps le plus
-  utilisé : c'est lui qui donne le grain « feuille de match ».
+- **Display** (900, `clamp(2.75rem, 9vw, 6rem)`, `line-height: 1`, `-0.02em`, tabular):
+  the scores and the clock, and nothing else. Always through the `.nums` class.
+- **Headline** (800, 1.5 rem, `tracking-tight`): a screen's title, once per page.
+- **Title** (800, 1 rem, often uppercase): a card's or a section's title.
+- **Body** (600, 0.875 rem): all the ordinary content. It is by far the most used size
+  in the repo.
+- **Body-compact** (600, 0.8125 rem): the body of **dialogs** and dense secondary panels
+  — a confirmation's message, a code dialog's explanation, an administration hint, the
+  sidebar's access panel. Also used by a few tight controls (clock corrections, folder
+  tabs). A dialog is read close up, on a narrow surface: one step under the ordinary
+  body holds the measure there without shrinking the target.
+- **Label** (900, 0.75 rem, `uppercase`, `tracking-wide`): the micro-labels —
+  "FAUTES", "PROCHAINE ÉCHÉANCE", "POINTS MARQUÉS". The second most used size: it is
+  what gives the "match sheet" grain.
 
 ### Named Rules
 
-**La règle des chiffres tabulaires.** Tout nombre qui peut changer sous l'œil porte
-`.nums` (`font-variant-numeric: tabular-nums`, `-0.02em`). Un score qui passe de 9 à
-10 ne doit pas déplacer ce qui l'entoure, et un chrono qui compte ne doit pas frémir.
+**The tabular-figures rule.** Every number that can change under the eye carries `.nums`
+(`font-variant-numeric: tabular-nums`, `-0.02em`). A score going from 9 to 10 must not
+shift what surrounds it, and a counting clock must not shiver.
 
-**La règle des trois petits corps.** L'échelle des petits corps s'arrête à trois pas —
-12 px pour l'étiquette, 13 px pour le dialogue, 14 px pour le contenu — et chacun a une
-surface à lui. Un quatrième pas n'ajouterait pas de hiérarchie, il ajouterait une
-hésitation : au-delà, on distingue par la **graisse** et la **casse**, jamais par un
-demi-point de plus.
+**The three-small-sizes rule.** The scale of small sizes stops at three steps — 12 px for
+the label, 13 px for the dialog, 14 px for the content — and each has a surface of its
+own. A fourth step would add no hierarchy, it would add a hesitation: beyond that, we
+distinguish by **weight** and **case**, never by half a point more.
 
-> Cette règle a d'abord été écrite comme « la règle des deux corps », interdisant le
-> pas de 13 px. C'était une invention : le dépôt l'emploie dix-neuf fois, dans dix
-> fichiers, et de façon cohérente. Le détecteur a signalé l'écart dès la première
-> retouche, et c'est la documentation qui avait tort — un `DESIGN.md` décrit un système
-> établi, il ne légifère pas contre lui.
+> This rule was first written as "the two-sizes rule", forbidding the 13 px step. That
+> was an invention: the repo uses it nineteen times, across ten files, and consistently.
+> The detector flagged the discrepancy at the first touch-up, and it was the
+> documentation that was wrong — a `DESIGN.md` describes an established system, it does
+> not legislate against it.
 
 ## Layout
 
-Coquille fixe et contenu qui défile. Au-delà de `lg` (1024 px), l'application est un
-rectangle arrondi (26 px) posé dans une gouttière de 16 px, avec une barre latérale de
-navigation ; en dessous, elle occupe tout l'écran et la navigation passe en barre
-basse. Les points de rupture réellement employés sont `sm` (640 px) et `lg` — `md` et
-`xl` sont l'exception, et le mobile est le cas par défaut du code, pas une adaptation.
+A fixed shell and content that scrolls. Above `lg` (1024 px), the application is a
+rounded rectangle (26 px) laid in a 16 px gutter, with a navigation sidebar; below it,
+it takes the whole screen and navigation moves to a bottom bar. The breakpoints actually
+used are `sm` (640 px) and `lg` — `md` and `xl` are the exception, and mobile is the
+code's default case, not an adaptation.
 
-Conteneurs : `max-w-6xl` pour les écrans de lecture, `max-w-4xl` pour la table de
-marque, `max-w-2xl` pour les formulaires. Le rythme vertical tient en quatre pas :
-`{spacing.serre}` à l'intérieur d'un groupe, `{spacing.groupe}` entre deux lignes de
-liste, `{spacing.section}` entre deux blocs, `{spacing.ecran}` pour la marge d'écran.
+Containers: `max-w-6xl` for reading screens, `max-w-4xl` for the scorer's table,
+`max-w-2xl` for forms. The vertical rhythm fits in four steps: `{spacing.tight}` inside
+a group, `{spacing.group}` between two list rows, `{spacing.section}` between two blocks,
+`{spacing.screen}` for the screen margin.
 
-La table de marque est le seul écran à `h-dvh` avec `overflow-hidden` : le tableau
-d'affichage et le chrono ne défilent jamais hors de vue, seul l'effectif défile dans sa
-propre boîte (`min-h-0` sur le parent flexible, sans quoi l'enfant refuse de se
-comprimer).
+The scorer's table is the only screen at `h-dvh` with `overflow-hidden`: the scoreboard
+and the clock never scroll out of view, and only the roster scrolls in its own box
+(`min-h-0` on the flex parent, without which the child refuses to be compressed).
 
 ### Named Rules
 
-**La règle du doigt.** Toute commande fait `{spacing.doigt}` (44 px) de haut au
-minimum, et 24 px est le plancher absolu même au pointeur. On saisit un match dans un
-gymnase, au pouce, sans regarder — un bouton de 25 px n'est pas un petit bouton, c'est
-un bouton raté. Corollaire : sous `sm`, une action ne partage jamais sa rangée avec du
-texte ; elle passe dessous, sur toute la largeur.
+**The finger rule.** Every control is `{spacing.finger}` (44 px) tall at minimum, and
+24 px is the absolute floor even under a pointer. A game is recorded in a gym, with a
+thumb, without looking — a 25 px button is not a small button, it is a failed one.
+Corollary: below `sm`, an action never shares its row with text; it goes underneath, at
+full width.
 
 ## Elevation & Depth
 
-**Aucune ombre.** La profondeur est **tonale**, et c'est un invariant : elle vient de
-l'escalier des six plans neutres, plus un filet de 1 px (`{colors.border}`) qui dessine
-le bord des cartes. C'est ce que réclame un canevas encre — vers le noir, une ombre
-noire n'a rien à assombrir.
+**No shadow.** Depth is **tonal**, and that is an invariant: it comes from the staircase
+of six neutral planes, plus a 1 px hairline (`{colors.border}`) that draws the cards'
+edges. It is what an ink canvas demands — towards black, a black shadow has nothing left
+to darken.
 
-Les ombres de Tailwind (`shadow-lg`, `shadow-2xl`) sont calibrées pour flotter au-dessus
-d'un fond clair : sur le bandeau clair de la table de marque, `shadow-lg` se lisait
-comme une salissure sous le bouton. Elles ont été retirées.
+Tailwind's shadows (`shadow-lg`, `shadow-2xl`) are calibrated to float above a light
+background: on the scorer's table's light banner, `shadow-lg` read as a smudge under the
+button. They were removed.
 
-Une seule exception, et c'est une ombre de mise en scène et non de profondeur : la
-coquille au-delà de `lg` porte un `shadow-2xl` qui la détache de sa gouttière, comme
-une feuille posée sur un bureau.
+One exception, and it is a shadow of staging rather than of depth: above `lg` the shell
+carries a `shadow-2xl` that detaches it from its gutter, like a sheet laid on a desk.
 
 ### Named Rules
 
-**La règle du plan.** Un élément se détache par son **plan** et son **filet**, jamais
-par une ombre. Si deux surfaces ne se distinguent pas, on écarte leurs clartés — on
-n'ajoute pas une ombre. Et jamais de voile d'opacité sur une carte (`bg-card/50`) : il
-rapproche la carte de son fond de moitié et annule l'écart qu'on vient de creuser.
+**The plane rule.** An element detaches by its **plane** and its **hairline**, never by a
+shadow. If two surfaces do not separate, spread their lightnesses — do not add a shadow.
+And never veil a card with opacity (`bg-card/50`): it brings the card halfway back to its
+background and cancels the gap just opened.
 
 ## Shapes
 
-Des angles franchement adoucis, sur une seule échelle dérivée d'un rayon de base
-(`0.85rem`). Trois usages tiennent presque tout : `{rounded.xl}` pour les commandes et
-les lignes de liste, `{rounded.2xl}` pour les cartes, `{rounded.full}` pour les
-pastilles, les écussons et les boutons du bandeau. `{rounded.md}` reste aux petites
-commandes carrées (une croix de suppression, un chiffre de maillot).
+Frankly softened corners, on a single scale derived from a base radius (`0.85rem`).
+Three uses cover almost everything: `{rounded.xl}` for controls and list rows,
+`{rounded.2xl}` for cards, `{rounded.full}` for pills, crests and the banner's buttons.
+`{rounded.md}` is left to small square controls (a delete cross, a jersey number).
 
-Pas de bordure colorée épaisse, pas de coin coupé, pas de silhouette irrégulière. La
-seule géométrie signée du produit est le **terrain** — un demi ou un plein terrain FIBA
-coté en mètres, avec sa raquette peinte et son arc à trois points, dessiné en SVG et
-non approximé.
+No thick coloured border, no cut corner, no irregular silhouette. The product's one
+signed geometry is the **court** — a FIBA half or full court dimensioned in metres, with
+its painted key and its three-point arc, drawn in SVG rather than approximated.
 
 ### Named Rules
 
-**La règle du filet supérieur.** Un panneau qui appartient à une équipe porte un liseré
-intérieur de 3 px de la couleur de marque sur son bord haut
-(`inset 0 3px 0 0 var(--c-brand)`), et rien d'autre. C'est le seul ornement structurel
-autorisé.
+**The top-hairline rule.** A panel belonging to a team carries a 3 px inner rule in the
+brand colour along its top edge (`inset 0 3px 0 0 var(--c-brand)`), and nothing else. It
+is the only structural ornament allowed.
 
 ## Components
 
-Les commandes sont **franches et visées au pouce** : hautes, en graisse lourde, sur
-aplat saturé, sans ombre. Une commande se touche dans un gymnase pendant qu'un match se
-joue ; elle doit se trouver sans être cherchée.
+The controls are **plain and thumb-aimed**: tall, in heavy weight, on saturated flat
+areas, without shadow. A control is touched in a gym while a game is being played; it
+must be found without being looked for.
 
 ### Buttons
-- **Shape :** angles adoucis (`{rounded.xl}`) pour l'action principale,
-  `{rounded.md}` pour les commandes secondaires, `{rounded.full}` sur le bandeau de la
-  table de marque.
-- **Primary :** aplat citron (`{colors.brand}`) et encre presque noire
-  (`{colors.on-brand}`), 44 px de haut, libellé en 600 terminé par une flèche `→`
-  quand il mène ailleurs.
-- **Neutral :** aplat `{colors.card-raised}`, encre `{colors.text}`. **Au survol, il
-  devient citron** — c'est le geste commun à toute l'application, pas une variante
-  locale.
-- **Danger :** encre `{colors.danger}` sur fond voilé au repos, aplat
-  `{colors.danger-fill}` au survol. Volontairement discret au repos : un aplat criard
-  invite le pouce à s'y poser.
-- **Hover / Focus / Active :** `transition` sur la couleur, `active:scale-90` sur les
-  commandes de saisie répétée (les `+1`, les corrections de chrono) et
-  `active:scale-95` ailleurs. Le focus est l'anneau natif du navigateur, teinté par
-  `outline-ring/50` — jamais supprimé.
+- **Shape:** softened corners (`{rounded.xl}`) for the primary action, `{rounded.md}`
+  for secondary controls, `{rounded.full}` on the scorer's table banner.
+- **Primary:** lemon flat area (`{colors.brand}`) and near-black ink
+  (`{colors.on-brand}`), 44 px tall, label at 600 ending in an arrow `→` when it leads
+  elsewhere.
+- **Neutral:** `{colors.card-raised}` flat area, `{colors.text}` ink. **On hover it turns
+  lemon** — that is the gesture common to the whole application, not a local variant.
+- **Danger:** `{colors.danger}` ink on a veiled background at rest, `{colors.danger-fill}`
+  flat area on hover. Deliberately discreet at rest: a loud flat area invites the thumb
+  to land on it.
+- **Hover / Focus / Active:** `transition` on colour, `active:scale-90` on the controls of
+  repeated entry (the `+1`s, the clock corrections) and `active:scale-95` elsewhere. Focus
+  is the browser's native ring, tinted by `outline-ring/50` — never removed.
 
 ### Chips
-- **Style :** `{colors.card-raised}` et encre `{colors.muted}`, corps Label, angles
-  `{rounded.md}`. Une pastille d'état colorée porte l'aplat sémantique et son encre
-  appariée (Bonus en rose, « En direct » en vert, « À venir » en or).
-- **State :** la période courante du bandeau porte l'aplat citron ; les périodes
-  passées `{colors.card-raised}` ; les à venir un simple voile.
+- **Style:** `{colors.card-raised}` and `{colors.muted}` ink, Label size, `{rounded.md}`
+  corners. A coloured state pill carries the semantic flat area and its paired ink (the
+  bonus in pink, "En direct" in green, "À venir" in gold).
+- **State:** the banner's current period carries the lemon flat area; past periods
+  `{colors.card-raised}`; upcoming ones a plain veil.
 
 ### Cards / Containers
-- **Corner Style :** `{rounded.2xl}`.
-- **Background :** `{colors.card}`, à pleine opacité — jamais voilée.
-- **Shadow Strategy :** aucune. Voir Elevation & Depth.
-- **Border :** filet de 1 px `{colors.border}`.
-- **Internal Padding :** `{spacing.section}` (1,25 rem), `{spacing.ecran}` au-delà de
-  `sm`. Les lignes internes se posent sur un puits `{colors.panel}`, plus sombre que la
-  carte.
+- **Corner Style:** `{rounded.2xl}`.
+- **Background:** `{colors.card}`, at full opacity — never veiled.
+- **Shadow Strategy:** none. See Elevation & Depth.
+- **Border:** a 1 px `{colors.border}` hairline.
+- **Internal Padding:** `{spacing.section}` (1.25 rem), `{spacing.screen}` above `sm`.
+  The internal rows sit on a `{colors.panel}` well, darker than the card.
 
 ### Inputs / Fields
-- **Style :** fond `{colors.panel}` (un puits, plus sombre que la carte qui le porte),
-  filet 1 px, angles `{rounded.md}`, 44 px de haut.
-- **Focus :** le liseré passe à `{colors.accent}`, sans lueur.
-- **Label :** une vraie étiquette au-dessus du champ, jamais un `placeholder` seul —
-  il disparaît à la première frappe, donc au moment précis où l'on vérifie qu'on
-  remplit la bonne case, et un lecteur d'écran n'annonce qu'« champ de saisie ».
-- **Case à cocher :** 1,125 rem, `accent-color: {colors.brand}`, et c'est le
-  `<label>` qui l'englobe qui constitue la cible.
+- **Style:** `{colors.panel}` background (a well, darker than the card carrying it), 1 px
+  hairline, `{rounded.md}` corners, 44 px tall.
+- **Focus:** the hairline turns `{colors.accent}`, with no glow.
+- **Label:** a real label above the field, never a `placeholder` alone — it vanishes at
+  the first keystroke, that is at the precise moment you check you are filling the right
+  box, and a screen reader announces nothing but "edit text".
+- **Checkbox:** 1.125 rem, `accent-color: {colors.brand}`, and it is the enclosing
+  `<label>` that constitutes the target.
 
 ### Navigation
-Barre latérale au-delà de `lg`, barre basse en dessous, avec les mêmes destinations. La
-ligne active porte `{colors.card-raised}` et une encre citron ; les autres sont en
-`{colors.muted}`. Icônes Lucide, trait 2, taille 16–18 px, une seule famille.
+A sidebar above `lg`, a bottom bar below, with the same destinations. The active row
+carries `{colors.card-raised}` and lemon ink; the others are in `{colors.muted}`. Lucide
+icons, stroke 2, size 16–18 px, one family.
 
-### Le tableau d'affichage
-Le composant signature. Deux scores en Display de part et d'autre du chrono, chacun
-précédé d'une pastille de 8 px et du nom de l'équipe. **Nous en encre
-(`{colors.text}`), l'adversaire en accent (`{colors.accent}`)** : la question posée est
-« nous ou eux ». Le score qui mène est à pleine opacité, l'autre à 0,85.
+### The scoreboard
+The signature component. Two Display scores either side of the clock, each preceded by an
+8 px pill and the team's name. **Us in ink (`{colors.text}`), the opposition in accent
+(`{colors.accent}`)**: the question asked is "us or them". The leading score is at full
+opacity, the other at 0.85.
 
-Le nombre accuse réception du geste qui l'a changé, et le **sens** compte : il monte
-parce qu'on a marqué (`score-up`, 150 ms), il descend parce qu'on a annulé
-(`score-down`). C'est le seul mouvement d'auteur du produit, et il porte une
-information que rien d'autre ne porte — *le geste a été pris en compte, de ce côté-ci*.
-Rien au premier rendu.
+The number acknowledges the gesture that changed it, and the **direction** matters: it
+rises because someone scored (`score-up`, 150 ms), it falls because someone undid
+(`score-down`). It is the product's only authored motion, and it carries information
+nothing else carries — *the gesture was taken, on this side*. Nothing on the first
+render.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** faire porter la couleur par un **aplat** avec son encre appariée
-  (`--c-*-fill` + `--c-on-*`). C'est la règle du remplissage, et elle est la correction
-  de trois palettes rejetées.
-- **Do** employer `--c-brand` pour remplir et `--c-accent` pour écrire. En thème sombre
-  les deux valent la même chose ; en clair ils divergent, et c'est le clair qui révèle
-  l'erreur.
-- **Do** donner 44 px de haut à toute commande, et faire passer l'action sous le texte
-  en dessous de `sm`.
-- **Do** pointer les jetons shadcn (`--card`, `--muted`, `--background`) vers les plans
-  `--c-*`. Une seconde échelle à un pour cent près se corrige deux fois et dérive.
-- **Do** porter `.nums` sur tout nombre susceptible de changer sous l'œil.
-- **Do** composer le thème clair **séparément**. Il ne se déduit pas du sombre.
-- **Do** vérifier les deux thèmes avant de conclure. Le sombre pardonne un citron
-  partout ; le clair non.
+- **Do** let colour be carried by a **flat area** with its paired ink (`--c-*-fill` +
+  `--c-on-*`). That is the fill rule, and it is the correction of three rejected
+  palettes.
+- **Do** use `--c-brand` to fill and `--c-accent` to write. In the dark theme the two are
+  the same value; on light they diverge, and it is light that reveals the error.
+- **Do** give every control 44 px of height, and move the action under the text below
+  `sm`.
+- **Do** point the shadcn tokens (`--card`, `--muted`, `--background`) at the `--c-*`
+  planes. A second scale to within a per cent gets corrected twice and drifts.
+- **Do** carry `.nums` on every number liable to change under the eye.
+- **Do** compose the light theme **separately**. It is not derived from the dark one.
+- **Do** check both themes before concluding. Dark forgives lemon everywhere; light does
+  not.
 
 ### Don't:
-- **Don't** ajouter d'ombre pour détacher un élément. On écarte les plans, on pose un
-  filet de 1 px.
-- **Don't** voiler une carte (`bg-card/50`) : le voile annule la moitié de la
-  séparation des plans.
-- **Don't** employer une couleur Tailwind brute (`bg-red-600`, `text-emerald-700`).
-  Elles sont calibrées pour un charcoal et sortent de la charte dans les deux thèmes.
-  Le dépôt n'en contient aucune, et c'est un état à préserver.
-- **Don't** créer de famille de jetons pour une surface qui « ne basculerait pas ». Ça
-  a été tenté deux fois — le bandeau de la table de marque et le terrain — et les deux
-  ont produit un rectangle noir au milieu d'une application claire. Seule la
-  *convention de teintes* du terrain échappe au thème, jamais sa surface.
-- **Don't** colorer un texte ou une série de graphique par un hachage d'identifiant.
-  Réservé aux écussons.
-- **Don't** mettre le nom d'un champ dans son seul `placeholder`.
-- **Don't** annoncer un rapport de contraste dans un commentaire. Les chiffres
-  périment au premier ajustement de teinte et personne ne les recalcule ; ils vivent
-  dans `src/ui/theme/contrast.test.ts`, qui relit le CSS et refait le calcul.
-- **Don't** ajouter de mouvement pour rendre la finition visible. Un seul moment
-  d'auteur existe (le score qui répond), et le mouvement infini est coupé sous
-  `prefers-reduced-motion` sans supprimer l'accusé de réception.
+- **Don't** add a shadow to detach an element. Spread the planes, lay a 1 px hairline.
+- **Don't** veil a card (`bg-card/50`): the veil cancels half the separation of the
+  planes.
+- **Don't** use a raw Tailwind colour (`bg-red-600`, `text-emerald-700`). They are
+  calibrated for a charcoal and fall outside the charter in both themes. The repo
+  contains none, and that is a state worth preserving.
+- **Don't** create a token family for a surface that "would not switch". It was tried
+  twice — the scorer's table banner and the court — and both produced a black rectangle
+  in the middle of a light application. Only the court's *colour convention* escapes the
+  theme, never its surface.
+- **Don't** colour a text or a chart series by a hash of an id. Reserved for crests.
+- **Don't** put a field's name in its `placeholder` alone.
+- **Don't** announce a contrast ratio in a comment. The figures go stale at the first hue
+  adjustment and nobody recomputes them; they live in `src/ui/theme/contrast.test.ts`,
+  which reads the CSS back and redoes the calculation.
+- **Don't** add motion to make the finish visible. One authored moment exists (the score
+  answering), and infinite motion is cut under `prefers-reduced-motion` without removing
+  the acknowledgement.

@@ -6,7 +6,7 @@
     "colorMeta": {
       "brand": {
         "role": "primary",
-        "displayName": "Citron électrique",
+        "displayName": "Electric lemon",
         "canonical": "oklch(94.3% 0.211 119.6)",
         "tonalRamp": [
           "oklch(15% 0.211 119.6)",
@@ -21,7 +21,7 @@
       },
       "accent": {
         "role": "primary",
-        "displayName": "Citron électrique (encre)",
+        "displayName": "Electric lemon (ink)",
         "canonical": "oklch(94.3% 0.211 119.6)",
         "tonalRamp": [
           "oklch(15% 0.211 119.6)",
@@ -36,7 +36,7 @@
       },
       "green-fill": {
         "role": "tertiary",
-        "displayName": "Vert vif",
+        "displayName": "Vivid green",
         "canonical": "oklch(80.0% 0.186 156.4)",
         "tonalRamp": [
           "oklch(15% 0.186 156.4)",
@@ -51,7 +51,7 @@
       },
       "danger-fill": {
         "role": "tertiary",
-        "displayName": "Rose alerte",
+        "displayName": "Alert pink",
         "canonical": "oklch(68.6% 0.206 15.0)",
         "tonalRamp": [
           "oklch(15% 0.206 15.0)",
@@ -66,7 +66,7 @@
       },
       "gold-fill": {
         "role": "tertiary",
-        "displayName": "Or",
+        "displayName": "Gold",
         "canonical": "oklch(87.9% 0.162 90.9)",
         "tonalRamp": [
           "oklch(15% 0.162 90.9)",
@@ -81,7 +81,7 @@
       },
       "info-fill": {
         "role": "tertiary",
-        "displayName": "Bleu séance",
+        "displayName": "Session blue",
         "canonical": "oklch(74.4% 0.145 241.4)",
         "tonalRamp": [
           "oklch(15% 0.145 241.4)",
@@ -96,7 +96,7 @@
       },
       "frame": {
         "role": "neutral",
-        "displayName": "Encre de salle",
+        "displayName": "Hall ink",
         "canonical": "oklch(19.0% 0.018 259.7)",
         "tonalRamp": [
           "oklch(15% 0.018 259.7)",
@@ -111,7 +111,7 @@
       },
       "card": {
         "role": "neutral",
-        "displayName": "Ardoise",
+        "displayName": "Slate",
         "canonical": "oklch(27.2% 0.029 261.4)",
         "tonalRamp": [
           "oklch(15% 0.029 261.4)",
@@ -126,7 +126,7 @@
       },
       "card-raised": {
         "role": "neutral",
-        "displayName": "Ardoise levée",
+        "displayName": "Raised slate",
         "canonical": "oklch(32.8% 0.035 262.0)",
         "tonalRamp": [
           "oklch(15% 0.035 262.0)",
@@ -141,7 +141,7 @@
       },
       "border": {
         "role": "neutral",
-        "displayName": "Filet",
+        "displayName": "Hairline",
         "canonical": "oklch(39.5% 0.040 259.9)",
         "tonalRamp": [
           "oklch(15% 0.040 259.9)",
@@ -156,7 +156,7 @@
       },
       "text": {
         "role": "neutral",
-        "displayName": "Craie",
+        "displayName": "Chalk",
         "canonical": "oklch(96.0% 0.008 253.9)",
         "tonalRamp": [
           "oklch(15% 0.008 253.9)",
@@ -171,7 +171,7 @@
       },
       "muted": {
         "role": "neutral",
-        "displayName": "Craie éteinte",
+        "displayName": "Dimmed chalk",
         "canonical": "oklch(77.1% 0.030 254.7)",
         "tonalRamp": [
           "oklch(15% 0.030 254.7)",
@@ -186,7 +186,7 @@
       },
       "court": {
         "role": "neutral",
-        "displayName": "Parquet de nuit",
+        "displayName": "Night hardwood",
         "canonical": "oklch(22.3% 0.023 254.3)",
         "tonalRamp": [
           "oklch(15% 0.023 254.3)",
@@ -201,7 +201,7 @@
       },
       "court-attack": {
         "role": "tertiary",
-        "displayName": "Rouge attaque",
+        "displayName": "Attack red",
         "canonical": "oklch(68.6% 0.206 15.0)",
         "tonalRamp": [
           "oklch(15% 0.206 15.0)",
@@ -216,7 +216,7 @@
       },
       "court-defense": {
         "role": "tertiary",
-        "displayName": "Bleu défense",
+        "displayName": "Defence blue",
         "canonical": "oklch(74.4% 0.145 241.4)",
         "tonalRamp": [
           "oklch(15% 0.145 241.4)",
@@ -231,7 +231,7 @@
       },
       "court-ball": {
         "role": "tertiary",
-        "displayName": "Or ballon",
+        "displayName": "Ball gold",
         "canonical": "oklch(87.9% 0.162 90.9)",
         "tonalRamp": [
           "oklch(15% 0.162 90.9)",
@@ -248,66 +248,66 @@
     "typographyMeta": {
       "display": {
         "displayName": "Score",
-        "purpose": "Les scores et le chrono, et rien d'autre. Toujours via la classe `.nums` (chiffres tabulaires, -0,02em)."
+        "purpose": "The scores and the clock, and nothing else. Always through the `.nums` class (tabular figures, -0.02em)."
       },
       "headline": {
         "displayName": "Titre d'écran",
-        "purpose": "Le titre d'un écran, une fois par page."
+        "purpose": "A screen's title, once per page."
       },
       "title": {
         "displayName": "Titre de carte",
-        "purpose": "Le titre d'une carte ou d'une section, souvent en majuscules."
+        "purpose": "A card's or a section's title, often uppercase."
       },
       "body": {
         "displayName": "Corps",
-        "purpose": "Tout le contenu courant. Le corps le plus employé du dépôt, de loin."
+        "purpose": "All the ordinary content. By far the most used size in the repo."
       },
       "label": {
         "displayName": "Micro-étiquette",
-        "purpose": "« FAUTES », « PROCHAINE ÉCHÉANCE ». C'est ce corps qui donne le grain « feuille de match »."
+        "purpose": "“FAUTES”, “PROCHAINE ÉCHÉANCE”. It is this size that gives the “match sheet” grain."
       },
       "body-compact": {
         "displayName": "Corps de dialogue",
-        "purpose": "Le corps des dialogues et des panneaux secondaires denses (message de confirmation, dialogue de code, aide d'administration, panneau d'accès), plus quelques commandes serrées. Un dialogue est lu de près sur une surface étroite : un cran sous le corps courant y tient la mesure sans rétrécir la cible."
+        "purpose": "The body of dialogs and dense secondary panels (a confirmation's message, a code dialog, an administration hint, the access panel), plus a few tight controls. A dialog is read close up on a narrow surface: one step under the ordinary body holds the measure there without shrinking the target."
       }
     },
     "shadows": [
       {
-        "name": "aucune",
+        "name": "none",
         "value": "none",
-        "purpose": "L'invariant. La profondeur est tonale : l'escalier des six plans neutres plus un filet de 1 px. Vers le noir, une ombre noire n'a rien à assombrir, et les ombres de Tailwind se lisent comme une salissure sur le bandeau clair."
+        "purpose": "The invariant. Depth is tonal: the staircase of six neutral planes plus a 1 px hairline. Towards black, a black shadow has nothing left to darken, and Tailwind's shadows read as a smudge on the light banner."
       },
       {
-        "name": "coquille",
+        "name": "shell",
         "value": "0 25px 50px -12px rgb(0 0 0 / 0.25)",
-        "purpose": "Seule exception, et c'est une ombre de mise en scène et non de profondeur : au-delà de 1024 px, elle détache la coquille arrondie de sa gouttière, comme une feuille posée sur un bureau."
+        "purpose": "The one exception, and it is a shadow of staging rather than of depth: above 1024 px it detaches the rounded shell from its gutter, like a sheet laid on a desk."
       }
     ],
     "motion": [
       {
-        "name": "sortie-exponentielle",
+        "name": "exponential-out",
         "value": "cubic-bezier(0.16, 1, 0.3, 1)",
-        "purpose": "La seule courbe du produit. Sortie franche depuis un état déjà visible."
+        "purpose": "The product's only curve. A clean exit from an already visible state."
       },
       {
         "name": "score-up",
         "value": "150ms",
-        "purpose": "Le score monte parce qu'on a marqué : il arrive en grandissant vers sa place."
+        "purpose": "The score rises because someone scored: it arrives growing into its place."
       },
       {
         "name": "score-down",
         "value": "150ms",
-        "purpose": "Le score descend parce qu'on a annulé : il part de plus grand et se retire. Le sens porte la cause — le même mouvement dans les deux cas dirait « quelque chose a changé » là où il faut lire « quoi »."
+        "purpose": "The score falls because someone undid: it starts larger and withdraws. The direction carries the cause — the same motion in both cases would say “something changed” where you need to read “what”."
       },
       {
         "name": "bonus-in",
         "value": "200ms",
-        "purpose": "La pastille Bonus au montage, une seule fois : au cinquième faute d'équipe (TEAM_FOUL_BONUS, cinq en FFBB), c'est la règle du match qui change."
+        "purpose": "The Bonus pill on mount, once: on the fifth team foul (TEAM_FOUL_BONUS, five under FFBB rules), it is the game's rule that changes."
       },
       {
         "name": "reduced-motion",
         "value": "score-flash",
-        "purpose": "Sous prefers-reduced-motion, les boucles infinies s'arrêtent à pleine opacité et le mouvement du score devient un flash — l'accusé de réception survit, seul le déplacement disparaît."
+        "purpose": "Under prefers-reduced-motion, infinite loops stop at full opacity and the score's motion becomes a flash — the acknowledgement survives, only the travel disappears."
       }
     ],
     "breakpoints": [
@@ -323,146 +323,146 @@
   },
   "components": [
     {
-      "name": "Bouton principal",
+      "name": "Primary button",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "L'action de l'écran. Aplat citron, encre presque noire, hauteur d'un doigt.",
+      "description": "The screen's action. Lemon flat area, near-black ink, a finger tall.",
       "html": "<button class=\"ds-btn-primary\">Planifier une rencontre →</button>",
       "css": ".ds-btn-primary { height: 2.75rem; padding: 0 1.5rem; border: none; border-radius: 1.19rem; background: var(--c-brand); color: var(--c-on-brand); font: 600 0.875rem/1 'Geist Variable', sans-serif; cursor: pointer; transition: filter .15s, transform .15s; } .ds-btn-primary:hover { filter: brightness(1.1); } .ds-btn-primary:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; } .ds-btn-primary:active { transform: scale(.95); }"
     },
     {
-      "name": "Bouton neutre",
+      "name": "Neutral button",
       "kind": "button",
       "refersTo": "button-neutral",
-      "description": "Toute commande secondaire. Au survol elle devient citron — le geste commun à toute l'application.",
+      "description": "Every secondary control. On hover it turns lemon — the gesture common to the whole application.",
       "html": "<button class=\"ds-btn-neutral\">Annuler</button>",
       "css": ".ds-btn-neutral { height: 2.75rem; padding: 0 1rem; border: none; border-radius: .68rem; background: var(--c-card2); color: var(--c-text); font: 700 0.75rem/1 'Geist Variable', sans-serif; cursor: pointer; transition: background .15s, color .15s, transform .15s; } .ds-btn-neutral:hover { background: var(--c-brand); color: var(--c-on-brand); } .ds-btn-neutral:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; } .ds-btn-neutral:active { transform: scale(.95); }"
     },
     {
-      "name": "Bouton destructeur",
+      "name": "Destructive button",
       "kind": "button",
       "refersTo": "button-danger",
-      "description": "Volontairement discret au repos : un aplat criard inviterait le pouce à s'y poser. L'aplat n'arrive qu'au survol.",
+      "description": "Deliberately discreet at rest: a loud flat area would invite the thumb to land on it. The flat area arrives only on hover.",
       "html": "<button class=\"ds-btn-danger\">Terminer</button>",
       "css": ".ds-btn-danger { height: 2.75rem; padding: 0 1rem; border: none; border-radius: .68rem; background: var(--c-danger-bg); color: var(--c-danger); font: 700 0.75rem/1 'Geist Variable', sans-serif; cursor: pointer; transition: background .15s, color .15s; } .ds-btn-danger:hover { background: var(--c-danger-fill); color: var(--c-on-danger); } .ds-btn-danger:focus-visible { outline: 2px solid var(--c-danger); outline-offset: 2px; }"
     },
     {
-      "name": "Carte",
+      "name": "Card",
       "kind": "card",
       "refersTo": "card",
-      "description": "Le plan haut. Pleine opacité, filet de 1 px, aucune ombre — la profondeur vient de l'écart des plans.",
+      "description": "The high plane. Full opacity, a 1 px hairline, no shadow — depth comes from the gap between planes.",
       "html": "<section class=\"ds-card\"><p class=\"ds-card-label\">Points marqués</p><p class=\"ds-card-value\">77</p><p class=\"ds-card-hint\">par match</p></section>",
       "css": ".ds-card { background: var(--c-card); border: 1px solid var(--c-border); border-radius: 1.53rem; padding: 1rem; font-family: 'Geist Variable', sans-serif; color: var(--c-text); } .ds-card-label { margin: 0; font: 700 0.75rem/1.3 inherit; letter-spacing: .025em; text-transform: uppercase; color: var(--c-faint); } .ds-card-value { margin: .25rem 0 0; font: 900 1.5rem/1 inherit; font-variant-numeric: tabular-nums; letter-spacing: -.02em; } .ds-card-hint { margin: .125rem 0 0; font: 600 0.75rem/1.3 inherit; color: var(--c-muted); }"
     },
     {
-      "name": "Champ de saisie",
+      "name": "Input field",
       "kind": "input",
       "refersTo": "input",
-      "description": "Un puits creusé dans la carte : plus sombre qu'elle. Étiquette réelle au-dessus, jamais un placeholder seul.",
+      "description": "A well hollowed into the card: darker than it. A real label above, never a placeholder alone.",
       "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Nom de l'équipe</span><input class=\"ds-input\" placeholder=\"ex. AVENIR DE VIGNOT\" /></label>",
       "css": ".ds-field { display: block; font-family: 'Geist Variable', sans-serif; } .ds-field-label { display: block; margin-bottom: .375rem; font: 700 0.75rem/1.3 inherit; letter-spacing: .025em; text-transform: uppercase; color: var(--c-faint); } .ds-input { width: 100%; height: 2.75rem; padding: 0 .875rem; border: 1px solid var(--c-border); border-radius: .68rem; background: var(--c-panel); color: var(--c-text); font: 400 0.875rem/1 inherit; outline: none; transition: border-color .15s; } .ds-input::placeholder { color: var(--c-faint); } .ds-input:focus { border-color: var(--c-accent); }"
     },
     {
-      "name": "Pastille d'état",
+      "name": "State chip",
       "kind": "chip",
       "refersTo": "chip-label",
-      "description": "Dit un état et disparaît avec lui. Aplat sémantique et encre appariée — jamais l'accent de marque.",
+      "description": "States a state and disappears with it. A semantic flat area and its paired ink — never the brand accent.",
       "html": "<span class=\"ds-chip ds-chip-live\">En direct</span> <span class=\"ds-chip ds-chip-soon\">À venir</span> <span class=\"ds-chip ds-chip-bonus\">Bonus</span>",
       "css": ".ds-chip { display: inline-flex; align-items: center; gap: .5rem; padding: .25rem .5rem; border-radius: .68rem; font: 900 0.75rem/1.3 'Geist Variable', sans-serif; letter-spacing: .025em; text-transform: uppercase; } .ds-chip-live { background: var(--c-green-fill); color: var(--c-on-green); } .ds-chip-soon { background: var(--c-amber-bg); color: var(--c-amber); } .ds-chip-bonus { background: var(--c-danger-fill); color: var(--c-on-danger); }"
     },
     {
-      "name": "Navigation latérale",
+      "name": "Sidebar navigation",
       "kind": "nav",
       "refersTo": "nav-item-active",
-      "description": "La ligne active porte l'ardoise levée et une encre citron ; les autres restent en craie éteinte. Icônes d'une seule famille, trait 2.",
+      "description": "The active row carries the raised slate and lemon ink; the others stay in dimmed chalk. Icons from one family, stroke 2.",
       "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-active\" href=\"#\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z\"/></svg>Tableau de bord</a><a class=\"ds-nav-item\" href=\"#\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/><path d=\"M3 10h18M8 2v4M16 2v4\"/></svg>Calendrier</a></nav>",
       "css": ".ds-nav { display: flex; flex-direction: column; gap: .125rem; font-family: 'Geist Variable', sans-serif; } .ds-nav-item { display: flex; align-items: center; gap: .625rem; padding: .5rem .75rem; border-radius: .68rem; font: 600 0.875rem/1 inherit; color: var(--c-muted); text-decoration: none; transition: background .15s, color .15s; } .ds-nav-item svg { width: 16px; height: 16px; flex: none; } .ds-nav-item:hover { color: var(--c-text); background: var(--c-hover); } .ds-nav-active { background: var(--c-card2); color: var(--c-brand); }"
     },
     {
-      "name": "Tableau d'affichage",
+      "name": "Scoreboard",
       "kind": "custom",
       "refersTo": "card",
-      "description": "Le composant signature. Nous en encre, l'adversaire en accent : la question posée est « nous ou eux ». Le score qui mène est à pleine opacité, l'autre à 0,85.",
+      "description": "The signature component. Us in ink, the opposition in accent: the question asked is “us or them”. The leading score is at full opacity, the other at 0.85.",
       "html": "<div class=\"ds-board\"><div class=\"ds-side ds-side-us\"><span class=\"ds-team\"><i class=\"ds-dot ds-dot-us\"></i>AVENIR DE VIGNOT</span><span class=\"ds-score ds-score-us\">42</span></div><div class=\"ds-clock\">05:00</div><div class=\"ds-side\"><span class=\"ds-team\"><i class=\"ds-dot ds-dot-them\"></i>ÉTOILE DE METZ</span><span class=\"ds-score ds-score-them\">36</span></div></div>",
       "css": ".ds-board { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1.5rem; padding: 1rem 1.5rem; background: var(--c-card); border-bottom: 1px solid var(--c-border); border-radius: 1.53rem; font-family: 'Geist Variable', sans-serif; } .ds-side { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; } .ds-side-us { align-items: flex-end; } .ds-team { display: flex; align-items: center; gap: .375rem; font: 700 0.75rem/1.3 inherit; color: var(--c-muted); text-transform: uppercase; letter-spacing: .025em; } .ds-dot { width: 8px; height: 8px; border-radius: 9999px; } .ds-dot-us { background: var(--c-text); } .ds-dot-them { background: var(--c-accent); } .ds-score { font: 900 3.5rem/1 inherit; font-variant-numeric: tabular-nums; letter-spacing: -.02em; } .ds-score-us { color: var(--c-text); } .ds-score-them { color: var(--c-accent); opacity: .85; } .ds-clock { font: 700 2.75rem/1 ui-monospace, monospace; font-variant-numeric: tabular-nums; color: var(--c-text); }"
     }
   ],
   "narrative": {
-    "northStar": "La Nuit électrique",
-    "overview": "Un gymnase le soir. La salle est dans le noir, et ce qui éclaire, c'est le tableau d'affichage et les lignes du terrain. Swish est cette scène : un canevas encre presque noir, et un seul citron électrique qui porte tout ce qui compte — le score de l'adversaire, le bouton qu'on va toucher, la période en cours. La couleur est rare parce qu'elle est de la lumière, et une salle avec dix lampes n'éclaire rien.\n\nLe produit est un outil, pas une vitrine. Il se tient à une main dans un gymnase, au pouce, pendant qu'un match se joue — et il se lit aussi de loin, projeté pour les spectateurs. Les chiffres sont donc l'objet principal : tabulaires, très lourds, énormes quand ils sont le score. Tout le reste s'efface derrière eux.\n\nLe monde est sombre d'abord, et c'est un choix d'identité, pas un mode d'économie. Le thème clair existe et il est composé, jamais hérité. Trois palettes ont été rejetées avant celle-ci, toutes pour la même raison — elles dérivaient chaque couleur d'une contrainte de contraste sur fond blanc, ce qui force l'assombrissement et la désaturation.",
+    "northStar": "Electric night",
+    "overview": "A gym in the evening. The hall is dark, and what gives light is the scoreboard and the court's lines. Swish is that scene: a near-black ink canvas, and a single electric lemon carrying everything that counts — the opposition's score, the button about to be touched, the current period. Colour is rare because it is light, and a hall with ten lamps lights nothing.\n\nThe product is a tool, not a showcase. It is held one-handed in a gym, under a thumb, while a game is being played — and it is also read from a distance, projected for spectators. The numbers are therefore the main object: tabular, very heavy, enormous when they are the score. Everything else recedes behind them.\n\nThe world is dark first, and that is a choice of identity, not an economy mode. The light theme exists and it is composed, never inherited. Three palettes were rejected before this one, all for the same reason — they derived every colour from a contrast constraint against white, which forces darkening and desaturation.",
     "keyCharacteristics": [
-      "Canevas encre, un seul accent citron électrique (#dcff33)",
-      "Chiffres tabulaires, graisses 800–900, jusqu'à 6 rem pour un score",
-      "Aucune ombre : la profondeur vient d'un escalier de plans et d'un filet de 1 px",
-      "Toute commande fait 44 px de haut, sans exception",
-      "Deux thèmes composés séparément, jamais l'un dérivé de l'autre",
-      "Le terrain tactique a sa propre palette, dont la convention de teintes ne bascule pas"
+      "Ink canvas, a single electric lemon accent (#dcff33)",
+      "Tabular figures, weights 800–900, up to 6 rem for a score",
+      "No shadow: depth comes from a staircase of planes and a 1 px hairline",
+      "Every control is 44 px tall, without exception",
+      "Two themes composed separately, neither derived from the other",
+      "The playbook court has its own palette, whose colour convention does not switch"
     ],
     "rules": [
       {
-        "name": "La règle du remplissage",
+        "name": "The fill rule",
         "section": "colors",
-        "body": "La couleur vit dans les aplats, avec leur encre appariée (*-fill + on-*) ; les encres restent presque noires ou presque blanches. Une couleur qui n'a pas à se lire comme petit texte sur du blanc n'a plus besoin d'être assombrie — et c'est l'assombrissement qui rendait l'ensemble terne. Corollaire : brand remplit, accent écrit."
+        "body": "Colour lives in the flat areas, with their paired ink (*-fill + on-*); the inks stay near-black or near-white. A colour that does not have to read as small text on white no longer needs darkening — and it was the darkening that made the whole thing drab. Corollary: brand fills, accent writes."
       },
       {
-        "name": "La règle d'une seule voix",
+        "name": "The one-voice rule",
         "section": "colors",
-        "body": "Un seul accent sur toute l'application. Un second accent ne double pas l'expressivité, il divise par deux la lisibilité du premier."
+        "body": "One accent across the whole application. A second accent does not double the expressiveness, it halves the legibility of the first."
       },
       {
-        "name": "La règle du bureau",
+        "name": "The desk rule",
         "section": "colors",
-        "body": "La gouttière doit se voir et ne jamais dominer la carte. Le sens de l'écart suit la place disponible : en clair il y a de la place sous le papier, en sombre il n'y en a pas sous le noir."
+        "body": "The gutter must be visible and must never dominate the card. The direction of the gap follows the room available: on light there is room under the paper, on dark there is none under the black."
       },
       {
-        "name": "La règle du hachage",
+        "name": "The hash rule",
         "section": "colors",
-        "body": "Une couleur tirée d'un hachage d'identifiant est juste pour un écusson dans une liste, et fausse partout ailleurs. Jamais comme encre, ni comme série de graphique."
+        "body": "A colour drawn from a hash of an id is right for a crest in a list, and wrong everywhere else. Never as ink, nor as a chart series."
       },
       {
-        "name": "La règle des chiffres tabulaires",
+        "name": "The tabular-figures rule",
         "section": "typography",
-        "body": "Tout nombre qui peut changer sous l'œil porte .nums. Un score qui passe de 9 à 10 ne doit pas déplacer ce qui l'entoure."
+        "body": "Every number that can change under the eye carries .nums. A score going from 9 to 10 must not shift what surrounds it."
       },
       {
-        "name": "La règle des trois petits corps",
+        "name": "The three-small-sizes rule",
         "section": "typography",
-        "body": "L'échelle des petits corps s'arrête à trois pas — 12 px pour l'étiquette, 13 px pour le dialogue, 14 px pour le contenu — et chacun a une surface à lui. Un quatrième pas n'ajouterait pas de hiérarchie, il ajouterait une hésitation : au-delà, on distingue par la graisse et la casse. Écrite d'abord comme « la règle des deux corps » en interdisant le pas de 13 px, elle était une invention — le dépôt l'emploie dix-neuf fois dans dix fichiers, de façon cohérente."
+        "body": "The scale of small sizes stops at three steps — 12 px for the label, 13 px for the dialog, 14 px for the content — and each has a surface of its own. A fourth step would add no hierarchy, it would add a hesitation: beyond that we distinguish by weight and case. First written as “the two-sizes rule”, forbidding the 13 px step, it was an invention — the repo uses it nineteen times across ten files, consistently."
       },
       {
-        "name": "La règle du doigt",
+        "name": "The finger rule",
         "section": "layout",
-        "body": "Toute commande fait 44 px de haut au minimum, et 24 px est le plancher absolu même au pointeur. Sous sm, une action ne partage jamais sa rangée avec du texte."
+        "body": "Every control is 44 px tall at minimum, and 24 px is the absolute floor even under a pointer. Below sm, an action never shares its row with text."
       },
       {
-        "name": "La règle du plan",
+        "name": "The plane rule",
         "section": "elevation",
-        "body": "Un élément se détache par son plan et son filet, jamais par une ombre. Si deux surfaces ne se distinguent pas, on écarte leurs clartés. Et jamais de voile d'opacité sur une carte."
+        "body": "An element detaches by its plane and its hairline, never by a shadow. If two surfaces do not separate, spread their lightnesses. And never veil a card with opacity."
       },
       {
-        "name": "La règle du filet supérieur",
+        "name": "The top-hairline rule",
         "section": "shapes",
-        "body": "Un panneau qui appartient à une équipe porte un liseré intérieur de 3 px de la couleur de marque sur son bord haut, et rien d'autre."
+        "body": "A panel belonging to a team carries a 3 px inner rule in the brand colour along its top edge, and nothing else."
       }
     ],
     "dos": [
-      "Do faire porter la couleur par un aplat avec son encre appariée (--c-*-fill + --c-on-*).",
-      "Do employer --c-brand pour remplir et --c-accent pour écrire.",
-      "Do donner 44 px de haut à toute commande, et faire passer l'action sous le texte en dessous de sm.",
-      "Do pointer les jetons shadcn (--card, --muted, --background) vers les plans --c-*.",
-      "Do porter .nums sur tout nombre susceptible de changer sous l'œil.",
-      "Do composer le thème clair séparément. Il ne se déduit pas du sombre.",
-      "Do vérifier les deux thèmes avant de conclure. Le sombre pardonne un citron partout ; le clair non."
+      "Do let colour be carried by a flat area with its paired ink (--c-*-fill + --c-on-*).",
+      "Do use --c-brand to fill and --c-accent to write.",
+      "Do give every control 44 px of height, and move the action under the text below sm.",
+      "Do point the shadcn tokens (--card, --muted, --background) at the --c-* planes.",
+      "Do carry .nums on every number liable to change under the eye.",
+      "Do compose the light theme separately. It is not derived from the dark one.",
+      "Do check both themes before concluding. Dark forgives lemon everywhere; light does not."
     ],
     "donts": [
-      "Don't ajouter d'ombre pour détacher un élément. On écarte les plans, on pose un filet de 1 px.",
-      "Don't voiler une carte (bg-card/50) : le voile annule la moitié de la séparation des plans.",
-      "Don't employer une couleur Tailwind brute (bg-red-600, text-emerald-700). Le dépôt n'en contient aucune.",
-      "Don't créer de famille de jetons pour une surface qui « ne basculerait pas ». Ça a été tenté deux fois et les deux ont produit un rectangle noir au milieu d'une application claire.",
-      "Don't colorer un texte ou une série de graphique par un hachage d'identifiant.",
-      "Don't mettre le nom d'un champ dans son seul placeholder.",
-      "Don't annoncer un rapport de contraste dans un commentaire ; ils vivent dans src/ui/theme/contrast.test.ts.",
-      "Don't ajouter de mouvement pour rendre la finition visible."
+      "Don't add a shadow to detach an element. Spread the planes, lay a 1 px hairline.",
+      "Don't veil a card (bg-card/50): the veil cancels half the separation of the planes.",
+      "Don't use a raw Tailwind colour (bg-red-600, text-emerald-700). The repo contains none.",
+      "Don't create a token family for a surface that “would not switch”. It was tried twice and both produced a black rectangle in the middle of a light application.",
+      "Don't colour a text or a chart series by a hash of an id.",
+      "Don't put a field's name in its placeholder alone.",
+      "Don't announce a contrast ratio in a comment; they live in src/ui/theme/contrast.test.ts.",
+      "Don't add motion to make the finish visible."
     ]
   }
 }
