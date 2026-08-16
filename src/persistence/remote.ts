@@ -219,7 +219,7 @@ async function doFlush(): Promise<void> {
        * on closing stays in the queue and leaves again at the next start, which is
        * infinitely preferable to a batch that never leaves at all.
        */
-      const r = await fetch(`${BASE}/state`, {
+      const r = await fetch(`${BASE}/mutate`, {
         method: 'POST', headers: headers(), body,
         keepalive: new Blob([body]).size < 60_000,
       })
