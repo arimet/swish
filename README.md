@@ -171,7 +171,9 @@ Sync shares data between devices **and** powers remote spectator following. Thre
    then injects `DATABASE_URL` — use the pooled connection string.
 2. Create the table: `psql "$DATABASE_URL" -f db/schema.sql`.
 3. Set **`SYNC_WRITE_TOKEN`** to a long random string, add **`VITE_SYNC_URL=/api`**,
-   and redeploy. Each device enters the token once, under Administration.
+   and redeploy. Each device **that writes** enters the token once, under
+   Administration; reading needs nothing. See [DEPLOY.md](DEPLOY.md) for what that
+   makes public.
 
 Once sharing is on, the database is the source of truth and each device keeps a
 mirror so the app still works in a gym with no signal. Read `DEPLOY.md` first:
@@ -211,7 +213,7 @@ admin code leaves the scorer's table open on the French word `marque`.
 |---|---|---|
 | `VITE_SYNC_URL=/api` | Shared data + live following | Optional |
 | `DATABASE_URL` | Postgres (pooled host) | Auto (Vercel/Neon) |
-| `SYNC_WRITE_TOKEN` | Guards club data | With `VITE_SYNC_URL` |
+| `SYNC_WRITE_TOKEN` | Guards writes (reading is public) | With `VITE_SYNC_URL` |
 | `VITE_SEED=1` | Demo data | Demo only |
 | `VITE_ADMIN_PASSWORD` | Administrator code (fallback `admin`) | Recommended |
 | `VITE_SCORER_PASSWORD` | Scorer's table code (fallback `marque`) | Recommended |

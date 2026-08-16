@@ -89,6 +89,27 @@ async function readState(): Promise<RemoteState | null> {
   } catch { lastState = 'network'; return null }
 }
 
+/**
+ * Does the server accept this device's token?
+ *
+ * Hydrating no longer proves anything: `GET /api/state` is public, so it succeeds
+ * just as well for a device that has never been given a token. Only writing is
+ * guarded — hence this empty batch, which goes through the whole check and changes
+ * nothing. Without it the administration screen would announce "token accepted" on
+ * a typo, and the first real write would fail two hours later, in a gym.
+ */
+export async function checkToken(): Promise<State> {
+  if (!BASE) return 'idle'
+  try {
+    const r = await fetch(`${BASE}/mutate`, {
+      method: 'POST', headers: headers(), body: JSON.stringify({ ops: [] }),
+    })
+    lastState = r.status === 401 || r.status === 503 ? 'token' : r.ok ? 'ok' : 'network'
+  } catch { lastState = 'network' }
+  void notify()
+  return lastState
+}
+
 /* A document's kind says which mirror table it files under. The primary key is not
    always `id`: a message is filed under its club, a call-up under its game. The
    sweep below reads each table's primary keys, so it follows those choices without
@@ -198,7 +219,7 @@ async function doFlush(): Promise<void> {
        * on closing stays in the queue and leaves again at the next start, which is
        * infinitely preferable to a batch that never leaves at all.
        */
-      const r = await fetch(`${BASE}/mutate`, {
+      const r = await fetch(`${BASE}/state`, {
         method: 'POST', headers: headers(), body,
         keepalive: new Blob([body]).size < 60_000,
       })

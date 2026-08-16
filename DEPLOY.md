@@ -27,8 +27,10 @@ each device; spectator following is same-device only).
    write of club data. Without it the API refuses to serve at all, on purpose:
    an open database is worse than a broken one.
 4. Add **`VITE_SYNC_URL=/api`** (Production) and redeploy.
-5. On each device: **Administration → Synchronisation**, paste the token, and
-   press *Save and check*. The device says whether the server accepted it.
+5. On each device **that writes** — the scorer's table, the coach's phone:
+   **Administration → Synchronisation**, paste the token, and press *Save and
+   check*. The device says whether the server accepted it. A device that only
+   reads needs nothing: hydration is public (see below).
 
 Now **data is shared across every machine**: teams, players and the schedule
 created on one device show up on the others. The app stays **local-first**: it
@@ -61,12 +63,16 @@ match", which freezes the score for good.
 | `VITE_PLAYER_PASSWORD` | Nothing in write. Only picking your own name in the roster, to see your stats | `joueur` |
 
 > **What these codes are not.** They are `VITE_*` variables: compiled into the
-> bundle and readable in the browser's dev tools. And the write endpoints
-> `api/mutate.ts` and `api/match/[id].ts` accept writes with no authentication
-> and `Access-Control-Allow-Origin: *`, so the UI can be bypassed outright. The
-> three accesses guard against
-> accidents between people who trust each other, not against a malicious third
-> party. Do not deploy shared data you would mind seeing altered.
+> bundle and readable in the browser's dev tools. They guard against accidents
+> between people who trust each other, not against a malicious third party.
+>
+> **And reading is public.** `GET /api/state` carries no token: a visitor, a
+> parent, a phone in private browsing all open the club rather than an empty
+> application, with no device to provision. The price is stated plainly — the
+> payload carries the roster as filed, licence numbers, birth dates and heights
+> included, readable by anyone who knows the deployment's URL. `SYNC_WRITE_TOKEN`
+> guards writing, and writing alone. Do not deploy shared data you would mind
+> seeing read or altered.
 
 ## 4. Demo data
 
@@ -108,7 +114,7 @@ overwrites shared data. Remove the variable for real use.
 |---|---|---|
 | `VITE_SYNC_URL=/api` | Enable shared data + realtime following | Optional |
 | `DATABASE_URL` | Postgres (use the pooled host) | Auto (Vercel/Neon) |
-| `SYNC_WRITE_TOKEN` | Guards club data; entered once per device | With `VITE_SYNC_URL` |
+| `SYNC_WRITE_TOKEN` | Guards **writes**; entered once per writing device | With `VITE_SYNC_URL` |
 | `VITE_SEED=1` | Seed demo data | Demo only |
 | `VITE_ADMIN_PASSWORD` | Admin access code (fallback `admin`) | Recommended |
 | `VITE_SCORER_PASSWORD` | Scorer's table access code (fallback `marque`) | Recommended |
@@ -120,7 +126,7 @@ overwrites shared data. Remove the variable for real use.
 
 | Method | Route | Purpose |
 |--------|-------|---------|
-| `GET`  | `/api/state?since=<rev>` | Changed documents + the ids still alive. **Token required.** |
+| `GET`  | `/api/state?since=<rev>` | Changed documents + the ids still alive. **Public.** |
 | `POST` | `/api/mutate` | Apply a batch of upserts/deletes. **Token required.** |
 | `GET`  | `/api/match/:id` | Spectator payload, derived from the database. Public. |
 | `GET`  | `/api/match/:id/stream` | Realtime SSE stream (Edge) |
