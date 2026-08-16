@@ -149,12 +149,31 @@ describe('the outgoing queue', () => {
     const { enqueuePut } = await remoteModule()
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 204 })))
 
-    const avant = Date.now()
+    const before = Date.now()
     await enqueuePut('team', 'ta', { id: 'ta', name: 'VIGNOT' })
     const [item] = await db.outbox.toArray()
 
     expect(item.modifiedAt).toBeTruthy()
-    expect(Date.parse(item.modifiedAt)).toBeGreaterThanOrEqual(avant)
+    expect(Date.parse(item.modifiedAt)).toBeGreaterThanOrEqual(before)
+  })
+
+  it('sends to the write route, and nowhere else', async () => {
+    // The queue used to POST to `/api/state`, which only answers GET: the server
+    // replied 405, the batch was read as a network incident and stayed queued for
+    // good. Nothing checked the URL, so every other assertion in this file passed
+    // while no write could leave the device.
+    const { enqueuePut, flushNow } = await remoteModule()
+    const calls: { url: string; method?: string }[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
+      calls.push({ url, method: init?.method }); return { ok: true, status: 204 }
+    }))
+
+    await enqueuePut('team', 'ta', { id: 'ta', name: 'VIGNOT' })
+    await flushNow()
+
+    expect(calls.every((c) => c.url.endsWith('/mutate'))).toBe(true)
+    expect(calls.every((c) => c.method === 'POST')).toBe(true)
+    expect(await db.outbox.count()).toBe(0)
   })
 
   it('keeps the queue when the server rejects the token', async () => {
