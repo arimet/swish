@@ -43,9 +43,12 @@ function sameSecret(a: string, b: string): boolean {
 }
 
 /**
- * Guards the routes that touch club data — writing, but hydration too: the roster
- * carries names, birth dates and heights of players who are sometimes minors, and
- * that has no business being public.
+ * Guards the routes that **write** club data. Reading is open: `/api/state` used to
+ * carry this check too, and it made the source of truth unreadable to anyone who had
+ * not been handed a secret — see the note at the top of that file.
+ *
+ * So this is now the only door, which puts more weight on it, not less: an
+ * unguarded `/api/mutate` would let anyone who knows the URL rewrite a match sheet.
  *
  * Returns `true` when the request may continue; otherwise the response is already
  * written and the caller only has to return.

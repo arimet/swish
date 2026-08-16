@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { pool, preamble, unauthorized } from './_db.js'
+import { pool, preamble } from './_db.js'
 
 /**
  * Hydration of the local mirror from the source of truth.
@@ -15,10 +15,23 @@ import { pool, preamble, unauthorized } from './_db.js'
  * describe what no longer exists. Absence says it instead — which is sturdier than
  * a trace, since nothing can expire or be missed: a device left offline for six
  * months rights itself in one hydration.
+ *
+ * **This route is public. Reading is open, writing is not.**
+ *
+ * It used to carry the token, and that made the source of truth unreadable to
+ * anyone who had not been handed a secret: a visitor, a parent, a phone in private
+ * browsing all opened an empty application rather than the club. Provisioning every
+ * device that only ever reads is a cost with no matching benefit — the club's
+ * schedule, standings and team message are not confidential.
+ *
+ * The consequence is stated rather than hidden: the payload carries the roster as
+ * filed, licence numbers, birth dates and heights included, and it is readable by
+ * anyone who knows the deployment's URL. `/api/match/:id` chooses the opposite
+ * trade-off for the spectator page, where it projects number and name alone. Do not
+ * deploy shared data you would mind seeing read.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (preamble(req, res, 'GET')) return
-  if (unauthorized(req, res)) return
 
   const raw = Number(req.query.since)
   const since = Number.isFinite(raw) && raw > 0 ? raw : 0

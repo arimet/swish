@@ -21,7 +21,7 @@ import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { C, bd, useLeagueLabel } from '../olive/kit'
-import { syncState, hydrate, token, remoteEnabled, setToken, type State } from '../../persistence/remote'
+import { syncState, hydrate, checkToken, token, remoteEnabled, setToken, type State } from '../../persistence/remote'
 
 /** A cleanup operation ready to be confirmed: what it announces, and what it does.
  *  Nothing runs before the confirmation. */
@@ -226,8 +226,11 @@ function SyncToken() {
   const verify = async () => {
     setToken(value.trim())
     setTrying(true)
-    await hydrate()
-    setState(syncState())
+    // The verdict comes from the write probe, never from the hydration that follows:
+    // reading is public, so it would say yes to a token the server refuses.
+    const verdict = await checkToken()
+    if (verdict === 'ok') await hydrate()
+    setState(verdict)
     setTrying(false)
   }
 
