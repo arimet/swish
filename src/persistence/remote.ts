@@ -16,8 +16,23 @@ import { db, type OutboxItem } from './db'
 const BASE = (import.meta.env.VITE_SYNC_URL as string | undefined)?.replace(/\/+$/, '') || ''
 export const remoteEnabled = (): boolean => BASE !== ''
 
-/** The hydration cursor: the highest write number already seen. */
-const REV_KEY = 'swish-sync-rev'
+/**
+ * The hydration cursor: the highest write number already seen.
+ *
+ * **The `-2` is a repair, and it is the point of the key's name.** Until the lock
+ * added in `api/mutate`, a cursor could be filed *past* a write that had not yet
+ * committed — the reader saw rev 11 while rev 10 was still in flight. That write is
+ * then below the cursor for good, `alive` names its id so the sweep below keeps the
+ * stale copy, and the device never sees the correction: a message updated on one
+ * phone stays old on the other, refresh after refresh.
+ *
+ * Nothing in a cursor says whether it is one of those. So none of them are trusted:
+ * every device hydrates in full once, which costs one payload and repairs the
+ * mirrors already diverged, then resumes incrementally.
+ */
+const REV_KEY = 'swish-sync-rev-2'
+/* The abandoned key is removed rather than left to rot in the device's storage. */
+if (typeof localStorage !== 'undefined') localStorage.removeItem('swish-sync-rev')
 /**
  * The write token, entered once per device.
  *
