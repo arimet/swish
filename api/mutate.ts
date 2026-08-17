@@ -44,6 +44,12 @@ async function writeMatch(client: PoolClient, id: string, incoming: Match, when:
     [id, merged, when])
 }
 
+/**
+ * The key every writer agrees on. Its value means nothing — only that it is the
+ * same one everywhere, so that two sends contend for it. See `begin` below.
+ */
+const REV_LOCK = 8_246_733
+
 /** The kinds the database accepts. An operation of an unknown kind is ignored
  *  rather than rejected: a device left on a newer version must not have its whole
  *  queue turned away over a single item. */
@@ -88,6 +94,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // A batch is all or nothing: a half-applied queue would leave the client
     // believing its send lost, and replaying on top of a half-updated state.
     await client.query('begin')
+
+    /*
+     * Writes are serialised, and this is not a precaution — it is what makes the
+     * hydration cursor tell the truth.
+     *
+     * `rev` is handed out by `nextval` at the moment of the *statement*, while a
+     * reader only ever sees *committed* rows. Those two orders are not the same one,
+     * and hydration reads "what is above my cursor":
+     *
+     *   Send A takes rev 10 and is still committing.
+     *   Send B takes rev 11 and commits first.
+     *   A phone hydrates: it sees 11, and files 11 as its cursor.
+     *   A commits. Its rev 10 now sits *below* that cursor — `rev > since` will never
+     *   match it again, on that device, ever.
+     *
+     * The write is in the database and `alive` even names its id, so the sweep for the
+     * dead keeps the phone's stale copy rather than dropping it: the divergence is
+     * silent, and no amount of refreshing repairs it. That is how the source of truth
+     * comes to hold a message a second phone cannot see.
+     *
+     * Holding one lock for the length of a batch makes assignment order and commit
+     * order the same order, so what is committed is always a *prefix* of what has been
+     * handed out — and a cursor cannot step over a write it has not been given. The
+     * lock is released by the commit or the rollback below, whichever comes.
+     *
+     * The cost is that two devices sending at the same instant queue up. A batch is a
+     * handful of statements against an indexed primary key, and a club is a handful of
+     * phones: this is the cheap side of the trade.
+     *
+     * The timeout puts a floor under the bad case. Whatever holds the lock for five
+     * seconds is not a batch about to land, and waiting behind it pins a connection
+     * for nothing. Giving up raises, hence rolls back, hence answers 500 — which is
+     * exactly what the queue is built for: it keeps its items and leaves again later.
+     */
+    await client.query("set local lock_timeout = '5s'")
+    await client.query('select pg_advisory_xact_lock($1)', [REV_LOCK])
     for (const o of ops) {
       if (!o?.id || !o.kind || !KINDS.has(o.kind)) continue
       const when = o.modifiedAt ? new Date(o.modifiedAt) : null

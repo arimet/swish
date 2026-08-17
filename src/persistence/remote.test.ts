@@ -87,6 +87,25 @@ describe('hydrate — the server is authoritative', () => {
     expect(appels[1]).toContain('since=42')
   })
 
+  it('throws away a cursor left by the version that could step over a write', async () => {
+    // Before the lock in `api/mutate`, a cursor could be filed past a write still in
+    // flight: `rev > since` never matched it again, `alive` named its id so the sweep
+    // kept the stale copy, and the device stayed on the old version for good — a
+    // message updated on one phone that a second phone never saw, however often it
+    // refreshed. Nothing distinguishes a poisoned cursor from a sound one, so they all
+    // go: one full hydration per device, which repairs the mirrors already diverged.
+    localStorage.setItem('swish-sync-rev', '42')
+    const { hydrate } = await remoteModule()
+    const appels: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => { appels.push(url); return state([], [], 7) }))
+
+    await hydrate()
+
+    expect(appels[0]).toContain('since=0')
+    expect(localStorage.getItem('swish-sync-rev')).toBeNull()
+    expect(localStorage.getItem('swish-sync-rev-2')).toBe('7')
+  })
+
   it('a rejected token does not touch the mirror', async () => {
     await db.teams.put({ id: 'ta', name: 'VIGNOT' })
     const { hydrate, syncState } = await remoteModule()
