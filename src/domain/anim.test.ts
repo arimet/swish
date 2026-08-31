@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { snapshot, refit, transitions } from './anim'
 import { newPlay, nextStep, type Play } from './plays'
 
-const proche = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+const near = (a: { x: number; y: number }, b: { x: number; y: number }) => {
   expect(a.x).toBeCloseTo(b.x, 6); expect(a.y).toBeCloseTo(b.y, 6)
 }
 
@@ -10,8 +10,8 @@ describe('refit', () => {
   it('lands the endpoints exactly on the start and the end', () => {
     const trace = [{ x: 0.2, y: 0.2 }, { x: 0.2, y: 0.6 }, { x: 0.6, y: 0.6 }]
     const r = refit(trace, { x: 0.1, y: 0.1 }, { x: 0.9, y: 0.5 })
-    proche(r[0], { x: 0.1, y: 0.1 })
-    proche(r[r.length - 1], { x: 0.9, y: 0.5 })
+    near(r[0], { x: 0.1, y: 0.1 })
+    near(r[r.length - 1], { x: 0.9, y: 0.5 })
   })
 
   it('preserves the shape: an L stays an L', () => {
@@ -27,7 +27,7 @@ describe('refit', () => {
     // The midpoint of a straight segment stays the midpoint after refitting.
     const trace = [{ x: 0, y: 0 }, { x: 0.5, y: 0 }, { x: 1, y: 0 }]
     const r = refit(trace, { x: 0.2, y: 0.2 }, { x: 0.8, y: 0.8 })
-    proche(r[1], { x: 0.5, y: 0.5 })
+    near(r[1], { x: 0.5, y: 0.5 })
   })
 
   it('falls back to the straight line when the stroke is degenerate', () => {
@@ -191,8 +191,8 @@ describe('snapshot — the movement paths', () => {
   it('leads from the starting position to the arrival one', () => {
     const s = twoSteps()
     const l = ligneDe(s, 0.5, 1)!
-    proche(l.points[0], { x: 0.5, y: 0.62 })
-    proche(l.points[l.points.length - 1], { x: 0.5, y: 0.2 })
+    near(l.points[0], { x: 0.5, y: 0.62 })
+    near(l.points[l.points.length - 1], { x: 0.5, y: 0.2 })
   })
 
   it('stays the same across the whole transition: it is a path, not a trail', () => {
@@ -211,8 +211,8 @@ describe('snapshot — the movement paths', () => {
     }] }
     const l = ligneDe(s, 0.5, 1)!
     // Endpoints refitted onto the real positions…
-    proche(l.points[0], { x: 0.5, y: 0.62 })
-    proche(l.points[l.points.length - 1], { x: 0.5, y: 0.2 })
+    near(l.points[0], { x: 0.5, y: 0.62 })
+    near(l.points[l.points.length - 1], { x: 0.5, y: 0.2 })
     // …and the belly of the curve kept, hence off the chord.
     expect(Math.min(...l.points.map((p) => p.x))).toBeLessThan(0.45)
     expect(l.stroke).toBe('cut')
@@ -237,8 +237,8 @@ describe('snapshot — the movement paths', () => {
     s.steps[1] = { ...s.steps[1], ball: { side: 'offense', position: 3 } }
     const pass = snapshot(s, { step: 0, part: 0.5 }, true).arrows.find((f) => f.stroke === 'pass')!
     expect(pass).toBeDefined()
-    proche(pass.points[0], { x: 0.5, y: 0.62 })          // the carrier at the start
-    proche(pass.points[pass.points.length - 1], { x: 0.78, y: 0.48 })   // le receveur
+    near(pass.points[0], { x: 0.5, y: 0.62 })          // the carrier at the start
+    near(pass.points[pass.points.length - 1], { x: 0.78, y: 0.48 })   // le receveur
   })
 
   it('draws no pass when the ball does not change hands', () => {
@@ -256,5 +256,31 @@ describe('snapshot — the movement paths', () => {
     // already be there: it announces the gesture, it does not comment on it after.
     const s = twoSteps()
     expect(ligneDe(s, 0, 1)).toBeDefined()
+  })
+})
+
+/**
+ * The annotations survive the animation.
+ *
+ * They belong to the step the way the props belong to the play: a circle drawn round
+ * the key describes the position, it does not move with it. A stroke that vanished
+ * the moment you pressed Play read as a bug — the coach had just drawn it.
+ */
+describe('snapshot — the brush', () => {
+  const withBrush = (): Play => {
+    const s = { id: 's1', ...newPlay('ta', 'half', false) } as Play
+    s.steps[0].brush = [[{ x: 0.2, y: 0.2 }, { x: 0.4, y: 0.3 }]]
+    s.steps = [s.steps[0], nextStep(s.steps[0])]
+    return s
+  }
+
+  it('carries them through a transition', () => {
+    expect(snapshot(withBrush(), { step: 0, part: 0.5 }).brush).toEqual([[{ x: 0.2, y: 0.2 }, { x: 0.4, y: 0.3 }]])
+  })
+
+  it('carries them on the last step, which has no transition', () => {
+    const s = withBrush()
+    expect(snapshot(s, { step: 1, part: 0 }).brush).toBeUndefined()   // the second step has none
+    expect(snapshot(s, { step: 0, part: 1 }).brush).toHaveLength(1)
   })
 })

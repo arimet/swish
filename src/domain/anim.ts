@@ -81,11 +81,10 @@ function sameBall(a: Step['ball'], b: Step['ball']): boolean {
  * directly. Each marker travels from its position at step N to that of the same marker
  * at step N+1; its arrow, fitted onto those two positions, only bends the path.
  *
- * `withPaths` decides what `arrows` carries. Off — the default, and the only behaviour
- * that used to exist — the snapshot carries none: during the animation you watch the
- * players, not the strokes. On, it carries the **paths actually travelled**: not the
- * arrows as drawn, but those same arrows refitted onto the two steps' positions, which
- * is exactly the curve carrying each marker.
+ * `withPaths` decides what `arrows` carries. Off — the default — the snapshot carries
+ * none: during the animation you watch the players, not the strokes. On, it carries the
+ * **paths actually travelled**: not the arrows as drawn, but those same arrows refitted
+ * onto the two steps' positions, which is exactly the curve carrying each marker.
  *
  * That distinction is the whole point of the option. Re-showing the arrows as drawn
  * would be simpler, and wrong: they start from the drawn positions while the markers
@@ -96,7 +95,11 @@ export function snapshot(s: Play, at: Instant, withPaths = false): Step {
   const n = Math.max(0, Math.min(Math.floor(at.step), transitions(s)))
   const from = s.steps[n]
   const next = s.steps[n + 1]
-  if (!next) return { markers: structuredClone(from.markers), ball: structuredClone(from.ball), arrows: [] }
+  // The annotations travel with the snapshot: they belong to the step the way the
+  // props belong to the play, and a circle round the key that vanishes the moment you
+  // press Play was read as a bug.
+  const brush = from.brush ? { brush: structuredClone(from.brush) } : {}
+  if (!next) return { markers: structuredClone(from.markers), ball: structuredClone(from.ball), arrows: [], ...brush }
   const part = Math.max(0, Math.min(at.part, 1))
 
   const arrowFrom = (side: Side, position: Position, strokes: Stroke[]): Arrow | undefined =>
@@ -154,5 +157,5 @@ export function snapshot(s: Play, at: Instant, withPaths = false): Step {
     return advanceAlong(flight, part)
   })()
 
-  return { markers, ball, arrows: lines }
+  return { markers, ball, arrows: lines, ...brush }
 }

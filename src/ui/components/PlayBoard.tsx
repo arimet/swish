@@ -158,11 +158,11 @@ function DrawnArrow({ f, h }: { f: Arrow; h: number }) {
  * Offense: a filled disc in the attack colour, the number on top. Defence: an open
  * ring with the number inside it.
  *
- * The defender used to be a plain grey text cross that drowned in the court's
- * lines, especially in a thumbnail. Drawn, it carries the same stroke weight as
- * the disc: both sides read at a glance, and they are told apart by **shape** —
- * filled disc against open ring — hence in black and white too. The opaque fill
- * detaches the marker from the court's lines.
+ * The defender is drawn, not written: a grey text cross drowns in the court's lines,
+ * especially in a thumbnail. Drawn, it carries the same stroke weight as the disc, so
+ * both sides read at a glance and are told apart by **shape** — filled disc against
+ * open ring — hence in black and white too. The opaque fill detaches the marker from
+ * the court's lines.
  */
 function DrawnMarker({ marker, h }: { marker: Marker; h: number }) {
   const { x, y } = toUnits(marker.at, h)
@@ -209,6 +209,24 @@ function Ball({ t, h }: { t: Step; h: number }) {
   return <circle aria-label={translate('play.ball')} cx={at.x} cy={at.y} r={28} fill={T.ball} stroke={T.court} strokeWidth={6} />
 }
 
+/**
+ * A freehand annotation: the coach's pen.
+ *
+ * Deliberately thinner than an arrow and without a head — it must read as writing on
+ * the board, not as a movement. A stroke that looked like an arrow would have the
+ * reader hunting for the player it carries.
+ */
+function DrawnBrush({ line, h }: { line: Point[]; h: number }) {
+  const pts = line.map((p) => toUnits(p, h))
+  if (pts.length < 2) return null
+  return (
+    <path
+      data-brush="" d={smooth(pts)} fill="none" stroke={T.ink} strokeWidth={7}
+      strokeLinecap="round" strokeLinejoin="round" opacity={0.75}
+    />
+  )
+}
+
 /** Cone, loose ball, agility ladder: the drill's equipment, shared by every step. */
 function DrawnProp({ o, h }: { o: Prop; h: number }) {
   const { x, y } = toUnits(o.at, h)
@@ -229,9 +247,9 @@ function DrawnProp({ o, h }: { o: Prop; h: number }) {
 /**
  * The board. `stepIndex` picks the step shown; out of bounds, we fall back to the
  * first — a play always has at least one step, and a thumbnail must never render an
- * empty court. `apercu` cuts all interaction (thumbnails).
+ * empty court. `preview` cuts all interaction (thumbnails).
  */
-export function PlayBoard({ play, stepIndex, step, onPointerDown, onPointerMove, onPointerUp, children, apercu, remplit }: {
+export function PlayBoard({ play, stepIndex, step, onPointerDown, onPointerMove, onPointerUp, children, preview, fills }: {
   play: Play
   stepIndex: number
   /** A computed step — the player's snapshot — to display instead of the play's own.
@@ -241,25 +259,25 @@ export function PlayBoard({ play, stepIndex, step, onPointerDown, onPointerMove,
   onPointerMove?: (e: React.PointerEvent<SVGSVGElement>) => void
   onPointerUp?: (e: React.PointerEvent<SVGSVGElement>) => void
   children?: ReactNode
-  apercu?: boolean
+  preview?: boolean
   /** The SVG fills its box instead of following its width. Reserved for the player,
    *  which sets the court's ratio itself: a caller that converts pointer coordinates
    *  must not use it. */
-  remplit?: boolean
+  fills?: boolean
 }) {
   const translate = useT()
   const h = depth(play)
   const t = step ?? play.steps[stepIndex] ?? play.steps[0]
-  const interactive = !apercu && !!(onPointerDown || onPointerMove || onPointerUp)
+  const interactive = !preview && !!(onPointerDown || onPointerMove || onPointerUp)
   return (
     <svg
       viewBox={`0 0 ${W} ${h}`}
       role={interactive ? 'application' : 'img'}
       aria-label={translate('play.board', { name: play.name })}
-      onPointerDown={apercu ? undefined : onPointerDown}
-      onPointerMove={apercu ? undefined : onPointerMove}
-      onPointerUp={apercu ? undefined : onPointerUp}
-      className={`${remplit ? 'h-full w-full' : 'w-full'} ${interactive ? 'cursor-crosshair' : ''}`}
+      onPointerDown={preview ? undefined : onPointerDown}
+      onPointerMove={preview ? undefined : onPointerMove}
+      onPointerUp={preview ? undefined : onPointerUp}
+      className={`${fills ? 'h-full w-full' : 'w-full'} ${interactive ? 'cursor-crosshair' : ''}`}
       style={{ touchAction: interactive ? 'none' : 'manipulation' }}
     >
       {/* The background carries the rounding, not a CSS mask: expressed in court
@@ -276,7 +294,9 @@ export function PlayBoard({ play, stepIndex, step, onPointerDown, onPointerMove,
         </>
       )}
       {play.props.map((o, i) => <DrawnProp key={i} o={o} h={h} />)}
-      {/* Arrows first: a marker must never be struck through by a stroke. */}
+      {/* Annotations under everything: they comment on the play, they are not it. */}
+      {(t.brush ?? []).map((line, i) => <DrawnBrush key={i} line={line} h={h} />)}
+      {/* Arrows next: a marker must never be struck through by a stroke. */}
       {t.arrows.map((f, i) => <DrawnArrow key={i} f={f} h={h} />)}
       {t.markers.map((p) => <DrawnMarker key={`${p.side}${p.position}`} marker={p} h={h} />)}
       <Ball t={t} h={h} />
