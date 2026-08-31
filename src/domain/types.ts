@@ -2,7 +2,20 @@ export type TeamSide = 'A' | 'B'
 export type ScoreKind = '2int' | '2ext' | '3' | 'lf'
 /** Secondary stats credited to a player. */
 export type StatKind = 'assist' | 'reb_off' | 'reb_def' | 'block'
-export type FoulType = 'personal' | 'technical' | 'unsportsmanlike' | 'disqualifying'
+/**
+ * The official FFBB categories, plus the two the scorer's table actually calls out.
+ *
+ * `offensive` and `defensive` are personal fouls said out loud — which side of the
+ * ball it happened on. They are **refinements of `personal`, not rivals to it**:
+ * `personal` stays, and it means "a personal foul whose side was not specified". That
+ * is what the one-tap `F` on the roster row records, and what every foul recorded
+ * before this distinction existed carries.
+ *
+ * No counting rule reads this field: a foul is a foul for the player's five and for
+ * the team bonus, whatever its type. Changing that is a rules decision, not a
+ * labelling one.
+ */
+export type FoulType = 'personal' | 'offensive' | 'defensive' | 'technical' | 'unsportsmanlike' | 'disqualifying'
 export type FoulTarget =
   | { kind: 'player'; playerId: string }
   | { kind: 'coach' }
@@ -59,21 +72,6 @@ export interface Match {
   roster: string[]
   events: GameEvent[]
   status: 'setup' | 'live' | 'finished'
-  /**
-   * Retractions: ids of events taken out of the log.
-   *
-   * A match sheet merges across devices by **union** of its events, each carrying a
-   * stable id. A union alone cannot tell "this event never reached the other device"
-   * from "the other device undid it": the basket the coach cancelled would come back
-   * as soon as the scorer, who still has it, pushes their copy.
-   *
-   * The event therefore leaves the log — screens and statistics do not change one
-   * bit — but its id stays here. A log records its own crossings-out.
-   *
-   * Optional, and not merely out of caution: Dexie stores whole objects and does not
-   * index this field, so there is no local database version to add.
-   */
-  retracted?: string[]
 }
 
 /**
@@ -84,7 +82,7 @@ export interface Match {
  */
 export interface ReportedResult {
   id: string
-  /** The league the game belongs to, used to group the standings. */
+  /** The league the game belongs to. It is the grouping key of the standings. */
   championshipLabel: string
   date?: string
   homeId: string

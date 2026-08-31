@@ -11,7 +11,7 @@ import { SubstitutionDialog } from '../components/SubstitutionDialog'
 import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
-import { SyncState } from '../components/SyncState'
+import { ConnectionState } from '../components/ConnectionState'
 import { useAuth } from '../../app/auth'
 import { useMatch } from '../../app/useMatch'
 import { liveState } from '../../rules/ffbb'
@@ -75,11 +75,6 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     }
   }, [ls?.clockRunning])
 
-  /* The spectator view has nothing left to publish from here. It reads the game from
-     the database, where the queue already carries it, and the server assembles the
-     bundle. This screen used to republish the whole state on every event — two write
-     paths for the same data, and two ways to contradict each other. */
-
   if (!match || !ls)
     return <div className="grid min-h-dvh place-items-center text-muted-foreground">{translate('common.loading')}</div>
 
@@ -138,6 +133,15 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
       e.type === 'STAT' && e.team === 'A' && e.playerId === id ? e.stat : null)
   const missCount = (id: string) =>
     match.events.filter((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === id).length
+  /** This player's fouls, by type. Only the types actually recorded appear, so the
+   *  corrections can name what they will take back. */
+  const foulCounts = (id: string): Partial<Record<FoulType, number>> => {
+    const c: Partial<Record<FoulType, number>> = {}
+    for (const e of match.events)
+      if (e.type === 'FOUL' && e.team === 'A' && e.target.kind === 'player' && e.target.playerId === id)
+        c[e.foulType] = (c[e.foulType] ?? 0) + 1
+    return c
+  }
 
   const clampClock = (s: number) => Math.min(periodLength(ls.period), Math.max(0, s))
   const onCourt = () => {
@@ -159,33 +163,32 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   }
 
   return (
-    /* `h-dvh`, not `min-h-full`: the scoreboard and the clock never scroll off the
-       screen again, only the roster scrolls — and it barely scrolls now that the
-       shell no longer takes its hundred pixels. */
+    /* `h-dvh`, not `min-h-full`: the scoreboard and the clock must never scroll off
+       the screen — only the roster scrolls. This screen sits outside the shell, which
+       is what leaves the roster the hundred pixels it needs. */
     <div className="flex h-dvh flex-col overflow-hidden" style={{ background: C.frame, color: C.text }}>
-      {/* The banner is a card, no longer a surface that refuses the theme: a
-          hard-coded charcoal `--scoreboard` laid a black rectangle at the top of a
-          light application. It keeps its presence through the plane (the card is the
-          high point) and through the rule that separates it from the screen, not
-          through a value that belongs to it alone. */}
+      {/* The banner is a card, and takes its colours from the theme like everything
+          else: a hard-coded charcoal would lay a black rectangle at the top of a light
+          application. It holds its presence through the plane — the card is the high
+          point — and through the rule separating it from the screen, never through a
+          value of its own. */}
       <header className="shrink-0 px-4 pb-4 pt-3 sm:px-6" style={{ background: C.card, color: C.text, borderBottom: `1px solid ${C.border}` }}>
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
           {/* The way out travels with the period strip, not with the actions: leaving
-              is not a recording action, and the period row has the room the button row
-              no longer has. The game is not over for all that — you return to its
-              record, and "Resume" brings you back here. */}
+              is not a recording action, and the period row has room the button row does
+              not. The game is not over for all that — you return to its record, and
+              "Resume" brings you back here. */}
           <div className="flex items-center gap-2">
             {/* The scorer's table lives outside the shell: without this copy, the one
                 screen where people record for two hours would be the only one saying
                 nothing about an interrupted share. */}
-            <SyncState compact />
+            <ConnectionState compact />
             <Link to={`/match/${match.id}`} aria-label={translate('live.leave')} title={translate('live.leave')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><X className="h-5 w-5" strokeWidth={2.5} /></Link>
             <PeriodStrip current={ls.period} />
           </div>
-          {/* `flex-wrap`: five finger-wide controls do not always fit on one phone
-              row. They wrap — they no longer leave the screen, as "Finish" did, out of
-              reach. */}
+          {/* `flex-wrap`: five finger-wide controls do not fit on one phone row. They
+              wrap rather than push the last of them — "Finish" — off the screen. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Link to={`/match/${match.id}/watch`} target="_blank" aria-label={translate('live.spectatorView')} title={translate('live.spectatorView')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><Eye className="h-[18px] w-[18px]" strokeWidth={2} /></Link>
@@ -262,22 +265,23 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         open={!!pick} playerName={pick?.name ?? ''} color={TEAM_A}
         scoreCounts={pick ? scoreCounts(pick.id) : undefined}
         statCounts={pick ? statCounts(pick.id) : undefined}
+        foulCounts={pick ? foulCounts(pick.id) : undefined}
         fouls={pick ? statsByPlayer().get(pick.id)?.fouls ?? 0 : 0}
         misses={pick ? missCount(pick.id) : 0}
         shots={pick ? shotsOf([match], pick.id) : undefined}
         onClose={() => setPick(null)} onScore={score} onMiss={miss} onFoul={foul}
         onStat={(kind) => pick && dispatch({ type: 'STAT', team: 'A', playerId: pick.id, stat: kind, period: ls.period, gameClock: seconds })}
         onRemoveScore={(kind) => pick && removeLast((e) => e.type === 'SCORE' && e.team === 'A' && e.playerId === pick.id && e.kind === kind)}
-        onRemoveFoul={() => pick && removeLast((e) => e.type === 'FOUL' && e.team === 'A' && e.target.kind === 'player' && e.target.playerId === pick.id)}
+        onRemoveFoul={(type) => pick && removeLast((e) => e.type === 'FOUL' && e.team === 'A' && e.foulType === type && e.target.kind === 'player' && e.target.playerId === pick.id)}
         onRemoveStat={(kind) => pick && removeLast((e) => e.type === 'STAT' && e.team === 'A' && e.playerId === pick.id && e.stat === kind)}
         onRemoveMiss={() => pick && removeLast((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === pick.id)}
       />
       <ClockEditDialog open={editClock} seconds={seconds} max={periodLength(ls.period)}
         onClose={() => setEditClock(false)} onSubmit={(s) => setSeconds(clampClock(s))} />
-      {/* We only leave the game if it really is closed. `finish()` used to return
-          `void` and we left whatever happened: a failed write took you out to a record
-          announcing a finished game that was not. On failure we stay, and the error
-          band above explains it. */}
+      {/* We only leave the game if it really is closed: `finish()` reports whether the
+          write landed, and on failure we stay, with the error band above explaining it.
+          Leaving regardless would take the volunteer out to a record announcing a
+          finished game that is not. */}
       <ConfirmDialog open={askFinish} onClose={() => setAskFinish(false)} onConfirm={async () => { if (await finish()) onFinish() }}
         title={translate('live.finishTitle')} message={translate('live.finishText')} confirmLabel={translate('live.finish')} danger />
       <SubstitutionDialog open={sub} onClose={() => setSub(false)}

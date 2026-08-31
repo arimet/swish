@@ -53,3 +53,82 @@ describe('PlayerActionDialog — recording a shot', () => {
     expect(screen.getByRole('status')).toHaveTextContent('MANQUÉ · Raquette')
   })
 })
+
+/**
+ * The foul, and its side of the ball.
+ *
+ * What a table calls out is offensive, defensive or technical — and it calls it out
+ * while looking at the court. Hence three buttons rather than one button and a picker:
+ * the type is recorded without costing a second tap. A single "Personal foul" button
+ * would file every foul in the database under the same unspecified type.
+ */
+describe('PlayerActionDialog — the foul and its type', () => {
+  it('records each of the three types in one tap', () => {
+    for (const [aria, expected] of [
+      ['Faute offensive', 'offensive'],
+      ['Faute défensive', 'defensive'],
+      ['Faute technique', 'technical'],
+    ] as const) {
+      const onFoul = vi.fn()
+      const { unmount } = render(
+        <PlayerActionDialog open playerName="4 ROUX"
+          onClose={vi.fn()} onScore={vi.fn()} onMiss={vi.fn()} onFoul={onFoul} onStat={noop}
+          onRemoveScore={noop} onRemoveFoul={noop} onRemoveStat={noop} onRemoveMiss={noop} />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: aria }))
+      expect(onFoul).toHaveBeenCalledWith(expected)
+      unmount()
+    }
+  })
+
+  it('closes on the foul, like every other entry', () => {
+    const { onClose } = renderDialog()
+    fireEvent.click(screen.getByRole('button', { name: 'Faute offensive' }))
+    expect(onClose).toHaveBeenCalled()
+  })
+})
+
+/**
+ * Correcting a mis-entry.
+ *
+ * It stays folded — this dialog is opened to record, and unfolded corrections push
+ * half of it below the fold — but it reads as a button and carries the count of what
+ * it can take back. A mis-entered basket is the second reason anyone opens this
+ * dialog, not a footnote behind a small grey caption.
+ */
+describe('PlayerActionDialog — the corrections', () => {
+  it('says how many actions it can take back', () => {
+    renderDialog({ scoreCounts: { '2int': 2, '2ext': 0, '3': 1, lf: 0 }, fouls: 1, misses: 1 })
+    // 2 + 1 baskets, one foul, one miss.
+    expect(screen.getByText('(5)')).toBeInTheDocument()
+  })
+
+  it('stays out of the way entirely when there is nothing to correct', () => {
+    // An enabled control that can do nothing reads as a fault; so does a count of
+    // zero next to the word "correct".
+    renderDialog()
+    expect(screen.queryByText(/corriger/i)).not.toBeInTheDocument()
+  })
+
+  it('names the foul type it will remove, and removes that one', () => {
+    // A type you can enter and never read back is a type nobody trusts: these buttons
+    // are the only place the recorded type is shown.
+    const { onRemoveFoul } = renderDialog({
+      fouls: 3, foulCounts: { defensive: 2, technical: 1 }, onRemoveFoul: vi.fn(),
+    })
+    fireEvent.click(screen.getByText(/corriger/i))
+
+    expect(screen.getByRole('button', { name: /retirer une faute défensive/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /retirer une faute technique/i }))
+    expect(onRemoveFoul).toHaveBeenCalledWith('technical')
+  })
+
+  it('offers no removal for a type that was never recorded', () => {
+    // The regex has to say "retirer": the three recording buttons carry the same type
+    // names and are always on screen.
+    renderDialog({ fouls: 1, foulCounts: { offensive: 1 } })
+    fireEvent.click(screen.getByText(/corriger/i))
+    expect(screen.getByRole('button', { name: /retirer une faute offensive/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /retirer une faute technique/i })).not.toBeInTheDocument()
+  })
+})
