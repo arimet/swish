@@ -76,7 +76,10 @@ export const deleteTeam = (id: string) => serial(async () => {
 
 export const savePlayer = (p: Player) => one('player', p.id, p)
 export const getPlayer = (id: string) => get<Player>('player', id)
-export const listPlayers = async (teamId: string) => (await list<Player>('player')).filter((p) => p.teamId === teamId)
+/** Every player of every team. The screens want a roster, not this — but the cache
+ *  wants one entry per kind, so `usePlayers` reads this and filters. See `queries.ts`. */
+export const listAllPlayers = () => list<Player>('player')
+export const listPlayers = async (teamId: string) => (await listAllPlayers()).filter((p) => p.teamId === teamId)
 /** Deletes a player and removes them from every call-up that mentions them: without
  *  this cascade a call-up would keep a player who no longer exists, impossible to
  *  untick, and would skew the count shown on the game sheet. */
@@ -138,7 +141,9 @@ export const toggleTrainingPlay = (trainingId: string, playId: string) => serial
 })
 
 /** The playbook belongs to the club. */
-export const listPlays = async (clubId: string) => (await list<Play>('play')).filter((s) => s.clubId === clubId)
+/** Every play of every club, for the same reason as `listAllPlayers`. */
+export const listAllPlays = () => list<Play>('play')
+export const listPlays = async (clubId: string) => (await listAllPlays()).filter((s) => s.clubId === clubId)
 export const getPlay = (id: string) => get<Play>('play', id)
 /** Stamps the time on save: without `updatedAt` the library would only have the
  *  database's order, which is to say none, and would look shuffled at every

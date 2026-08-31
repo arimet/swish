@@ -103,6 +103,11 @@ function ClubGate() {
   return <OliveShell />
 }
 
+/* The query client is **not** built here. It is infrastructure, so it belongs to the
+   entry point — `main.tsx` in the browser, `src/test/render.tsx` under test, one client
+   per case. Held here instead, every test that rendered a screen directly sat below a
+   second, unconfigured client, and the two disagreed about something as ordinary as
+   whether to retry. */
 export default function App() {
   return (
     <BrowserRouter>
