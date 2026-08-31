@@ -6,7 +6,7 @@ import { useT } from '../../i18n'
 import { kindAt, ZONE_LABELS, zoneAt } from '../../domain/shotzones'
 import type { Shot } from '../../domain/shotchart'
 import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types'
-import { TriangleAlert } from 'lucide-react'
+import { TriangleAlert, Undo2, ChevronDown } from 'lucide-react'
 
 const SCORES: { k: ScoreKind; label: string; pts: number }[] = [
   { k: '2int', label: 'action.twoInside', pts: 2 },
@@ -20,22 +20,53 @@ const STATS: { k: StatKind; label: string }[] = [
   { k: 'reb_off', label: 'action.offRebound' },
   { k: 'reb_def', label: 'action.defRebound' },
 ]
+/**
+ * The three fouls a scorer's table actually calls out, each one tap.
+ *
+ * A picker after a single "Foul" button would have been tidier and would have cost a
+ * second tap on the most frequent gesture of the two hours — the one made while
+ * looking at the court, not at the screen. Three buttons keep it at one.
+ *
+ * The visible label is short so the three fit side by side; the accessible name says
+ * "foul" out loud, because "Offensive" alone read out means nothing.
+ */
+const FOULS: { k: FoulType; label: string; aria: string }[] = [
+  { k: 'offensive', label: 'action.offensive', aria: 'action.foulOffensive' },
+  { k: 'defensive', label: 'action.defensive', aria: 'action.foulDefensive' },
+  { k: 'technical', label: 'action.technical', aria: 'action.foulTechnical' },
+]
+
+/** How a recorded foul is named back to the scorer, in the corrections. `personal`
+ *  is the untyped one — the roster row's one-tap `F`, and anything recorded before
+ *  the distinction existed. */
+const FOUL_LABEL: Record<FoulType, string> = {
+  personal: 'action.foul',
+  offensive: 'action.foulOffensive',
+  defensive: 'action.foulDefensive',
+  technical: 'action.foulTechnical',
+  unsportsmanlike: 'action.foulUnsportsmanlike',
+  disqualifying: 'action.foulDisqualifying',
+}
+
 const ZERO_S: Record<ScoreKind, number> = { '2int': 0, '2ext': 0, '3': 0, lf: 0 }
 const ZERO_T: Record<StatKind, number> = { assist: 0, reb_off: 0, reb_def: 0, block: 0 }
 const POINTS_LABEL: Record<'2int' | '2ext' | '3', string> = { '2int': '2 PTS', '2ext': '2 PTS', '3': '3 PTS' }
 
 export function PlayerActionDialog({
-  open, playerName, color = C.text, scoreCounts, statCounts, fouls = 0, misses = 0, shots,
+  open, playerName, color = C.text, scoreCounts, statCounts, foulCounts, fouls = 0, misses = 0, shots,
   onClose, onScore, onMiss, onFoul, onStat, onRemoveScore, onRemoveFoul, onRemoveStat, onRemoveMiss,
 }: {
   open: boolean; playerName: string; color?: string
   scoreCounts?: Record<ScoreKind, number>; statCounts?: Record<StatKind, number>
+  /** Fouls already recorded for this player, by type. It is what lets the corrections
+   *  name what they will remove — "remove a defensive foul", not "remove a foul". */
+  foulCounts?: Partial<Record<FoulType, number>>
   fouls?: number; misses?: number; shots?: Shot[]
   onClose: () => void
   onScore: (kind: ScoreKind, shot?: ShotSpot) => void
   onMiss: (kind: ScoreKind, shot: ShotSpot) => void
   onFoul: (type: FoulType) => void; onStat: (kind: StatKind) => void
-  onRemoveScore: (kind: ScoreKind) => void; onRemoveFoul: () => void
+  onRemoveScore: (kind: ScoreKind) => void; onRemoveFoul: (type: FoulType) => void
   onRemoveStat: (kind: StatKind) => void; onRemoveMiss: () => void
 }) {
   const translate = useT()
@@ -44,8 +75,12 @@ export function PlayerActionDialog({
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const sc = scoreCounts ?? ZERO_S
   const tc = statCounts ?? ZERO_T
-  const hasCorrections =
-    Object.values(sc).some((n) => n > 0) || Object.values(tc).some((n) => n > 0) || fouls > 0 || misses > 0
+  // Only the types actually recorded: a list of six removal buttons, five of them
+  // disabled, says nothing and buries the one that matters.
+  const recordedFouls = (Object.entries(foulCounts ?? {}) as [FoulType, number][]).filter(([, n]) => n > 0)
+  const removable =
+    Object.values(sc).reduce((a, b) => a + b, 0) + Object.values(tc).reduce((a, b) => a + b, 0) + fouls + misses
+  const hasCorrections = removable > 0
 
   // Without this cancellation, closing the popup by hand during the delay would
   // trigger a state update on an unmounted component.
@@ -106,19 +141,35 @@ export function PlayerActionDialog({
           ))}
         </div>
 
-        <button onClick={() => { onFoul('personal'); close() }}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--c-danger-bg)] py-3.5 text-base font-bold text-[var(--c-danger)] transition hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)] active:scale-[0.98]">
-          <TriangleAlert className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-          {translate('action.personalFoul')}
-        </button>
+        {/* FOUL — its side of the ball, one tap each. */}
+        <p className="mt-4 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-[var(--c-danger)]">
+          <TriangleAlert className="h-[14px] w-[14px] shrink-0" strokeWidth={2.2} />
+          {translate('action.foul')}
+        </p>
+        <div className="mt-1.5 grid grid-cols-3 gap-2">
+          {FOULS.map((f) => (
+            <button key={f.k} aria-label={translate(f.aria)} onClick={() => { onFoul(f.k); close() }}
+              className="rounded-2xl bg-[var(--c-danger-bg)] py-3.5 text-[13px] font-bold text-[var(--c-danger)] transition hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)] active:scale-[0.97]">
+              {translate(f.label)}
+            </button>
+          ))}
+        </div>
 
-        {/* CORRECTIONS — folded away: this popup is opened to record, not to undo.
-            Unfolded from the start, they pushed half the dialog below the fold and
-            forced a scroll on every shot. */}
+        {/* CORRECTIONS — still folded, now visibly a button.
+            Folded, because this popup is opened to record and not to undo: unfolded
+            from the start, the corrections pushed half the dialog below the fold and
+            forced a scroll on every shot.
+            Visibly a button, because a mis-entry is not a footnote — it is the second
+            reason anyone opens this dialog, and a small grey caption hides it. It also
+            says how many actions it can take back, which is how you tell "nothing to
+            correct" from "did not notice the control". */}
         {hasCorrections && (
-          <details className="mt-4 border-t border-[var(--c-border)] pt-3">
-            <summary className="cursor-pointer list-none text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)] transition hover:text-[var(--c-text)]">
+          <details className="group mt-4">
+            <summary className="flex cursor-pointer list-none items-center justify-center gap-2 rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] py-3.5 text-[15px] font-bold text-[var(--c-text)] transition hover:border-[var(--c-accent)] hover:bg-[var(--c-panel)] active:scale-[0.98] [&::-webkit-details-marker]:hidden">
+              <Undo2 className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
               {translate('action.correct')}
+              <span className="tabular-nums text-[var(--c-muted)]">({removable})</span>
+              <ChevronDown className="h-[16px] w-[16px] shrink-0 text-[var(--c-muted)] transition group-open:rotate-180" strokeWidth={2.4} />
             </summary>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {SCORES.map((s) => (
@@ -132,10 +183,16 @@ export function PlayerActionDialog({
               className="mt-2 w-full rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] py-2.5 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)] disabled:opacity-35 disabled:hover:border-[var(--c-border)]">
               {translate('action.removeMiss')} {misses > 0 && <span className="text-[var(--c-muted)]">({misses})</span>}
             </button>
-            <button disabled={fouls <= 0} onClick={() => { onRemoveFoul(); close() }}
-              className="mt-2 w-full rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] py-2.5 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)] disabled:opacity-35 disabled:hover:border-[var(--c-border)]">
-              {translate('action.removeFoul')} {fouls > 0 && <span className="text-[var(--c-muted)]">({fouls})</span>}
-            </button>
+            {/* One button per foul type actually recorded — which is also the only
+                place the recorded type is shown back. A type you can enter and never
+                read again is a type nobody trusts. */}
+            {recordedFouls.map(([type, n]) => (
+              <button key={type} onClick={() => { onRemoveFoul(type); close() }}
+                className="mt-2 flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] px-3.5 py-2.5 text-sm font-bold text-[var(--c-text)] transition hover:border-[var(--c-muted)] hover:bg-[var(--c-panel)]">
+                <span className="truncate">{translate('action.removeOne', { what: translate(FOUL_LABEL[type]).toLowerCase() })}</span>
+                <span className="tabular-nums text-[var(--c-muted)]">({n})</span>
+              </button>
+            ))}
           </details>
         )}
       </DialogContent>
