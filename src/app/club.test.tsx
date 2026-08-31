@@ -1,9 +1,7 @@
-import 'fake-indexeddb/auto'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ClubProvider, useClub } from './club'
-import { db } from '../persistence/db'
 import { saveTeam } from '../persistence/repositories'
 
 function Probe() {
@@ -16,7 +14,6 @@ const renderProbe = () => render(<ClubProvider><Probe /></ClubProvider>)
 
 beforeEach(async () => {
   localStorage.clear()
-  await db.teams.clear()
   await saveTeam({ id: 't1', name: 'VIGNOT' })
   await saveTeam({ id: 't2', name: 'VERDUN' })
 })

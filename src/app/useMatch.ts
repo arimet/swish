@@ -19,15 +19,11 @@ export function useMatch(matchId: string) {
   /**
    * Applies the state to the screen, saves it, and **rolls back** if the save fails.
    *
-   * The display preceded the write without ever checking it, which is exactly the
-   * opposite of what a match sheet can afford. A failed `saveMatch` left the screen
-   * showing a basket the database did not have: the scoreboard said 42, the database
-   * 40, and the point vanished on reload. For an official score, a state that lies is
-   * worse than an action refused.
-   *
-   * The optimism stays, and it is justified: at the scorer's table, entry must answer
-   * the finger without waiting for the disk. What was missing is the rollback when
-   * the promise is not kept.
+   * The optimism is deliberate: at the scorer's table, entry must answer the finger
+   * without waiting for the network. The rollback is what makes it honest. Without it
+   * a failed write leaves the screen showing a basket the database does not have — the
+   * scoreboard says 42, the database 40, and the point vanishes on reload. For an
+   * official score, a state that lies is worse than an action refused.
    *
    * Returns the outcome, because "Finish" navigates out of the game right after:
    * leaving in the belief the game is closed when nothing was written is the same
@@ -53,11 +49,11 @@ export function useMatch(matchId: string) {
     const current = matchRef.current
     if (!current) return
     const event = { ...input, id: newId(), wallClock: Date.now() } as GameEvent
-    /* Two causes of failure, two treatments. `appendEvent` only throws deliberate
-       rulebook messages ("Cannot score before the clock starts."): they are shown as
-       they are, and nothing has been applied yet. A write failure is something else,
-       and used to land in the same `catch` — where it showed a raw technical
-       exception to a volunteer. */
+    /* Two causes of failure, two treatments, and they must not share a `catch`.
+       `appendEvent` throws deliberate rulebook messages ("Cannot score before the clock
+       starts."): they are shown as they are, and nothing has been applied. A write
+       failure is a technical exception, and showing one to a volunteer mid-game tells
+       them nothing they can act on — `persist` turns it into `error.save`. */
     let next: Match
     try {
       next = appendEvent(current, event)

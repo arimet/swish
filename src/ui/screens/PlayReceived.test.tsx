@@ -1,4 +1,3 @@
-import 'fake-indexeddb/auto'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -6,7 +5,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { PlayReceived } from './PlayReceived'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
-import { db } from '../../persistence/db'
 import { listPlays, savePlay, saveTeam } from '../../persistence/repositories'
 import { encode } from '../../domain/share'
 import { newPlay, nextStep, type Play } from '../../domain/plays'
@@ -39,8 +37,6 @@ function pointGuardY(): number {
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
   localStorage.clear()
-  await db.plays.clear()
-  await db.teams.clear()
   // Sans équipe en base, `ClubProvider` oublierait le club réglé.
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   localStorage.setItem('swish-club-id', 'ta')

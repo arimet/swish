@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useClub } from '../../app/club'
 import { C, bd, Ic, ICON, TeamBadge } from '../olive/kit'
+import { WriteToken } from '../components/WriteToken'
 import { useT } from '../../i18n'
 
 /** First launch: pick the club to follow. Shown in place of the shell as long as
@@ -53,6 +54,14 @@ export function Welcome() {
         <p className="mt-5 text-center text-[12px]" style={{ color: C.faint }}>
           {translate('welcome.changeable')}
         </p>
+
+        {/* The write token, here and not only under Administration: that screen sits
+            behind a chosen club, a club comes from a team, and founding a team is a
+            write. On a fresh deployment the key would otherwise be locked inside the
+            door it opens. */}
+        <div className="mt-8">
+          <WriteToken />
+        </div>
       </div>
     </div>
   )

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { listPlayers, listTeams, saveMatch } from '../../persistence/repositories'
-import { refresh } from '../../persistence/remote'
 import type { Match, Team } from '../../domain/types'
 import { C, bd, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
@@ -19,7 +18,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   const { can, guard } = useAuth()
   const { clubId, club, ready } = useClub()
   const [teams, setTeams] = useState<Team[] | null>(null) // null = not loaded yet
-  useEffect(() => { refresh().then(() => listTeams()).then(setTeams) }, [])
+  useEffect(() => { listTeams().then(setTeams) }, [])
   const opponents = (teams ?? []).filter((t) => t.id !== clubId)
   const [championshipLabel, setChampionship] = useState('')
   // The team list loads asynchronously: a state initialised once on mount would

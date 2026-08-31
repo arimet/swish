@@ -14,10 +14,9 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
  * shorthands. That is what this file does, and nothing more — a single code path
  * answers in development and in production.
  *
- * **The plugin only mounts if `DATABASE_URL` is present.** Without it, `pnpm dev`
- * behaves exactly as before: no API, no network call, the application is 100% local
- * with its demo dataset. That is what someone cloning the repo for the first time
- * should experience.
+ * **The plugin only mounts if `DATABASE_URL` is present**, and says so loudly when
+ * it is not: the application has a single source of truth, so without a database it
+ * has nothing to read and every screen stays empty. See README, "Getting started".
  */
 export function devApi(): Plugin {
   return {
@@ -25,7 +24,7 @@ export function devApi(): Plugin {
     apply: 'serve',
     configureServer(server: ViteDevServer) {
       if (!process.env.DATABASE_URL) {
-        server.config.logger.info('  ➜  API: off (DATABASE_URL absent) — 100% local mode')
+        server.config.logger.warn('  ✖  API: off — DATABASE_URL is absent, so the app has no data. See README.')
         return
       }
       server.config.logger.info('  ➜  API: /api/* served from api/ (DATABASE_URL present)')
@@ -55,7 +54,7 @@ export function devApi(): Plugin {
  *  name become a parameter. */
 function resolve(pathname: string): { file: string; params: Record<string, string> } | null {
   const p = pathname.replace(/^\/api\//, '').replace(/\/$/, '')
-  if (p === 'state') return { file: 'state.ts', params: {} }
+  if (p === 'docs') return { file: 'docs.ts', params: {} }
   if (p === 'mutate') return { file: 'mutate.ts', params: {} }
   const stream = p.match(/^match\/([^/]+)\/stream$/)
   if (stream) return { file: 'match/[id]/stream.ts', params: { id: decodeURIComponent(stream[1]) } }

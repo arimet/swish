@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react'
-import { getMatch, listPlayers, listTeams } from '../../persistence/repositories'
-import { syncEnabled, fetchBundle, subscribeBundle, type SyncBundle } from '../../app/sync'
+import { fetchBundle, subscribeBundle, type SpectatorBundle } from '../../app/spectator'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
 import { teamTotals } from '../../domain/totals'
@@ -12,43 +11,35 @@ import { C, TeamBadge , useLeagueLabel } from '../olive/kit'
 import { useT } from '../../i18n'
 import type { Match, Player, TeamSide } from '../../domain/types'
 
-/** The live view for spectators (read-only, full screen). Refreshes its state from
- * the server or, failing that, the local store; designed to be projected. */
+/** The live view for spectators (read-only, full screen). It reads the public
+ * bundle — the game, the numbers and the names, nothing more — over the real-time
+ * stream, and is designed to be projected. */
 export function SpectatorMatch({ matchId }: { matchId: string }) {
   const translate = useT()
   const champ = useLeagueLabel()
   const [match, setMatch] = useState<Match | null | undefined>(undefined)
   const [players, setPlayers] = useState<Record<string, Player>>({})
-  // Placeholders until the real names arrive: the effects below replace them within
-  // the first frames, but a projected screen must never show an empty label.
+  // Placeholders until the real names arrive: the bundle replaces them within the
+  // first frames, but a projected screen must never show an empty label.
   const [names, setNames] = useState<Record<TeamSide, string>>(() => ({ A: translate('match.home'), B: translate('match.away') }))
   const [nowMs, setNowMs] = useState(() => Date.now())
   // One shot chart open across the whole screen: it is often projected in the hall,
   // and two charts at once would make it unreadable from a distance.
   const [openShotsId, setOpenShotsId] = useState<string | null>(null)
 
-  // Remote mode (multi-device): the real-time SSE stream, with polling as fallback.
+  // The real-time SSE stream, with polling as a fallback.
   useEffect(() => {
-    if (!syncEnabled()) return
-    const apply = (b: SyncBundle) => {
+    const apply = (b: SpectatorBundle) => {
       setMatch(b.match)
       const map: Record<string, Player> = {}
       for (const p of b.players) map[p.id] = p
       setPlayers(map)
       setNames(b.teamNames)
     }
-    fetchBundle(matchId).then((b) => { if (b) apply(b) })
+    // `null` on a first fetch that finds nothing: without it a stale link would sit
+    // on "Loading…" for ever, and a projected screen would say nothing at all.
+    fetchBundle(matchId).then((b) => { if (b) apply(b); else setMatch(null) })
     return subscribeBundle(matchId, apply)
-  }, [matchId])
-
-  // Local mode (same device): read from the local store.
-  useEffect(() => {
-    if (syncEnabled()) return
-    let stop = false
-    const load = async () => { const m = await getMatch(matchId); if (!stop) setMatch(m ?? null) }
-    load()
-    const iv = window.setInterval(load, 1500)
-    return () => { stop = true; clearInterval(iv) }
   }, [matchId])
 
   // The simulated clock's tick (for as long as the clock is running).
@@ -57,19 +48,6 @@ export function SpectatorMatch({ matchId }: { matchId: string }) {
     const iv = window.setInterval(() => setNowMs(Date.now()), 500)
     return () => clearInterval(iv)
   }, [match])
-
-  useEffect(() => {
-    if (syncEnabled() || !match) return
-    Promise.all([listPlayers(match.meta.clubId), listTeams()]).then(([roster, teams]) => {
-      const map: Record<string, Player> = {}
-      for (const p of roster) map[p.id] = p
-      setPlayers(map)
-      setNames({
-        A: teams.find((t) => t.id === match.meta.clubId)?.name ?? translate('match.home'),
-        B: teams.find((t) => t.id === match.meta.opponentId)?.name ?? translate('match.away'),
-      })
-    })
-  }, [match?.meta.clubId, match?.meta.opponentId, translate])
 
   if (match === undefined) return <Screen><p style={{ color: C.muted }}>{translate('common.loading')}</p></Screen>
   if (match === null) return <Screen><p style={{ color: C.muted }}>{translate('preview.notFound')}</p></Screen>
@@ -151,11 +129,11 @@ function Screen({ children }: { children: ReactNode }) {
 /**
  * One side of the spectator scoreboard.
  *
- * The score used to carry `teamColor(id)`, a hue drawn from a hash of the id among
- * eight NBA-ish hex values. That is the right device for telling six crests apart in
- * a list — and the wrong one here: on a scoreboard the question is not "which of the
- * six teams" but "us or them", and the answer was a crimson and a navy foreign to
- * the charter. The two tokens that say exactly that already existed for the scorer's
+ * The score does **not** carry a hue hashed from the team's id. That device is right
+ * for telling six crests apart in a list, and wrong here: on a scoreboard the question
+ * is not "which of the six teams" but "us or them", and a hash answers it with a
+ * crimson and a navy foreign to the charter. The two tokens that say exactly that
+ * already exist for the scorer's
  * table: ours in ink, the opposition in accent. The crest keeps its club colour —
  * that is where identity means something.
  */

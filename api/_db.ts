@@ -3,9 +3,8 @@ import { timingSafeEqual } from 'node:crypto'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 /**
- * The source of truth. `null` when `DATABASE_URL` is absent, which lets the routes
- * answer a clean "sync not configured" — and that is the default: without a
- * database the application stays 100% local.
+ * The source of truth. There is no fallback: without a database the application has
+ * nothing to read and nowhere to write, so the routes answer 500 rather than pretend.
  *
  * `max: 1`: a serverless function has no connection to keep between two
  * invocations, and Neon does the real pooling on its side (use its shared entry
@@ -29,11 +28,15 @@ export const pool = url ? new Pool({ connectionString: url, max: 1 }) : null
  */
 pool?.on('error', (e) => { console.error('[swish] Postgres connection lost:', e.message) })
 
+/** The kinds the database accepts. Both routes check against this list: an unknown
+ *  kind is a client bug or a probe, never a document to store. */
+export const KINDS = new Set(['team', 'player', 'match', 'result', 'convocation', 'training', 'play', 'message'])
+
 /** The write token. **No** `VITE_` prefix: it must never enter the bundle, unlike
  *  the three access codes, which are readable in the browser's tools. That is the
  *  whole difference between a door the client opens for itself and a door guarded
  *  by the server. */
-const TOKEN = process.env.SYNC_WRITE_TOKEN ?? ''
+const TOKEN = process.env.WRITE_TOKEN ?? ''
 
 /** Constant-time comparison: a naive one leaks the length of the correct prefix,
  *  hence the token, one character at a time. */
@@ -43,21 +46,20 @@ function sameSecret(a: string, b: string): boolean {
 }
 
 /**
- * Guards the routes that **write** club data. Reading is open: `/api/state` used to
- * carry this check too, and it made the source of truth unreadable to anyone who had
- * not been handed a secret — see the note at the top of that file.
+ * Guards the routes that **write** club data. Reading is open — see the note at the
+ * top of `docs.ts`.
  *
- * So this is now the only door, which puts more weight on it, not less: an
- * unguarded `/api/mutate` would let anyone who knows the URL rewrite a match sheet.
+ * So this is the only door, which puts more weight on it, not less: an unguarded
+ * `/api/mutate` would let anyone who knows the URL rewrite a match sheet.
  *
- * Returns `true` when the request may continue; otherwise the response is already
- * written and the caller only has to return.
+ * Returns `true` when the response is already written and the caller only has to
+ * return.
  */
 export function unauthorized(req: VercelRequest, res: VercelResponse): boolean {
   if (!TOKEN) {
     // A database configured without a token would be open to anyone who knows the
     // URL. We refuse to start in that state rather than let it pass in silence.
-    res.status(503).json({ error: 'SYNC_WRITE_TOKEN missing server-side' })
+    res.status(503).json({ error: 'WRITE_TOKEN missing server-side' })
     return true
   }
   const supplied = req.headers['x-swish-token']
@@ -68,14 +70,14 @@ export function unauthorized(req: VercelRequest, res: VercelResponse): boolean {
   return false
 }
 
-/** The common preamble: CORS, preflight, database configured. Returns `true` when
- *  the response is already written. */
+/** The common preamble: CORS, preflight, database reachable, method allowed.
+ *  Returns `true` when the response is already written. */
 export function preamble(req: VercelRequest, res: VercelResponse, methods: string): boolean {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', `${methods}, OPTIONS`)
   res.setHeader('Access-Control-Allow-Headers', 'content-type, x-swish-token')
   if (req.method === 'OPTIONS') { res.status(204).end(); return true }
-  if (!pool) { res.status(501).json({ error: 'Sync not configured' }); return true }
+  if (!pool) { res.status(500).json({ error: 'DATABASE_URL missing server-side' }); return true }
   if (!methods.split(', ').includes(req.method ?? '')) {
     res.setHeader('Allow', `${methods}, OPTIONS`)
     res.status(405).end()

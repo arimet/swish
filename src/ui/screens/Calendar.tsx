@@ -2,7 +2,6 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { listMatches, listPlays, listTeams, listTrainings, saveTraining, deleteTraining, toggleTrainingPlay } from '../../persistence/repositories'
-import { refresh } from '../../persistence/remote'
 import type { Match, Team, Training } from '../../domain/types'
 import type { Play } from '../../domain/plays'
 import { isoDay, nextFixture } from '../../domain/fixtures'
@@ -10,7 +9,6 @@ import { C, bd, Ic, ICON, MatchCard, PageTitle, fmtDate } from '../olive/kit'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useClub } from '../../app/club'
 import { currentLang, useT } from '../../i18n'
-import { remoteEnabled } from '../../persistence/remote'
 import { useAuth } from '../../app/auth'
 import { X } from 'lucide-react'
 
@@ -44,7 +42,7 @@ export function Calendar() {
 
   useEffect(() => {
     let cancel = false
-    refresh().then(() => Promise.all([listMatches(), listTeams(), listTrainings()])).then(([m, t, tr]) => {
+    Promise.all([listMatches(), listTeams(), listTrainings()]).then(([m, t, tr]) => {
       if (cancel) return
       setTeams(Object.fromEntries(t.map((x) => [x.id, x])))
       setMatches(m)
@@ -113,10 +111,10 @@ export function Calendar() {
     })
   }
   /* Deleting a session goes through a confirmation, like deleting a game, a play or a
-     player. It was missing here: a click on the cross erased the session, with no way
-     back. The message says what is **not** deleted — the attached plays live in the
-     library, only the link disappears — because that is the question people ask with
-     their hand on the cross. */
+     player: a click on the cross would erase it with no way back. The message says what
+     is **not** deleted — the attached plays live in the library, only the link
+     disappears — because that is the question people ask with their hand on the
+     cross. */
   const [toDelete, setToDelete] = useState<Training | null>(null)
   const remove = () => { const t = toDelete; if (!t) return
     guard('manage', async () => { await deleteTraining(t.id); setToDelete(null); refreshTrainings() }) }
@@ -254,7 +252,6 @@ export function Calendar() {
       {/* Like the call-ups and the outside results: worded the same way as on the
           standings screen and the game record, so as not to suggest two different limits
           — the decision covered the trainings just as much. */}
-      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('calendar.trainingsLocal')}</p>}
 
       <ConfirmDialog open={!!toDelete} onClose={() => setToDelete(null)} onConfirm={remove}
         title={translate('calendar.deleteSessionTitle')}
@@ -267,8 +264,8 @@ export function Calendar() {
 }
 
 /** A game's card and — while it is still upcoming — direct access to its call-up.
- *  The call-up stays on the game's record, where it belongs; what was missing is a
- *  path from where the coach is looking. The link sits BESIDE the card and not
+ *  The call-up lives on the game's record, where it belongs; this is the path to it
+ *  from where the coach is actually looking. The link sits BESIDE the card and not
  *  inside it: `MatchCard` is itself a link, and a link inside a link is not valid
  *  HTML. */
 function GameCard({ m, teams, manages }: { m: Match; teams: Record<string, Team>; manages: boolean }) {

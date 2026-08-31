@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { deleteMessage, getConvocation, getMessage, listMatches, listPlayers, listPlays, listTeams, listTrainings, saveMessage } from '../../persistence/repositories'
-import { refresh } from '../../persistence/remote'
 import { teamMatches, teamRecord, teamScorers } from '../../domain/teamRecord'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { since, nextFixture, type Fixture } from '../../domain/fixtures'
@@ -14,7 +13,6 @@ import type { Convocation, Match, TeamMessage, Player, Team, Training } from '..
 import type { Play } from '../../domain/plays'
 import { Check } from 'lucide-react'
 import { useLang, useT } from '../../i18n'
-import { remoteEnabled } from '../../persistence/remote'
 
 export function Dashboard() {
   const translate = useT()
@@ -34,8 +32,7 @@ export function Dashboard() {
   useEffect(() => {
     if (!clubId) return
     let cancelled = false
-    refresh()
-      .then(() => Promise.all([listMatches(), listTeams(), listPlayers(clubId), listTrainings(), listPlays(clubId)]))
+    Promise.all([listMatches(), listTeams(), listPlayers(clubId), listTrainings(), listPlays(clubId)])
       .then(([ms, ts, ps, trs, sch]) => {
         if (cancelled) return
         setTeams(Object.fromEntries(ts.map((t) => [t.id, t])))
@@ -269,10 +266,10 @@ function CoachMessage({ clubId }: { clubId: string }) {
     return (
       <section className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
         <div className="mb-3 flex items-center gap-3">
-          <label htmlFor="message-equipe" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('dashboard.teamMessage')}</label>
+          <label htmlFor="message-team" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('dashboard.teamMessage')}</label>
           <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('common.closeShort')}</button>
         </div>
-        <textarea id="message-equipe" rows={3} value={text} onChange={(e) => setText(e.target.value)}
+        <textarea id="message-team" rows={3} value={text} onChange={(e) => setText(e.target.value)}
           placeholder={translate('dashboard.messagePlaceholder')}
           className="w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
         <button onClick={publish} disabled={!text.trim()} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
@@ -280,7 +277,6 @@ function CoachMessage({ clubId }: { clubId: string }) {
         </button>
         {/* Like the call-ups, the trainings and the plays: worded the same way, so as
             not to suggest two different limits. */}
-        {!remoteEnabled() && <p className="mt-3 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('dashboard.messageLocal')}</p>}
       </section>
     )
   }

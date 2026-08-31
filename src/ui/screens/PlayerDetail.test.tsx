@@ -1,12 +1,11 @@
-import 'fake-indexeddb/auto'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { PlayerDetail } from './PlayerDetail'
 import { AuthProvider, PLAYER_ID_KEY } from '../../app/auth'
-import { db } from '../../persistence/db'
 import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { GameEvent, Match } from '../../domain/types'
+import { clear } from '../../test/fakeApi'
 
 const TOP3 = { x: 0.5, y: 0.65 }
 
@@ -18,7 +17,6 @@ const match = (id: string, events: Partial<GameEvent>[]): Match => ({
 
 beforeEach(async () => {
   localStorage.clear()
-  await db.matches.clear(); await db.players.clear(); await db.teams.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
   await saveMatch(match('m1', [
@@ -81,7 +79,7 @@ describe('PlayerDetail', () => {
   })
 
   it('shows a dash rather than a zero for a player with no game', async () => {
-    await db.matches.clear()
+    clear('match')
     renderAt('p1')
     expect(await screen.findByText('MARTIN Lucas')).toBeInTheDocument()
     expect(screen.queryByText('0,0')).not.toBeInTheDocument()

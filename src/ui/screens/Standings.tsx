@@ -3,7 +3,6 @@ import { newId } from '../../domain/ids'
 import { standings, fixtureKey } from '../../domain/standings'
 import { FRIENDLY } from '../../domain/ids'
 import { listMatches, listResults, saveResult, deleteResult } from '../../persistence/repositories'
-import { remoteEnabled } from '../../persistence/remote'
 import type { Match, ReportedResult } from '../../domain/types'
 import { C, bd, leagueLabel, SectionTitle, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
@@ -62,13 +61,12 @@ export function Standings() {
    *
    * With an empty array as the initial value the screen cannot tell "I have not read
    * yet" from "there is nothing": it therefore showed "No standings to display" for a
-   * frame before replacing it with the table. Fifteen milliseconds on this machine —
-   * but that duration is the IndexedDB read, so it follows how slow the device is, and
-   * a club's phone is not a development machine.
+   * frame before replacing it with the table. That duration is now a network round
+   * trip to the database, which is to say anything at all: a gym's connection is not a
+   * development machine.
    *
-   * The convention already existed in the repo (`MatchSetup`, `TeamsList`,
-   * `SchemaList`, `Calendrier`, and `Dashboard` for its games); it was missing
-   * here. */
+   * The same convention holds across the repo: `MatchSetup`, `TeamsList`, `PlayList`,
+   * `Calendar`, and `Dashboard` for its games. */
   const [matches, setMatches] = useState<Match[] | null>(null)
   const [results, setResults] = useState<ReportedResult[] | null>(null)
   const [error, setError] = useState('')
@@ -126,8 +124,8 @@ export function Standings() {
     if (!awayId && teams[1]) setAwayId(teams[1].id)
   }, [teams, homeId, awayId])
 
-  // An error message that outlives the correction of the form would wrongly accuse an
-  // entry that no longer poses a problem: it clears as soon as any field changes.
+  // An error that outlives the correction of the form accuses an entry that is now
+  // fine: it clears as soon as any field changes.
   const changeLeague = (v: string) => { setError(''); setLeague(v); setFieldTouched(true) }
   const changeHomeId = (v: string) => { setError(''); setHomeId(v) }
   const changeAwayId = (v: string) => { setError(''); setAwayId(v) }
@@ -229,8 +227,8 @@ export function Standings() {
                     <td className="hidden px-2 text-center tabular-nums sm:table-cell">{l.pointsAgainst}</td>
                     {/* The table's only tinted column, besides the points: the sign of
                         the differential is what the eye hunts for when scanning the
-                        grid, and one coloured column out of nine stands out — nine
-                        coloured columns stand out no longer. */}
+                        grid. One coloured column out of nine stands out; nine of them
+                        would not. */}
                     <td className="px-2 text-center font-semibold tabular-nums"
                       style={{ color: l.pointsFor - l.pointsAgainst > 0 ? C.green : l.pointsFor - l.pointsAgainst < 0 ? C.danger : C.faint }}>
                       {l.pointsFor - l.pointsAgainst > 0 ? `+${l.pointsFor - l.pointsAgainst}` : l.pointsFor - l.pointsAgainst}
@@ -303,12 +301,10 @@ export function Standings() {
         ) : (
           /* The results grouped by league, and the league's name written once per
              group — not once per row.
-             It used to be: six rows carried "Pré régionale masculine · Poule A" six
-             times, the common case being that a club enters the results of its single
-             pool. It was the largest block of text on each row, for a constant piece of
-             information, and it took a second row that carried the delete button with
-             it — hence a ✕ floating under the game it erases. The group absorbs both
-             problems: the name moves to the top, the row becomes a row again.
+             A club normally enters the results of its single pool, so per-row the name
+             is a constant repeated six times, and the largest block of text on the row:
+             it pushed the delete button onto a second line, leaving a ✕ floating under
+             the game it erases. Grouped, the name sits at the top and the row is a row.
              A single group does not deserve a header: the section's title already says
              it, and the standings just above repeat it. */
           <div className="space-y-5">
@@ -317,18 +313,18 @@ export function Standings() {
                 {resultsByLeague.length > 1 && (
                   <p className="mb-1 text-[12px] font-bold" style={{ color: C.faint }}>{league || translate('common.noLeague')}</p>
                 )}
-                {/* Rules, not cards. Each row used to be a card laid inside the
-                    section's card: two nested frames for a hierarchy that has only one
-                    level, and six borders of noise. */}
+                {/* Rules, not cards: a card per row inside the section's own card
+                    means two nested frames for a hierarchy one level deep, and six
+                    borders of noise. */}
                 <ul className="divide-y" style={{ borderColor: C.border }}>
             {rows.map((r) => (
               /* One team per row, its score on the right — the idiom the kit's game
-                 card already uses, and the only one that holds at every width. The game
-                 used to be on a single row, the two names either side of the scores: on
-                 a phone the two flexible columns had thirty pixels left, and `truncate`
-                 reduced "BC BAR-LE-DUC" to "B". You could no longer tell who had played
-                 whom — the opposite of what the list is there to read. Stacked, each
-                 name has the full width minus its crest and its score. */
+                 card already uses, and the only one that holds at every width. Both
+                 names on a single row either side of the scores leaves the two flexible
+                 columns thirty pixels on a phone, and `truncate` reduces "BC
+                 BAR-LE-DUC" to "B": you can no longer tell who played whom, which is
+                 the one thing the list exists to say. Stacked, each name has the full
+                 width minus its crest and its score. */
               <li key={r.id} className="flex items-center gap-3 py-2.5">
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <TeamRow
@@ -358,7 +354,6 @@ export function Standings() {
         {/* Hand-entered results do not go through the synchronisation: without this
             note, someone opening the app on another device would find empty standings
             without understanding why. */}
-        {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('standings.resultsLocal')}</p>}
       </section>
     </div>
   )

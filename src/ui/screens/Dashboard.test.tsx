@@ -1,4 +1,3 @@
-import 'fake-indexeddb/auto'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -6,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { Dashboard } from './Dashboard'
 import { AuthProvider, PLAYER_ID_KEY, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
-import { db } from '../../persistence/db'
+import { count } from '../../test/fakeApi'
 import { getMessage, saveConvocation, saveMatch, saveMessage, savePlay, savePlayer, saveTeam, saveTraining } from '../../persistence/repositories'
 import { newPlay, type Play } from '../../domain/plays'
 import type { GameEvent, Match } from '../../domain/types'
@@ -48,9 +47,6 @@ beforeEach(async () => {
   // The role lives in the tab's session: without this cleanup, a test that unlocks
   // administration would leave the following ones already unlocked.
   sessionStorage.clear()
-  await db.matches.clear(); await db.players.clear(); await db.teams.clear()
-  await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear()
-  await db.messages.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' }); await saveTeam({ id: 'tb', name: 'VERDUN' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
   localStorage.setItem('swish-club-id', 'ta')
@@ -134,9 +130,9 @@ describe('Dashboard', () => {
   })
 
   it('invites planning when no fixture is scheduled', async () => {
-    // One game played, and that is the premise that was missing: "no fixture
-    // scheduled" describes a club **in season** with nothing ahead of it. A club with
-    // no game at all is another state — getting started — and that is the next test.
+    // One game played, and that premise carries the test: "no fixture scheduled"
+    // describes a club **in season** with nothing ahead of it. A club with no game at
+    // all is another state — getting started — and that is the next test.
     await saveMatch(finished('m1', 10, 4))
     renderDash()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
@@ -145,11 +141,11 @@ describe('Dashboard', () => {
   /**
    * The founder's arrival, right after entering their roster.
    *
-   * What this screen used to show: four statistic tiles reading "—", a form strip
-   * reading "—", two panels announcing the absence of scorers and shots, and two
-   * invitations to plan a game — neither of which says that an opposition has to be
-   * recorded first, so that both led to a dead-end screen. Six blocks to say six times
-   * that nothing has begun, and not one usable path.
+   * The screen a founder must **not** meet: four statistic tiles reading "—", a form
+   * strip reading "—", two panels announcing the absence of scorers and shots, and two
+   * invitations to plan a game that do not say an opposition has to be recorded first,
+   * so both lead to a dead end. Six blocks saying six times that nothing has begun,
+   * and not one usable path.
    */
   it('a club with no game at all gets the getting-started block, not the empty figures', async () => {
     sessionStorage.setItem(ROLE_KEY, 'admin')
@@ -356,7 +352,7 @@ describe('Dashboard — the message to the team', () => {
     await waitFor(() => expect(screen.getByText('Nouveau message.')).toBeInTheDocument())
     expect(screen.queryByText('Ancien message.')).not.toBeInTheDocument()
     // One message at a time: this is not a thread, there is nothing to stack.
-    expect(await db.messages.count()).toBe(1)
+    expect(count('message')).toBe(1)
   })
 
   it('erasing it makes the panel disappear', async () => {
@@ -394,13 +390,6 @@ describe('Dashboard — the message to the team', () => {
     expect(screen.queryByRole('button', { name: /effacer/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /modifier/i })).not.toBeInTheDocument()
     expect(await getMessage('ta')).toBeDefined()
-  })
-
-  it('says that the message stays on this device', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'admin')
-    renderDash()
-    await openEntry()
-    expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
   })
 })
 

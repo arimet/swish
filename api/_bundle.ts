@@ -2,31 +2,21 @@ import { pool } from './_db.js'
 
 /**
  * The spectator bundle: the game, the roster and the two team names — everything
- * the remote page needs, since it has no local database.
- *
- * It is **derived** from the table, no longer published separately by the scorer's
- * table. That is a plain simplification: the game already arrives through the
- * queue, so publishing it a second time meant two write paths for the same data,
- * with two ways to contradict each other — and a twelve-hour lifetime after which
- * the live view of a morning game went dark.
- *
- * `rev` is the highest write number among the rows that make up the bundle: the SSE
- * stream uses it to emit only on a real change.
+ * the remote page needs, projected out of the source of truth.
  */
 export interface Bundle {
   match: unknown
   players: unknown[]
   teamNames: { A: string; B: string }
-  rev: number
 }
 
-interface Row { doc: Record<string, unknown>; rev: string }
+interface Row { doc: Record<string, unknown> }
 
 export async function bundle(id: string): Promise<Bundle | null> {
   if (!pool) return null
 
   const { rows: m } = await pool.query<Row>(
-    "select doc, rev from documents where kind = 'match' and id = $1", [id])
+    "select doc from documents where kind = 'match' and id = $1", [id])
   if (!m.length) return null
 
   const match = m[0].doc
@@ -36,23 +26,18 @@ export async function bundle(id: string): Promise<Bundle | null> {
 
   const [roster, teams] = await Promise.all([
     pool.query<Row>(
-      "select doc, rev from documents where kind = 'player' and doc ->> 'teamId' = $1", [clubId]),
+      "select doc from documents where kind = 'player' and doc ->> 'teamId' = $1", [clubId]),
     pool.query<Row>(
-      "select doc, rev from documents where kind = 'team' and id = any($1::text[])", [[clubId, opponentId]]),
+      "select doc from documents where kind = 'team' and id = any($1::text[])", [[clubId, opponentId]]),
   ])
 
   const name = (tid: string) =>
     (teams.rows.find((r) => r.doc.id === tid)?.doc.name as string | undefined) ?? ''
 
-  const rev = Math.max(
-    ...[...m, ...roster.rows, ...teams.rows].map((r) => Number(r.rev)),
-  )
-
   return {
     match,
     players: roster.rows.map((r) => publicPlayer(r.doc)),
     teamNames: { A: name(clubId), B: name(opponentId) },
-    rev,
   }
 }
 

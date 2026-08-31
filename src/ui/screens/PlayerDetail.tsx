@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getPlayer, getTeam, listMatches } from '../../persistence/repositories'
-import { refresh as refreshRemote } from '../../persistence/remote'
 import { playerStats } from '../../domain/boxscore'
 import { playingTimes } from '../../domain/playingtime'
 import { playerCareer, ageAt } from '../../domain/career'
@@ -31,8 +30,7 @@ export function PlayerDetail() {
   useEffect(() => {
     if (!id) return
     let cancelled = false
-    refreshRemote()
-      .then(() => getPlayer(id))
+    getPlayer(id)
       .then(async (p) => {
         if (cancelled) return
         if (!p) { setPlayer(null); return }

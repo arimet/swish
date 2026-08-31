@@ -1,11 +1,10 @@
-import 'fake-indexeddb/auto'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { ROLE_KEY } from './app/auth'
-import { db } from './persistence/db'
 import { saveTeam } from './persistence/repositories'
+import { clear } from './test/fakeApi'
 
 beforeEach(async () => {
   // A club must be set to reach the shell: without it, App shows the welcome screen
@@ -56,15 +55,12 @@ describe('first launch (blank device)', () => {
     // Nobody ever replays this journey once demo data is in place: no club set, and no
     // team in the store to offer one.
     localStorage.clear()
-    await db.teams.clear()
-    // No role unlocked, and that is the whole point of the test.
-    //
-    // It used to grant itself `admin` up front, "to test the journey rather than the
-    // password box" — and that box was precisely the wall of first launch: a volunteer
-    // on a blank install was asked for an administrator code nobody had given them. The
-    // test's workaround described the defect without reporting it. Founding the club
-    // now asks for nothing (cf. `TeamCreate.test.tsx`), so the journey is played as a
-    // visitor.
+    clear('team')
+    // No role unlocked, and that is the whole point of the test: on a blank install
+    // the first volunteer has no administrator code, and nobody has given them one.
+    // Founding the club therefore asks for nothing (cf. `TeamCreate.test.tsx`), and
+    // this journey is played as a visitor. A test that granted itself `admin` here
+    // would pass while the real first launch hit a password box.
     sessionStorage.removeItem(ROLE_KEY)
   })
 
@@ -89,5 +85,39 @@ describe('first launch (blank device)', () => {
     // something can be done: without that right, the shell's five screens offer no
     // create button and the journey stops there, silently.
     expect(sessionStorage.getItem(ROLE_KEY)).toBe('admin')
+  })
+})
+
+/**
+ * The gate in front of the whole application, when the database does not answer.
+ *
+ * There is no local store behind these screens any more: a failed read is not a
+ * slower start, it is a start with no data. Two failures were possible and both were
+ * silent — the gate never resolved, so "Loading…" stayed on screen for ever; and a
+ * device with no club fell through to the welcome screen, which invites founding a
+ * team the server already holds.
+ */
+describe('an unreachable database', () => {
+  afterEach(() => { vi.restoreAllMocks() })
+
+  it('says so instead of inviting a club to be founded again', async () => {
+    localStorage.clear() // no club on this device: nothing to fall back on
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'))
+
+    render(<App />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/hors ligne/i)
+    expect(screen.queryByRole('link', { name: /créer ma première équipe/i })).not.toBeInTheDocument()
+  })
+
+  it('lets a device that already follows a club into the application', async () => {
+    // The shell shows what it can and its pill carries the rest. Locking the volunteer
+    // out of a match sheet because a list did not load would be the worse failure.
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'))
+
+    render(<App />)
+
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+    expect(await screen.findByRole('status')).toHaveAttribute('title', expect.stringMatching(/serveur ne répond pas/i))
   })
 })

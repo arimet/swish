@@ -57,14 +57,16 @@ and it is what a league-wide tool cannot copy: it makes entry fast enough for on
 volunteer, and it makes the data useful without requiring anyone else in the league to
 adopt anything. Standings and other teams are context, not the core.
 
-**Local-first, no account, no network required.** The app is fully usable offline with
-zero configuration; data lives on the device. Multi-device sharing is an addition that a
-club turns on, not a dependency it inherits.
+**One shared database, no account.** The club's data lives in one place and every
+device reads and writes there. A phone at the table, one on the bench and one in the
+stands are looking at the same season, with nothing to reconcile. The cost is stated
+rather than hidden: no network, no application.
 
 ## Operating Context
 
-- **A gym.** Poor or absent network is normal, especially away. Glare, distance, noise.
-  The device is held, not placed.
+- **A gym.** Glare, distance, noise; the device is held, not placed. The network is the
+  one thing the application cannot do without — a hall with no coverage is a hall where
+  the sheet cannot be kept, and that is a known, accepted limit.
 - **FFBB rules** (French federation) govern the domain, and they differ from NBA
   defaults in ways that matter: four periods of 10 minutes then overtimes of 5,
   team-foul **bonus at 5** (not 4), standings scored 2 points for a win and 1 for a
@@ -90,39 +92,38 @@ whole play travels in the URL fragment, so the recipient needs no installed app)
 team message from the coach; PDF export of the match sheet; administrative bulk cleanup;
 read-only spectator live view.
 
-**Local-first is the floor.** IndexedDB is the source of truth. The app shell is
-precached and a cold open works with no network, on any route.
-
-**Multi-device sync is an intended capability**, not an experiment. It is off by
-default (`VITE_SYNC_URL` empty) and turns on with a Postgres database plus serverless
-functions; see `DEPLOY.md`.
-
-When it is on, **the database is the source of truth and the device keeps a mirror** of
-it. That ordering is deliberate and load-bearing: the scorer's table writes on every
-gesture, hundreds of times over two hours, and a gym has no signal. Everything a club
-owns travels — teams, players, matches, call-ups, trainings, plays, entered results and
+**A single source of truth, and it is the database.** One Postgres table of JSON
+documents behind `api/`, required, not optional; see `DEPLOY.md`. Everything a club owns
+lives there — teams, players, matches, call-ups, trainings, plays, entered results and
 the coach's message — which is what lets a player read their call-up on their own phone
 instead of only on the coach's.
 
-Three rules follow, and they are the ones to keep in mind when changing this area. The
-server wins **without exception**, including when it holds nothing: turning sync on
-replaces a device's local data. Conflicts are settled by **when a change was made**, not
-when it arrived, so a queue unblocking two hours late cannot overwrite a newer edit. And
-**the match sheet is the exception to that arbitration**: it merges rather than
-overwrites, because the losing device is not wrong — it simply recorded other events,
-and dropping them would make baskets disappear.
+There used to be a mirror on each device, and it was defended by exactly the argument
+above: a gym has no signal, and the scorer's table writes hundreds of times over two
+hours. It was dropped anyway, and the reasoning is worth keeping. Two copies of the
+truth cost a hydration cursor, a manifest of the living, a per-device conflict
+arbitration on the time of the *gesture*, and a whole class of defect where a phone
+showed a state the database did not have. For an official score, a screen that lies is
+worse than an action refused.
+
+Two rules follow, and they are the ones to keep in mind when changing this area. A write
+is not a write until the server has answered — every screen that shows the result of one
+must roll back when it fails, as `useMatch` does. And **a write replaces**: there is no
+merge left to soften it, because a merge only ever reconciles copies and there are none.
+A match sheet is therefore kept by one device at a time; the day two need to record the
+same game, the fix is for the server to own the event log — appending events rather than
+accepting a rewritten one — not for a merge to come back.
 
 The shareable spectator link is public by design and carries only shirt numbers and
 names; licence numbers, birth dates and heights never leave the database.
 
-**Failures announce themselves.** When the queue cannot go out, every screen — including
-the scoring table, which lives outside the app shell and needed its own copy — shows how
-many changes are waiting and why. It is deliberately not an alert: nothing is lost when a
-push fails, the entries are in the local mirror and the queue resumes on its own, and
-telling a volunteer otherwise mid-match would be both alarming and untrue. It is
-deliberately not a toast either: a gym with no signal lasts two hours, so the indicator
-stays while the condition holds and disappears when the queue drains. The count is what
-distinguishes a hiccup from a breakdown.
+**Failures announce themselves.** When the server is silent or refuses the device's
+token, every screen — including the scoring table, which lives outside the app shell and
+needed its own copy — shows it, for as long as it lasts. It is deliberately not a toast:
+a gym with no signal lasts two hours, and a fading message would be gone before the
+volunteer looked up. And the wording deliberately does **not** reassure: there is no
+queue behind it any more, so "nothing is lost" would be false in the direction that costs
+a scorer their last basket.
 
 **Single-team by design.** An opponent never has a roster. Any feature that would
 require entering the other side's players contradicts the positioning above.
@@ -187,9 +188,9 @@ into hard constraints.
    possession is a broken control, not a small one.
 3. **Single-team asymmetry is the design, not a limitation.** Detail our side, total
    theirs. It is what keeps entry within one person's reach.
-4. **Local-first is the floor; sync is an addition that must announce its own
-   failures.** Working offline is not a degraded mode. But a capability that can fail
-   silently is worse than one that is absent.
+4. **One source of truth, and it must announce its own failures.** Two copies of the
+   data cost more than the gym connection they buy. But a write that can fail silently
+   is worse than one that is refused out loud.
 5. **Never invent data about real people.** Empty is honest; plausible is not.
 
 ## Accessibility & Inclusion

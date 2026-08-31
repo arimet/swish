@@ -1,4 +1,3 @@
-import 'fake-indexeddb/auto'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -6,7 +5,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { OliveShell } from './OliveShell'
 import { AuthProvider, PLAYER_ID_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
-import { db } from '../../persistence/db'
 import { savePlayer, saveTeam } from '../../persistence/repositories'
 
 const renderShell = () =>
@@ -46,7 +44,6 @@ const saisirLeCode = async (code: string) => {
 beforeEach(async () => {
   localStorage.clear()
   sessionStorage.clear()
-  await db.teams.clear(); await db.players.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
   await savePlayer({ id: 'p2', teamId: 'ta', number: 9, lastName: 'DURAND', firstName: 'Théo' })
