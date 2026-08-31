@@ -21,7 +21,7 @@ import { snapshot, transitions } from '../../domain/anim'
 import { LINK_LIMIT, encode } from '../../domain/share'
 import type { Play, Step } from '../../domain/plays'
 import { C, bd } from '../olive/kit'
-import { useT } from '../../i18n'
+import { useT, type Translate } from '../../i18n'
 import { PlayBoard } from './PlayBoard'
 import { D, W } from './ShotCourt'
 import { Link2 } from 'lucide-react'
@@ -34,8 +34,8 @@ const fileName = (s: Play, ext: string) =>
   `${(s.name || 'schéma').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'play'}.${ext}`
 
 /** The off-screen renderer only arrives on the first share: two hundred kilobytes
- *  a coach has no business downloading to open a match sheet. The service worker
- *  caches it like the rest of the bundle, so sharing works offline too. */
+ *  a coach has no business downloading to open a match sheet. The browser caches it
+ *  like the rest of the bundle, so the second share costs nothing. */
 const renderer = async () => (await import('react-dom/server')).renderToStaticMarkup
 
 /**
@@ -49,7 +49,7 @@ const renderer = async () => (await import('react-dom/server')).renderToStaticMa
  */
 async function standaloneSvg(play: Play, step: Step, width: number, height: number): Promise<string> {
   const toMarkup = await renderer()
-  return toMarkup(<PlayBoard play={play} stepIndex={0} step={step} apercu />)
+  return toMarkup(<PlayBoard play={play} stepIndex={0} step={step} preview />)
     .replace('<svg', `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"`)
     .replace(/[«»]/g, '_')
 }
@@ -185,8 +185,14 @@ function assemblePdf(pages: { jpeg: Uint8Array; l: number; h: number; title: str
   return new Blob(chunks as BlobPart[], { type: 'application/pdf' })
 }
 
-/** One page per step, the name and the note at the top. */
-async function makePdf(play: Play): Promise<Blob> {
+/**
+ * One page per step, the name and the note at the top.
+ *
+ * The translator is **passed in**: this is a plain function, not a component, so it
+ * cannot call `useT`. Writing the headers by hand would hand an English club a PDF
+ * titled "temps 1 / 4".
+ */
+async function makePdf(play: Play, translate: Translate): Promise<Blob> {
   const h = depth(play)
   // 1200 wide: enough to print cleanly without weighing megabytes.
   const l = 1200
@@ -197,8 +203,8 @@ async function makePdf(play: Play): Promise<Blob> {
     const jpeg = new Uint8Array(await (await toBlob(canvas, 'image/jpeg', 0.85)).arrayBuffer())
     pages.push({
       jpeg, l, h: hi,
-      title: `${play.name} — temps ${i + 1} / ${play.steps.length}`,
-      sub: play.note?.slice(0, 110) || (play.court === 'half' ? 'Demi-terrain' : 'Terrain complet'),
+      title: `${play.name} — ${translate('play.step', { n: i + 1, total: play.steps.length })}`,
+      sub: play.note?.slice(0, 110) || translate(play.court === 'half' ? 'play.halfCourt' : 'play.fullCourt'),
     })
   }
   return assemblePdf(pages)
@@ -463,7 +469,7 @@ export function SharePlay({ play, stepIndex = 0, open, onClose }: {
         </div>
         <div className="grid grid-cols-3 gap-2">
           <FileButton label={translate('share.png')} what={translate('share.thisStep')} disabled={busy} onClick={out(translate('share.theImage'), () => makePng(play, play.steps[stepIndex] ?? play.steps[0]), 'png', 'image/png')} />
-          <FileButton label={translate('share.pdf')} what={translate('share.everyStep')} disabled={busy} onClick={out(translate('share.thePdf'), () => makePdf(play), 'pdf', 'application/pdf')} />
+          <FileButton label={translate('share.pdf')} what={translate('share.everyStep')} disabled={busy} onClick={out(translate('share.thePdf'), () => makePdf(play, translate), 'pdf', 'application/pdf')} />
           <FileButton
             label={translate('share.gif')} what={translate('share.animation')} disabled={busy}
             onClick={out(translate('share.theGif'), () => makeGif(play, (done, total) => setStatus(translate('share.gifProgress', { done: done, total }))), 'gif', 'image/gif')}

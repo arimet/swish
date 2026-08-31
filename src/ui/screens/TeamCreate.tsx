@@ -52,8 +52,8 @@ export function TeamCreate() {
   return (
     <div className="p-6">
       <Link to="/teams" className="-mx-2 inline-block px-2 py-1.5 text-sm font-semibold" style={{ color: C.muted }}>{translate('team.backToTeams')}</Link>
-      {/* A real heading, no longer the subtitle that stood in for one: this screen
-          lives outside the shell, so its header does not name it on its behalf. */}
+      {/* A real heading: this screen lives outside the shell, so no header names it on
+          its behalf. */}
       <h1 className="mb-6 mt-2 text-2xl font-extrabold tracking-tight">{translate('create.title')}</h1>
 
       <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
@@ -78,10 +78,10 @@ export function TeamCreate() {
               ))}
             </ul>
           )}
-          {/* Three real labels, above their fields. The word used to be in the
-              `placeholder`: it vanished at the first keystroke, that is at the precise
-              moment you check you are filling the right box, and a screen reader
-              announced nothing but "edit text". */}
+          {/* Three real labels, above their fields, and not `placeholder`s: a
+              placeholder vanishes at the first keystroke — the precise moment you check
+              you are filling the right box — and leaves a screen reader announcing
+              nothing but "edit text". */}
           <div className="grid grid-cols-[68px_1fr_1fr_44px] items-end gap-2">
             <div><Label htmlFor="roster-num">{translate('team.number')}</Label>
               <input id="roster-num" value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center', width: '100%' }} /></div>
@@ -97,11 +97,11 @@ export function TeamCreate() {
 
       {/* The button stays visible without the right — this screen lives outside the
           shell and without an access menu, so hiding it would make the application
-          impossible to start. The reasoning used to stop there, and "the gate asks for
-          the code at create time" was precisely the wall: on a blank install, the very
-          first volunteer got an administrator-code prompt nobody had given them, for
-          the one action that makes the application usable. A visible button that opens
-          a locked door is no better than a hidden one.
+          impossible to start. And it must not merely *look* available: gating the code
+          at create time puts the very first volunteer of a blank install in front of an
+          administrator-code prompt nobody has given them, for the one action that makes
+          the application usable. A visible button that opens a locked door is no better
+          than a hidden one.
           Founding therefore asks for nothing: no team exists, there is no data to
           protect, and the administrator code defends data rather than access. From the
           second team on, the gate goes back to work. */}

@@ -16,36 +16,36 @@ import { ScoreSide } from './Scoreboard'
 const mount = (score: number) =>
   render(<ScoreSide align="right" color="#fff" name="VIGNOT" score={score} lead />)
 
-const nombre = (value: number) => screen.getByText(String(value))
+const shown = (value: number) => screen.getByText(String(value))
 
 describe('ScoreSide — the score\'s acknowledgement', () => {
   it('does not move on the first render', () => {
     // At opening, the score has not changed: it was already there. A loading
     // choreography has no business on a recording screen.
     mount(38)
-    expect(nombre(38).className).not.toMatch(/score-(up|down)/)
+    expect(shown(38).className).not.toMatch(/score-(up|down)/)
   })
 
   it('rises when someone scores', () => {
     const { rerender } = mount(38)
     rerender(<ScoreSide align="right" color="#fff" name="VIGNOT" score={40} lead />)
-    expect(nombre(40)).toHaveClass('score-up')
+    expect(shown(40)).toHaveClass('score-up')
   })
 
   it('falls when someone undoes', () => {
     // An undo that read as a basket would be worse than no motion at all.
     const { rerender } = mount(40)
     rerender(<ScoreSide align="right" color="#fff" name="VIGNOT" score={38} lead />)
-    expect(nombre(38)).toHaveClass('score-down')
+    expect(shown(38)).toHaveClass('score-down')
   })
 
   it('does not re-trigger when the score does not change', () => {
     // The clock-tick case: the parent re-renders, the score is the same. The node must
     // be the *same* node — otherwise the browser would replay the keyframe.
     const { rerender } = mount(38)
-    const avant = nombre(38)
+    const avant = shown(38)
     rerender(<ScoreSide align="right" color="#fff" name="VIGNOT" score={38} lead={false} />)
-    expect(nombre(38)).toBe(avant)
+    expect(shown(38)).toBe(avant)
   })
 
   it('replays the motion on every basket, even of the same value', () => {
@@ -53,9 +53,9 @@ describe('ScoreSide — the score\'s acknowledgement', () => {
     // sinon le second panier passerait inaperçu.
     const { rerender } = mount(38)
     rerender(<ScoreSide align="right" color="#fff" name="VIGNOT" score={39} lead />)
-    const premier = nombre(39)
+    const premier = shown(39)
     rerender(<ScoreSide align="right" color="#fff" name="VIGNOT" score={40} lead />)
-    expect(nombre(40)).not.toBe(premier)
-    expect(nombre(40)).toHaveClass('score-up')
+    expect(shown(40)).not.toBe(premier)
+    expect(shown(40)).toHaveClass('score-up')
   })
 })

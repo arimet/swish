@@ -3,8 +3,8 @@ import { useT } from '../../i18n'
 
 /** The theme toggle, twin of the language switcher and placed next to it. Two
  *  themes, so a toggle: the icon shows what the click leads *to*, and the
- *  accessible name says it in words. Both labels used to be hard-coded French, the
- *  only two strings in the shell that the catalogue never saw. */
+ *  accessible name says it in words. Both labels come from the catalogue: a
+ *  hard-coded string here is one the translation can never reach. */
 export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme()
   const translate = useT()

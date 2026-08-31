@@ -41,9 +41,9 @@ export function TeamPanel({
           <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: color }} />
           <h3 className="truncate text-xs font-extrabold uppercase tracking-wide text-muted-foreground">{translate('panel.onCourt')}</h3>
           {/* `bonus-in`: the pill arrives on mount, once. On the period's fifth team
-              foul (`TEAM_FOUL_BONUS`), the opposition shoots free throws — that is not
-              a counter ticking up, it is the game's rule changing, and the pill used to
-              appear with nothing to signal it. */}
+              foul (`TEAM_FOUL_BONUS`) the opposition shoots free throws — that is not a
+              counter ticking up, it is the game's rule changing, and it deserves more
+              than a pill appearing in silence. */}
           {bonus && <span className="bonus-in rounded-md bg-[var(--c-danger-fill)] px-1.5 py-0.5 text-[12px] font-black uppercase text-[var(--c-on-danger)]">{translate('panel.bonus')}</span>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">

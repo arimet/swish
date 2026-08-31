@@ -51,10 +51,9 @@ export function CourtLines({ bord = true }: { bord?: boolean }) {
   const faint = { fill: 'none', stroke: 'currentColor', strokeWidth: 4, opacity: 0.34 } as const
   return (
     <g style={{ color: T.line }}>
-      {/* The key **painted**, as in a gym. It was filled with the paths' ink at five
-          per cent opacity, that is to say invisible: the court had no colour of its
-          own, only markings laid on a bare slab. It was the surface that was missing,
-          not the wood's hue. */}
+      {/* The key **painted**, as in a gym, with its own token and not the paths' ink at
+          five per cent — which is to say invisible, leaving markings laid on a bare
+          slab. What makes a court read as a court is the surface, not the wood's hue. */}
       <rect x={505} y={0} width={490} height={580} fill={T.paint} />
       {/* Extensions of the lane lines: they hint at the mid-range targets. */}
       <g {...faint} strokeDasharray="18 22">
