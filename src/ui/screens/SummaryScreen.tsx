@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { PrintableSummary } from '../../export/PrintableSummary'
 import { ProgressionChart } from '../../export/ProgressionChart'
@@ -7,7 +8,8 @@ import { MatchMetaDialog } from '../components/MatchMetaDialog'
 import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
-import { getMatch, listPlayers, listTeams, saveMatch } from '../../persistence/repositories'
+import { saveMatch } from '../../persistence/repositories'
+import { docKey, useMatchDoc, usePlayersById, useTeamsById } from '../../persistence/queries'
 import { removeLastEvent } from '../../domain/reducer'
 import { newId } from '../../domain/ids'
 import { liveState } from '../../rules/ffbb'
@@ -28,32 +30,19 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const translate = useT()
   const champ = useLeagueLabel()
   const { can, guard } = useAuth()
-  const [match, setMatch] = useState<Match | null | undefined>(undefined)
-  const [players, setPlayers] = useState<Record<string, Player>>({})
+  const client = useQueryClient()
+  const { data: match } = useMatchDoc(matchId)
+  const { data: players = {} } = usePlayersById(match?.meta.clubId)
+  const { data: byId = {} } = useTeamsById()
   // Indexed by event side: A = our club, B = the opposition (with no roster).
-  const [teamNames, setTeamNames] = useState<Record<TeamSide, string>>({ A: '', B: '' })
+  const teamNames: Record<TeamSide, string> = {
+    A: byId[match?.meta.clubId ?? '']?.name ?? translate('common.ourTeam'),
+    B: byId[match?.meta.opponentId ?? '']?.name ?? translate('match.opponent'),
+  }
   const [showEdit, setShowEdit] = useState(false)
   const [editStats, setEditStats] = useState(false)
   const [pick, setPick] = useState<{ id: string; name: string } | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    getMatch(matchId).then(async (m) => {
-      if (cancelled) return
-      if (!m) { setMatch(null); return }
-      const [roster, teams] = await Promise.all([listPlayers(m.meta.clubId), listTeams()])
-      if (cancelled) return
-      const map: Record<string, Player> = {}
-      for (const p of roster) map[p.id] = p
-      setPlayers(map)
-      setTeamNames({
-        A: teams.find((t) => t.id === m.meta.clubId)?.name ?? translate('common.ourTeam'),
-        B: teams.find((t) => t.id === m.meta.opponentId)?.name ?? translate('match.opponent'),
-      })
-      setMatch(m)
-    })
-    return () => { cancelled = true }
-  }, [matchId, translate])
 
   if (match === undefined) return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
   if (match === null) return <div className="p-6"><p className="py-16 text-center text-sm" style={{ color: C.muted }}>{translate('preview.notFound')}</p></div>
@@ -64,8 +53,11 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const f = fmtDate(match.meta.date)
   const meta = match.meta
 
+  /* The cache is the sheet, here as in `useMatch`: the correction shows at once and the
+     write follows. No rollback on this screen — a stat corrected after the game is not
+     a basket during one, and the `ConnectionState` pill carries a failed write. */
   const persist = async (next: Match) => {
-    setMatch(next)
+    client.setQueryData(docKey('match', matchId), next)
     await saveMatch(next)
   }
   const saveMeta = async (patch: Partial<Match['meta']>) => persist({ ...match, meta: { ...match.meta, ...patch } })
