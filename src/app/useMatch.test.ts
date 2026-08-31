@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '../test/render'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useMatch } from './useMatch'
 import { doc } from '../test/fakeApi'
