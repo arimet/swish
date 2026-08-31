@@ -79,13 +79,14 @@ match", which freezes the score for good.
 
 ## 4. Demo data
 
-Two ways in, both writing the same documents from the same module:
+```bash
+DATABASE_URL=… pnpm db:seed
+```
 
-- **From a terminal**: `DATABASE_URL=… pnpm db:seed`. It refuses a table that
-  already holds documents, so it cannot erase a season by accident.
-- **From the deployment**: add **`VITE_SEED=1`** and redeploy. The application then
-  seeds itself on first load, and here too **only into an empty database**. Remove
-  the variable for real use all the same.
+It refuses a table that already holds documents, so it cannot erase a season by
+accident. The application never seeds itself: filling the club's database is not
+the front end's business, and a browser could only do it on a device already
+carrying the write token.
 
 ## How it works
 
@@ -122,7 +123,6 @@ Two ways in, both writing the same documents from the same module:
 |---|---|---|
 | `DATABASE_URL` | Postgres (use the pooled host) — the source of truth | **Yes** |
 | `WRITE_TOKEN` | Guards **writes**; entered once per writing device | **Yes** |
-| `VITE_SEED=1` | Seed demo data | Demo only |
 | `VITE_ADMIN_PASSWORD` | Admin access code (fallback `admin`) | Recommended |
 | `VITE_SCORER_PASSWORD` | Scorer's table access code (fallback `marque`) | Recommended |
 | `VITE_PLAYER_PASSWORD` | Player identification code, no write access (fallback `joueur`) | Recommended |

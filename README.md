@@ -91,9 +91,9 @@ deploy it, and create your team on first launch.
 
 Before you fork:
 
-- **The demo data** (`src/dev/seed.ts`) contains a real club's roster. It only loads in
-  development, or in production if you set `VITE_SEED=1`. For real use: leave that
-  variable unset, and replace the file if you want your own demo.
+- **The demo data** (`src/dev/seed.ts`) contains a real club's roster. Nothing loads it
+  on its own: it reaches a database only when someone runs `pnpm db:seed`. Replace the
+  file if you want your own demo.
 - **The vocabulary follows FFBB rules** (French federation): four 10-minute periods,
   bonus on the fifth team foul, 2/1 standings. If your federation differs, it is all
   gathered in `src/rules/ffbb.ts` and `src/domain/`.
@@ -202,7 +202,6 @@ admin code leaves the scorer's table open on the French word `marque`.
 |---|---|---|
 | `DATABASE_URL` | Postgres (pooled host) — the source of truth | **Yes** |
 | `WRITE_TOKEN` | Guards writes (reading is public) | **Yes** |
-| `VITE_SEED=1` | Demo data | Demo only |
 | `VITE_ADMIN_PASSWORD` | Administrator code (fallback `admin`) | Recommended |
 | `VITE_SCORER_PASSWORD` | Scorer's table code (fallback `marque`) | Recommended |
 | `VITE_PLAYER_PASSWORD` | Player code, no write access (fallback `joueur`) | Recommended |
