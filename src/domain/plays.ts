@@ -7,21 +7,49 @@
  */
 export type Court = 'half' | 'full'
 export type Side = 'offense' | 'defense'
+/**
+ * A player's number on the board, and their identity: arrows and the ball name a
+ * marker by `(side, position)`.
+ *
+ * Five per side, no more: that is the game, and the type says so rather than leaving
+ * it to be checked. Players can be added and removed one at a time — a three-on-two,
+ * a two-on-one — so a side may hold fewer than five, and the numbers left may have
+ * gaps while it does. A **freed number is reused**: remove 3, place a player, and they
+ * come back as 3. Handing out a sixth would name a poste that does not exist.
+ */
 export type Position = 1 | 2 | 3 | 4 | 5
+
+/** Five per side. Not a setting: it is the game. */
+export const MAX_PER_SIDE = 5
 export type Stroke = 'cut' | 'screen' | 'pass' | 'dribble'
 
 export interface Point { x: number; y: number }
 
 export interface Marker { side: Side; position: Position; at: Point }
 
-/** Sampled points of the gesture, smoothed at render time. The last one carries the
- *  arrowhead (or the T-bar for a screen). */
+/**
+ * A player's path: two points, from the marker it leaves to where it ends.
+ *
+ * `points` is a list and not a pair: the editor offers a straight path and a freehand
+ * one (see `PlayEdit`'s shape control), and a freehand gesture keeps its sampled
+ * points. `anim.refit` bends whatever it is given onto the two steps' positions, so
+ * both shapes animate the same way. The last point carries the arrowhead (or the T-bar
+ * for a screen).
+ */
 export interface Arrow { from: { side: Side; position: Position }; points: Point[]; stroke: Stroke }
 
 export interface Step {
-  markers: Marker[]                                   // 5 ou 10 selon `defense`
+  markers: Marker[]
   ball: { side: Side; position: Position } | Point    // carried by a marker, or on the floor
   arrows: Arrow[]
+  /**
+   * Freehand annotations, one list of points per stroke.
+   *
+   * They belong to no player and move nothing: a zone circled, a cross on a spot, a
+   * word underlined. That is exactly why they are not `Arrow`s — an `Arrow` names the
+   * marker it carries, and the animation makes that marker travel along it.
+   */
+  brush?: Point[][]
 }
 
 export interface Prop { kind: 'cone' | 'ball' | 'ladder'; at: Point }
@@ -96,12 +124,146 @@ export function newPlay(clubId: string, court: Court, defense: boolean): Omit<Pl
 }
 
 /**
- * The following step: same positions, same ball, no arrows. The coach drags the
- * markers where his arrows were sending them — he does not replace five markers at
- * every step.
+ * The following step: same positions, no arrows and no annotations. The coach drags
+ * the markers where his arrows were sending them — he does not replace five markers
+ * at every step.
+ *
+ * **The ball follows the pass.** A pass drawn from the carrier to a teammate says who
+ * has it next; making the coach then place the ball by hand was asking them to state
+ * twice what they had already drawn once, and the step where they forgot showed the
+ * ball still in the passer's hands.
  */
 export function nextStep(t: Step): Step {
-  return { markers: structuredClone(t.markers), ball: structuredClone(t.ball), arrows: [] }
+  return {
+    markers: structuredClone(t.markers),
+    ball: receiver(t) ?? structuredClone(t.ball),
+    arrows: [],
+  }
+}
+
+/**
+ * How close a gesture has to end to a marker for the two to be treated as touching.
+ *
+ * One radius, two uses, and they have to agree: the editor snaps an arrow's end onto
+ * the marker, and `receiver` below reads that end back to find who catches the pass.
+ * Two different tolerances would let a coach draw a pass that visibly lands on 2 and
+ * hands the ball to nobody.
+ */
+export const SNAP_RADIUS = 0.06
+
+/** The marker within `SNAP_RADIUS` of `p`, nearest first, `null` if none is close
+ *  enough. `except` leaves out the marker a gesture started from — an arrow ending on
+ *  its own author is a zero-length stroke, not a pass to oneself. */
+export function markerNear(
+  t: Step, p: Point, except?: { side: Side; position: Position },
+): Marker | null {
+  let found: Marker | null = null
+  for (const m of t.markers) {
+    if (except && m.side === except.side && m.position === except.position) continue
+    const d = Math.hypot(m.at.x - p.x, m.at.y - p.y)
+    if (d > SNAP_RADIUS) continue
+    if (!found || d < Math.hypot(found.at.x - p.x, found.at.y - p.y)) found = m
+  }
+  return found
+}
+
+/**
+ * Who catches the ball in this step, if anyone: the marker at the end of a pass drawn
+ * **from the current carrier**.
+ *
+ * That the pass must start from the carrier is the whole precision of the rule. A
+ * pass drawn between two other players is a drawing — a second option, a reminder —
+ * and must not move a ball that was never in that hand. The last such pass wins: the
+ * coach who redraws is correcting, not adding.
+ */
+export function receiver(t: Step): { side: Side; position: Position } | null {
+  if ('x' in t.ball) return null                 // on the floor: nobody is passing it
+  const carrier = t.ball
+  for (let i = t.arrows.length - 1; i >= 0; i--) {
+    const a = t.arrows[i]
+    if (a.stroke !== 'pass') continue
+    if (a.from.side !== carrier.side || a.from.position !== carrier.position) continue
+    const end = a.points[a.points.length - 1]
+    const target = end && markerNear(t, end, carrier)
+    if (target) return { side: target.side, position: target.position }
+  }
+  return null
+}
+
+const POSITIONS_ALL: Position[] = [1, 2, 3, 4, 5]
+
+/**
+ * The lowest number free on that side, `null` when all five are taken.
+ *
+ * **Lowest, not next**: a side that has lost its 3 gets its 3 back, not a 6. The
+ * board reads as a team of five whatever the coach has added and removed, and a
+ * number always names a poste that exists.
+ *
+ * A number taken in **any** step counts as taken. A play carries the same set of
+ * markers at every step (see `addPlayer`), so the question does not normally arise —
+ * but reusing a number that still exists three steps later would merge two players
+ * into one, and every arrow naming that number would become ambiguous.
+ */
+export function freePosition(s: Play, side: Side): Position | null {
+  const taken = new Set(s.steps.flatMap((t) => t.markers.filter((m) => m.side === side).map((m) => m.position)))
+  return POSITIONS_ALL.find((n) => !taken.has(n)) ?? null
+}
+
+/**
+ * Adds a player, at the same spot in **every** step. Returns the play unchanged when
+ * that side already holds its five.
+ *
+ * Every step carries the complete set of markers, so a player who exists in one step
+ * and not the next has no counterpart to travel towards — `anim.snapshot` leaves them
+ * where they are, and the coach sees a marker that ignores the play. The coach then
+ * drags them step by step, which is the ordinary gesture.
+ *
+ * The full side is refused **here** and not only in the interface: the editor greys
+ * the control out, and this is what makes the limit true whatever calls it.
+ */
+export function addPlayer(s: Play, side: Side, at: Point): Play {
+  const position = freePosition(s, side)
+  if (position === null) return s
+  const marker: Marker = { side, position, at }
+  return {
+    ...s,
+    // A play carries defenders or it does not, and that flag is what the "Defence"
+    // toggle reads. Placing the first opponent turns it on rather than leaving the
+    // board showing a defender the play claims not to have.
+    defense: side === 'defense' ? true : s.defense,
+    steps: s.steps.map((t) => ({ ...t, markers: [...t.markers, structuredClone(marker)] })),
+  }
+}
+
+/**
+ * Removes a player from every step, with what named them: their arrows go, and the
+ * ball drops to the floor where they stood if they were carrying it.
+ *
+ * The ball is deliberately **not** handed to a teammate. Choosing one would be
+ * inventing a pass the coach never drew; on the floor it is visible, wrong in a way
+ * anyone can see, and one tap from being right.
+ *
+ * The last attacker cannot be removed: a play with nobody to carry the ball is a
+ * state no screen can draw.
+ */
+export function removePlayer(s: Play, side: Side, position: Position): Play {
+  const isTarget = (m: { side: Side; position: Position }) => m.side === side && m.position === position
+  if (side === 'offense' && s.steps.every((t) => t.markers.filter((m) => m.side === 'offense').length <= 1)) return s
+
+  const steps = s.steps.map((t): Step => {
+    const gone = t.markers.find(isTarget)
+    return {
+      ...t,
+      markers: t.markers.filter((m) => !isTarget(m)),
+      arrows: t.arrows.filter((a) => !isTarget(a.from)),
+      ball: !('x' in t.ball) && isTarget(t.ball) ? { ...(gone?.at ?? { x: 0.5, y: 0.5 }) } : t.ball,
+    }
+  })
+  return {
+    ...s,
+    defense: steps.some((t) => t.markers.some((m) => m.side === 'defense')),
+    steps,
+  }
 }
 
 /** Distance from `p` to segment [a, b], at the nearest point. Exported because the
@@ -148,6 +310,9 @@ function remapY(s: Play, court: Court, f: (y: number) => number): Play {
       markers: t.markers.map((p) => ({ ...p, at: pt(p.at) })),
       ball: 'x' in t.ball ? pt(t.ball) : { ...t.ball },
       arrows: t.arrows.map((fl) => ({ ...fl, points: fl.points.map(pt) })),
+      // Without this the annotations would stay in the old scale: a circle drawn round
+      // the key would end up across the half-way line.
+      ...(t.brush ? { brush: t.brush.map((line) => line.map(pt)) } : {}),
     })),
   }
 }
@@ -160,6 +325,7 @@ function backcourtOccupant(s: Play): Occupant | null {
   for (const t of s.steps) {
     for (const p of t.markers) if (p.at.y > 0.5) return { key: 'play.occPosition', n: p.position }
     for (const fl of t.arrows) if (fl.points.some((p) => p.y > 0.5)) return { key: 'play.occArrow', n: fl.from.position }
+    for (const line of t.brush ?? []) if (line.some((p) => p.y > 0.5)) return { key: 'play.occBrush' }
   }
   const names: Record<Prop['kind'], string> = { cone: 'play.occCone', ball: 'play.occLooseBall', ladder: 'play.occLadder' }
   for (const o of s.props) if (o.at.y > 0.5) return { key: names[o.kind] }

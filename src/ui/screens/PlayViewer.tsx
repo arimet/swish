@@ -156,7 +156,7 @@ export function PlayViewer() {
             reachable. */}
         <div className="relative flex min-h-0 flex-1 items-center justify-center">
           <div className="h-full w-full select-none" style={{ maxWidth: boardWidth }}>
-            <PlayBoard play={play} stepIndex={0} step={step} remplit />
+            <PlayBoard play={play} stepIndex={0} step={step} fills />
           </div>
           <HalfScreen side="left" label={translate('viewer.previous')} chevron="‹" onClick={() => go(-1)} disabled={current === 0} />
           <HalfScreen side="right" label={translate('viewer.next')} chevron="›" onClick={() => go(1)} disabled={current === last} />

@@ -7,11 +7,11 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import {
-  BASKET, distanceToSegment, simplifyPath, nextStep, toCourt,
+  BASKET, distanceToSegment, simplifyPath, nextStep, toCourt, addPlayer, removePlayer, markerNear,
+  freePosition, MAX_PER_SIDE,
   type Side, type Arrow, type Prop, type Marker, type Point, type Position, type Play, type Step, type Court, type Stroke,
 } from '../../domain/plays'
 import { getPlay, savePlay } from '../../persistence/repositories'
-import { remoteEnabled } from '../../persistence/remote'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { courtWidth, PlayBoard, toSvg } from '../components/PlayBoard'
@@ -20,10 +20,28 @@ import { D, W } from '../components/ShotCourt'
 import { C, bd, Ic } from '../olive/kit'
 import { X } from 'lucide-react'
 
-type Tool = 'deplacer' | Stroke | 'ball' | 'objet' | 'gomme'
+type Tool = 'move' | Stroke | 'brush' | 'ball' | 'place' | 'eraser'
+/** What the "place" tool drops: a player of either side, or a piece of equipment. The
+ *  players are markers and the rest are props, but from the coach's side it is one
+ *  gesture — pick what, then tap where. */
+type Placeable = Prop['kind'] | 'ally' | 'opponent'
+/**
+ * How a path is recorded: as the segment between its ends, or as the hand drew it.
+ *
+ * It is a **second axis**, not a fifth stroke. The four strokes say what a movement
+ * *is* — a cut, a screen, a pass, a dribble — and that meaning is what the animation
+ * and the ball transfer read. Whether the line is straight or curved says how it goes
+ * there. Eight buttons for four movements times two shapes would have hidden the one
+ * distinction that matters behind the one that does not.
+ */
+type Shape = 'straight' | 'free'
+const SHAPES: { key: Shape; label: string }[] = [
+  { key: 'straight', label: 'edit.straight' },
+  { key: 'free', label: 'edit.free' },
+]
 /** What a drag holds: a marker (by its side and its position), or a placed prop (by
  *  its index) — both move, nothing else does. */
-type Grab = { kind: 'pion'; side: Side; position: Position } | { kind: 'objet'; index: number }
+type Grab = { kind: 'pion'; side: Side; position: Position } | { kind: 'place'; index: number }
 /**
  * One undo entry. The brief called for a stack of `Step`s; the props go with them,
  * since they live outside the steps and the eraser removes them too — without them,
@@ -56,12 +74,24 @@ function markerUnder(t: Step, p: Point): Marker | null {
 /** Index of the prop under the finger, -1 otherwise. */
 const propUnder = (props: Prop[], p: Point) => props.findIndex((o) => dist(o.at, p) < GRAB_RADIUS)
 
-/** Distance from the finger to an arrow's path, segment by segment. */
-function distanceToArrow(f: Arrow, p: Point): number {
-  if (f.points.length < 2) return f.points.length ? dist(f.points[0], p) : Infinity
+/** Distance from the finger to a path, segment by segment. Arrows and freehand
+ *  annotations are both measured with it: the finger does not know the difference. */
+function distanceToPath(points: Point[], p: Point): number {
+  if (points.length < 2) return points.length ? dist(points[0], p) : Infinity
   let d = Infinity
-  for (let i = 0; i < f.points.length - 1; i++) d = Math.min(d, distanceToSegment(p, f.points[i], f.points[i + 1]))
+  for (let i = 0; i < points.length - 1; i++) d = Math.min(d, distanceToSegment(p, points[i], points[i + 1]))
   return d
+}
+
+/** Index of the annotation nearest the finger, -1 if none is close enough. */
+function brushUnder(t: Step, p: Point): number {
+  let rank = -1
+  let best = NEAR_STROKE
+  ;(t.brush ?? []).forEach((line, i) => {
+    const d = distanceToPath(line, p)
+    if (d < best) { best = d; rank = i }
+  })
+  return rank
 }
 
 /** Index of the arrow nearest the finger, -1 if none is close enough. */
@@ -69,7 +99,7 @@ function arrowUnder(t: Step, p: Point): number {
   let rank = -1
   let best = NEAR_STROKE
   t.arrows.forEach((f, i) => {
-    const d = distanceToArrow(f, p)
+    const d = distanceToPath(f.points, p)
     if (d < best) { best = d; rank = i }
   })
   return rank
@@ -79,7 +109,7 @@ function arrowUnder(t: Step, p: Point): number {
  *  drag and for the write on release, so that the preview and what is saved cannot
  *  diverge. */
 function moveTo(s: Play, stepIndex: number, what: Grab, at: Point): Play {
-  if (what.kind === 'objet') return { ...s, props: s.props.map((o, k) => (k === what.index ? { ...o, at } : o)) }
+  if (what.kind === 'place') return { ...s, props: s.props.map((o, k) => (k === what.index ? { ...o, at } : o)) }
   return {
     ...s,
     steps: s.steps.map((t, k) => (k !== stepIndex ? t : {
@@ -124,8 +154,8 @@ function withoutDefense(t: Step): Step {
  */
 const HANDLE: { key: Tool; label: string; icon: string }[] = [
   // The move cursor's four-way arrow, and the notebook's eraser.
-  { key: 'deplacer', label: 'tool.move', icon: 'M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3' },
-  { key: 'gomme', label: 'tool.eraser', icon: 'm7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21M22 21H7M5 11l9 9' },
+  { key: 'move', label: 'tool.move', icon: 'M12 2v20M2 12h20M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3' },
+  { key: 'eraser', label: 'tool.eraser', icon: 'm7 21-4.3-4.3a2.4 2.4 0 0 1 0-3.4l9.6-9.6a2.4 2.4 0 0 1 3.4 0l5.6 5.6a2.4 2.4 0 0 1 0 3.4L13 21M22 21H7M5 11l9 9' },
 ]
 const DRAW: { key: Stroke; label: string }[] = [
   { key: 'cut', label: 'tool.cut' },
@@ -135,9 +165,13 @@ const DRAW: { key: Stroke; label: string }[] = [
 ]
 const PLACE: { key: Tool; label: string }[] = [
   { key: 'ball', label: 'tool.ball' },
-  { key: 'objet', label: 'tool.props' },
+  { key: 'place', label: 'tool.props' },
 ]
-const PROP_KINDS: { key: Prop['kind']; label: string }[] = [
+/** The players come first: adding a sixth attacker or a lone defender is what a coach
+ *  reaches for far more often than an agility ladder. */
+const PLACEABLES: { key: Placeable; label: string }[] = [
+  { key: 'ally', label: 'tool.ally' },
+  { key: 'opponent', label: 'tool.opponent' },
   { key: 'cone', label: 'tool.cone' },
   { key: 'ball', label: 'tool.looseBall' },
   { key: 'ladder', label: 'tool.ladder' },
@@ -151,11 +185,16 @@ export function PlayEdit() {
   const { can, guard } = useAuth()
   const [play, setPlay] = useState<Play | null | undefined>(undefined)
   const [stepIndex, setStepIndex] = useState(0)
-  const [tool, setTool] = useState<Tool>('deplacer')
-  const [propKind, setPropKind] = useState<Prop['kind']>('cone')
+  const [tool, setTool] = useState<Tool>('move')
+  const [placing, setPlacing] = useState<Placeable>('ally')
+  // Straight by default: it is the shape of most of what a coach draws, and the one
+  // that survives `anim.refit` without carrying a finger's wobble into the animation.
+  const [shape, setShape] = useState<Shape>('straight')
   // Gestures in progress: purely visual, never saved as they are.
   const [grab, setGrab] = useState<{ what: Grab; origin: Point; at: Point } | null>(null)
-  const [drawing, setDrawing] = useState<{ from: Arrow['from']; points: Point[] } | null>(null)
+  // `from` is null for the pen: it belongs to no player. A placeholder marker would
+  // have been a lie the type system could not catch.
+  const [drawing, setDrawing] = useState<{ from: Arrow['from'] | null; points: Point[] } | null>(null)
   // One stack per step: undoing on the second step does not undo the first.
   const [undoStack, setUndoStack] = useState<UndoStep[][]>([])
   const [refused, setRefused] = useState('')
@@ -224,25 +263,41 @@ export function PlayEdit() {
     // Without capture, a finger leaving the court would leave the gesture hanging.
     try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* no active pointer (jsdom) */ }
     const marker = markerUnder(step, p)
-    if (tool === 'deplacer') {
+    if (tool === 'move') {
       if (marker) { setGrab({ what: { kind: 'pion', side: marker.side, position: marker.position }, origin: marker.at, at: marker.at }); return }
       const i = propUnder(play.props, p)
-      if (i >= 0) setGrab({ what: { kind: 'objet', index: i }, origin: play.props[i].at, at: play.props[i].at })
+      if (i >= 0) setGrab({ what: { kind: 'place', index: i }, origin: play.props[i].at, at: play.props[i].at })
       return
     }
     if (tool === 'ball') {
       updateStep((t) => ({ ...t, ball: marker ? { side: marker.side, position: marker.position } : p }))
       return
     }
-    if (tool === 'objet') {
-      update((s) => ({ ...s, props: [...s.props, { kind: propKind, at: p }] }))
+    if (tool === 'place') {
+      if (placing === 'ally' || placing === 'opponent') {
+        // A player joins every step at once — see `addPlayer`. Hence `update` and not
+        // `updateStep`, and hence an undo stack that cannot bring them back: the stack
+        // is per step. The eraser is the way out, and it is one tap.
+        update((s) => addPlayer(s, placing === 'ally' ? 'offense' : 'defense', p), false)
+        return
+      }
+      update((s) => ({ ...s, props: [...s.props, { kind: placing, at: p }] }))
       return
     }
-    if (tool === 'gomme') {
+    if (tool === 'eraser') {
       const f = arrowUnder(step, p)
       if (f >= 0) { updateStep((t) => ({ ...t, arrows: t.arrows.filter((_, k) => k !== f) })); return }
+      const b = brushUnder(step, p)
+      if (b >= 0) { updateStep((t) => ({ ...t, brush: (t.brush ?? []).filter((_, k) => k !== b) })); return }
+      // The player last, after the strokes: a marker covers the end of every arrow that
+      // reaches it, and erasing the arrow is by far the commoner intent.
+      if (marker) { update((s) => removePlayer(s, marker.side, marker.position), false); return }
       const o = propUnder(play.props, p)
       if (o >= 0) update((s) => ({ ...s, props: s.props.filter((_, k) => k !== o) }))
+      return
+    }
+    if (tool === 'brush') {
+      setDrawing({ from: null, points: [p] })
       return
     }
     // An arrow always starts from a marker: elsewhere, the gesture draws nothing. And
@@ -270,9 +325,41 @@ export function PlayEdit() {
     }
     if (!drawing) return
     const { from } = drawing
-    const points = simplifyPath([...drawing.points, p])
+    const sampled = [...drawing.points, p]
     setDrawing(null)
-    if (!points.some((q) => dist(q, points[0]) > MIN_STROKE)) return
+    if (!sampled.some((q) => dist(q, sampled[0]) > MIN_STROKE)) return
+
+    if (tool === 'brush' || !from) {
+      // The pen keeps the hand's shape — that is the point of it — so the gesture is
+      // only thinned of its redundant samples, never straightened.
+      const line = simplifyPath(sampled, 0.004)
+      updateStep((t) => ({ ...t, brush: [...(t.brush ?? []), line] }))
+      return
+    }
+
+    /*
+     * The end is magnetised onto the marker it lands near, **whatever the shape**.
+     *
+     * That is the part that must not depend on the choice above: a pass ending *near*
+     * 2 rather than *on* 2 is, to the model, a pass to nobody. The snap is what makes
+     * "give it to 2" a fact the domain can read — which is exactly what `receiver`
+     * does to hand the ball over at the next step. A curved pass has to hand the ball
+     * over as surely as a straight one.
+     *
+     * The shape decides the rest. Straight keeps the two ends and nothing between:
+     * the sampled curve carried every wobble of a finger on glass, and `anim.refit`
+     * then stretched that wobble between the two steps' positions — a jitter nobody
+     * drew on purpose. Free keeps the gesture, thinned of its redundant samples: a
+     * cut behind a screen is a curve, and straightening it loses what the coach was
+     * showing.
+     */
+    const target = markerNear(step, p, from)
+    const end = target ? target.at : p
+    const points = shape === 'straight'
+      ? [sampled[0], end]
+      // The last point is replaced, not appended: appending would leave a stub from
+      // where the finger lifted to the marker, drawn as part of the path.
+      : [...simplifyPath(sampled).slice(0, -1), end]
     updateStep((t) => ({ ...t, arrows: [...t.arrows, { from, points, stroke: tool as Stroke }] }))
   }
 
@@ -385,6 +472,10 @@ export function PlayEdit() {
                   <StrokeGlyph stroke={t.key} />
                 </ToolButton>
               ))}
+              {/* The pen, last: it draws no play, it annotates one. */}
+              <ToolButton label={translate('tool.brush')} active={tool === 'brush'} onClick={() => setTool('brush')}>
+                <Ic d="M15.5 3.5a2.1 2.1 0 0 1 3 3L8 17l-4 1 1-4Z M13.5 5.5l3 3" className="h-[19px] w-[19px]" />
+              </ToolButton>
             </ToolGroup>
             <ToolGroup title={translate('edit.place')}>
               {PLACE.map((o) => (
@@ -403,18 +494,52 @@ export function PlayEdit() {
               <span className="text-base leading-none">↩</span> {translate('common.cancel')}
             </button>
           </div>
-          {tool === 'objet' && (
-            <div className="mb-3 flex select-none flex-wrap gap-2">
-              {PROP_KINDS.map((s) => (
+          {/* Shown only while a stroke tool is held, like the placeables row: a control
+              that cannot act on anything is noise, and this toolbar is already dense. */}
+          {DRAW.some((d) => d.key === tool) && (
+            <div className="mb-3 flex select-none items-center gap-2">
+              <span className="text-[11px] font-black uppercase tracking-wider" style={{ color: C.faint }}>{translate('edit.shape')}</span>
+              {SHAPES.map((f) => (
                 <button
-                  key={s.key} onClick={() => setPropKind(s.key)} aria-pressed={propKind === s.key}
+                  key={f.key} onClick={() => setShape(f.key)} aria-pressed={shape === f.key}
                   className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
-                  style={propKind === s.key ? { background: C.amberBg, color: C.amber, border: `1px solid ${C.amber}` } : { background: C.card, border: bd, color: C.muted }}
+                  style={shape === f.key
+                    ? { background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }
+                    : { background: C.card, border: bd, color: C.muted }}
                 >
-                  {translate(s.label)}
+                  {translate(f.label)}
                 </button>
               ))}
             </div>
+          )}
+          {tool === 'place' && (
+            <div className="mb-3 flex select-none flex-wrap items-center gap-2">
+              {PLACEABLES.map((o) => {
+                // Five per side. A chip that stays enabled and does nothing reads as a
+                // fault, so a full side greys out and says so beside the row.
+                const full = (o.key === 'ally' && !freePosition(play, 'offense'))
+                  || (o.key === 'opponent' && !freePosition(play, 'defense'))
+                return (
+                  <button
+                    key={o.key} onClick={() => setPlacing(o.key)} aria-pressed={placing === o.key && !full} disabled={full}
+                    title={full ? translate('edit.sideFull', { max: MAX_PER_SIDE }) : undefined}
+                    className="rounded-lg px-3 py-1.5 text-[12px] font-bold disabled:opacity-35"
+                    style={placing === o.key && !full ? { background: C.amberBg, color: C.amber, border: `1px solid ${C.amber}` } : { background: C.card, border: bd, color: C.muted }}
+                  >
+                    {translate(o.label)}
+                  </button>
+                )
+              })}
+              {(placing === 'ally' || placing === 'opponent') && !freePosition(play, placing === 'ally' ? 'offense' : 'defense') && (
+                <span className="text-[12px] font-semibold" style={{ color: C.muted }}>{translate('edit.sideFull', { max: MAX_PER_SIDE })}</span>
+              )}
+            </div>
+          )}
+          {/* Said once, where the gesture is: the eraser is the only way back for a
+              player, since adding one touches every step and the undo stack is per
+              step. */}
+          {tool === 'eraser' && (
+            <p className="mb-3 text-[12px] font-semibold" style={{ color: C.muted }}>{translate('edit.eraserHint')}</p>
           )}
 
           {/* The court is bounded by width, never by height: its box's ratio must stay
@@ -460,7 +585,7 @@ export function PlayEdit() {
                 className="w-20 shrink-0 rounded-xl p-1"
                 style={{ background: C.card, border: i === index ? `2px solid ${C.accent}` : bd }}
               >
-                <PlayBoard play={play} stepIndex={i} apercu />
+                <PlayBoard play={play} stepIndex={i} preview />
                 <span className="mt-1 block text-[12px] font-bold" style={{ color: i === index ? C.accent : C.muted }}>{i + 1}</span>
               </button>
             ))}
@@ -507,7 +632,6 @@ export function PlayEdit() {
               onBlur={saveNote}
               placeholder={translate('edit.notePlaceholder')} style={{ ...field, width: '100%' }}
             />
-            {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('play.playsLocal')}</p>}
           </section>
         </aside>
       </div>
