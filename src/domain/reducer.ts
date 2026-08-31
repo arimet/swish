@@ -18,10 +18,10 @@ function clockStartedThisPeriod(events: GameEvent[], period: number): boolean {
 /**
  * The rule that was broken, as a **translation key** — or `null` if the event passes.
  *
- * These messages used to be hard-coded French, and they surface in the scorer's table
- * error banner, so they stayed French inside an English interface. The domain cannot
- * translate them itself — it is pure code, called outside React, with no knowledge of
- * the current language. It names the rule; the interface says it.
+ * A key and not a sentence, because these surface in the scorer's table error banner
+ * and the interface has two languages. The domain cannot translate them itself — it is
+ * pure code, called outside React, with no knowledge of the current language. It names
+ * the rule; the interface says it.
  */
 export function validateEvent(match: Match, event: GameEvent): string | null {
   const { events } = match
@@ -50,13 +50,7 @@ export function appendEvent(match: Match, event: GameEvent): Match {
 
 export function undoLast(match: Match): Match {
   if (match.events.length === 0) return match
-  return strike(match, match.events[match.events.length - 1].id, match.events.slice(0, -1))
-}
-
-/** Takes the event out of the log and keeps its id as a retraction. See
- *  `Match.retracted` for why both are needed. */
-function strike(match: Match, id: string, events: GameEvent[]): Match {
-  return { ...match, events, retracted: [...(match.retracted ?? []), id] }
+  return { ...match, events: match.events.slice(0, -1) }
 }
 
 /** Removes the last event matching the predicate (correcting a mis-entry: a basket,
@@ -65,7 +59,7 @@ function strike(match: Match, id: string, events: GameEvent[]): Match {
 export function removeLastEvent(match: Match, predicate: (e: GameEvent) => boolean): Match {
   for (let i = match.events.length - 1; i >= 0; i--) {
     if (predicate(match.events[i]))
-      return strike(match, match.events[i].id, [...match.events.slice(0, i), ...match.events.slice(i + 1)])
+      return { ...match, events: [...match.events.slice(0, i), ...match.events.slice(i + 1)] }
   }
   return match
 }
