@@ -5,11 +5,10 @@ import { bundle } from '../../_bundle.js'
 /**
  * SSE stream: pushes a game's bundle to spectators as soon as it changes.
  *
- * The runtime moves from Edge to Node, because Postgres is spoken over TCP and the
- * Edge runtime does not open one. Consequence: the loop can no longer hold five
- * minutes — a Vercel function has a bounded duration — so we hold fifty seconds and
- * let `EventSource` reconnect, which it does on its own. The client keeps its
- * polling fallback in any case.
+ * The runtime is Node, because Postgres is spoken over TCP and the Edge runtime does
+ * not open one. Consequence: the loop cannot hold five minutes — a Vercel function
+ * has a bounded duration — so we hold fifty seconds and let `EventSource` reconnect,
+ * which it does on its own. The client keeps its polling fallback in any case.
  */
 export const config = { maxDuration: 60 }
 
@@ -18,7 +17,7 @@ const STEP_MS = 1500
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  if (!pool) return res.status(501).end('Sync not configured')
+  if (!pool) return res.status(500).end('DATABASE_URL missing server-side')
 
   const id = req.query.id as string
   if (!id) return res.status(400).end('id missing')
@@ -33,18 +32,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let open = true
   req.on('close', () => { open = false })
 
-  // We emit only on a real change: `rev` is a write number, so comparing two
-  // integers is enough — no need to serialise the bundle to know whether it moved.
-  let last = -1
+  // We emit only on a real change. The bundle has to be serialised to be sent
+  // anyway, so comparing the two payloads costs nothing and needs no write counter
+  // in the table.
+  let last = ''
   res.write(': ok\n\n')
 
   const start = Date.now()
   while (open && Date.now() - start < WINDOW_MS) {
     try {
       const p = await bundle(id)
-      if (p && p.rev !== last) {
-        last = p.rev
-        res.write(`data: ${JSON.stringify(p)}\n\n`)
+      const next = p ? JSON.stringify(p) : ''
+      if (next && next !== last) {
+        last = next
+        res.write(`data: ${next}\n\n`)
       } else {
         res.write(': ping\n\n')
       }

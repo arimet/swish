@@ -1,4 +1,3 @@
-import 'fake-indexeddb/auto'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -6,10 +5,10 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { Calendar } from './Calendar'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
-import { db } from '../../persistence/db'
 import { listTrainings, saveMatch, savePlay, saveTeam, saveTraining } from '../../persistence/repositories'
 import { newPlay, type Play } from '../../domain/plays'
 import type { Match } from '../../domain/types'
+import { clear } from '../../test/fakeApi'
 
 const mk = (id: string, clubId: string, opponentId: string, date = '2026-01-10'): Match => ({
   id, meta: { championshipLabel: 'Poule A', date, clubId, opponentId },
@@ -29,7 +28,6 @@ const jour = (offset: number) => {
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
   localStorage.clear()
-  await db.matches.clear(); await db.teams.clear(); await db.trainings.clear(); await db.plays.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await saveTeam({ id: 'tb', name: 'VERDUN' })
   await saveTeam({ id: 'tc', name: 'METZ' })
@@ -107,17 +105,12 @@ describe('Calendar', () => {
 
   it('points at the next fixture when nothing is scheduled today', async () => {
     // The same rule as on the dashboard: `nextFixture` is what says "what comes next".
-    await db.matches.clear() // the fixture's games are dated and would skew the result
+    clear('match') // the fixture's games are dated and would skew the result
     await saveTraining({ id: 'plus-tard', clubId: 'ta', date: jour(10), theme: 'Séance à venir' })
     renderCal()
 
     const groupe = (await screen.findByText('Séance à venir')).closest('section')
     expect(within(groupe!).getByText(/prochaine échéance/i)).toBeInTheDocument()
-  })
-
-  it('says that the trainings stay on this device', async () => {
-    renderCal()
-    expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
   })
 
   it('creates a training from the form and adds it to the calendar', async () => {
@@ -137,10 +130,10 @@ describe('Calendar', () => {
   })
 
   it('deletes a training only after confirmation', async () => {
-    // This test used to assert the opposite: that a click on the cross was enough. That
-    // was the behaviour, and it was the defect — a session disappeared on a single click
-    // while deleting a game, a play or a team asks for confirmation. The first half of
-    // the test is therefore the new property, and the second the old one.
+    // A single click on the cross must not be enough: a session would disappear on one
+    // tap while deleting a game, a play or a team asks for confirmation. The first half
+    // checks the dialog appears and nothing is deleted, the second that confirming
+    // deletes.
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran' })
     renderCal()
     await userEvent.click(await screen.findByRole('button', { name: /supprimer cet entraînement/i }))
@@ -267,7 +260,7 @@ describe('Calendar — rights', () => {
   })
 
   it('does not offer to call up for a game already played', async () => {
-    await db.matches.clear()
+    clear('match')
     await saveMatch({ ...mk('m9', 'ta', 'tb'), status: 'finished' })
     renderCal()
     await screen.findByText(/VERDUN/)

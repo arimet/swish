@@ -1,4 +1,3 @@
-import 'fake-indexeddb/auto'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -6,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { Admin } from './Admin'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
-import { db } from '../../persistence/db'
+import { clear, count } from '../../test/fakeApi'
 import { newPlay } from '../../domain/plays'
 import {
   getConvocation, listMatches, listPlays, listResults, listTrainings, saveConvocation,
@@ -24,8 +23,6 @@ const rencontre = (id: string, champ: string, date: string, events: GameEvent[] 
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
   localStorage.clear()
-  await db.teams.clear(); await db.players.clear(); await db.matches.clear(); await db.results.clear()
-  await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear(); await db.outbox.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await saveTeam({ id: 'tb', name: 'VERDUN' })
   await saveMatch(rencontre('m1', 'Poule A', '2026-01-10', [evt('e1')]))
@@ -71,7 +68,7 @@ describe('Administration — the counts announced', () => {
   })
 
   it('disables an operation that would destroy nothing, showing its count at zero', async () => {
-    await db.results.clear(); await db.plays.clear()
+    clear('result'); clear('play')
     renderAdmin()
     await waitFor(() => expect(row('Supprimer les résultats saisis')).toHaveTextContent('0 résultat'))
     expect(screen.getByRole('button', { name: 'Supprimer les résultats saisis' })).toBeDisabled()
@@ -162,10 +159,10 @@ describe('Administration — erase everything', () => {
     await confirmer()
 
     await waitFor(async () => expect(await listMatches()).toEqual([]))
-    expect(await db.teams.count()).toBe(0)
+    expect(count('team')).toBe(0)
     expect(await listResults()).toEqual([])
     expect(await listTrainings()).toEqual([])
-    expect(await db.convocations.count()).toBe(0)
+    expect(count('convocation')).toBe(0)
   })
 })
 
@@ -197,6 +194,6 @@ describe('Administration — rights', () => {
     expect(await listResults()).toHaveLength(1)
     expect(await listTrainings()).toHaveLength(1)
     expect(await listPlays('ta')).toHaveLength(1)
-    expect(await db.teams.count()).toBe(2)
+    expect(count('team')).toBe(2)
   })
 })

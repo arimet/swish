@@ -1,8 +1,7 @@
-import 'fake-indexeddb/auto'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useMatch } from './useMatch'
-import { db } from '../persistence/db'
+import { doc } from '../test/fakeApi'
 import { saveMatch } from '../persistence/repositories'
 import type { Match } from '../domain/types'
 
@@ -11,7 +10,7 @@ const seed = (): Match => ({
   roster: ['p1'], events: [], status: 'live',
 })
 
-beforeEach(async () => { await db.matches.clear(); await saveMatch(seed()) })
+beforeEach(async () => { await saveMatch(seed()) })
 
 describe('useMatch', () => {
   /**
@@ -31,16 +30,18 @@ describe('useMatch', () => {
     await act(async () => { await result.current.dispatch({ type: 'CLOCK_START', period: 1, gameClock: 600 }) })
     expect(result.current.match!.events).toHaveLength(2)
 
-    const put = vi.spyOn(db.matches, 'put').mockRejectedValueOnce(new Error('QuotaExceededError'))
+    // The write leaves for the database and the network drops it: the one failure
+    // mode this hook exists to handle.
+    const put = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('QuotaExceededError'))
     await act(async () => {
       await result.current.dispatch({ type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int', period: 1, gameClock: 590 })
     })
     put.mockRestore()
 
-    // The basket is neither on screen nor in the store, and the failure is announced —
+    // The basket is neither on screen nor in the database, and the failure is announced —
     // without exposing the exception's technical message.
     expect(result.current.match!.events).toHaveLength(2)
-    expect((await db.matches.get('m1'))!.events).toHaveLength(2)
+    expect(doc<Match>('match', 'm1')!.events).toHaveLength(2)
     expect(result.current.error).toMatch(/enregistrement impossible/i)
     expect(result.current.error).not.toMatch(/QuotaExceededError/)
   })
@@ -49,19 +50,19 @@ describe('useMatch', () => {
     const { result } = renderHook(() => useMatch('m1'))
     await waitFor(() => expect(result.current.match).not.toBeNull())
 
-    const put = vi.spyOn(db.matches, 'put').mockRejectedValueOnce(new Error('bloqué'))
+    const put = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('bloqué'))
     let issue: boolean | undefined
     await act(async () => { issue = await result.current.finish() })
     put.mockRestore()
 
     expect(issue).toBe(false)
     expect(result.current.match!.status).toBe('live')
-    expect((await db.matches.get('m1'))!.status).toBe('live')
+    expect(doc<Match>('match', 'm1')!.status).toBe('live')
 
     // And the nominal case does return `true`, otherwise we would never leave.
     await act(async () => { issue = await result.current.finish() })
     expect(issue).toBe(true)
-    expect((await db.matches.get('m1'))!.status).toBe('finished')
+    expect(doc<Match>('match', 'm1')!.status).toBe('finished')
   })
 
   it('loads the game, dispatches an event and saves', async () => {
@@ -69,7 +70,7 @@ describe('useMatch', () => {
     await waitFor(() => expect(result.current.match).not.toBeNull())
     await act(async () => { await result.current.dispatch({ type: 'PERIOD_START', period: 1, gameClock: 600 }) })
     expect(result.current.match!.events).toHaveLength(1)
-    expect((await db.matches.get('m1'))!.events).toHaveLength(1)
+    expect(doc<Match>('match', 'm1')!.events).toHaveLength(1)
   })
   it('surfaces a validation error without crashing', async () => {
     const { result } = renderHook(() => useMatch('m1'))
@@ -90,7 +91,7 @@ describe('useMatch', () => {
       ])
     })
     expect(result.current.match!.events.map((e) => e.type)).toEqual(['PERIOD_END', 'PERIOD_START'])
-    const saved = await db.matches.get('m1')
+    const saved = doc<Match>('match', 'm1')
     expect(saved!.events.map((e) => e.type)).toEqual(['PERIOD_END', 'PERIOD_START'])
   })
   it('finish() moves the status to finished and saves it', async () => {
@@ -99,7 +100,7 @@ describe('useMatch', () => {
     expect(result.current.match!.status).toBe('live')
     await act(async () => { await result.current.finish() })
     expect(result.current.match!.status).toBe('finished')
-    const saved = await db.matches.get('m1')
+    const saved = doc<Match>('match', 'm1')
     expect(saved!.status).toBe('finished')
   })
   it('two synchronous dispatches (same act) both persist (nothing lost through a stale closure)', async () => {
@@ -111,7 +112,7 @@ describe('useMatch', () => {
       await Promise.all([p1, p2])
     })
     expect(result.current.match!.events.map((e) => e.type)).toEqual(['PERIOD_END', 'PERIOD_START'])
-    const saved = await db.matches.get('m1')
+    const saved = doc<Match>('match', 'm1')
     expect(saved!.events.map((e) => e.type)).toEqual(['PERIOD_END', 'PERIOD_START'])
   })
 })

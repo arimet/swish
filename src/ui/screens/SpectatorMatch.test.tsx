@@ -1,17 +1,14 @@
-import 'fake-indexeddb/auto'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { SpectatorMatch } from './SpectatorMatch'
-import { db } from '../../persistence/db'
 import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { GameEvent, Match } from '../../domain/types'
 
 const MATCH_ID = 'match-spectator'
 
 beforeEach(async () => {
-  await db.matches.clear(); await db.players.clear(); await db.teams.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await saveTeam({ id: 'tb', name: 'VERDUN' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas' })
@@ -99,8 +96,8 @@ describe('SpectatorMatch — per-player shot chart', () => {
     expect(await screen.findAllByLabelText('Carte des tirs')).toHaveLength(1)
 
     await userEvent.click(rowB)
-    // One chart shown at a time, as projection demands: per-row state
-    // laisserait les deux ouvertes ici.
+    // One chart shown at a time, as projection demands: per-row state would leave both
+    // of them open.
     expect(await screen.findAllByLabelText('Carte des tirs')).toHaveLength(1)
   })
 })

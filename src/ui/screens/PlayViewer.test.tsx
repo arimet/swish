@@ -1,12 +1,11 @@
-import 'fake-indexeddb/auto'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PlayViewer } from './PlayViewer'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
-import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
 import { newPlay, nextStep, type Play } from '../../domain/plays'
+import { clear } from '../../test/fakeApi'
 
 /** Two steps: the point guard goes down from 0.62 to 0.20; nobody else moves. Their
  *  cut is drawn straight, so that the path stays the chord. */
@@ -39,7 +38,6 @@ beforeEach(async () => {
     addListener: () => {}, removeListener: () => {},
   })) as unknown as typeof window.matchMedia
   sessionStorage.removeItem(ROLE_KEY)
-  await db.plays.clear()
   await savePlay(twoSteps())
 })
 
@@ -123,7 +121,7 @@ describe('SchemaPlayer — the time-out viewer', () => {
     const s = twoSteps()
     const t2 = nextStep(s.steps[1])
     t2.markers = t2.markers.map((p) => (p.position === 1 ? { ...p, at: { x: 0.5, y: 0.05 } } : p))
-    await db.plays.clear()
+    clear('play')
     await savePlay({ ...s, steps: [...s.steps, t2] })
 
     await open()

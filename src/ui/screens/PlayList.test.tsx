@@ -1,4 +1,3 @@
-import 'fake-indexeddb/auto'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -6,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { PlayList } from './PlayList'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
-import { db } from '../../persistence/db'
+import { put } from '../../test/fakeApi'
 import { listPlays, savePlay, saveTeam } from '../../persistence/repositories'
 import { newPlay, type Play } from '../../domain/plays'
 
@@ -16,8 +15,6 @@ const play = (id: string, name: string, extra: Partial<Play> = {}): Play =>
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
   localStorage.clear()
-  await db.plays.clear()
-  await db.teams.clear()
   // With no team in the store, `ClubProvider` would forget the club set: the library
   // would then have no club whose plays to list.
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
@@ -190,9 +187,9 @@ describe('SchemaList — filing the library', () => {
   it('orders from most recently edited to oldest, plays never stamped last', async () => {
     // A direct write: `savePlay` stamps the current time, and we could not otherwise
     // build three distinct dates nor a play from before the timestamping.
-    await db.plays.put(play('s1', 'Ancien', { updatedAt: '2026-01-01T10:00:00.000Z' }))
-    await db.plays.put(play('s2', 'Récent', { updatedAt: '2026-06-01T10:00:00.000Z' }))
-    await db.plays.put(play('s3', 'Jamais horodaté'))
+    put('play', 's1', play('s1', 'Ancien', { updatedAt: '2026-01-01T10:00:00.000Z' }))
+    put('play', 's2', play('s2', 'Récent', { updatedAt: '2026-06-01T10:00:00.000Z' }))
+    put('play', 's3', play('s3', 'Jamais horodaté'))
     renderList()
 
     await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(3))

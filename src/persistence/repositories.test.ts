@@ -1,16 +1,9 @@
-import 'fake-indexeddb/auto'
-import { beforeEach, describe, expect, it } from 'vitest'
-import { db } from './db'
+import { describe, expect, it } from 'vitest'
+import { count } from '../test/fakeApi'
 import { saveTeam, listTeams, saveMatch, getMatch, listMatches, deleteMatch, deleteTeam, saveResult, listResults, savePlayer, deletePlayer, saveTraining, listTrainings, saveConvocation, getConvocation, savePlay, listPlays, getPlay, deletePlay, deleteMatchesWhere, clearClubStats, deleteAllResults, deleteTrainingsOfClub, deletePlaysOfClub, wipeAll, getMessage, saveMessage, deleteMessage } from './repositories'
 import { newPlay } from '../domain/plays'
 import { hasEvents, ofYear, ofLeague } from '../domain/cleanup'
 import type { GameEvent, Match } from '../domain/types'
-
-beforeEach(async () => {
-  await db.teams.clear(); await db.players.clear(); await db.matches.clear(); await db.results.clear()
-  await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear(); await db.outbox.clear()
-  await db.messages.clear()
-})
 
 const match = (id: string): Match => ({
   id, meta: { championshipLabel: 'PRM', clubId: 'a', opponentId: 'b' },
@@ -121,12 +114,6 @@ describe('repositories', () => {
     expect((await listTrainings())[0].playIds).toEqual([])
     expect(await listPlays('ta')).toEqual([])
   })
-
-  it('plays go through the sync queue', async () => {
-    await savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'PnR haut' })
-    await deletePlay('s1')
-    expect(await db.outbox.count()).toBe(0)
-  })
 })
 
 // ── The team message ────────────────────────────────────────────────────────
@@ -145,7 +132,7 @@ describe('the team message', () => {
     await saveMessage({ clubId: 'ta', text: 'Premier', writtenAt: '2026-08-10T18:00:00.000Z' })
     await saveMessage({ clubId: 'ta', text: 'Second', writtenAt: '2026-08-12T18:00:00.000Z' })
     expect((await getMessage('ta'))?.text).toBe('Second')
-    expect(await db.messages.count()).toBe(1)
+    expect(count('message')).toBe(1)
   })
 
   it('keeps two clubs\' messages apart', async () => {
@@ -172,13 +159,6 @@ describe('the team message', () => {
 
     expect(await getMessage('ta')).toBeUndefined()
     expect(await getMessage('tb')).toBeDefined()
-  })
-
-  it('the message goes through the sync queue', async () => {
-    // Like the call-ups, the trainings and the plays: it goes through the queue.
-    await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: '2026-08-10T18:00:00.000Z' })
-    await deleteMessage('ta')
-    expect(await db.outbox.count()).toBe(0)
   })
 })
 
@@ -277,7 +257,7 @@ describe('bulk cleanup', () => {
     expect((await listTrainings())[0].playIds).toEqual([])
   })
 
-  it('empties every table, sync queue included', async () => {
+  it('empties the database, every kind of document', async () => {
     await saveTeam({ id: 'ta', name: 'VIGNOT' })
     await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas' })
     await saveMatch(rencontre('m1', 'Poule A', '2026-01-10', 'ta', [evt('e1')]))
@@ -286,16 +266,13 @@ describe('bulk cleanup', () => {
     await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
     await savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
     await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: '2026-08-10T18:00:00.000Z' })
-    // A mutation waiting to be sent: it must not survive the reset.
-    await db.outbox.add({ kind: 'match', op: 'put', id: 'm1', ts: Date.now(), modifiedAt: new Date().toISOString() })
 
     await wipeAll()
 
-    const comptes = await Promise.all([
-      db.teams.count(), db.players.count(), db.matches.count(), db.results.count(),
-      db.convocations.count(), db.trainings.count(), db.plays.count(), db.messages.count(), db.outbox.count(),
-    ])
-    expect(comptes).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0])
+    // The eight kinds, including the two filed under something other than an `id`:
+    // a call-up left behind would be invisible and immovable.
+    expect(['team', 'player', 'match', 'result', 'convocation', 'training', 'play', 'message'].map(count))
+      .toEqual([0, 0, 0, 0, 0, 0, 0, 0])
   })
 
   it('counts as a sheet to empty only a game that carries events', async () => {

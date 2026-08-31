@@ -12,7 +12,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { folders, newPlay, type Play } from '../../domain/plays'
 import { deletePlay, listPlays, savePlay } from '../../persistence/repositories'
-import { remoteEnabled } from '../../persistence/remote'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
@@ -190,9 +189,9 @@ export function PlayList() {
                         the row on it and clip it at the bottom. The SVG fits inside the box
                         without distortion (`preserveAspectRatio`) — a full court therefore
                         appears narrower, which reads perfectly well. No pointer conversion
-                        here: `remplit` is safe. */}
+                        here: `fills` is safe. */}
                     <div className="h-[150px] sm:h-[200px]">
-                      <PlayBoard play={s} stepIndex={0} apercu remplit />
+                      <PlayBoard play={s} stepIndex={0} preview fills />
                     </div>
                     <h3 className="mt-2.5 truncate text-[15px] font-extrabold tracking-tight">{s.name}</h3>
                     <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-bold" style={{ color: C.muted }}>
@@ -276,9 +275,6 @@ export function PlayList() {
         </>
       )}
 
-      {/* Worded the same way as the trainings and the outside results: one limit to
-          remember, not one per screen. */}
-      {!remoteEnabled() && <p className="mt-8 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('play.playsLocal')}</p>}
 
       <ConfirmDialog
         open={!!toDelete} danger

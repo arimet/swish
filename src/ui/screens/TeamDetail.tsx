@@ -8,7 +8,6 @@ import { C, NumBadge, Panel, TeamBadge, bd, fmtDate } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { useClub } from '../../app/club'
-import { refresh as refreshRemote } from '../../persistence/remote'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
@@ -52,8 +51,7 @@ export function TeamDetail() {
   const refresh = () => { if (id) listPlayers(id).then(setPlayers) }
   useEffect(() => {
     if (!id) return
-    refreshRemote()
-      .then(() => getTeam(id).then((t) => { setTeam(t ?? null); setCoach(t?.coach ?? '') }))
+    getTeam(id).then((t) => { setTeam(t ?? null); setCoach(t?.coach ?? '') })
       .then(refresh)
       .then(() => Promise.all([listMatches(), listTeams()]))
       .then(([ms, ts]) => { setMatches(ms); setTeamsById(Object.fromEntries(ts.map((x) => [x.id, x]))) })
@@ -79,9 +77,8 @@ export function TeamDetail() {
    * Removing a player goes through a confirmation, like deleting the team just above
    * and like deleting a game or a play elsewhere.
    *
-   * It was missing, and it was the one defect in that review no measurement could
-   * find: a single click, on a twenty-four-pixel button flush against "edit", deleted
-   * the player without asking anything. The consequence announced is the one
+   * Without it, a single click on a twenty-four-pixel button flush against "edit"
+   * deletes the player, asking nothing. The consequence announced is the one
    * `deletePlayer` actually produces — they leave the roster and the call-ups, but the
    * actions already recorded stay in the games played, where they lose their name.
    * That is checked in the repository, not assumed.

@@ -4,9 +4,9 @@ A scoresheet, a game clock, statistics and tactical plays for **one** amateur ba
 team. You keep the sheet from the sideline; the club gets back a season of usable data
 without anyone re-typing a thing.
 
-Swish runs **offline, with no account and no configuration**. Data lives on the device.
-Sharing between devices and live spectator following are optional, and turn on with a
-Postgres database.
+Swish runs on **one shared Postgres database and nothing else**: no account to create,
+one place where the club's data lives, the same for every phone at the table, on the
+bench and in the stands. Spectators follow a game live from a link.
 
 > 🇫🇷 **The product itself ships in French by default** — that is deliberate, it was
 > built for a French club and its vocabulary follows the French federation's rules.
@@ -64,9 +64,9 @@ game is running.
 
 ### Spectator following
 
-A read-only link (`/match/:id/watch`) shows the score, clock and statistics live. Built
-to be projected in the hall as much as opened on a phone. Locally it follows a game on
-the same device; with sync enabled, from anywhere.
+A read-only link (`/match/:id/watch`) shows the score, clock and statistics live, from
+anywhere. Built to be projected in the hall as much as opened on a phone. It carries
+shirt numbers and names, nothing more: the link is public by design.
 
 ### Access
 
@@ -106,37 +106,47 @@ Before you fork:
 
 ## Running locally
 
+**A database is required.** It is the only place the application's data lives, so
+without one every screen is empty. Everything under `api/` runs inside the Vite dev
+server, so `/api/*` behaves exactly as it does on Vercel — no Vercel CLI, no linked
+project.
+
 ```bash
 pnpm install
-pnpm dev
 ```
-
-The app opens on `http://localhost:5173` with demo data. It works entirely offline, with
-no server — **no database needed to develop the app itself**.
-
-### Working on the sync
-
-Only if you are changing how devices share data. Everything under `api/` then runs
-inside the Vite dev server, so `/api/*` behaves exactly as it does on Vercel — no
-Vercel CLI, no linked project.
 
 ```bash
 docker compose up -d
 ```
 
 ```bash
-psql "postgres://swish:swish@localhost:5433/swish" -f db/schema.sql
+printf 'DATABASE_URL=postgres://swish:swish@localhost:5433/swish\nWRITE_TOKEN=dev\n' >> .env
 ```
-
-Then put this in a `.env` (see `.env.example`) and restart `pnpm dev`:
 
 ```bash
-printf 'DATABASE_URL=postgres://swish:swish@localhost:5433/swish\nSYNC_WRITE_TOKEN=dev\nVITE_SYNC_URL=/api\n' >> .env
+pnpm db:reset
 ```
 
-The dev server prints which mode it started in. Enter the token once under
-**Administration → Synchronisation**. Without `DATABASE_URL`, none of this is
-mounted and `pnpm dev` behaves exactly as above.
+```bash
+pnpm dev
+```
+
+`db:reset` creates the table and fills it with the demo season — a club, its roster,
+five games (one live), the standings, two months of practices and three plays. The
+app opens on `http://localhost:5173` already full.
+
+To **write** from the app you also need the token: paste `dev` once under
+Administration → Write access. Reading needs nothing, which is why the screens fill
+up before you do anything.
+
+| Command | What it does |
+|---|---|
+| `pnpm db:init` | Creates the table if it is not there. Touches no data. |
+| `pnpm db:seed` | Creates the table if needed, then fills it with the demo season. Refuses a table that already holds documents. |
+| `pnpm db:reset` | Drops the table, re-creates it, re-seeds it. Destructive. |
+
+There are no migrations: while the documents are still moving, `db:reset` is the
+answer to a change of shape.
 
 Other useful commands:
 
@@ -154,43 +164,23 @@ pnpm build
 
 The full guide is in **[DEPLOY.md](DEPLOY.md)**. In short:
 
-### 1. The bare minimum
+### 1. The database, which is not optional
 
-Import the repository into Vercel — the **Vite** preset is detected automatically, and
-the `api/` folder is deployed as serverless functions. With no environment variable at
-all, the app runs in **local mode**: each device keeps its own data, and spectator
-following works on the same device.
+1. Import the repository into Vercel — the **Vite** preset is detected automatically,
+   and the `api/` folder is deployed as serverless functions.
+2. **Storage → create a Postgres database** (Neon). Vercel then injects
+   `DATABASE_URL` — use the pooled connection string.
+3. Create the table: `psql "$DATABASE_URL" -f db/schema.sql`.
+4. Set **`WRITE_TOKEN`** to a long random string and redeploy. Each device **that
+   writes** enters it once, under Administration → Write access; reading needs
+   nothing. See [DEPLOY.md](DEPLOY.md) for what that makes public.
 
-That is a complete, usable deployment. A scorer's table needs nothing more.
+How it works, in two lines: a screen reads what it needs from `GET /api/docs?kind=…`
+and every write goes straight to `POST /api/mutate`, which answers before the screen
+believes itself saved. Spectators receive a game over **SSE**
+(`GET /api/match/:id/stream`), falling back to polling.
 
-### 2. Making sync work
-
-Sync shares data between devices **and** powers remote spectator following. Three steps:
-
-1. In the Vercel project: **Storage → create a Postgres database** (Neon). Vercel
-   then injects `DATABASE_URL` — use the pooled connection string.
-2. Create the table: `psql "$DATABASE_URL" -f db/schema.sql`.
-3. Set **`SYNC_WRITE_TOKEN`** to a long random string, add **`VITE_SYNC_URL=/api`**,
-   and redeploy. Each device **that writes** enters the token once, under
-   Administration; reading needs nothing. See [DEPLOY.md](DEPLOY.md) for what that
-   makes public.
-
-Once sharing is on, the database is the source of truth and each device keeps a
-mirror so the app still works in a gym with no signal. Read `DEPLOY.md` first:
-turning sync on replaces a device's local data with the server's.
-3. Redeploy.
-
-Teams, players and the schedule created on one device now show up on the others. The app
-stays **local-first**: it keeps working offline and flushes its queued writes when the
-network returns.
-
-How it works, in two lines: every write goes to the local cache and then to a queue
-(`POST /api/mutate`); on startup the app hydrates from `GET /api/state`; the scorer's
-table publishes the full match state on every action (`PUT /api/match/:id`) and
-spectators receive it over **SSE** (`GET /api/match/:id/stream`), falling back to
-polling. Match snapshots are kept for 12 h.
-
-### 3. Setting the access codes
+### 2. Setting the access codes
 
 **All three codes have a fallback, and it applies in production too.** Setting only the
 admin code leaves the scorer's table open on the French word `marque`.
@@ -202,18 +192,16 @@ admin code leaves the scorer's table open on the French word `marque`.
 | `VITE_PLAYER_PASSWORD` | Nothing in write. Only picking your own name on the roster | `joueur` |
 
 > **What these codes are not.** They are `VITE_*` variables: compiled into the bundle and
-> readable in the browser's dev tools. The write endpoints `api/mutate.ts` and
-> `api/match/[id].ts` accept writes with no authentication. These accesses guard against
-> accidents between people who trust each other, not against a malicious third party. Do
-> not share data you would mind seeing altered.
+> readable in the browser's dev tools. They guard against accidents between people who
+> trust each other, not against a malicious third party. The door the server actually
+> guards is `WRITE_TOKEN`: without it, `POST /api/mutate` refuses.
 
 ### All variables
 
 | Variable | Purpose | Required |
 |---|---|---|
-| `VITE_SYNC_URL=/api` | Shared data + live following | Optional |
-| `DATABASE_URL` | Postgres (pooled host) | Auto (Vercel/Neon) |
-| `SYNC_WRITE_TOKEN` | Guards writes (reading is public) | With `VITE_SYNC_URL` |
+| `DATABASE_URL` | Postgres (pooled host) — the source of truth | **Yes** |
+| `WRITE_TOKEN` | Guards writes (reading is public) | **Yes** |
 | `VITE_SEED=1` | Demo data | Demo only |
 | `VITE_ADMIN_PASSWORD` | Administrator code (fallback `admin`) | Recommended |
 | `VITE_SCORER_PASSWORD` | Scorer's table code (fallback `marque`) | Recommended |
@@ -223,9 +211,9 @@ admin code leaves the scorer's table open on the French word `marque`.
 
 ## Under the hood
 
-React 19, Vite, TypeScript, Tailwind v4, react-router, Dexie (IndexedDB), installable
-offline PWA. Tests with Vitest. The serverless functions in `api/` exist only for
-optional sync.
+React 19, Vite, TypeScript, Tailwind v4, react-router. Tests with Vitest. The serverless
+functions in `api/` are the only way to the data: one Postgres table of JSON documents,
+read through `GET /api/docs` and written through `POST /api/mutate`.
 
 Two documents describe the product and its visual identity, and they are authoritative
 for anyone picking up the code:

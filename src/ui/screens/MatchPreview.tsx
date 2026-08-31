@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getMatch, listTeams, deleteMatch, listPlayers, getConvocation, saveConvocation } from '../../persistence/repositories'
-import { remoteEnabled } from '../../persistence/remote'
 import type { Match, Team, Player } from '../../domain/types'
 import { C, bd, PageTitle, SectionTitle, TeamBadge, fmtDate , useLeagueLabel } from '../olive/kit'
 import { useAuth } from '../../app/auth'
@@ -113,9 +112,8 @@ export function MatchPreview({ matchId }: { matchId: string }) {
       <PageTitle action={<Link to="/calendrier" className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('preview.backToCalendar')}</Link>} />
 
       <div className="rounded-2xl p-6" style={{ background: C.card, border: bd }}>
-        {/* The league used to be the page's "subtitle"; it was not one, it is a fact
-            about the game. So it joins the record's banner, between the status and the
-            number. */}
+        {/* The league is a fact about the game, not the page's subtitle: it belongs in
+            the record's banner, between the status and the number. */}
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <span className="rounded-md px-2 py-1 text-[12px] font-black uppercase" style={{ background: statusPill.bg, color: statusPill.fg }}>{statusPill.label}</span>
           <span className="min-w-0 truncate text-[12px] font-bold" style={{ color: C.muted }}>{champ(match.meta)}</span>
@@ -172,11 +170,6 @@ export function MatchPreview({ matchId }: { matchId: string }) {
             <button onClick={saveCallUp} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
               {translate('preview.saveCallUp')}
             </button>
-
-            {/* Like the league results: no synchronisation for the call-up, worded the
-                same way as on the standings screen so as not to suggest two different
-                limits. */}
-            {!remoteEnabled() && <p className="mt-4 max-w-[65ch] text-[12px]" style={{ color: C.faint }}>{translate('preview.callUpLocal')}</p>}
           </>
         ) : calledUp.size === 0 ? (
           <p className="text-sm" style={{ color: C.muted }}>{translate('preview.nobodyCalledUp')}</p>

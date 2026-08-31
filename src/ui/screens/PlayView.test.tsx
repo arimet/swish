@@ -1,11 +1,9 @@
-import 'fake-indexeddb/auto'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { PlayView } from './PlayView'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
-import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
 import { newPlay, nextStep, type Play } from '../../domain/plays'
 
@@ -16,7 +14,6 @@ const twoSteps = (): Play => {
 
 beforeEach(async () => {
   sessionStorage.removeItem(ROLE_KEY)
-  await db.plays.clear()
   await savePlay(twoSteps())
 })
 

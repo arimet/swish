@@ -21,7 +21,7 @@ import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { C, bd, useLeagueLabel } from '../olive/kit'
-import { syncState, hydrate, checkToken, token, remoteEnabled, setToken, type State } from '../../persistence/remote'
+import { WriteToken } from '../components/WriteToken'
 
 /** A cleanup operation ready to be confirmed: what it announces, and what it does.
  *  Nothing runs before the confirmation. */
@@ -91,11 +91,11 @@ export function Admin() {
   return (
     <div className="p-6">
       <p className="mb-6 rounded-2xl px-4 py-3 text-sm" style={{ background: C.accentBg, color: C.accent }}>
-        {translate(remoteEnabled() ? 'admin.warningShared' : 'admin.warning')}
+        {translate('admin.warning')}
       </p>
 
       <div className="space-y-6">
-        <SyncToken />
+        <WriteToken />
 
         <Block title={translate('admin.byLeague')} help={translate('admin.leagueHelp')}>
           {leagues(matches).map((league) => {
@@ -198,69 +198,6 @@ export function Admin() {
         onConfirm={confirm} onClose={() => setPending(null)}
       />
     </div>
-  )
-}
-
-/**
- * The shared database's write token.
- *
- * It is here and not in the access dialog because it is not of the same nature as
- * the three codes: those say *who you are* and live for the length of a tab; this
- * one is a device setting, entered once by whoever deployed, and checked by the
- * server.
- *
- * The block does not appear when the application runs locally — there would be
- * nothing to set, and a door you cannot open has no business showing itself.
- */
-function SyncToken() {
-  const translate = useT()
-  const [value, setValue] = useState(token)
-  const [state, setState] = useState<State>(syncState)
-  const [trying, setTrying] = useState(false)
-
-  if (!remoteEnabled()) return null
-
-  // We save and then really try, rather than announcing "saved" on a token the
-  // server will reject: this is the kind of setting you enter once and never come
-  // back to check.
-  const verify = async () => {
-    setToken(value.trim())
-    setTrying(true)
-    // The verdict comes from the write probe, never from the hydration that follows:
-    // reading is public, so it would say yes to a token the server refuses.
-    const verdict = await checkToken()
-    if (verdict === 'ok') await hydrate()
-    setState(verdict)
-    setTrying(false)
-  }
-
-  const says = trying ? 'admin.tokenTrying'
-    : state === 'ok' ? 'admin.tokenOk'
-    : state === 'token' ? 'admin.tokenRefused'
-    : state === 'network' ? 'admin.tokenNetwork'
-    : 'admin.tokenUnknown'
-  const wrong = !trying && (state === 'token' || state === 'network')
-
-  return (
-    <Block title={translate('admin.sync')} help={translate('admin.syncHelp')}>
-      <div className="flex flex-wrap items-center gap-2 py-1">
-        <input
-          type="password" value={value} onChange={(e) => setValue(e.target.value)}
-          aria-label={translate('admin.token')} placeholder={translate('admin.token')}
-          className="min-w-[12rem] flex-1 rounded-xl px-4 py-3 text-sm outline-none transition focus:border-[var(--c-accent)]"
-          style={{ background: C.panel, border: bd, color: C.text }}
-        />
-        <button onClick={verify} disabled={trying}
-          className="rounded-xl px-5 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40"
-          style={{ background: C.brand }}>
-          {translate('admin.checkToken')}
-        </button>
-      </div>
-      <p aria-live="polite" className="pb-1 text-[13px] font-semibold"
-        style={{ color: wrong ? C.danger : state === 'ok' ? C.green : C.muted }}>
-        {translate(says)}
-      </p>
-    </Block>
   )
 }
 

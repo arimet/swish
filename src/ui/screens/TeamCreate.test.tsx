@@ -1,4 +1,3 @@
-import 'fake-indexeddb/auto'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -6,10 +5,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { TeamCreate } from './TeamCreate'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
-import { db } from '../../persistence/db'
+import { count, docs } from '../../test/fakeApi'
+import type { Team } from '../../domain/types'
 import { saveTeam } from '../../persistence/repositories'
 
-beforeEach(async () => { sessionStorage.setItem(ROLE_KEY, 'admin'); await db.teams.clear(); await db.players.clear() })
+beforeEach(async () => { sessionStorage.setItem(ROLE_KEY, 'admin'); })
 
 describe('TeamCreate', () => {
   it('creates a team (with a player) and saves it', async () => {
@@ -26,19 +26,19 @@ describe('TeamCreate', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /^créer /i }))
 
-    await waitFor(async () => expect(await db.teams.count()).toBe(1))
-    const teams = await db.teams.toArray()
+    await waitFor(() => expect(count('team')).toBe(1))
+    const teams = docs<Team>('team')
     expect(teams[0].name).toBe('VIGNOT')
-    expect(await db.players.count()).toBe(1)
+    expect(count('player')).toBe(1)
   })
 })
 
 describe('TeamCreate — rights', () => {
   it('creating a team is administrative: the scorer\'s table is asked for the admin code', async () => {
-    // A team already exists, and that is the premise this test was missing: the rule
-    // "creating a team is administrative" protects data, so it only applies from the
-    // moment there is some. On an empty store, creation is the founding of the club and
-    // asks for nothing — see the test just below.
+    // A team already exists, and that premise carries the test: the rule "creating a
+    // team is administrative" protects data, so it only applies from the moment there
+    // is some. On an empty database, creation is the founding of the club and asks for
+    // nothing — see the test just below.
     await saveTeam({ id: 'deja', name: 'DÉJÀ LÀ' })
     sessionStorage.setItem(ROLE_KEY, 'scorer')
     render(<MemoryRouter><ClubProvider><AuthProvider><TeamCreate /></AuthProvider></ClubProvider></MemoryRouter>)
@@ -47,7 +47,7 @@ describe('TeamCreate — rights', () => {
     await userEvent.click(screen.getByRole('button', { name: /^créer /i }))
 
     expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
-    expect(await db.teams.count()).toBe(1) // seule « DÉJÀ LÀ », rien de créé
+    expect(count('team')).toBe(1) // seule « DÉJÀ LÀ », rien de créé
   })
 
   /**
@@ -68,7 +68,7 @@ describe('TeamCreate — rights', () => {
     await userEvent.type(screen.getByLabelText(/nom de l.équipe/i), 'PREMIER CLUB')
     await userEvent.click(screen.getByRole('button', { name: /^créer /i }))
 
-    await waitFor(async () => expect(await db.teams.count()).toBe(1))
+    await waitFor(() => expect(count('team')).toBe(1))
     expect(screen.queryByRole('heading', { name: /Accès Administrateur requis/ })).not.toBeInTheDocument()
     // And the founder keeps the right afterwards, otherwise they land back on a
     // dashboard with not one create button.

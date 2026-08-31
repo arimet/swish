@@ -4,8 +4,6 @@ import './index.css'
 import App from './App.tsx'
 import { ThemeProvider } from './ui/theme/ThemeProvider'
 import { LangProvider } from './i18n'
-import { db } from './persistence/db'
-import { remoteEnabled, hydrate, flush } from './persistence/remote'
 
 // Base UI only unmounts its popups (Dialog, Select…) after waiting for a
 // requestAnimationFrame and then for the CSS exit animations to finish. In a tab that
@@ -23,29 +21,42 @@ import { remoteEnabled, hydrate, flush } from './persistence/remote'
 // does not load)
 ;(globalThis as { BASE_UI_ANIMATIONS_DISABLED?: boolean }).BASE_UI_ANIMATIONS_DISABLED = true
 
-async function bootstrap() {
-  // Shared database: hydrate the local mirror from the server first.
-  if (remoteEnabled()) await hydrate()
-
-  // Demo data: in dev, or in prod if VITE_SEED=1. In shared mode we only seed when the
-  // server is empty (otherwise we would overwrite the shared data).
-  const empty = (await db.teams.count()) === 0
-  if ((import.meta.env.DEV || import.meta.env.VITE_SEED === '1') && (!remoteEnabled() || empty)) {
-    const { seedDevData } = await import('./dev/seed')
-    await seedDevData()
-  }
-
-  if (remoteEnabled()) flush(0) // push the seed / whatever is queued
-
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <ThemeProvider>
-        <LangProvider>
-          <App />
-        </LangProvider>
-      </ThemeProvider>
-    </StrictMode>,
-  )
+/**
+ * Earlier versions shipped a service worker to make the application work offline.
+ * Offline is gone — the database is the only source of truth — but a worker
+ * registered on someone's phone stays registered, and would keep serving that old
+ * cached shell forever, against a database it no longer understands. So we
+ * un-register whatever is left, once, on the way in.
+ *
+ * Removable in a season or two, when no device is still carrying one.
+ */
+async function dropServiceWorkers(): Promise<void> {
+  if (!('serviceWorker' in navigator)) return
+  try {
+    for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister()
+  } catch { /* private browsing, or no permission: there is nothing to clean up then */ }
 }
 
-bootstrap()
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <ThemeProvider>
+      <LangProvider>
+        <App />
+      </LangProvider>
+    </ThemeProvider>
+  </StrictMode>,
+)
+
+/* The screens fetch what they need; nothing here blocks the first paint on a network
+   round trip. A database that does not answer must show its screens and say so
+   (see `ConnectionState`), not hang on a white page. */
+void dropServiceWorkers()
+
+// Demo data: in dev, or in production if VITE_SEED=1. It only ever fills an empty
+// database — see `seedDevData`.
+if (import.meta.env.DEV || import.meta.env.VITE_SEED === '1') {
+  void import('./dev/seed').then(({ seedDevData }) => seedDevData()).catch((e) => {
+    console.error('[swish] demo data not seeded:', (e as Error).message,
+      '— is DATABASE_URL set, and the write token entered under Administration?')
+  })
+}

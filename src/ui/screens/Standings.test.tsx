@@ -1,4 +1,3 @@
-import 'fake-indexeddb/auto'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -6,13 +5,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { Standings } from './Standings'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
-import { db } from '../../persistence/db'
 import { listResults, saveMatch, saveResult, saveTeam } from '../../persistence/repositories'
 
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
   localStorage.clear()
-  await db.teams.clear(); await db.matches.clear(); await db.results.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await saveTeam({ id: 'tb', name: 'VERDUN' })
   await saveTeam({ id: 'tc', name: 'METZ' })
@@ -69,11 +66,6 @@ describe('Standings', () => {
     await userEvent.click(document.body)
     expect((await listResults())[0].homeScore).toBe(70)
     expect(scoreHome).toHaveValue(70)
-  })
-
-  it('says that the entered results stay on this device', async () => {
-    renderChamp()
-    expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
   })
 
   it('refuses a result that would duplicate one already entered, even with the teams reversed', async () => {

@@ -1,10 +1,8 @@
-import 'fake-indexeddb/auto'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SummaryScreen } from './SummaryScreen'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
-import { db } from '../../persistence/db'
 import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { Match } from '../../domain/types'
 
@@ -12,7 +10,6 @@ const MATCH_ID = 'match-finished'
 
 beforeEach(async () => {
   sessionStorage.clear() // the summary reads without a role: each test starts as a visitor
-  await db.matches.clear(); await db.players.clear(); await db.teams.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await saveTeam({ id: 'tb', name: 'VERDUN' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas' })

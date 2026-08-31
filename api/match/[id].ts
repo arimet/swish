@@ -6,11 +6,11 @@ import { bundle } from '../_bundle.js'
  * The spectator view of a game.
  *
  * **Public, and that is its whole point**: this link is shared with parents, who
- * have neither the application nor the club's token. It is the one route that does
- * not go through `_db.unauthorized`.
+ * have neither the application nor the club's token. Reading is open here as it is
+ * on `docs.ts`, but this route projects far less: number and name, not the record.
  *
- * There is no `PUT` any more: the bundle is derived from the table (see
- * `_bundle`), and the game already arrives there through the scorer's table queue.
+ * It is read-only: the bundle is projected out of the table (see `_bundle`), and
+ * the game gets there through the scorer's own writes.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (preamble(req, res, 'GET')) return

@@ -15,10 +15,10 @@ import { ClubProvider, useClub } from './app/club'
 import { Welcome } from './ui/screens/Welcome'
 import { useT } from './i18n'
 
-/* The screens loaded on demand. The bundle used to be one piece: opening the
- * dashboard also downloaded the play editor, the play viewer, the scorer's table and
- * the whole export path — 657 kB to display a score. These nine screens share two
- * traits: they are heavy, and none of them is the first thing anyone opens.
+/* The screens loaded on demand. In one piece, the bundle makes opening the dashboard
+ * download the play editor, the play viewer, the scorer's table and the whole export
+ * path — 657 kB to display a score. These nine screens share two traits: they are
+ * heavy, and none of them is the first thing anyone opens.
  *
  * The rest — dashboard, calendar, standings, teams — arrives in the initial bundle:
  * they are the menu's four entries, and splitting them would only add a round trip to
@@ -69,12 +69,36 @@ function Loading() {
   return <div className="grid min-h-dvh place-items-center text-muted-foreground" role="status" aria-live="polite">{translate('common.loading')}</div>
 }
 
+/** The screen shown when the database cannot be reached and this device has no club
+ *  to fall back on. It replaces the welcome screen, which would otherwise invite
+ *  someone to create a team the server already holds. */
+function Unreachable() {
+  const translate = useT()
+  return (
+    <div className="grid min-h-dvh place-items-center p-6" role="alert">
+      <div className="max-w-[55ch] text-center">
+        <p className="text-lg font-extrabold tracking-tight">{translate('connection.lost')}</p>
+        <p className="mt-2 text-sm" style={{ color: 'var(--c-muted)' }}>{translate('connection.lostDetail')}</p>
+        <button onClick={() => window.location.reload()}
+          className="mt-6 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]"
+          style={{ background: 'var(--c-brand)' }}>
+          {translate('common.retry')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /** As long as no valid club is set, the application is the welcome screen. The
  *  spectator view stays reachable without a club: it is shared with people who have
  *  not set the application up. */
 function ClubGate() {
-  const { clubId, ready } = useClub()
+  const { clubId, ready, unreachable } = useClub()
   if (!ready) return <Loading />
+  // A device that already follows a club goes through: the shell shows what it can
+  // and its pill says the rest. It is the device with nothing to fall back on that
+  // needs to be told, rather than invited to create a team.
+  if (unreachable && !clubId) return <Unreachable />
   if (!clubId) return <Welcome />
   return <OliveShell />
 }

@@ -8,7 +8,6 @@ import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { getMatch, listPlayers, listTeams, saveMatch } from '../../persistence/repositories'
-import { flushNow } from '../../persistence/remote'
 import { removeLastEvent } from '../../domain/reducer'
 import { newId } from '../../domain/ids'
 import { liveState } from '../../rules/ffbb'
@@ -68,10 +67,6 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const persist = async (next: Match) => {
     setMatch(next)
     await saveMatch(next)
-    // Sent immediately (no waiting for the 700 ms debounce), once the write into the
-    // queue is confirmed: a stats correction here is typically followed by a
-    // navigation that may trigger a hydration elsewhere.
-    void flushNow()
   }
   const saveMeta = async (patch: Partial<Match['meta']>) => persist({ ...match, meta: { ...match.meta, ...patch } })
 

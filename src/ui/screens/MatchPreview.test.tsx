@@ -1,4 +1,3 @@
-import 'fake-indexeddb/auto'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -6,13 +5,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { MatchPreview } from './MatchPreview'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
-import { db } from '../../persistence/db'
 import { saveTeam, savePlayer, saveMatch, getConvocation, saveConvocation } from '../../persistence/repositories'
 
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin') // guarded actions unlocked for the test
   localStorage.setItem('swish-club-id', 'ta')
-  await db.teams.clear(); await db.players.clear(); await db.matches.clear(); await db.convocations.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await saveTeam({ id: 'tb', name: 'VERDUN' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'ANTOINE', firstName: 'Léa' })
@@ -137,11 +134,6 @@ describe('MatchPreview — the call-up', () => {
     renderPreview()
     await screen.findByLabelText(/ANTOINE/i)
     expect(document.getElementById('convocation')).not.toBeNull()
-  })
-
-  it('says that the call-up stays on this device', async () => {
-    renderPreview()
-    expect(await screen.findByText(/sur cet appareil/i)).toBeInTheDocument()
   })
 
   it("shows the game's club's roster, not the device setting's when they differ", async () => {

@@ -11,7 +11,6 @@
  * produces none, handing over the file goes through the native share when there is one
  * and through a download otherwise, and sharing never asks for a code.
  */
-import 'fake-indexeddb/auto'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -20,9 +19,9 @@ import { SharePlay, deliver } from './SharePlay'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { decode } from '../../domain/share'
 import { newPlay, nextStep, type Arrow, type Play } from '../../domain/plays'
-import { db } from '../../persistence/db'
 import { savePlay } from '../../persistence/repositories'
 import { PlayView } from '../screens/PlayView'
+import { clear } from '../../test/fakeApi'
 
 const twoSteps = (): Play => {
   const s: Play = { id: 's1', ...newPlay('ta', 'half', true), name: 'Pick and roll haut', note: 'Écran au meneur' }
@@ -150,7 +149,7 @@ describe('ExportSchema — sharing a play', () => {
   })
 
   it('sharing asks for no code, even with no role at all', async () => {
-    await db.plays.clear()
+    clear('play')
     await savePlay(twoSteps())
     render(
       <MemoryRouter initialEntries={['/schemas/s1']}>

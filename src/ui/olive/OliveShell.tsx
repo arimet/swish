@@ -8,7 +8,7 @@ import { C, bd, Ic, ICON } from './kit'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { LangSwitcher } from '../../i18n/LangSwitcher'
 import { useT } from '../../i18n'
-import { SyncState } from '../components/SyncState'
+import { ConnectionState } from '../components/ConnectionState'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 
@@ -95,7 +95,7 @@ export function OliveShell() {
               {/* Before the language and the theme: it is the only one of these three
                   that appears in order to say something, and it must not shift the
                   other two as it appears. */}
-              <SyncState compact />
+              <ConnectionState compact />
               <LangSwitcher />
               <ThemeSwitcher />
               <AccessMenu players={roster} compact />
@@ -246,9 +246,9 @@ function MobileNav() {
 function NavGroup({ items, mutedOn }: { items: { icon: string; label: string; to: string; end: boolean }[]; mutedOn?: string }) {
   const translate = useT()
   const { pathname } = useLocation()
-  /** "Teams" used to light up on my team's record, which sits under `/teams/`: two
-   *  menu entries would have lit for a single page. The entry that owns the route
-   *  keeps it; the one that merely prefixes it goes dark. */
+  /** My team's record sits under `/teams/`, so a plain prefix match would light two
+   *  menu entries for a single page. The entry that owns the route keeps it; the one
+   *  that merely prefixes it goes dark. */
   const active = (isActive: boolean, to: string) =>
     isActive && !(mutedOn && mutedOn !== to && pathname === mutedOn)
   return (

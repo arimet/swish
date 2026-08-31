@@ -1,11 +1,15 @@
-# Deployment (Vercel) & realtime sync
+# Deployment (Vercel) & realtime following
 
-Swish runs **fully offline** (IndexedDB) with zero configuration. Sharing data
-across machines and **realtime spectator following** are optional and turn on
-with a Postgres database.
+**One Postgres database, and it is the only source of truth.** Every screen reads
+from it and every action writes to it before the screen believes itself saved.
+There is no local store, no queue and no offline mode: without the network the
+application does nothing, and it says so rather than pretending.
 
-Once sharing is on, **the database is the source of truth** and each device
-keeps a mirror of it so the app still works in a gym with no signal.
+That is the trade, taken deliberately. A mirror on each device would let a gym with
+no signal work, and would cost two truths to reconcile — a hydration cursor, a
+manifest of the living, a per-device conflict arbitration, and a class of bug where
+a phone shows data the database does not have. A scoreboard that refuses a basket is
+better than one that shows 42 while the official sheet says 40.
 
 ## 1. Deploy the frontend to Vercel
 
@@ -14,39 +18,38 @@ keeps a mirror of it so the app still works in a gym with no signal.
 - The `api/` folder is deployed as **serverless functions** (including the SSE
   stream) — nothing to configure.
 
-With no extra environment variable, the app runs in local mode (data stays on
-each device; spectator following is same-device only).
-
-## 2. Enable sharing + realtime (multi-device)
+## 2. The database (required)
 
 1. In the Vercel project: **Storage → create a Postgres database** (Neon).
    Vercel then injects `DATABASE_URL`. Use the **pooled** connection string —
    its host ends in `-pooler` — because serverless functions hold no connection.
-2. Create the table: `psql "$DATABASE_URL" -f db/schema.sql`.
-3. Add **`SYNC_WRITE_TOKEN`** — any long random string. It guards every read and
-   write of club data. Without it the API refuses to serve at all, on purpose:
-   an open database is worse than a broken one.
-4. Add **`VITE_SYNC_URL=/api`** (Production) and redeploy.
+2. Create the table: `DATABASE_URL=… pnpm db:init` (or
+   `psql "$DATABASE_URL" -f db/schema.sql` — it is the same file).
+3. Add **`WRITE_TOKEN`** — any long random string. It guards every **write**.
+   Without it `POST /api/mutate` refuses, on purpose: an open database is worse
+   than a broken one.
+4. Redeploy.
 5. On each device **that writes** — the scorer's table, the coach's phone:
-   **Administration → Synchronisation**, paste the token, and press *Save and
+   **Administration → Write access**, paste the token, and press *Save and
    check*. The device says whether the server accepted it. A device that only
-   reads needs nothing: hydration is public (see below).
+   reads needs nothing: reading is public (see below).
 
-Now **data is shared across every machine**: teams, players and the schedule
-created on one device show up on the others. The app stays **local-first**: it
-keeps working offline and re-syncs when the network is back. Without
-`VITE_SYNC_URL`, everything stays purely local per device.
+### There are no migrations
 
-> ### ⚠️ Turning sync on is a one-way door for a device's local data
->
-> The database is the source of truth, **without exception**: a device adopts
-> what the server holds, including when the server holds nothing. The first time
-> a device syncs against a fresh database, its own local data is replaced by the
-> server's — plays, team message and trainings included.
->
-> This is not a failure of sync. Data that was never synced was never in the
-> system of record, and a mirror that has never reflected anything is not a
-> backup. Set sync up **before** a club starts entering a season, not after.
+One table, no versioning, and that is deliberate while the documents are still
+moving: when their shape changes, the answer is to re-create the table, not to
+replay a migration nobody will run twice.
+
+```bash
+DATABASE_URL=… pnpm db:reset
+```
+
+That drops `documents`, re-creates it and re-seeds the demo season. It is
+destructive by name and by design — do not point it at a club's season.
+
+A device carrying an older build of the application also carries its service
+worker. It is un-registered on the first load of this version, so nothing has to be
+done by hand.
 
 ## 3. Set the three access codes
 
@@ -66,40 +69,45 @@ match", which freezes the score for good.
 > bundle and readable in the browser's dev tools. They guard against accidents
 > between people who trust each other, not against a malicious third party.
 >
-> **And reading is public.** `GET /api/state` carries no token: a visitor, a
+> **And reading is public.** `GET /api/docs` carries no token: a visitor, a
 > parent, a phone in private browsing all open the club rather than an empty
-> application, with no device to provision. The price is stated plainly — the
-> payload carries the roster as filed, licence numbers, birth dates and heights
-> included, readable by anyone who knows the deployment's URL. `SYNC_WRITE_TOKEN`
-> guards writing, and writing alone. Do not deploy shared data you would mind
-> seeing read or altered.
+> application, with no device to provision. The price is stated plainly —
+> `?kind=player` returns the roster as filed, licence numbers, birth dates and
+> heights included, readable by anyone who knows the deployment's URL.
+> `WRITE_TOKEN` guards writing, and writing alone. Do not deploy data you
+> would mind seeing read.
 
 ## 4. Demo data
 
-For a demo (deployment pre-filled with teams / championship / matches), add
-**`VITE_SEED=1`** and redeploy. Every device that opens the app is seeded with a
-data set. In shared mode the seed only runs when the store is empty, so it never
-overwrites shared data. Remove the variable for real use.
+Two ways in, both writing the same documents from the same module:
+
+- **From a terminal**: `DATABASE_URL=… pnpm db:seed`. It refuses a table that
+  already holds documents, so it cannot erase a season by accident.
+- **From the deployment**: add **`VITE_SEED=1`** and redeploy. The application then
+  seeds itself on first load, and here too **only into an empty database**. Remove
+  the variable for real use all the same.
 
 ## How it works
 
-- **Everything a club owns is shared**: teams, players, matches, call-ups,
-  trainings, plays, entered results and the coach's message — eight kinds, all of
-  them. Each write goes to the local
-  mirror immediately and is queued to the server (`POST /api/mutate`). On
-  startup the app hydrates from `GET /api/state`; list pages refresh from it.
-  Offline writes are flushed when the connection returns.
-- **Conflicts are settled by when the change was *made*, not when it arrived.**
-  Each queued write carries the moment the person made it, and an older change
-  arriving late cannot overwrite a newer one — which is what happens when a
-  device spends a game offline and empties its queue two hours later.
-- **Deletions really delete the row.** Other devices learn about them because
-  `GET /api/state` also returns the list of ids the database still holds;
-  anything missing from it is dropped locally.
-- **Match sheets merge, they do not overwrite.** Two devices scoring the same game
-  keep every event: each one carries a stable id, and an undo travels as a
-  retraction so it cannot be resurrected by the other device's copy. `status`
-  never moves backwards, so a late queue cannot re-open a finished game.
+- **Everything a club owns is in one table**: teams, players, matches, call-ups,
+  trainings, plays, entered results and the coach's message — eight kinds of JSON
+  document, keyed on `(kind, id)`. A screen reads what it needs from
+  `GET /api/docs?kind=…` when it mounts; every write goes to
+  `POST /api/mutate` and the screen rolls back if that fails.
+- **A cascade is one batch, hence one transaction.** Deleting a team takes its
+  players, its results, its sessions, its plays and its message: half of that
+  applied would leave the club in a state no screen can describe.
+- **Deletions really delete the row.** There is no tombstone, because there is no
+  mirror left to inform.
+- **A write replaces, every kind alike**, the match sheet included. There is no
+  merge and no retraction any more: both existed to reconcile copies held on
+  devices, and there are no copies. The consequence is worth knowing — the sheet is
+  written whole, so **one game should be kept by one device**. A second tab left
+  open on the bench holds the log as it was when it loaded, and its next write
+  would file that version.
+- **A failed exchange is visible.** The header shows a pill for as long as the
+  server is silent or refusing the token, and it does not claim anything is kept:
+  nothing is.
 - **The spectator link is public and carries only what the page shows**: shirt
   number and name. Licence numbers, birth dates and heights stay in the database.
 - **Live following**: spectators open `…/match/:id/watch` and receive updates
@@ -112,9 +120,8 @@ overwrites shared data. Remove the variable for real use.
 
 | Variable | Purpose | Required |
 |---|---|---|
-| `VITE_SYNC_URL=/api` | Enable shared data + realtime following | Optional |
-| `DATABASE_URL` | Postgres (use the pooled host) | Auto (Vercel/Neon) |
-| `SYNC_WRITE_TOKEN` | Guards **writes**; entered once per writing device | With `VITE_SYNC_URL` |
+| `DATABASE_URL` | Postgres (use the pooled host) — the source of truth | **Yes** |
+| `WRITE_TOKEN` | Guards **writes**; entered once per writing device | **Yes** |
 | `VITE_SEED=1` | Seed demo data | Demo only |
 | `VITE_ADMIN_PASSWORD` | Admin access code (fallback `admin`) | Recommended |
 | `VITE_SCORER_PASSWORD` | Scorer's table access code (fallback `marque`) | Recommended |
@@ -126,7 +133,7 @@ overwrites shared data. Remove the variable for real use.
 
 | Method | Route | Purpose |
 |--------|-------|---------|
-| `GET`  | `/api/state?since=<rev>` | Changed documents + the ids still alive. **Public.** |
-| `POST` | `/api/mutate` | Apply a batch of upserts/deletes. **Token required.** |
-| `GET`  | `/api/match/:id` | Spectator payload, derived from the database. Public. |
-| `GET`  | `/api/match/:id/stream` | Realtime SSE stream (Edge) |
+| `GET`  | `/api/docs?kind=<kind>[&id=<id>]` | Every document of a kind, or one of them. **Public.** |
+| `POST` | `/api/mutate` | Apply a batch of upserts/deletes, in one transaction. **Token required.** |
+| `GET`  | `/api/match/:id` | Spectator payload, projected from the database. Public. |
+| `GET`  | `/api/match/:id/stream` | Realtime SSE stream (Node runtime) |
