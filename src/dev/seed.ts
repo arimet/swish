@@ -1,5 +1,5 @@
-import { db } from '../persistence/db'
-import { saveTeam, savePlayer, saveMatch, saveResult, saveTraining, saveConvocation, savePlay, saveMessage } from '../persistence/repositories'
+import { listTeams, wipeAll } from '../persistence/repositories'
+import { mutate, type Kind } from '../persistence/api'
 import type { Convocation, GameEvent, Match, TeamMessage, Period, Player, ReportedResult, ScoreKind, StatKind, Training } from '../domain/types'
 import { kindAt } from '../domain/shotzones'
 import { newPlay, nextStep } from '../domain/plays'
@@ -7,20 +7,22 @@ import type { Side, Arrow, Position, Play, Step, Court, Stroke } from '../domain
 import { CLUB_ID_KEY } from '../app/club'
 
 /**
- * Demo data (DEV only): Avenir de Vignot and its five opponents of the season.
+ * Demo data: Avenir de Vignot and its five opponents of the season.
  *
- * The seed only replays when its version has changed, otherwise every opening would
- * overwrite what a developer has just entered by hand. That version used to be a
- * number to bump **from memory**: we therefore assumed that anyone touching the data
- * would remember to raise it. That failed the second time — the distribution of
- * baskets was fixed without the version moving, and browsers already on the old
- * version regenerated nothing. The defect read as a data bug when it was a bug in the
- * guard.
+ * Two ways in, one definition. `seedDocuments` below is pure, so
+ * `scripts/db.mjs seed` can write the season from a terminal; `seedDevData` is the
+ * browser path, kept for `pnpm dev` and for a demo deployment (`VITE_SEED=1`).
  *
- * `SEED_DATA_VERSION` stays manual for what the fingerprint cannot see (the
- * construction logic, the plays), but the fingerprint of the **declarative tables** is
- * appended to it: touching a player, a weight, a score or a rotation changes the
- * version on its own. See `DATA_FINGERPRINT`, at the very bottom.
+ * The seed only replays when its version changes, otherwise every opening would
+ * overwrite what a developer has just entered by hand.
+ *
+ * That version is **not** a number to bump by hand — a hand-bumped version gets
+ * forgotten, and the browsers already carrying the old one then regenerate nothing,
+ * which reads as a data bug when it is a bug in the guard. `SEED_DATA_VERSION` covers
+ * only what a fingerprint cannot see (the construction logic, the plays); the
+ * fingerprint of the **declarative tables** is appended to it, so touching a player, a
+ * weight, a score or a rotation moves the version on its own. See `DATA_FINGERPRINT`,
+ * at the very bottom.
  */
 const SEED_DATA_VERSION = 'v28'
 const LEAGUE = 'Pré régionale masculine · Poule A'
@@ -40,7 +42,7 @@ const TEAMS: [string, string][] = [
  * absence — that is in fact the case the old seed exercised with its last player left
  * without data. They are filled in from the team record.
  */
-const ROSTER_DATA: [numero: number, name: string, firstName: string][] = [
+const ROSTER_DATA: [jersey: number, name: string, firstName: string][] = [
   [2, 'CAUTENET', 'Louis'],
   [5, 'DELEPEE', 'Mateo'],
   [6, 'SALAH', 'Ali'],
@@ -53,6 +55,10 @@ const ROSTER_DATA: [numero: number, name: string, firstName: string][] = [
   [17, 'HOSTIN', 'Steven'],
   [20, 'MILAS', 'Galaad'],
 ]
+
+/** A document as the seed hands it over: its kind, the key it is filed under, and
+ *  the document itself. The key is not always `doc.id` — see `seedDocuments`. */
+export interface SeedDoc { kind: Kind; id: string; doc: unknown }
 
 const teamId = (t: number) => `seed-t${t}`
 const playerId = (i: number) => `seed-p${i}`
@@ -72,13 +78,12 @@ const ev = (e: Omit<GameEvent, 'id' | 'wallClock'> & Record<string, unknown>): G
 
 /** Plausible shot spots, **separated by value**.
  *
- *  They used to sit in a single list walked with `k % length`, and the last three —
- *  the three-pointers — were never reached: a game segment counts five baskets, so `k`
- *  never went past index 4. The 3PT column of the match sheet showed zero for the
- *  whole roster, in every game. The seed now picks the shot's **value** first, then a
- *  spot that carries it; `kindAt` remains the sole judge of which side of the line it
- *  falls on, and the seed's test checks that these three spots really are behind
- *  it. */
+ *  Two lists and not one, because a single list walked with `k % length` never reaches
+ *  its tail: a game segment counts five baskets, so `k` never passes index 4, and the
+ *  three-pointers at the end would show zero in the 3PT column for the whole roster,
+ *  in every game. The seed picks the shot's **value** first, then a spot that carries
+ *  it; `kindAt` remains the sole judge of which side of the line it falls on, and the
+ *  seed's test checks that these three spots really are behind it. */
 const SPOTS_2: { x: number; y: number }[] = [
   { x: 0.50, y: 0.14 }, { x: 0.45, y: 0.18 }, { x: 0.56, y: 0.16 }, // in the key
   { x: 0.24, y: 0.24 }, { x: 0.76, y: 0.24 }, { x: 0.50, y: 0.45 }, // mid-range
@@ -98,8 +103,9 @@ const SPOTS_3: { x: number; y: number }[] = [
  *  points a game and five players finished on zero. What makes a match sheet credible
  *  is a ratio of about three between first and last, not a ratio of ten.
  *
- *  The old calculation derived the weight from the rank in the list, which stopped
- *  working once the starters were no longer the first five of the roster. */
+ *  Keyed on the **jersey number** and not on the rank in the list: the starting five
+ *  are not the first five of the roster, so a rank would hand the weights to the wrong
+ *  players. */
 const SCORING_WEIGHT: Record<number, number> = {
   11: 6,                       // BUZZI, the top scorer
   13: 4, 2: 4,                 // his two outlets
@@ -158,11 +164,10 @@ const MAX_FOULS = 4
  * A proportional allocator, by highest quotient: at each award, we serve whoever has
  * the largest `weight / (already served + 1)`.
  *
- * It used to be written by hand inside `baskets` and now serves six things (baskets,
- * assists, two kinds of rebound, blocks, fouls): it is the same question every time,
- * and the three defects that had to be fixed for the baskets — a pre-filled list
- * walked with a modulo, a counter reset on every segment — would have been reproduced
- * identically five more times.
+ * One allocator for six things (baskets, assists, two kinds of rebound, blocks,
+ * fouls): it is the same question every time. Written by hand at each call site, the
+ * traps come back with it — a pre-filled list walked with a modulo, a counter reset on
+ * every segment — five more times over.
  *
  * The counter is held by the allocator, hence by the game: proportionality plays out
  * over the match and not over a segment of five baskets.
@@ -687,22 +692,57 @@ export const DATA_FINGERPRINT = fingerprint([
 ])
 const SEED_VERSION = `${SEED_DATA_VERSION}-${DATA_FINGERPRINT}`
 
-export async function seedDevData(): Promise<void> {
-  const already = (await db.teams.count()) > 0
-  if (already && localStorage.getItem('seed-version') === SEED_VERSION) return
-  // Re-seed (schema or demo data updated). Call-ups and trainings too: without that, a
-  // re-seed would leave orphans attached to games that no longer exist.
-  await db.matches.clear(); await db.players.clear(); await db.teams.clear(); await db.results.clear()
-  await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear(); await db.messages.clear()
+/**
+ * Fills the database with the demo season.
+ *
+ * **It only ever writes into an empty database, except in development.** There is no
+ * device-local store to clear: a re-seed *is* a wipe of the club's data, and
+ * `VITE_SEED=1` left on by accident on a real deployment would erase a season.
+ * Development regenerates when its demo data changes; production fills a blank and
+ * never touches anything else.
+ */
+/**
+ * The whole demo season as documents, ready to be written. Pure: it touches neither
+ * the network nor the browser.
+ *
+ * That is what lets `scripts/db.mjs seed` fill the database from a terminal, with no
+ * application open and no write token to paste, while the browser path below writes
+ * exactly the same thing.
+ *
+ * The play's `updatedAt` is stamped here rather than by `savePlay`, which the
+ * terminal path does not go through: without it the library has nothing to order
+ * itself by and looks shuffled at every opening.
+ */
+export function seedDocuments(): SeedDoc[] {
+  const now = new Date().toISOString()
+  return [
+    ...TEAMS.map((t, i): SeedDoc => ({ kind: 'team', id: teamId(i), doc: { id: teamId(i), name: t[0], coach: t[1] } })),
+    ...PLAYERS.map((p): SeedDoc => ({ kind: 'player', id: p.id, doc: p })),
+    ...FIXTURES.map((f, idx): SeedDoc => { const m = buildMatch(f, idx); return { kind: 'match', id: m.id, doc: m } }),
+    ...OUTSIDE_GAMES.map((g, idx): SeedDoc => { const r = buildResult(g, idx); return { kind: 'result', id: r.id, doc: r } }),
+    ...buildTrainings().map((tr): SeedDoc => ({ kind: 'training', id: tr.id, doc: tr })),
+    // The two kinds filed under something other than an `id`: the call-up under its
+    // game, the coach's message under its club.
+    ((c) => ({ kind: 'convocation', id: c.matchId, doc: c }) as SeedDoc)(buildConvocation()),
+    ((m) => ({ kind: 'message', id: m.clubId, doc: m }) as SeedDoc)(buildMessage()),
+    ...buildSchemas(teamId(0)).map((s): SeedDoc => ({ kind: 'play', id: s.id, doc: { ...s, updatedAt: now } })),
+  ]
+}
 
-  for (let t = 0; t < TEAMS.length; t++) await saveTeam({ id: teamId(t), name: TEAMS[t][0], coach: TEAMS[t][1] })
-  for (const p of PLAYERS) await savePlayer(p)
-  for (let idx = 0; idx < FIXTURES.length; idx++) await saveMatch(buildMatch(FIXTURES[idx], idx))
-  for (let idx = 0; idx < OUTSIDE_GAMES.length; idx++) await saveResult(buildResult(OUTSIDE_GAMES[idx], idx))
-  for (const tr of buildTrainings()) await saveTraining(tr)
-  await saveConvocation(buildConvocation())
-  await saveMessage(buildMessage())
-  for (const s of buildSchemas(teamId(0))) await savePlay(s)
+/** The club the demo opens on: `scripts/db.mjs` prints it, the browser stores it. */
+export const SEED_CLUB_ID = teamId(0)
+
+export async function seedDevData(): Promise<void> {
+  if ((await listTeams()).length) {
+    if (!import.meta.env.DEV || localStorage.getItem('seed-version') === SEED_VERSION) return
+    // Development, and the demo data has moved: regenerate. Call-ups and trainings go
+    // too, otherwise a re-seed leaves orphans attached to games that no longer exist.
+    await wipeAll()
+  }
+
+  // One batch, hence one transaction: a seed that lands half-written leaves games
+  // pointing at teams that do not exist, and the screens have no way to say so.
+  await mutate(seedDocuments().map(({ kind, id, doc }) => ({ kind, op: 'put' as const, id, doc })))
 
   localStorage.setItem('seed-version', SEED_VERSION)
   // Avenir de Vignot is the demo club: without this, the demo opens on the welcome
