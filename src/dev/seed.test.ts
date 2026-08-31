@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DATA_FINGERPRINT, fingerprint, seedDevData } from './seed'
-import { getConvocation, listMatches, listPlayers, listPlays, listResults, listTeams, listTrainings, saveConvocation, savePlayer, saveTraining } from '../persistence/repositories'
+import { seedDocuments } from './seed'
+import { mutate } from '../persistence/api'
+import { getConvocation, listMatches, listPlayers, listPlays, listResults, listTeams, listTrainings } from '../persistence/repositories'
 import { playingTimes } from '../domain/playingtime'
 import { nextFixture } from '../domain/fixtures'
 import { folders } from '../domain/plays'
@@ -8,9 +9,11 @@ import { standings } from '../domain/standings'
 import { playerStats } from '../domain/boxscore'
 import { TEAM_FOUL_BONUS } from '../rules/ffbb'
 
+/* The season is written the way `scripts/db.mjs seed` writes it: one batch of the
+   documents `seedDocuments` hands over. Nothing else seeds — the application does
+   not. */
 beforeEach(async () => {
-  localStorage.clear()
-  await seedDevData()
+  await mutate(seedDocuments().map(({ kind, id, doc }) => ({ kind, op: 'put' as const, id, doc })))
 })
 
 describe('demo data', () => {
@@ -258,50 +261,5 @@ describe('demo data', () => {
     expect(prochaine.playIds).toHaveLength(2)
     const existing = new Set(plays.map((s) => s.id))
     expect(prochaine.playIds!.every((id) => existing.has(id))).toBe(true)
-  })
-
-  it('clears trainings and call-ups before re-seeding, so as to leave no orphans', async () => {
-    await saveTraining({ id: 'orphelin', clubId: 'zzz', date: '2000-01-01' })
-    await saveConvocation({ matchId: 'inexistant', playerIds: ['x'] })
-    localStorage.removeItem('seed-version') // forces a re-seed on the next call
-    await seedDevData()
-    expect((await listTrainings()).some((t) => t.id === 'orphelin')).toBe(false)
-    expect(await getConvocation('inexistant')).toBeUndefined()
-  })
-})
-
-describe('the seed\'s version guard', () => {
-  it('the fingerprint changes as soon as a datum changes', () => {
-    // The real defect was not in the data but in the guard: the version was a number
-    // to bump from memory, and we forgot to when fixing the distribution of baskets.
-    // Browsers already up to date on the old version therefore regenerated nothing, and
-    // the fixed bug stayed visible.
-    const base = [[[2, 'CAUTENET', 'Louis']], { 11: 6 }]
-    const otherPlayer = [[[2, 'CAUTENET', 'Louise']], { 11: 6 }]
-    const otherWeight = [[[2, 'CAUTENET', 'Louis']], { 11: 7 }]
-    expect(fingerprint(base)).not.toBe(fingerprint(otherPlayer))
-    expect(fingerprint(base)).not.toBe(fingerprint(otherWeight))
-    expect(fingerprint(base)).toBe(fingerprint(base))   // et stable à données égales
-  })
-
-  it('the fingerprint does not depend on today\'s date', () => {
-    // The seed's dates are anchored on today. Including them would regenerate
-    // everything each night, erasing what a developer entered the day before.
-    expect(DATA_FINGERPRINT).toBe(DATA_FINGERPRINT)
-    expect(DATA_FINGERPRINT).not.toMatch(new RegExp(String(new Date().getFullYear())))
-  })
-
-  it('a re-seed follows the version, and replays nothing at an equal version', async () => {
-    const version = localStorage.getItem('seed-version')
-    expect(version).toContain(DATA_FINGERPRINT)
-    // At an identical version, a second call does not touch the store: we do not
-    // overwrite what a developer has just entered by hand.
-    await savePlayer({ id: 'ajout-main', teamId: (await listMatches())[0].meta.clubId, number: 99, lastName: 'TEST', firstName: 'Manuel' })
-    await seedDevData()
-    expect((await listPlayers((await listMatches())[0].meta.clubId)).some((p) => p.id === 'ajout-main')).toBe(true)
-    // Version changed: everything is regenerated, so the manual addition disappears.
-    localStorage.setItem('seed-version', 'autre-chose')
-    await seedDevData()
-    expect((await listPlayers((await listMatches())[0].meta.clubId)).some((p) => p.id === 'ajout-main')).toBe(false)
   })
 })

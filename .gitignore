@@ -45,3 +45,5 @@ docs/superpowers/
 # extends (tonal ramps, motion tokens, component excerpts). The rest of the folder
 # is cache and machine preference.
 !.impeccable/design.json
+.vercel
+.env*

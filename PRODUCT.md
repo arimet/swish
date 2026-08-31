@@ -162,8 +162,8 @@ into hard constraints.
 ## Evidence on Hand
 
 - **A real roster** — eleven named players of the Avenir de Vignot and their coach — in
-  `src/dev/seed.ts` (development data only, never shipped to production unless
-  `VITE_SEED=1`).
+  `src/dev/seed.ts`. Demo data: it reaches a database only through `pnpm db:seed`, never
+  on its own.
 - **Durable constraint on that roster: these are real people.** Birth dates and heights
   are deliberately left empty and must not be invented. Both fields are optional, the
   screens handle their absence, and they are filled from the team sheet by someone who

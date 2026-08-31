@@ -51,12 +51,3 @@ createRoot(document.getElementById('root')!).render(
    round trip. A database that does not answer must show its screens and say so
    (see `ConnectionState`), not hang on a white page. */
 void dropServiceWorkers()
-
-// Demo data: in dev, or in production if VITE_SEED=1. It only ever fills an empty
-// database — see `seedDevData`.
-if (import.meta.env.DEV || import.meta.env.VITE_SEED === '1') {
-  void import('./dev/seed').then(({ seedDevData }) => seedDevData()).catch((e) => {
-    console.error('[swish] demo data not seeded:', (e as Error).message,
-      '— is DATABASE_URL set, and the write token entered under Administration?')
-  })
-}

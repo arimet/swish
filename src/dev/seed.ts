@@ -1,30 +1,20 @@
-import { listTeams, wipeAll } from '../persistence/repositories'
-import { mutate, type Kind } from '../persistence/api'
+import type { Kind } from '../persistence/api'
 import type { Convocation, GameEvent, Match, TeamMessage, Period, Player, ReportedResult, ScoreKind, StatKind, Training } from '../domain/types'
 import { kindAt } from '../domain/shotzones'
 import { newPlay, nextStep } from '../domain/plays'
 import type { Side, Arrow, Position, Play, Step, Court, Stroke } from '../domain/plays'
-import { CLUB_ID_KEY } from '../app/club'
 
 /**
  * Demo data: Avenir de Vignot and its five opponents of the season.
  *
- * Two ways in, one definition. `seedDocuments` below is pure, so
- * `scripts/db.mjs seed` can write the season from a terminal; `seedDevData` is the
- * browser path, kept for `pnpm dev` and for a demo deployment (`VITE_SEED=1`).
+ * **This module writes nothing.** `seedDocuments` builds the season and hands it
+ * over; `scripts/db.mjs seed` is what puts it in the database. The application never
+ * seeds itself — the front end has no business filling the club's database, and a
+ * `seed-version` kept per device to decide when to rewrite shared data was the last
+ * piece of local-first thinking left in the repo.
  *
- * The seed only replays when its version changes, otherwise every opening would
- * overwrite what a developer has just entered by hand.
- *
- * That version is **not** a number to bump by hand — a hand-bumped version gets
- * forgotten, and the browsers already carrying the old one then regenerate nothing,
- * which reads as a data bug when it is a bug in the guard. `SEED_DATA_VERSION` covers
- * only what a fingerprint cannot see (the construction logic, the plays); the
- * fingerprint of the **declarative tables** is appended to it, so touching a player, a
- * weight, a score or a rotation moves the version on its own. See `DATA_FINGERPRINT`,
- * at the very bottom.
+ * To regenerate after touching the data below: `pnpm db:reset`.
  */
-const SEED_DATA_VERSION = 'v28'
 const LEAGUE = 'Pré régionale masculine · Poule A'
 
 // [name, coach]. The first team is ours; the five that follow are our opponents.
@@ -663,55 +653,17 @@ function buildMessage(): TeamMessage {
   }
 }
 
-/**
- * A fingerprint of the seed's declarative tables. Any change to the roster, the
- * scoring weights, the starting five, the rotations, our scores or the outside results
- * changes it — and so regenerates the data without anyone having to think about it.
- *
- * **Dates** are excluded on purpose: they are anchored on the day the seed runs, so
- * including them would regenerate everything each night and erase what a developer
- * entered the day before.
- *
- * The hash is a djb2 in base 36: the aim is not to resist a malicious collision, only
- * to notice that a constant has moved.
- */
-export function fingerprint(value: unknown): string {
-  const text = JSON.stringify(value)
-  let h = 5381
-  for (let i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0
-  return h.toString(36)
-}
 
-export const DATA_FINGERPRINT = fingerprint([
-  ROSTER_DATA, TEAMS, SCORING_WEIGHT, THEMES,
-  ROLE_OF, STAT_WEIGHT, PER_PERIOD, FOULS_PER_PERIOD, MAX_FOULS,
-  SPOTS_2, SPOTS_3,
-  [2, 11, 13, 15, 17], SUB_SWAPS,
-  FIXTURES.map((f) => [f.opponent, f.time, f.status, f.score]),
-  OUTSIDE_GAMES.map((g) => [g.home, g.away, g.score]),
-])
-const SEED_VERSION = `${SEED_DATA_VERSION}-${DATA_FINGERPRINT}`
-
-/**
- * Fills the database with the demo season.
- *
- * **It only ever writes into an empty database, except in development.** There is no
- * device-local store to clear: a re-seed *is* a wipe of the club's data, and
- * `VITE_SEED=1` left on by accident on a real deployment would erase a season.
- * Development regenerates when its demo data changes; production fills a blank and
- * never touches anything else.
- */
 /**
  * The whole demo season as documents, ready to be written. Pure: it touches neither
  * the network nor the browser.
  *
  * That is what lets `scripts/db.mjs seed` fill the database from a terminal, with no
- * application open and no write token to paste, while the browser path below writes
- * exactly the same thing.
+ * application open and no write token to paste.
  *
- * The play's `updatedAt` is stamped here rather than by `savePlay`, which the
- * terminal path does not go through: without it the library has nothing to order
- * itself by and looks shuffled at every opening.
+ * The play's `updatedAt` is stamped here rather than by `savePlay`, which this path
+ * does not go through: without it the library has nothing to order itself by and looks
+ * shuffled at every opening.
  */
 export function seedDocuments(): SeedDoc[] {
   const now = new Date().toISOString()
@@ -729,23 +681,5 @@ export function seedDocuments(): SeedDoc[] {
   ]
 }
 
-/** The club the demo opens on: `scripts/db.mjs` prints it, the browser stores it. */
+/** The club the demo opens on. `scripts/db.mjs` prints it after seeding. */
 export const SEED_CLUB_ID = teamId(0)
-
-export async function seedDevData(): Promise<void> {
-  if ((await listTeams()).length) {
-    if (!import.meta.env.DEV || localStorage.getItem('seed-version') === SEED_VERSION) return
-    // Development, and the demo data has moved: regenerate. Call-ups and trainings go
-    // too, otherwise a re-seed leaves orphans attached to games that no longer exist.
-    await wipeAll()
-  }
-
-  // One batch, hence one transaction: a seed that lands half-written leaves games
-  // pointing at teams that do not exist, and the screens have no way to say so.
-  await mutate(seedDocuments().map(({ kind, id, doc }) => ({ kind, op: 'put' as const, id, doc })))
-
-  localStorage.setItem('seed-version', SEED_VERSION)
-  // Avenir de Vignot is the demo club: without this, the demo opens on the welcome
-  // screen every time the data is regenerated.
-  if (!localStorage.getItem(CLUB_ID_KEY)) localStorage.setItem(CLUB_ID_KEY, teamId(0))
-}
