@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { forget, get, list, mutate, checkToken, onState, setToken, TOKEN_KEY } from './api'
+import { get, list, mutate, onWrite, checkToken, onState, setToken, TOKEN_KEY, type Op } from './api'
 
 /**
  * The single door to the database, and what it does when the door does not open.
@@ -110,77 +110,47 @@ describe('checking the token', () => {
 })
 
 /**
- * The fifteen-second copy of the last read.
+ * What a write announces.
  *
- * What is checked here is not the speed — that is not testable — but the three rules
- * that make the copy safe. Break any one of them and a screen shows a state the
- * database does not hold, which is precisely what taking the offline mode out was
- * meant to end.
+ * This is the whole contract between the door to the database and the cache above it:
+ * `mutate` says which kinds a batch touched, and `WriteBridge` drops those keys. Get it
+ * wrong in either direction and the defect is silent — too few kinds and a screen keeps
+ * showing a document that was deleted, too many and every write costs the schedule its
+ * match sheets again.
  */
-describe('the short-lived copy of a read', () => {
-  // `setupTests` clears it between tests; these cases clear it again on purpose, so
-  // they read the same as if run alone.
-  beforeEach(forget)
-
-  it('a second read of the same kind does not go to the network', async () => {
-    const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(ok([{ id: 't1' }]))
-    await list('team')
-    await expect(list('team')).resolves.toEqual([{ id: 't1' }])
-    expect(f).toHaveBeenCalledTimes(1)
+describe('announcing a write', () => {
+  it('hands over the batch itself, documents included', async () => {
+    // The ops and not a list of kinds: `WriteBridge` files the accepted document
+    // rather than reading it back, and it can only do that if the document comes with
+    // the announcement.
+    always(() => status(204))
+    const heard: Op[][] = []
+    const off = onWrite((ops) => heard.push(ops))
+    const batch: Op[] = [
+      { kind: 'player', op: 'del', id: 'p1' },
+      { kind: 'convocation', op: 'put', id: 'm1', doc: { matchId: 'm1', playerIds: [] } },
+    ]
+    await mutate(batch)
+    off()
+    expect(heard).toEqual([batch])
   })
 
-  it('two callers at once share one request', async () => {
-    // The dashboard asks for five kinds while the club gate is still asking for the
-    // teams. Without this, the same list goes out twice.
-    const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(ok([{ id: 't1' }]))
-    await Promise.all([list('team'), list('team'), list('team')])
-    expect(f).toHaveBeenCalledTimes(1)
+  it('says nothing when the write was refused', async () => {
+    // A refused write changed nothing. Dropping good cached data over it would make
+    // every failure look like an outage on the next screen the volunteer opens.
+    always(() => status(401))
+    const heard: Op[][] = []
+    const off = onWrite((ops) => heard.push(ops))
+    await expect(mutate([{ kind: 'team', op: 'del', id: 't1' }])).rejects.toThrow()
+    off()
+    expect(heard).toEqual([])
   })
 
-  it('two different kinds are two reads', async () => {
-    const f = always(() => ok([]))
-    await Promise.all([list('team'), list('player')])
-    expect(f).toHaveBeenCalledTimes(2)
-  })
-
-  it('a write empties it — a cascade must not read its own stale list', async () => {
-    // This is the rule that matters most. `deleteTeam` reads the players before it
-    // writes; served the list from before its own previous deletion, it reinstates ids
-    // it had just removed and the debris stays for good.
-    const f = always(() => ok([{ id: 't1' }]))
-    await list('team')
+  it('stops announcing once unsubscribed', async () => {
+    always(() => status(204))
+    const heard: Op[][] = []
+    onWrite((ops) => heard.push(ops))()
     await mutate([{ kind: 'team', op: 'del', id: 't1' }])
-    await list('team')
-    expect(f).toHaveBeenCalledTimes(3)
-  })
-
-  it('it expires, so a second device\'s write is not invisible for ever', async () => {
-    vi.useFakeTimers()
-    try {
-      const f = always(() => ok([]))
-      await list('team')
-      vi.advanceTimersByTime(14_000)
-      await list('team')
-      expect(f).toHaveBeenCalledTimes(1)
-      vi.advanceTimersByTime(2_000)
-      await list('team')
-      expect(f).toHaveBeenCalledTimes(2)
-    } finally { vi.useRealTimers() }
-  })
-
-  it('a refusal is not kept: the next read tries again', async () => {
-    // Cached, one network hiccup would be replayed to every screen for fifteen
-    // seconds — the application would look broken long after the network came back.
-    const f = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('offline'))
-    await expect(list('team')).rejects.toThrow()
-    f.mockResolvedValue(ok([{ id: 't1' }]))
-    await expect(list('team')).resolves.toEqual([{ id: 't1' }])
-  })
-
-  it('an absent document is an answer, and it is kept like any other', async () => {
-    const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(status(404))
-    await expect(get('match', 'gone')).resolves.toBeUndefined()
-    await expect(get('match', 'gone')).resolves.toBeUndefined()
-    expect(f).toHaveBeenCalledTimes(1)
+    expect(heard).toEqual([])
   })
 })

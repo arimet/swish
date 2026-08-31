@@ -1,4 +1,3 @@
-import { forget } from '../persistence/api'
 import type { Match } from '../domain/types'
 
 /**
@@ -21,24 +20,23 @@ const store = new Map<string, unknown>()
 
 const key = (kind: string, id: string) => `${kind}:${id}`
 
-/* The three arrangement helpers below write **straight into the store**, past
-   `/api/mutate` — so nothing tells `api.ts` that its fifteen-second copy of the last
-   read is out of date. Hence `forget()` on each: a fixture filed after a screen has
-   read once must be seen by the next read, or the test is arranging a world the code
-   never sees. */
+/* The three helpers below write **straight into the store**, past `/api/mutate`, and
+   that is the point: they are a test's arrangement, not a gesture under test. Nothing
+   announces them, so nothing invalidates a query — which is why `src/test/render.tsx`
+   builds a fresh, empty query client per case rather than trying to keep one in step
+   with fixtures filed behind its back. */
 
 /** Empties the database between two tests. Called for every test by `setupTests`. */
-export const resetStore = () => { store.clear(); forget() }
+export const resetStore = () => store.clear()
 
 /** Drops every document of a kind. Some tests file a fixture in `beforeEach` and then
  *  need one kind emptied to describe their own case ("a player with no game"). */
 export const clear = (kind: string) => {
   for (const k of [...store.keys()]) if (k.startsWith(`${kind}:`)) store.delete(k)
-  forget()
 }
 
 /** Files a document directly, bypassing the API — the arrangement half of a test. */
-export const put = (kind: string, id: string, doc: unknown) => { store.set(key(kind, id), doc); forget() }
+export const put = (kind: string, id: string, doc: unknown) => { store.set(key(kind, id), doc) }
 
 /** Reads a document back, to assert on what a screen actually wrote. */
 export const doc = <T>(kind: string, id: string): T | undefined => store.get(key(kind, id)) as T | undefined

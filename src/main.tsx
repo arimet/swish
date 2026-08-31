@@ -1,9 +1,17 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import App from './App.tsx'
 import { ThemeProvider } from './ui/theme/ThemeProvider'
 import { LangProvider } from './i18n'
+import { WriteBridge, makeQueryClient } from './persistence/queries'
+
+/* One client for the whole application, built here because it is infrastructure: the
+   reads it caches outlive any screen. `WriteBridge` sits under it and above everything
+   else, so an accepted write reaches the cache wherever in the application it came
+   from. */
+const queryClient = makeQueryClient()
 
 // Base UI only unmounts its popups (Dialog, Select…) after waiting for a
 // requestAnimationFrame and then for the CSS exit animations to finish. In a tab that
@@ -39,11 +47,14 @@ async function dropServiceWorkers(): Promise<void> {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider>
-      <LangProvider>
-        <App />
-      </LangProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <WriteBridge />
+      <ThemeProvider>
+        <LangProvider>
+          <App />
+        </LangProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   </StrictMode>,
 )
 

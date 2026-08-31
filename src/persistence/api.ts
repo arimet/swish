@@ -75,78 +75,46 @@ function fail(status?: number): never {
 }
 
 /**
- * The short-lived copy of what the server just said.
+ * Announced after every accepted write, with the batch that was accepted.
  *
- * Not a mirror, and not a step back towards the local-first version that was taken
- * out: nothing is stored, nothing survives a reload, and no write ever reads from
- * here. It answers one thing — a screen mounted twice in a row asked the same
- * question twice, and the second answer cannot have changed.
+ * The **ops**, not a list of kinds, and that is what makes the cache above precise.
+ * A `put` carries the document the server took, so `WriteBridge` can file it rather
+ * than read it back; a `del` names an id that is now gone. Only the kind's *list* has
+ * to be re-read, and only if a screen is showing one. In the play editor, where a
+ * marker released is a write, that is the difference between one request per gesture
+ * and none.
  *
- * Without it every navigation replayed the whole read. Going back to the schedule you
- * were looking at three seconds earlier re-downloaded every match sheet, events
- * included — ninety kilobytes for five games — through a cold serverless function and
- * a fresh Postgres connection. That is the "even when I come back to a page I have
- * just seen" this fixes.
- *
- * Three rules make it safe, and all three matter:
- *
- * **The promise is cached, not the value.** The dashboard asks for five kinds while
- * the club gate is still asking for the teams; the second caller joins the request in
- * flight instead of opening a second one.
- *
- * **A write empties it, all of it.** A cascade reads before it writes, and a cascade
- * reading its own stale list is how debris survives a deletion. `mutate` is the only
- * way to write, so this is the only place that has to remember it.
- *
- * **It expires.** Fifteen seconds is longer than a navigation and shorter than a
- * decision. It is what bounds the one thing this costs: a second device's write is
- * invisible here until the window passes. The spectator page does not pay it — it
- * polls `/api/match/:id` through `spectator.ts`, which never comes past this module.
+ * It is a subscription rather than a call into React Query, and deliberately: this
+ * module is the door to the database and knows nothing about the screens. It has
+ * announced "the link is up" the same way since long before there was a cache.
  */
-const FRESH = 15_000
+const writeListeners = new Set<(ops: Op[]) => void>()
 
-const fresh = new Map<string, { at: number; answer: Promise<unknown> }>()
-
-/** Empties the copy. Called by every write, and by the test suite between two cases —
- *  a fixture filed straight into the store bypasses `mutate`, so nothing else would
- *  tell us the world changed. */
-export function forget(): void { fresh.clear() }
-
-function cached<T>(key: string, ask: () => Promise<T>): Promise<T> {
-  const held = fresh.get(key)
-  if (held && Date.now() - held.at < FRESH) return held.answer as Promise<T>
-  const answer = ask()
-  fresh.set(key, { at: Date.now(), answer })
-  // A refused answer is not an answer to keep: cached, one network hiccup would be
-  // replayed to every screen for fifteen seconds.
-  answer.catch(() => { if (fresh.get(key)?.answer === answer) fresh.delete(key) })
-  return answer
+/** Subscribes to accepted writes. Returns an unsubscribe. */
+export function onWrite(f: (ops: Op[]) => void): () => void {
+  writeListeners.add(f)
+  return () => { writeListeners.delete(f) }
 }
 
 /** Every document of a kind. The lists are club-sized; there is no pagination and
  *  no need for one. */
-export function list<T>(kind: Kind): Promise<T[]> {
-  return cached(`docs?kind=${kind}`, async () => {
-    let r: Response
-    try { r = await fetch(`${BASE}/docs?kind=${kind}`) } catch { fail() }
-    if (!r.ok) fail(r.status)
-    announce('ok')
-    return (await r.json()) as T[]
-  })
+export async function list<T>(kind: Kind): Promise<T[]> {
+  let r: Response
+  try { r = await fetch(`${BASE}/docs?kind=${kind}`) } catch { fail() }
+  if (!r.ok) fail(r.status)
+  announce('ok')
+  return (await r.json()) as T[]
 }
 
 /** One document, or `undefined` when the database does not hold it. A missing
  *  document is an answer, not a failure: it is what a stale link looks like. */
-export function get<T>(kind: Kind, id: string): Promise<T | undefined> {
-  const path = `docs?kind=${kind}&id=${encodeURIComponent(id)}`
-  return cached(path, async () => {
-    let r: Response
-    try { r = await fetch(`${BASE}/${path}`) } catch { fail() }
-    if (r.status === 404) { announce('ok'); return undefined }
-    if (!r.ok) fail(r.status)
-    announce('ok')
-    return (await r.json()) as T
-  })
+export async function get<T>(kind: Kind, id: string): Promise<T | undefined> {
+  let r: Response
+  try { r = await fetch(`${BASE}/docs?kind=${kind}&id=${encodeURIComponent(id)}`) } catch { fail() }
+  if (r.status === 404) { announce('ok'); return undefined }
+  if (!r.ok) fail(r.status)
+  announce('ok')
+  return (await r.json()) as T
 }
 
 /**
@@ -171,10 +139,11 @@ export async function mutate(ops: Op[]): Promise<void> {
     })
   } catch { fail() }
   if (!r.ok) fail(r.status)
-  // Before `announce`, and unconditionally: whatever the screens read a moment ago,
-  // the database no longer holds it.
-  forget()
   announce('ok')
+  // After `announce`, and only on success: a refused write changed nothing, and
+  // throwing away good cached data over it would make every failure look like a
+  // network outage on the next screen.
+  for (const f of writeListeners) f(ops)
 }
 
 /**

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '../../test/render'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PlayerActionDialog } from './PlayerActionDialog'
 import { SHOT_FEEDBACK_MS } from './ShotCourt'
