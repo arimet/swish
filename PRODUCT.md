@@ -4,7 +4,8 @@
 
 > Written in English at the owner's request, like the README. The product itself is
 > **French-first**: French is the default and the reference, with English available from
-> the header of every screen so other clubs can fork it. `DESIGN.md` stays in French.
+> the header of every screen so other clubs can fork it. `DESIGN.md` is in English too, and its named rules keep
+> their names.
 > That is a commitment, not drift — see Brand Commitments.
 
 ## Platform
