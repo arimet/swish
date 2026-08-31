@@ -265,19 +265,36 @@ React 19, Vite, TypeScript, Tailwind v4, react-router. Tests with Vitest. The se
 functions in `api/` are the only way to the data: one Postgres table of JSON documents,
 read through `GET /api/docs` and written through `POST /api/mutate`.
 
-**Reads are held for fifteen seconds**, per request, in memory, in
-`src/persistence/api.ts` — otherwise coming back to a screen seen three seconds earlier
-replayed its whole read. Nothing is stored, nothing survives a reload, no write ever
-reads from it, and any write empties it whole. There is no data-fetching library: the
-callers are plain `useEffect` hooks, so thirty lines bought what the complaint actually
-was. The day two devices need to see each other's writes without a reload, that is the
-point to reach for React Query — refetch on focus and invalidation by key are the two
-things this cannot do, and the screens would have to be rewritten to use them.
+**Every read goes through React Query**, in `src/persistence/queries.ts`. The screens
+used to fetch in `useEffect` and hold the answer in `useState`, which meant a screen
+re-read everything each time it mounted. Four things replaced that, and each is worth
+knowing before touching a screen:
 
-**Writes are optimistic and roll back.** At the scorer's table an entry must answer the
-finger, so the screen moves first; if the write fails, `src/app/useMatch.ts` puts the
-previous state back and says so. A scoreboard showing 42 while the sheet holds 40 is
-worse than an action refused.
+- **One cache entry per kind.** `usePlayers(teamId)` is a `select` over the whole
+  `player` entry, not a query of its own — two teams' rosters share one request, and a
+  write invalidates one thing rather than a family of near-duplicates. Measured in the
+  browser: seven requests on first load, then **zero** across seven navigations.
+- **Stale-while-revalidate**, past thirty seconds. The screen draws from the cache
+  immediately and refetches behind it; nothing waits for the network to paint.
+- **A refetch when the device comes back**, on focus and on reconnect. A phone that
+  slept through half-time catches up on its own.
+- **Invalidation by key.** `WriteBridge` subscribes to accepted writes and files the
+  document the server took, so a `put` costs no read back. Adding a player in the
+  browser issues `POST /api/mutate` and one `GET docs?kind=player` — nothing else. A
+  gesture in the play editor issues the `POST` alone.
+
+The cost is **+9 kB gzipped** on the initial bundle (113 → 122 kB).
+
+**Writes call the repositories directly**, and the bridge above is what keeps the cache
+honest — so no call site can forget to invalidate. Each screen used to keep a `reload()`
+of its own, and the defects were always the forgotten one.
+
+**The scorer's table is optimistic and rolls back.** An entry must answer the finger, so
+the screen moves first; if the write fails, `src/app/useMatch.ts` puts the previous sheet
+back and says so. A scoreboard showing 42 while the sheet holds 40 is worse than an
+action refused. That hook applies its optimism **synchronously** rather than through
+`useMutation.onMutate`, and the comment there says why: two taps land in the same tick,
+and `onMutate` runs one microtask too late for the second to see the first.
 
 Two documents describe the product and its visual identity, and they are authoritative
 for anyone picking up the code:
