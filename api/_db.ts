@@ -6,6 +6,14 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
  * The source of truth. There is no fallback: without a database the application has
  * nothing to read and nowhere to write, so the routes answer 500 rather than pretend.
  *
+ * **The functions must run beside it.** Neon holds the club in `eu-west-2` (London);
+ * left to itself Vercel runs the functions in `iad1` (Washington), so every query
+ * crossed the Atlantic twice. That was measured, not guessed: 300 to 500 ms for a read
+ * of six kilobytes, on pages that read four to seven documents on mount — the whole of
+ * the "the data takes a while to load" this fixed. `vercel.json` pins `lhr1`, which is
+ * the same building as `eu-west-2`. **Move the database and that line moves with it**,
+ * or the latency comes straight back with nothing on screen to explain it.
+ *
  * `max: 1`: a serverless function has no connection to keep between two
  * invocations, and Neon does the real pooling on its side (use its shared entry
  * point, the one whose host carries `-pooler`).
