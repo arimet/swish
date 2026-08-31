@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { get, list, mutate, checkToken, onState, setToken, TOKEN_KEY } from './api'
+import { forget, get, list, mutate, checkToken, onState, setToken, TOKEN_KEY } from './api'
 
 /**
  * The single door to the database, and what it does when the door does not open.
@@ -12,6 +12,12 @@ import { get, list, mutate, checkToken, onState, setToken, TOKEN_KEY } from './a
 
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 })
 const status = (code: number) => new Response(null, { status: code })
+
+/* A `Response` body reads **once**. `mockResolvedValue` hands the same object to every
+   call, so a test that expects two real fetches gets "Body is unusable" on the second
+   — a test artefact that looks exactly like a bug in the code. Hence a factory. */
+const always = (make: () => Response) =>
+  vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.resolve(make()))
 
 let seen: State[] = []
 type State = 'idle' | 'ok' | 'token' | 'network'
@@ -100,5 +106,81 @@ describe('checking the token', () => {
   it('reports a refusal instead of throwing: the screen shows it', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(status(401))
     await expect(checkToken()).resolves.toBe('token')
+  })
+})
+
+/**
+ * The fifteen-second copy of the last read.
+ *
+ * What is checked here is not the speed — that is not testable — but the three rules
+ * that make the copy safe. Break any one of them and a screen shows a state the
+ * database does not hold, which is precisely what taking the offline mode out was
+ * meant to end.
+ */
+describe('the short-lived copy of a read', () => {
+  // `setupTests` clears it between tests; these cases clear it again on purpose, so
+  // they read the same as if run alone.
+  beforeEach(forget)
+
+  it('a second read of the same kind does not go to the network', async () => {
+    const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(ok([{ id: 't1' }]))
+    await list('team')
+    await expect(list('team')).resolves.toEqual([{ id: 't1' }])
+    expect(f).toHaveBeenCalledTimes(1)
+  })
+
+  it('two callers at once share one request', async () => {
+    // The dashboard asks for five kinds while the club gate is still asking for the
+    // teams. Without this, the same list goes out twice.
+    const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(ok([{ id: 't1' }]))
+    await Promise.all([list('team'), list('team'), list('team')])
+    expect(f).toHaveBeenCalledTimes(1)
+  })
+
+  it('two different kinds are two reads', async () => {
+    const f = always(() => ok([]))
+    await Promise.all([list('team'), list('player')])
+    expect(f).toHaveBeenCalledTimes(2)
+  })
+
+  it('a write empties it — a cascade must not read its own stale list', async () => {
+    // This is the rule that matters most. `deleteTeam` reads the players before it
+    // writes; served the list from before its own previous deletion, it reinstates ids
+    // it had just removed and the debris stays for good.
+    const f = always(() => ok([{ id: 't1' }]))
+    await list('team')
+    await mutate([{ kind: 'team', op: 'del', id: 't1' }])
+    await list('team')
+    expect(f).toHaveBeenCalledTimes(3)
+  })
+
+  it('it expires, so a second device\'s write is not invisible for ever', async () => {
+    vi.useFakeTimers()
+    try {
+      const f = always(() => ok([]))
+      await list('team')
+      vi.advanceTimersByTime(14_000)
+      await list('team')
+      expect(f).toHaveBeenCalledTimes(1)
+      vi.advanceTimersByTime(2_000)
+      await list('team')
+      expect(f).toHaveBeenCalledTimes(2)
+    } finally { vi.useRealTimers() }
+  })
+
+  it('a refusal is not kept: the next read tries again', async () => {
+    // Cached, one network hiccup would be replayed to every screen for fifteen
+    // seconds — the application would look broken long after the network came back.
+    const f = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('offline'))
+    await expect(list('team')).rejects.toThrow()
+    f.mockResolvedValue(ok([{ id: 't1' }]))
+    await expect(list('team')).resolves.toEqual([{ id: 't1' }])
+  })
+
+  it('an absent document is an answer, and it is kept like any other', async () => {
+    const f = vi.spyOn(globalThis, 'fetch').mockResolvedValue(status(404))
+    await expect(get('match', 'gone')).resolves.toBeUndefined()
+    await expect(get('match', 'gone')).resolves.toBeUndefined()
+    expect(f).toHaveBeenCalledTimes(1)
   })
 })
