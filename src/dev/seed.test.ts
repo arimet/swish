@@ -1,7 +1,5 @@
-import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DATA_FINGERPRINT, fingerprint, seedDevData } from './seed'
-import { db } from '../persistence/db'
 import { getConvocation, listMatches, listPlayers, listPlays, listResults, listTeams, listTrainings, saveConvocation, savePlayer, saveTraining } from '../persistence/repositories'
 import { playingTimes } from '../domain/playingtime'
 import { nextFixture } from '../domain/fixtures'
@@ -12,8 +10,6 @@ import { TEAM_FOUL_BONUS } from '../rules/ffbb'
 
 beforeEach(async () => {
   localStorage.clear()
-  await db.matches.clear(); await db.players.clear(); await db.teams.clear(); await db.results.clear()
-  await db.trainings.clear(); await db.convocations.clear(); await db.plays.clear()
   await seedDevData()
 })
 
@@ -76,20 +72,20 @@ describe('demo data', () => {
     // servi, un titulaire finissait à zéro.
     const matches = await listMatches()
     const players = await listPlayers(matches[0].meta.clubId)
-    const joues = matches.filter((m) => m.status === 'finished')
+    const played = matches.filter((m) => m.status === 'finished')
     const byPlayer = new Map<string, number>()
     let total = 0
-    for (const m of joues) {
+    for (const m of played) {
       for (const s of playerStats(m)) {
         byPlayer.set(s.playerId, (byPlayer.get(s.playerId) ?? 0) + s.points)
         total += s.points
       }
     }
-    const numero = (id: string) => players.find((p) => p.id === id)!.number
+    const jersey = (id: string) => players.find((p) => p.id === id)!.number
     const classe = [...byPlayer.entries()].sort((a, b) => b[1] - a[1])
 
     // The top scorer is the one the coach named.
-    expect(numero(classe[0][0])).toBe(11)
+    expect(jersey(classe[0][0])).toBe(11)
     // He dominates without crushing: a quarter of the team's points is already a lot.
     expect(classe[0][1] / total).toBeLessThan(0.25)
     // And the gap from first to last scorer stays that of a match sheet, not that of
@@ -102,7 +98,7 @@ describe('demo data', () => {
     // The starting five stay ahead overall — a productive sixth man may pass the fifth
     // starter, as happens in a real team.
     const five = new Set([2, 11, 13, 15, 17])
-    expect(classe.slice(0, 5).filter(([id]) => five.has(numero(id))).length).toBeGreaterThanOrEqual(4)
+    expect(classe.slice(0, 5).filter(([id]) => five.has(jersey(id))).length).toBeGreaterThanOrEqual(4)
   })
 
   /**
@@ -121,32 +117,32 @@ describe('demo data', () => {
   it('fills the whole match sheet: threes, assists, rebounds, blocks, fouls', async () => {
     const matches = await listMatches()
     const players = await listPlayers(matches[0].meta.clubId)
-    const numero = (id: string) => players.find((p) => p.id === id)!.number
-    const joues = matches.filter((m) => m.status === 'finished')
-    expect(joues.length).toBeGreaterThan(0)
+    const jersey = (id: string) => players.find((p) => p.id === id)!.number
+    const played = matches.filter((m) => m.status === 'finished')
+    expect(played.length).toBeGreaterThan(0)
 
-    for (const m of joues) {
+    for (const m of played) {
       const stats = playerStats(m)
-      const somme = (lire: (s: (typeof stats)[number]) => number) => stats.reduce((t, s) => t + lire(s), 0)
+      const total = (read: (s: (typeof stats)[number]) => number) => stats.reduce((t, s) => t + read(s), 0)
 
       // A three is derived from its spot, never declared: a non-zero column therefore
       // also proves that the seed's spots really do fall behind the line, which no
       // assertion had to repeat by hand.
-      expect(somme((s) => s.threes)).toBeGreaterThan(3)
-      expect(somme((s) => s.assists)).toBeGreaterThan(10)
-      expect(somme((s) => s.defRebounds)).toBeGreaterThan(somme((s) => s.offRebounds))
-      expect(somme((s) => s.blocks)).toBeGreaterThan(0)
-      expect(somme((s) => s.fouls)).toBeGreaterThan(10)
+      expect(total((s) => s.threes)).toBeGreaterThan(3)
+      expect(total((s) => s.assists)).toBeGreaterThan(10)
+      expect(total((s) => s.defRebounds)).toBeGreaterThan(total((s) => s.offRebounds))
+      expect(total((s) => s.blocks)).toBeGreaterThan(0)
+      expect(total((s) => s.fouls)).toBeGreaterThan(10)
 
       // Nobody fouls out: an excluded player leaves the court, while the seed's
       // rotations still count them present.
       expect(stats.every((s) => s.fouls < 5)).toBe(true)
 
-      // The roles must read in the figures, otherwise the per-category weights serve
-      // no purpose: the best passer is a guard, the best rebounder a big. That is what
-      // was missing when the statistic followed the player's index in the five.
-      const best = (lire: (s: (typeof stats)[number]) => number) =>
-        numero([...stats].sort((a, b) => lire(b) - lire(a))[0].playerId)
+      // The roles must read in the figures, otherwise the per-category weights serve no
+      // purpose: the best passer is a guard, the best rebounder a big. A statistic that
+      // followed the player's index in the five would satisfy neither.
+      const best = (read: (s: (typeof stats)[number]) => number) =>
+        jersey([...stats].sort((a, b) => read(b) - read(a))[0].playerId)
       expect([2, 5]).toContain(best((s) => s.assists))
       expect([15, 17, 20, 8]).toContain(best((s) => s.defRebounds))
     }
@@ -154,13 +150,13 @@ describe('demo data', () => {
     // The composed total lands **exactly** on the scores announced. The seed now
     // composes each segment from shots of three different values; a wrong decomposition
     // would read as a scoreboard bug, not as a seed bug.
-    const totaux = joues.map((m) => playerStats(m).reduce((t, s) => t + s.points, 0)).sort((a, b) => a - b)
+    const totaux = played.map((m) => playerStats(m).reduce((t, s) => t + s.points, 0)).sort((a, b) => a - b)
     expect(totaux).toEqual([72, 78, 81])
 
     // At least one period reaches the bonus (five team fouls under FFBB rules, not
     // four as in the NBA): the demo must be able to show the pill.
     const byPeriod = new Map<number, number>()
-    for (const e of joues[0].events)
+    for (const e of played[0].events)
       if (e.type === 'FOUL' && e.team === 'A') byPeriod.set(e.period, (byPeriod.get(e.period) ?? 0) + 1)
     expect(Math.max(...byPeriod.values())).toBeGreaterThanOrEqual(TEAM_FOUL_BONUS)
   })
