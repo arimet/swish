@@ -18,8 +18,7 @@ export { leagueLabel }
  * `T` is the court's palette: the floor. Its **surface** switches with the theme —
  * light wood in the light application, dark wood in the dark one — but its **colour
  * convention** does not: red always says "attack", blue "defence", amber "ball".
- * The court used to be a fixed charcoal panel in both themes; see themes.css for
- * what changed and why.
+ * See themes.css for how the two surfaces are built.
  */
 export const C = {
   page: 'var(--c-page)', frame: 'var(--c-frame)', panel: 'var(--c-panel)',
@@ -29,8 +28,8 @@ export const C = {
   // The **vivid** fills and the ink each one carries. They are what give the screen
   // its colour. The `*Bg` above stay the pale shades for discreet backgrounds, and
   // the inks (`green`, `danger`, `amber`, `info`) serve the rare places where a pill
-  // would be ridiculous — a figure in a table. The whole palette used to be made of
-  // inks, hence darkened throughout to hold on white: that is what made it dull.
+  // would be ridiculous — a figure in a table. A palette made of inks alone has to be
+  // darkened throughout to hold on white, and that is what makes it dull.
   greenFill: 'var(--c-green-fill)', onGreen: 'var(--c-on-green)',
   goldFill: 'var(--c-gold-fill)', onGold: 'var(--c-on-gold)',
   dangerFill: 'var(--c-danger-fill)', onDanger: 'var(--c-on-danger)',
@@ -41,9 +40,9 @@ export const C = {
   // single token did both, which forced it to the darkest end of the hue: it came
   // out brick-coloured.
   //
-  // The name says the role and not the hue. These keys used to be called `pink` and
-  // `orange`, and `orange` rendered raspberry once the palette had turned: a name
-  // that describes a colour goes stale at the first colour change.
+  // The name says the role and not the hue: a key called `orange` renders raspberry
+  // the day the palette turns, and a name that describes a colour goes stale at the
+  // first colour change.
   brand: 'var(--c-brand)', onBrand: 'var(--c-on-brand)',
   accent: 'var(--c-accent)',
   accentBg: 'var(--c-accent-bg)',
@@ -199,12 +198,11 @@ function ScoreRow({ name, score, lead, dim }: { name: string; score: number | nu
  *  guarantee that one of the three would be forgotten.
  *
  *  The title is a real title: `<h2>`, in sentence case, at body size stepped up, in
- *  the text ink. It used to be a twelve-pixel micro-label in tracked capitals, in
- *  the palest colour — the shape of a decorative eyebrow, whereas "Top scorers" is
- *  very much the title of what follows. That shape cost twice: it flattened the
- *  typographic scale (all the text sat between twelve and twenty pixels) and
- *  capitals across thirty characters are read letter by letter, the silhouette of
- *  the words having vanished. */
+ *  the text ink. A twelve-pixel micro-label in tracked capitals and the palest colour
+ *  has the shape of a decorative eyebrow, while "Top scorers" is very much the title
+ *  of what follows. It also costs twice: it flattens the typographic scale — every
+ *  size between twelve and twenty pixels — and capitals across thirty characters are
+ *  read letter by letter, the words' silhouette gone. */
 export function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>

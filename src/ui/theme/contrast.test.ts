@@ -4,11 +4,10 @@ import { describe, expect, it } from 'vitest'
 /**
  * The palette's legibility check.
  *
- * `themes.css` used to announce its ratios in comments, which checks nothing: the
- * next touch-up leaves the sentence intact and breaks the measurement. That happened
- * several times. The figures therefore left the comments and came here: this test
- * reads the tokens back from the file and redoes the computation, for both themes, on
- * every pair that actually carries text.
+ * The ratios live here and **not** in `themes.css` comments, because a comment checks
+ * nothing: the next touch-up leaves the sentence intact and breaks the measurement.
+ * This test reads the tokens back from the file and redoes the computation, for both
+ * themes, on every pair that actually carries text.
  *
  * The threshold is WCAG AA for body text, 4.5:1. The measured ratios are well above
  * it: the margin is there so that an adjustment of one or two per cent does not bring
@@ -89,9 +88,9 @@ const INK_PAIRS: [ink: string, grounds: string[]][] = [
   ['--c-on-danger', ['--c-danger-fill']],
   ['--c-on-gold', ['--c-gold-fill']],
   ['--c-on-info', ['--c-info-fill']],
-  // The number written on the playbook's attack disc. It used to draw on `--t-ink`,
-  // the paths' ink, until the light hardwood turned that dark: the number ended up
-  // black on red, at 2.4:1.
+  // The number written on the playbook's attack disc. It has its own token and not
+  // `--t-ink`, the paths' ink: on light hardwood that ink goes dark, and the number
+  // would sit black on red, at 2.4:1.
   ['--t-on-attack', ['--t-attack']],
 ]
 
@@ -123,21 +122,20 @@ describe.each([
     }
   })
 
-  /* Six assertions used to live here, on an `--sb-*` family belonging to the scorer's
-   * table de marque, mesurée contre deux constantes `#232326` / `#1c1c20` écrites à
-   * by hand in this file.
+  /* No `--sb-*` assertions here, and that is not a gap in coverage. That family
+   * belonged to the scorer's table and was measured against two constants
+   * (`#232326` / `#1c1c20`) written by hand in this file.
    *
-   * They went with the family, and it is worth noting *why* they have no replacements
-   * rather than reading a loss of coverage into it: the banner became a card of the
+   * It has no replacement because it needs none: the banner is a card of the
    * application (`--c-card`, ink `--c-text`, controls `--c-card2`, clock
-   * `--c-green-fill` / `--c-danger-fill`). All those pairs are in `PAIRES` above,
+   * `--c-green-fill` / `--c-danger-fill`). All those pairs are in `PAIRS` above,
    * measured for both themes.
    *
-   * Two defects of those assertions are worth remembering. They measured a **literal**
-   * background that was already no longer the banner's — `--scoreboard` was an
-   * `oklch()`, never `#232326` — so they checked legibility on an imaginary surface.
-   * And a conformity assertion was needed **on top**, because a hard-coded value can
-   * have impeccable contrast while being the wrong colour: that happened, an orange
+   * Two traps in that shape are worth remembering. A **literal** background drifts
+   * from the one on screen — `--scoreboard` was an `oklch()`, never `#232326` — so the
+   * assertion checks legibility on an imaginary surface. And it needs a conformity
+   * assertion **on top**, because a hard-coded value can have impeccable contrast while
+   * being the wrong colour: an orange
    * from the previous world had stayed there. A `var(--c-accent)` cannot drift, and so
    * no longer needs watching.
    */
@@ -182,11 +180,10 @@ describe.each([
    * The gutter, which does not belong to that stack: it is the desk the application
    * is laid on, visible only above `lg`.
    *
-   * It used to be in the ordering test just above, held to be the lowest plane in both
-   * themes. That was the requirement too many, and it demanded the impossible on dark:
-   * under a frame at 0.007 lightness there is only black left, and a gutter at 0.002
-   * reads exactly like one at 0.004 — black. The dark theme therefore had no gutter,
-   * only a screen edge.
+   * It is deliberately **out** of the ordering test above: requiring it to be the
+   * lowest plane in both themes demands the impossible on dark. Under a frame at 0.007
+   * lightness there is only black left, and a gutter at 0.002 reads exactly like one at
+   * 0.004 — black. On dark there is no gutter, only a screen edge.
    *
    * The two real requirements do not depend on the theme: it must be **visible**, and
    * it must never **dominate** the card — that second point is what forbids the real

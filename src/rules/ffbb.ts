@@ -1,7 +1,6 @@
 import { pointsForKind } from '../domain/boxscore'
 import type { Match, Period, TeamSide } from '../domain/types'
 
-export const PERIOD_COUNT = 4
 export const TEAM_FOUL_BONUS = 5
 export const PLAYER_FOUL_OUT = 5
 

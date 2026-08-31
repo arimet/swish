@@ -8,70 +8,68 @@ import { translator } from './index'
 /**
  * The translation's guard rail.
  *
- * The defect this file catches cannot be caught any other way: a key written in a
- * component but absent from the catalogue **compiles**, passes type checking, and
- * shows on screen as it is — "nav.calendar" spelled out in the navigation bar. That
- * happened during the shell's migration, between two steps, without a single tool
- * blinking.
+ * Nothing else catches this: a key written in a component but absent from the
+ * catalogue **compiles**, passes type checking, and shows on screen as it is —
+ * "nav.calendar" spelled out in the navigation bar, with not one tool blinking.
  *
- * So we read the sources back and confront the keys used with the French catalogue,
- * qui fait référence.
+ * So we read the sources back and confront the keys they use with the French
+ * catalogue, which is the reference.
  */
 
-const RACINES = ['src/ui', 'src/app', 'src/i18n', 'src/components']
+const ROOTS = ['src/ui', 'src/app', 'src/i18n', 'src/components']
 
 function sources(): string[] {
   const out: string[] = []
-  const descend = (dir: string) => {
+  const walk = (dir: string) => {
     for (const name of readdirSync(dir)) {
-      const chemin = join(dir, name)
-      if (statSync(chemin).isDirectory()) descend(chemin)
-      else if (/\.tsx?$/.test(name) && !name.includes('.test.')) out.push(chemin)
+      const path = join(dir, name)
+      if (statSync(path).isDirectory()) walk(path)
+      else if (/\.tsx?$/.test(name) && !name.includes('.test.')) out.push(path)
     }
   }
-  for (const r of RACINES) descend(r)
+  for (const r of ROOTS) walk(r)
   return out
 }
 
 /**
  * Every string literal **shaped like a key** found in the sources.
  *
- * The first version only read `t('…')`, and a mutation caught it out: the navigation
- * labels and the page titles are keys filed in module-level arrays —
- * `{ label: 'nav.calendar' }` — and translated at render time. A typo went through
- * unseen there, which is exactly the case we are trying to cover.
+ * Reading `t('…')` alone is not enough: the navigation labels and the page titles are
+ * keys filed in module-level arrays — `{ label: 'nav.calendar' }` — and translated at
+ * render time, so a typo there would go through unseen. That is exactly the case to
+ * cover.
  *
- * So keys are recognised by their **shape**: a family known to the catalogue, a dot,
- * a name. The families are derived from the catalogue itself, so adding one
- * n'oblige à rien ici.
+ * So keys are recognised by their **shape**: a family known to the catalogue, a dot, a
+ * name. The families are derived from the catalogue itself, so adding one asks nothing
+ * of this file.
  *
  * Computed keys (`t(\`role.${r}\`)`) stay out of reach of a textual read; they have
  * their own test, further down.
  */
-function clefsEmployees(): Map<string, string[]> {
+function keysUsed(): Map<string, string[]> {
   const families = [...new Set(Object.keys(fr).map((k) => k.split('.')[0]))]
-  const motif = new RegExp(`['\`](${families.join('|')})\\.([A-Za-z][\\w]*)['\`]`, 'g')
-  const par = new Map<string, string[]>()
+  const pattern = new RegExp(`['\`](${families.join('|')})\\.([A-Za-z][\\w]*)['\`]`, 'g')
+  const byKey = new Map<string, string[]>()
   for (const f of sources()) {
     // The two catalogues define themselves; every other file under `src/i18n` is an
     // ordinary component and must be read. Excluding the whole folder is how
     // `LangSwitcher`'s missing `lang.switch` went unnoticed: its aria-label announced
     // the key itself to screen readers.
     if (f === join('src/i18n', 'fr.ts') || f === join('src/i18n', 'en.ts')) continue
-    for (const m of readFileSync(f, 'utf8').matchAll(motif)) {
+    for (const m of readFileSync(f, 'utf8').matchAll(pattern)) {
       const key = `${m[1]}.${m[2]}`
-      par.set(key, [...(par.get(key) ?? []), f])
+      byKey.set(key, [...(byKey.get(key) ?? []), f])
     }
   }
-  return par
+  return byKey
 }
 
 describe('the translation catalogue', () => {
   it('every key used in the code exists in French', () => {
-    const missing = [...clefsEmployees()]
+    const missing = [...keysUsed()]
       .filter(([key]) => !(key in fr) && !(`${key}_one` in fr))
-      .map(([key, fichiers]) => `${key} (${fichiers.join(', ')})`)
-    expect(missing, 'clefs sans traduction française').toEqual([])
+      .map(([key, files]) => `${key} (${files.join(', ')})`)
+    expect(missing, 'keys with no French translation').toEqual([])
   })
 
   it('the computed families are complete', () => {
@@ -86,7 +84,7 @@ describe('the translation catalogue', () => {
     // English never returns the raw key, including for what English does not have.
     const t = translator('en')
     const raw = Object.keys(fr).filter((key) => t(key) === key && fr[key] !== key)
-    expect(raw, 'clefs rendues telles quelles en anglais').toEqual([])
+    expect(raw, 'keys rendered as-is in English').toEqual([])
   })
 
   it('English holds no key unknown to French', () => {

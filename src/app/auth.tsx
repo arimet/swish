@@ -20,7 +20,7 @@ const RIGHTS: Record<Role, Ability[]> = {
   admin: ['score', 'manage'],
 }
 
-/** The minimum access that grants each right — used to name what must be entered. */
+/** The minimum access that grants each right. It is what names the code to ask for. */
 export const REQUIRED: Record<Ability, Role> = { score: 'scorer', manage: 'admin' }
 
 /** Only the roles one acquires have a code: "visitor" is the default state, not
