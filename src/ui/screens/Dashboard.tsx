@@ -1,15 +1,16 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
-import { deleteMessage, getConvocation, getMessage, listMatches, listPlayers, listPlays, listTeams, listTrainings, saveMessage } from '../../persistence/repositories'
+import { deleteMessage, saveMessage } from '../../persistence/repositories'
+import { useConvocation, useMatches, useMessage, usePlayers, usePlays, useTeamsById, useTrainings } from '../../persistence/queries'
 import { teamMatches, teamRecord, teamScorers } from '../../domain/teamRecord'
 import { shootingPct, shotsOf } from '../../domain/shotchart'
 import { since, nextFixture, type Fixture } from '../../domain/fixtures'
 import { liveState } from '../../rules/ffbb'
 import { ShotChart } from '../components/ShotCourt'
 import { C, Panel, TeamBadge, You, bd, displayClock, fmtDate } from '../olive/kit'
-import type { Convocation, Match, TeamMessage, Player, Team, Training } from '../../domain/types'
+import type { Convocation, Match, Player, Team } from '../../domain/types'
 import type { Play } from '../../domain/plays'
 import { Check } from 'lucide-react'
 import { useLang, useT } from '../../i18n'
@@ -21,35 +22,19 @@ export function Dashboard() {
   // The dashboard reads in full; only the shortcuts that lead to a write (planning,
   // calling up) are reserved for whoever manages the club.
   const manages = can('manage')
-  const [matches, setMatches] = useState<Match[] | null>(null)
-  const [teams, setTeams] = useState<Record<string, Team>>({})
-  const [players, setPlayers] = useState<Player[]>([])
-  const [trainings, setTrainings] = useState<Training[]>([])
-  const [plays, setPlays] = useState<Play[]>([])
-  const [convocation, setConvocation] = useState<Convocation | null>(null)
+  const { data: matches } = useMatches()
+  const { data: teams = {} } = useTeamsById()
+  const { data: players } = usePlayers(clubId)
+  const { data: trainings } = useTrainings()
+  const { data: plays } = usePlays(clubId)
   const [openPlayer, setOpenPlayer] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!clubId) return
-    let cancelled = false
-    Promise.all([listMatches(), listTeams(), listPlayers(clubId), listTrainings(), listPlays(clubId)])
-      .then(([ms, ts, ps, trs, sch]) => {
-        if (cancelled) return
-        setTeams(Object.fromEntries(ts.map((t) => [t.id, t])))
-        setPlayers(ps)
-        setMatches(ms)
-        setTrainings(trs)
-        setPlays(sch)
-      })
-    return () => { cancelled = true }
-  }, [clubId])
 
   // Derived values placed before the early returns below, so that the effect that
   // follows (loading the call-up) obeys the rules of hooks: always called, in the same
   // order, on every render.
   const mine = (matches ?? []).filter((m) => m.meta.clubId === clubId)
   const live = mine.find((m) => m.status === 'live')
-  const ourTrainings = trainings.filter((t) => t.clubId === clubId)
+  const ourTrainings = (trainings ?? []).filter((t) => t.clubId === clubId)
   // A live game already occupies the banner below: the "next fixture" block must then
   // announce the one after, not repeat the one already shown. Filtered on status, not
   // on `live`'s identity: nothing prevents two `live` games at once (a second started
@@ -58,15 +43,31 @@ export function Dashboard() {
   const fixture = nextFixture(matchesOnDate, ourTrainings, new Date())
   const fixtureMatchId = fixture?.kind === 'match' ? fixture.match.id : null
 
-  useEffect(() => {
-    if (!fixtureMatchId) { setConvocation(null); return }
-    let cancelled = false
-    getConvocation(fixtureMatchId).then((c) => { if (!cancelled) setConvocation(c ?? null) })
-    return () => { cancelled = true }
-  }, [fixtureMatchId])
+  /* The call-up depends on which fixture is next, which depends on the games — so it
+     is a second query keyed on that id, not a second effect. `enabled` is what says
+     "there is no fixture yet"; before, the effect had to null the previous call-up by
+     hand, and a fixture changing while its read was in flight put the wrong one back. */
+  const { data: convocation } = useConvocation(fixtureMatchId)
 
   if (!clubId || !club) return null
-  if (!matches) return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
+  /**
+   * The skeleton waits for the four lists that decide the **layout**, not just for the
+   * games.
+   *
+   * Five independent queries settle one by one, and this screen composes them into a
+   * single arrangement: the getting-started block, the banner and the next fixture all
+   * depend on more than one of them. Drawing on the first to arrive made the block
+   * rewrite itself two or three times — "Add your players" becoming "Your squad — 1
+   * player" a frame later, the banner appearing and pushing everything down. The old
+   * version had the same property by accident, awaiting all five in one `Promise.all`;
+   * here it is stated.
+   *
+   * The message and the call-up are deliberately **not** in this list. Each lives
+   * inside its own block and can arrive late without moving anything above it.
+   */
+  if (!matches || !players || !trainings || !plays) {
+    return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
+  }
 
   // Derived from the same fixture as the block below (`fixture`), which already
   // excludes the past and finished games: without that sharing, a game planned and
@@ -131,7 +132,7 @@ export function Dashboard() {
         {!onlySettingUp && (
           <>
             <Banner live={live} next={next} teams={teams} manages={manages} keepsScore={can('score')} />
-            <NextFixture fixture={fixture} teams={teams} players={players} convocation={convocation} plays={plays} manages={manages} />
+            <NextFixture fixture={fixture} teams={teams} players={players} convocation={convocation ?? null} plays={plays} manages={manages} />
           </>
         )}
 
@@ -233,15 +234,10 @@ function CoachMessage({ clubId }: { clubId: string }) {
   const { lang } = useLang()
   const { can, guard } = useAuth()
   const manages = can('manage')
-  const [message, setMessage] = useState<TeamMessage | null>(null)
+  const { data: message } = useMessage(clubId)
   const [formOpen, setFormOpen] = useState(false)
   const [text, setText] = useState('')
 
-  useEffect(() => {
-    let cancelled = false
-    getMessage(clubId).then((m) => { if (!cancelled) setMessage(m ?? null) })
-    return () => { cancelled = true }
-  }, [clubId])
 
   // Whitespace is not a message: it does not occupy the dashboard, and nothing is
   // published while the field holds only spaces.
@@ -251,12 +247,10 @@ function CoachMessage({ clubId }: { clubId: string }) {
   const publish = () => guard('manage', async () => {
     const written = { clubId, text: text.trim(), writtenAt: new Date().toISOString() }
     await saveMessage(written)
-    setMessage(written)
     setFormOpen(false)
   })
   const erase = () => guard('manage', async () => {
     await deleteMessage(clubId)
-    setMessage(null)
     setFormOpen(false)
   })
 

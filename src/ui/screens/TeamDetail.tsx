@@ -1,9 +1,10 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { newId } from '../../domain/ids'
-import { getTeam, listPlayers, listMatches, listTeams, savePlayer, deletePlayer, deleteTeam, saveTeam } from '../../persistence/repositories'
+import { savePlayer, deletePlayer, deleteTeam, saveTeam } from '../../persistence/repositories'
+import { useMatches, usePlayers, useTeam, useTeamsById } from '../../persistence/queries'
 import { teamRecord, teamMatches, teamScorers } from '../../domain/teamRecord'
-import type { Match, Player, Team } from '../../domain/types'
+import type { Player } from '../../domain/types'
 import { C, NumBadge, Panel, TeamBadge, bd, fmtDate } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
@@ -34,10 +35,15 @@ export function TeamDetail() {
   // The player themselves and not a boolean: the dialog must be able to name them,
   // otherwise "Remove this player?" does not say which one out of eleven.
   const [toRemove, setToRemove] = useState<Player | null>(null)
-  const [team, setTeam] = useState<Team | null | undefined>(undefined)
-  const [players, setPlayers] = useState<Player[]>([])
-  const [matches, setMatches] = useState<Match[]>([])
-  const [teamsById, setTeamsById] = useState<Record<string, Team>>({})
+  /* Four queries, and they go out **together**. This screen used to chain them —
+     the team, then its roster, then the fixtures and the other teams — so opening a
+     team cost four round trips in series where one would do. Nothing in the chain
+     needed the previous answer; it was written as a chain because a promise reads that
+     way. */
+  const { data: team } = useTeam(id)
+  const { data: players = [] } = usePlayers(id)
+  const { data: matches = [] } = useMatches()
+  const { data: teamsById = {} } = useTeamsById()
   const [coach, setCoach] = useState('')
   // An entry form appears on a click, never up front: the roster is what people come
   // to read, recruiting is the exception.
@@ -48,14 +54,9 @@ export function TeamDetail() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editBirth, setEditBirth] = useState(''); const [editHeight, setEditHeight] = useState('')
 
-  const refresh = () => { if (id) listPlayers(id).then(setPlayers) }
-  useEffect(() => {
-    if (!id) return
-    getTeam(id).then((t) => { setTeam(t ?? null); setCoach(t?.coach ?? '') })
-      .then(refresh)
-      .then(() => Promise.all([listMatches(), listTeams()]))
-      .then(([ms, ts]) => { setMatches(ms); setTeamsById(Object.fromEntries(ts.map((x) => [x.id, x]))) })
-  }, [id])
+  // The coach's name is an editable field, so it is state — seeded from the team once
+  // it arrives, and not on every render, or typing in it would be impossible.
+  useEffect(() => { setCoach(team?.coach ?? '') }, [team])
 
   if (!id) return null
   if (team === undefined) return <div className="p-6"><div className="h-24 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
@@ -63,7 +64,7 @@ export function TeamDetail() {
 
   const saveCoach = () => {
     if (coach === (team.coach ?? '')) return
-    guard('manage', () => saveTeam({ ...team, coach: coach.trim() || undefined }).then(() => setTeam({ ...team, coach: coach.trim() || undefined })))
+    guard('manage', () => saveTeam({ ...team, coach: coach.trim() || undefined }))
   }
   const addPlayer = () => guard('manage', async () => {
     if (!num || !ln.trim()) return
@@ -71,7 +72,7 @@ export function TeamDetail() {
       id: newId(), teamId: id, number: Number(num), lastName: ln.trim().toUpperCase(), firstName: fn.trim(),
       birthDate: toUndef(birth), height: toHeight(height),
     })
-    setNum(''); setLn(''); setFn(''); setBirth(''); setHeight(''); refresh()
+    setNum(''); setLn(''); setFn(''); setBirth(''); setHeight('')
   })
   /**
    * Removing a player goes through a confirmation, like deleting the team just above
@@ -84,13 +85,13 @@ export function TeamDetail() {
    * That is checked in the repository, not assumed.
    */
   const removePlayer = () => { const p = toRemove; if (!p) return
-    guard('manage', async () => { await deletePlayer(p.id); setToRemove(null); refresh() }) }
+    guard('manage', async () => { await deletePlayer(p.id); setToRemove(null) }) }
   const startEdit = (p: Player) => { setEditingId(p.id); setEditBirth(p.birthDate ?? ''); setEditHeight(p.height ? String(p.height) : '') }
   // The player's id survives an edit: it is what carries their whole history of shots
   // and statistics, and recreating them would lose it.
   const saveEdit = (p: Player) => guard('manage', async () => {
     await savePlayer({ ...p, birthDate: toUndef(editBirth), height: toHeight(editHeight) })
-    setEditingId(null); refresh()
+    setEditingId(null)
   })
   const removeTeam = async () => {
     await deleteTeam(id)

@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { getMatch, listTeams, deleteMatch, listPlayers, getConvocation, saveConvocation } from '../../persistence/repositories'
-import type { Match, Team, Player } from '../../domain/types'
+import { deleteMatch, saveConvocation } from '../../persistence/repositories'
+import { useConvocation, useMatchDoc, usePlayers, useTeamsById } from '../../persistence/queries'
+import type { Player } from '../../domain/types'
 import { C, bd, PageTitle, SectionTitle, TeamBadge, fmtDate , useLeagueLabel } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
@@ -18,53 +19,43 @@ export function MatchPreview({ matchId }: { matchId: string }) {
   const navigate = useNavigate()
   const { hash } = useLocation()
   const { can, guard } = useAuth()
-  const [match, setMatch] = useState<Match | null>(null)
-  const [teams, setTeams] = useState<Record<string, Team>>({})
+  const { data: match } = useMatchDoc(matchId)
+  const { data: teams = {} } = useTeamsById()
   const [askDelete, setAskDelete] = useState(false)
-  const [players, setPlayers] = useState<Player[]>([])
+  /* The roster is THE GAME's club (`match.meta.clubId`, never absent), not the device
+     setting (`useClub`, a local preference that may name a different club if the club
+     has been changed since): an old game, reopened by a direct link after a club
+     change, must keep the roster it belongs to. */
+  const { data: players = [] } = usePlayers(match?.meta.clubId)
+  const { data: convocation } = useConvocation(match?.id)
   const [calledUp, setCalledUp] = useState<Set<string>>(new Set())
   const [meetTime, setMeetTime] = useState('')
   const [meetPlace, setMeetPlace] = useState('')
   const [note, setNote] = useState('')
 
-  useEffect(() => {
-    let cancel = false
-    getMatch(matchId).then(async (m) => {
-      if (cancel || !m) { if (!cancel) setMatch(m ?? null); return }
-      const ts = await listTeams()
-      if (cancel) return
-      setTeams(Object.fromEntries(ts.map((t) => [t.id, t])))
-      setMatch(m)
-    })
-    return () => { cancel = true }
-  }, [matchId])
 
-  // The club's roster and any call-up already saved: loaded once per game. A reload
-  // triggered by a keystroke in progress (say an effect that trusts "the field is
-  // empty") would overwrite what is being typed the moment someone clears a field to
-  // retype it — so these values are applied once, never mid-entry.
-  // The roster is THE GAME's club (`match.meta.clubId`, never absent), not the device
-  // setting (`useClub`, a local preference that may name a different club if the club
-  // has been changed since): an old game, reopened by a direct link after a club
-  // change, must keep the roster it belongs to.
+  /**
+   * The call-up's fields, seeded **once per game** and never again.
+   *
+   * The values come from a query now, so they can arrive a second time — a refetch on
+   * focus, or the invalidation that follows saving the call-up itself. Re-seeding then
+   * would overwrite what is being typed the instant someone clears a field to retype
+   * it. The ref is what makes "once per game" explicit; before, it was the accident of
+   * an effect that only ever fired once.
+   */
+  const seeded = useRef<string | null>(null)
   useEffect(() => {
-    if (!match) return
-    let cancel = false
-    Promise.all([listPlayers(match.meta.clubId), getConvocation(match.id)]).then(([ps, conv]) => {
-      if (cancel) return
-      setPlayers(ps)
-      // Checks the loaded ids against the real roster: a player removed from the
-      // roster since may still appear in a call-up already saved (`deletePlayer`'s
-      // cascade only repairs the future), and would otherwise stay counted with no box
-      // to untick.
-      const rosterIds = new Set(ps.map((p) => p.id))
-      setCalledUp(new Set((conv?.playerIds ?? []).filter((id) => rosterIds.has(id))))
-      setMeetTime(conv?.meetTime ?? '')
-      setMeetPlace(conv?.meetPlace ?? '')
-      setNote(conv?.note ?? '')
-    })
-    return () => { cancel = true }
-  }, [match?.id])
+    if (!match || convocation === undefined || seeded.current === match.id) return
+    seeded.current = match.id
+    // Checks the loaded ids against the real roster: a player removed from the roster
+    // since may still appear in a call-up already saved (`deletePlayer`'s cascade only
+    // repairs the future), and would otherwise stay counted with no box to untick.
+    const rosterIds = new Set(players.map((p) => p.id))
+    setCalledUp(new Set((convocation?.playerIds ?? []).filter((id) => rosterIds.has(id))))
+    setMeetTime(convocation?.meetTime ?? '')
+    setMeetPlace(convocation?.meetPlace ?? '')
+    setNote(convocation?.note ?? '')
+  }, [match, convocation, players])
 
   // Arrived from a "Call up" link (dashboard, calendar): the call-up is at the bottom
   // of the record, so we bring it into view. The scroll waits for the roster, because
@@ -74,6 +65,10 @@ export function MatchPreview({ matchId }: { matchId: string }) {
     if (hash === '#convocation' && players.length) document.getElementById('convocation')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
   }, [hash, players.length])
 
+  // `undefined` is "still reading", `null` is "the database does not hold it" — two
+  // states this screen used to conflate in one `useState(null)`, so a good link
+  // flashed "game not found" on the way in.
+  if (match === undefined) return <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
   if (match === null) return <p className="py-16 text-center text-sm" style={{ color: C.muted }}>{translate('preview.notFound')}</p>
 
   const nameOf = (id: string) => teams[id]?.name ?? '—'

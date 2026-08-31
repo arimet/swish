@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getPlayer, getTeam, listMatches } from '../../persistence/repositories'
+import { useMatches, usePlayer, useTeam } from '../../persistence/queries'
 import { playerStats } from '../../domain/boxscore'
 import { playingTimes } from '../../domain/playingtime'
 import { playerCareer, ageAt } from '../../domain/career'
@@ -10,7 +10,7 @@ import { fmt } from '../components/GameClock'
 import { useT } from '../../i18n'
 import { C, NumBadge, Panel, TeamBadge, bd, fmtDate , useLeagueLabel } from '../olive/kit'
 import { useAuth } from '../../app/auth'
-import type { Match, Player, Team } from '../../domain/types'
+import type { Match } from '../../domain/types'
 
 /** Per-game average, to one decimal. `—` when no game has been played: a player who
  *  has not played does not have "0.0 assists", they have no average. */
@@ -22,27 +22,20 @@ export function PlayerDetail() {
   const champ = useLeagueLabel()
   const { id } = useParams<{ id: string }>()
   const { playerId } = useAuth()
-  const [player, setPlayer] = useState<Player | null | undefined>(undefined)
-  const [team, setTeam] = useState<Team | null>(null)
-  const [matches, setMatches] = useState<Match[]>([])
+  const { data: player } = usePlayer(id)
+  /* The team read waits for the player, because it is their team it wants — a genuine
+     dependency, declared as `enabled` rather than chained by hand. The fixtures do not
+     wait for anything, and no longer do. */
+  const { data: team } = useTeam(player?.teamId)
+  const { data: allMatches = [] } = useMatches()
   const [openMatch, setOpenMatch] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!id) return
-    let cancelled = false
-    getPlayer(id)
-      .then(async (p) => {
-        if (cancelled) return
-        if (!p) { setPlayer(null); return }
-        const [t, all] = await Promise.all([getTeam(p.teamId), listMatches()])
-        if (cancelled) return
-        setTeam(t ?? null)
-        // Games where the player is on the roster and that have started.
-        setMatches(all.filter((m) => m.status !== 'setup' && m.roster.includes(id)))
-        setPlayer(p)
-      })
-    return () => { cancelled = true }
-  }, [id])
+  // Games where the player is on the roster and that have started.
+  const matches = useMemo(
+    () => (id ? allMatches.filter((m) => m.status !== 'setup' && m.roster.includes(id)) : []),
+    [allMatches, id],
+  )
+
 
   if (!id) return null
   if (player === undefined) return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>

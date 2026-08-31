@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { newId } from '../../domain/ids'
 import { standings, fixtureKey } from '../../domain/standings'
 import { FRIENDLY } from '../../domain/ids'
-import { listMatches, listResults, saveResult, deleteResult } from '../../persistence/repositories'
-import type { Match, ReportedResult } from '../../domain/types'
+import { saveResult, deleteResult } from '../../persistence/repositories'
+import { useMatches, useResults } from '../../persistence/queries'
+import type { ReportedResult } from '../../domain/types'
 import { C, bd, leagueLabel, SectionTitle, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
@@ -67,8 +68,8 @@ export function Standings() {
    *
    * The same convention holds across the repo: `MatchSetup`, `TeamsList`, `PlayList`,
    * `Calendar`, and `Dashboard` for its games. */
-  const [matches, setMatches] = useState<Match[] | null>(null)
-  const [results, setResults] = useState<ReportedResult[] | null>(null)
+  const { data: matches } = useMatches()
+  const { data: results } = useResults()
   const [error, setError] = useState('')
 
   const teamsById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams])
@@ -96,9 +97,6 @@ export function Standings() {
     if (m) return leagueLabel(m.meta)
     return (results ?? [])[0]?.championshipLabel ?? ''
   }, [matches, clubId, results])
-
-  const refresh = () => Promise.all([listMatches(), listResults()]).then(([m, r]) => { setMatches(m); setResults(r) })
-  useEffect(() => { refresh() }, [])
 
   const groups = useMemo(() => standings(matches ?? [], results ?? [], teamsById), [matches, results, teamsById])
 
@@ -170,21 +168,20 @@ export function Standings() {
         homeId, awayId, homeScore: Number(homeScore), awayScore: Number(awayScore),
       })
       setHomeScore(''); setAwayScore('')
-      refresh()
     })
   }
 
-  const setScore = (r: ReportedResult, patch: Partial<ReportedResult>) => guard('manage', async () => {
-    await saveResult({ ...r, ...patch })
-    refresh()
-  })
+  /* No refresh after the write, here or below: entering, correcting and deleting a
+     result all go through `mutate`, and `WriteBridge` invalidates `['doc', 'result']`
+     for them. */
+  const setScore = (r: ReportedResult, patch: Partial<ReportedResult>) => guard('manage', () => saveResult({ ...r, ...patch }))
   // Correcting a score is administrative: without the right, the result shows as plain
   // text rather than in a field. A field open to typing and then refused on submit
   // would leave on screen a value the database does not have (the fields are
   // uncontrolled, React does not reset a `defaultValue`), under standings that keep
   // counting the old one.
   const canCorrect = can('manage')
-  const remove = (id: string) => guard('manage', async () => { await deleteResult(id); refresh() })
+  const remove = (id: string) => guard('manage', () => deleteResult(id))
 
   return (
     <div className="p-6">
@@ -294,7 +291,7 @@ export function Standings() {
           stay with administration. */}
       <section className="mt-6 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <SectionTitle className="mb-3">{translate('standings.enteredResults')}</SectionTitle>
-        {results === null ? (
+        {results === undefined ? (
           <div className="h-16 animate-pulse rounded-xl" style={{ background: C.panel }} />
         ) : results.length === 0 ? (
           <p className="py-4 text-center text-sm" style={{ color: C.muted }}>{translate('standings.nothingToShow')}</p>

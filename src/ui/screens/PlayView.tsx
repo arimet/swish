@@ -4,10 +4,9 @@
  * "Edit" writes: it demands administrator access, and only shows for whoever has
  * it. The animated viewer lives on its own screen; here, the finger advances.
  */
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import type { Play } from '../../domain/plays'
-import { getPlay } from '../../persistence/repositories'
+import { usePlay } from '../../persistence/queries'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { SharePlay } from '../components/SharePlay'
@@ -19,11 +18,10 @@ export function PlayView() {
   const { id } = useParams<{ id: string }>()
   const { can, guard } = useAuth()
   const navigate = useNavigate()
-  const [play, setPlay] = useState<Play | null | undefined>(undefined)
+  const { data: play } = usePlay(id)
   const [index, setIndex] = useState(0)
   const [sharing, setSharing] = useState(false)
 
-  useEffect(() => { if (id) getPlay(id).then((s) => setPlay(s ?? null)) }, [id])
 
   if (!id) return null
   if (play === undefined) return <div className="p-6"><div className="h-96 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>

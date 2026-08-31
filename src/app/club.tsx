@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { listTeams } from '../persistence/repositories'
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
+import { useTeams } from '../persistence/queries'
 import type { Team } from '../domain/types'
 
 /** The club this device follows. A local preference, never synchronised: two
@@ -25,42 +25,59 @@ interface ClubCtx {
 const Ctx = createContext<ClubCtx | null>(null)
 
 export function ClubProvider({ children }: { children: ReactNode }) {
-  const [clubId, setClubId] = useState<string | null>(() => localStorage.getItem(KEY))
-  const [teams, setTeams] = useState<Team[]>([])
-  const [ready, setReady] = useState(false)
-  const [unreachable, setUnreachable] = useState(false)
-  // Incremented on every club change: forces a re-read of the team list. Without
-  // it the effect only runs on mount — a team created or deleted afterwards is
-  // never seen again until the page is reloaded.
-  const [gen, setGen] = useState(0)
+  const [stored, setStored] = useState<string | null>(() => localStorage.getItem(KEY))
+  /* One query, shared with every screen that lists teams — the gate no longer reads
+     ahead of them. It also replaces the counter this provider used to keep: creating
+     or deleting a team is a write, and a write invalidates `['doc', 'team']`, so the
+     list refreshes on its own. Bumping a `gen` by hand was the only way to do that
+     before, and forgetting to bump it left the application on a team that no longer
+     existed until the page was reloaded. */
+  const { data, isError } = useTeams()
+  const teams = data ?? []
 
-  useEffect(() => {
-    let cancelled = false
-    listTeams().then((ts) => {
-      if (cancelled) return
-      setTeams(ts)
-      setUnreachable(false)
-      // Team deleted from another device: we forget the setting rather than leave
-      // the application on an empty dashboard with no way out.
-      setClubId((id) => (id && ts.some((t) => t.id === id) ? id : null))
-      setReady(true)
-    }).catch(() => {
-      // The read failed, and this gate stands in front of the whole application: not
-      // resolving would leave "Loading…" on screen for ever, with nothing saying why.
-      // The club setting is deliberately left alone — a silent server is no reason to
-      // forget which club this device follows.
-      if (cancelled) return
-      setUnreachable(true)
-      setReady(true)
-    })
-    return () => { cancelled = true }
-  }, [gen])
+  /**
+   * Settled once, settled for good.
+   *
+   * The gate below shows a waiting screen while this is `false`, so it must not go
+   * back: `!isPending` did, on every background refetch, and the cost was not a
+   * flicker but a **loop**. Waiting unmounted the shell; the shell's own reads of the
+   * team list were what triggered the refetch; the refetch put the gate back to
+   * waiting. The application oscillated between the two for as long as the server
+   * stayed silent.
+   *
+   * A ref and not state: it is read during the same render that sets it, and it never
+   * causes one of its own.
+   */
+  const settled = useRef(false)
+  if (data !== undefined || isError) settled.current = true
 
-  const setClub = useCallback((id: string) => { localStorage.setItem(KEY, id); setClubId(id); setGen((g) => g + 1) }, [])
-  const clear = useCallback(() => { localStorage.removeItem(KEY); setClubId(null); setGen((g) => g + 1) }, [])
+  /**
+   * The club, resolved rather than stored twice.
+   *
+   * Two behaviours, and they pull in opposite directions, which is why this is one
+   * expression and not an effect. **On a good read** — the only case where `data` is
+   * defined — a setting naming a team the database no longer holds is dropped: the team
+   * was deleted from another device, and leaving it would strand the application on an
+   * empty dashboard with no way out. **While there is no good read**, loading or
+   * failed alike, the setting stands: a silent server is no reason to forget which club
+   * this device follows, and `ClubGate` lets such a device through with the header pill
+   * saying the rest.
+   *
+   * It turns on `data`, and deliberately not on `isError`: that flag drops on every
+   * refetch, and a club that disappears for one render unmounts the whole shell. See
+   * `settled` above — the two were one loop.
+   */
+  const clubId = stored && (data === undefined || teams.some((t) => t.id === stored)) ? stored : null
+
+  const setClub = useCallback((id: string) => { localStorage.setItem(KEY, id); setStored(id) }, [])
+  const clear = useCallback(() => { localStorage.removeItem(KEY); setStored(null) }, [])
 
   const club = teams.find((t) => t.id === clubId) ?? null
-  return <Ctx.Provider value={{ clubId, club, teams, ready, unreachable, setClub, clear }}>{children}</Ctx.Provider>
+  return (
+    <Ctx.Provider value={{ clubId, club, teams, ready: settled.current, unreachable: isError, setClub, clear }}>
+      {children}
+    </Ctx.Provider>
+  )
 }
 
 export function useClub(): ClubCtx {

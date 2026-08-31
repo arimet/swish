@@ -7,8 +7,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { snapshot, transitions } from '../../domain/anim'
-import type { Play } from '../../domain/plays'
-import { getPlay } from '../../persistence/repositories'
+import { usePlay } from '../../persistence/queries'
 import { SharePlay } from '../components/SharePlay'
 import { courtWidth, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
@@ -30,7 +29,7 @@ const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: redu
 export function PlayViewer() {
   const translate = useT()
   const { id } = useParams<{ id: string }>()
-  const [play, setPlay] = useState<Play | null | undefined>(undefined)
+  const { data: play } = usePlay(id)
   // Progress, in fractional steps: 1.5 is halfway from the second step to the
   // third. One number for the slider, the half-screens and the animation.
   const [pos, setPos] = useState(0)
@@ -44,7 +43,6 @@ export function PlayViewer() {
   const [paths, setPaths] = useState(false)
   const [sharing, setSharing] = useState(false)
 
-  useEffect(() => { if (id) getPlay(id).then((s) => setPlay(s ?? null)) }, [id])
 
   const last = play ? transitions(play) : 0
 

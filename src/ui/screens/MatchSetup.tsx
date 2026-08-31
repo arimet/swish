@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { newId } from '../../domain/ids'
-import { listPlayers, listTeams, saveMatch } from '../../persistence/repositories'
+import { listPlayers, saveMatch } from '../../persistence/repositories'
+import { useTeams } from '../../persistence/queries'
 import type { Match, Team } from '../../domain/types'
 import { C, bd, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
@@ -17,8 +18,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   const translate = useT()
   const { can, guard } = useAuth()
   const { clubId, club, ready } = useClub()
-  const [teams, setTeams] = useState<Team[] | null>(null) // null = not loaded yet
-  useEffect(() => { listTeams().then(setTeams) }, [])
+  const { data: teams } = useTeams() // `undefined` = not loaded yet
   const opponents = (teams ?? []).filter((t) => t.id !== clubId)
   const [championshipLabel, setChampionship] = useState('')
   // The team list loads asynchronously: a state initialised once on mount would
@@ -32,6 +32,11 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
 
   const create = async () => {
     if (!clubId) return
+    /* Read straight from the database, not from the cache: the roster is being **written
+       into** the sheet, where it will stay for the rest of the game. Everything else on
+       this screen is displayed and can afford to be a few seconds old; this one cannot,
+       so it is the one read in the application that deliberately does not go through
+       `queries.ts`. */
     const roster = await listPlayers(clubId)
     const match: Match = {
       id: newId(),
@@ -54,7 +59,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   // stays in place behind that redirect.
   if (!can('manage')) return <Navigate to="/calendrier" replace />
 
-  if (!ready || teams === null) {
+  if (!ready || teams === undefined) {
     return (
       <div className="mx-auto max-w-2xl">
         <div className="h-8 w-40 animate-pulse rounded-lg" style={{ background: C.card }} />

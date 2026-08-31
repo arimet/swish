@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from './test/render'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -118,6 +118,14 @@ describe('an unreachable database', () => {
     render(<App />)
 
     await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
-    expect(await screen.findByRole('status')).toHaveAttribute('title', expect.stringMatching(/serveur ne répond pas/i))
+    /* Found by its accessible name and not by `role="status"` alone: the waiting screen
+       carries that role too (it is a live region), so a bare `findByRole('status')`
+       resolves with whichever of the two is on screen at the first poll — and passed
+       only as long as the gate happened to resolve within one microtask. */
+    /* Found by its accessible name and not by `role="status"` alone: the waiting screen
+       carries that role too (it is a live region), so a bare `findByRole('status')`
+       resolves with whichever of the two is on screen at the first poll. */
+    expect(await screen.findByRole('status', { name: /serveur ne répond pas/i }))
+      .toHaveAttribute('title', expect.stringMatching(/serveur ne répond pas/i))
   })
 })

@@ -7,11 +7,12 @@
  * for whoever has the right. The guards stay in place: a hidden button is a display
  * convenience, not a protection.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { folders, newPlay, type Play } from '../../domain/plays'
-import { deletePlay, listPlays, savePlay } from '../../persistence/repositories'
+import { deletePlay, savePlay } from '../../persistence/repositories'
+import { usePlays } from '../../persistence/queries'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
@@ -41,7 +42,7 @@ export function PlayList() {
   const { can, guard } = useAuth()
   const manages = can('manage')
   const navigate = useNavigate()
-  const [plays, setPlays] = useState<Play[] | null>(null)
+  const { data: plays } = usePlays(clubId)
   // The play whose deletion has been asked for: the right is checked when the dialog
   // opens, as on the team record.
   const [toDelete, setToDelete] = useState<Play | null>(null)
@@ -51,10 +52,9 @@ export function PlayList() {
   // The play whose folder is being entered, and the value being typed.
   const [pickingFolder, setPickingFolder] = useState<{ id: string; value: string } | null>(null)
 
-  const reload = useCallback(() => {
-    if (clubId) listPlays(clubId).then(setPlays)
-  }, [clubId])
-  useEffect(() => { reload() }, [reload])
+  /* No `reload`: creating, duplicating, deleting a play and moving one to a folder all
+     write through `mutate`, and `WriteBridge` invalidates `['doc', 'play']` for each.
+     Four call sites that each had to remember to call it, and one that did not. */
 
   // Guard first, write second: the play is only created once the right is held,
   // otherwise a visitor would leave empty plays behind their refusals.
@@ -69,13 +69,11 @@ export function PlayList() {
     // Deep copy: the steps and their arrows would otherwise be shared, and touching
     // up the copy would modify the original.
     await savePlay({ ...structuredClone(s), id: newId(), name: translate('play.copyOf', { name: s.name }) })
-    reload()
   })
 
   const remove = async () => {
     if (!toDelete) return
     await deletePlay(toDelete.id)
-    reload()
   }
 
   // Guard first, mutate second: the scorer's table does not even open the input,
@@ -85,7 +83,6 @@ export function PlayList() {
     const value = pickingFolder?.value.trim()
     await savePlay({ ...s, folder: value || undefined })
     setPickingFolder(null)
-    reload()
   })
 
   const all = useMemo(() => plays ?? [], [plays])
@@ -114,7 +111,7 @@ export function PlayList() {
         )}
       />
 
-      {plays === null ? (
+      {plays === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} />
       ) : plays.length === 0 ? (
         // The empty state says what is filed here and what you get out of it, not
