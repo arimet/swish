@@ -1,7 +1,8 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { newId } from '../../domain/ids'
-import { listMatches, listPlays, listTeams, listTrainings, saveTraining, deleteTraining, toggleTrainingPlay } from '../../persistence/repositories'
+import { saveTraining, deleteTraining, toggleTrainingPlay } from '../../persistence/repositories'
+import { useMatches, usePlays, useTeamsById, useTrainings } from '../../persistence/queries'
 import type { Match, Team, Training } from '../../domain/types'
 import type { Play } from '../../domain/plays'
 import { isoDay, nextFixture } from '../../domain/fixtures'
@@ -32,33 +33,17 @@ export function Calendar() {
   const { can, guard } = useAuth()
   // Planning belongs to the club: what writes it only shows for whoever manages it.
   const manages = can('manage')
-  const [matches, setMatches] = useState<Match[] | null>(null)
-  const [teams, setTeams] = useState<Record<string, Team>>({})
-  const [trainings, setTrainings] = useState<Training[] | null>(null)
+  const { data: matches } = useMatches()
+  const { data: teams = {} } = useTeamsById()
+  const { data: trainings } = useTrainings()
   // The club's library: it is what says which plays still exist.
-  const [plays, setPlays] = useState<Play[]>([])
+  const { data: plays = [] } = usePlays(clubId)
 
-  const refreshTrainings = () => listTrainings().then(setTrainings)
-
-  useEffect(() => {
-    let cancel = false
-    Promise.all([listMatches(), listTeams(), listTrainings()]).then(([m, t, tr]) => {
-      if (cancel) return
-      setTeams(Object.fromEntries(t.map((x) => [x.id, x])))
-      setMatches(m)
-      setTrainings(tr)
-    })
-    return () => { cancel = true }
-  }, [])
-
-  // The plays follow the device's club, like the trainings below: a separate effect,
-  // because the one above does not depend on `clubId`.
-  useEffect(() => {
-    if (!clubId) { setPlays([]); return }
-    let cancel = false
-    listPlays(clubId).then((s) => { if (!cancel) setPlays(s) })
-    return () => { cancel = true }
-  }, [clubId])
+  /* There is no `refreshTrainings` any more, and its absence is the point. Planning,
+     deleting and attaching a play all write through `mutate`, which announces the kinds
+     it touched; `WriteBridge` invalidates them and these queries refetch. The old
+     version had to remember to call a refresh after each of the three writes — and one
+     forgotten call left a session on screen that the database no longer held. */
 
   const ourGames = useMemo(() => matches?.filter((m) => m.meta.clubId === clubId) ?? null, [matches, clubId])
   // Like the games: a device that changes club must keep in the calendar only that
@@ -107,7 +92,6 @@ export function Calendar() {
     guard('manage', async () => {
       await saveTraining({ id: newId(), clubId, date, time: time.trim() || undefined, place: place.trim() || undefined, theme: theme.trim() || undefined })
       setDate(''); setTime(''); setPlace(''); setTheme('')
-      refreshTrainings()
     })
   }
   /* Deleting a session goes through a confirmation, like deleting a game, a play or a
@@ -117,15 +101,12 @@ export function Calendar() {
      cross. */
   const [toDelete, setToDelete] = useState<Training | null>(null)
   const remove = () => { const t = toDelete; if (!t) return
-    guard('manage', async () => { await deleteTraining(t.id); setToDelete(null); refreshTrainings() }) }
+    guard('manage', async () => { await deleteTraining(t.id); setToDelete(null) }) }
 
   // Attaching a play to a session is administrative: guard first, write second. The
   // toggle itself is transactional (cf. `toggleTrainingPlay`), so that two boxes ticked
   // in quick succession do not erase each other.
-  const togglePlay = (id: string, playId: string) => guard('manage', async () => {
-    await toggleTrainingPlay(id, playId)
-    refreshTrainings()
-  })
+  const togglePlay = (id: string, playId: string) => guard('manage', () => toggleTrainingPlay(id, playId))
 
   return (
     <div className="p-6">

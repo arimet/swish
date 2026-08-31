@@ -7,15 +7,14 @@
  * would destroy nothing is disabled: an enabled button that does nothing reads as a
  * fault.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { years, hasEvents, leagues, clubsOfGames, ofYear, ofLeague } from '../../domain/cleanup'
-import type { Match, ReportedResult, Training } from '../../domain/types'
-import type { Play } from '../../domain/plays'
+import type { Match } from '../../domain/types'
 import {
-  clearClubStats, deleteAllResults, deleteMatchesWhere, deletePlaysOfClub, deleteTrainingsOfClub,
-  listMatches, listPlays, listResults, listTrainings, wipeAll,
+  clearClubStats, deleteAllResults, deleteMatchesWhere, deletePlaysOfClub, deleteTrainingsOfClub, wipeAll,
 } from '../../persistence/repositories'
+import { useMatches, usePlays, useResults, useTrainings } from '../../persistence/queries'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
@@ -42,34 +41,32 @@ export function Admin() {
   const { clubId, club, teams, clear } = useClub()
   const { can, guard } = useAuth()
   const navigate = useNavigate()
-  const [matches, setMatches] = useState<Match[]>([])
-  const [results, setResults] = useState<ReportedResult[]>([])
-  const [trainings, setTrainings] = useState<Training[]>([])
-  const [plays, setPlays] = useState<Play[]>([])
+  const { data: matches } = useMatches()
+  const { data: results } = useResults()
+  const { data: trainings } = useTrainings()
+  const { data: plays } = usePlays(clubId)
   // The operation whose confirmation has been asked for. The right is checked when
   // the dialog opens, as on the team record and the library.
   const [pending, setPending] = useState<Operation | null>(null)
-
-  const reload = useCallback(async () => {
-    const [ms, rs, ts, ps] = await Promise.all([listMatches(), listResults(), listTrainings(), clubId ? listPlays(clubId) : []])
-    setMatches(ms); setResults(rs); setTrainings(ts); setPlays(ps)
-  }, [clubId])
-  useEffect(() => { reload() }, [reload])
 
   /* "Match amical" is the value stored for a game with no league, and it serves as a
      grouping key here: it is translated at the moment of writing it, not before, or
      the two languages would carve out two different groups. */
   const leagueName = useLeagueLabel()
   const teamName = useCallback((id: string) => teams.find((t) => t.id === id)?.name ?? translate('common.team'), [teams, translate])
-  const sessions = useMemo(() => trainings.filter((t) => t.clubId === clubId), [trainings, clubId])
+  const sessions = useMemo(() => (trainings ?? []).filter((t) => t.clubId === clubId), [trainings, clubId])
 
   // Guard first, mutate second: the scorer's table does not see a confirmation dialog
   // open that it would have no right to confirm.
   const ask = (op: Operation) => guard('manage', () => setPending(op))
+  /* No reload after the operation. Every one of them empties something through
+     `mutate`, and `WriteBridge` invalidates the kinds it names — which is what makes
+     this screen's counters fall to zero as soon as the deletion lands. Reloading four
+     lists by hand was the previous answer, and it read the state back even when the
+     operation had failed. */
   const confirm = async () => {
     if (!pending) return
     await pending.run()
-    await reload()
   }
 
   const deleteGames = (label: string, filter: (m: Match) => boolean, n: number) => ask({
@@ -87,6 +84,14 @@ export function Admin() {
   // without the right, all that would be left is counts under buttons demanding a
   // code. The guards on each operation stay in place behind this redirect.
   if (!can('manage')) return <Navigate to="/" replace />
+  /* Nothing is announced until all four lists are in. Every row here says how much a
+     button is about to destroy, and each count comes from a different query: drawn as
+     they arrive, a row reads "0 plays — Delete" next to a library that holds three.
+     A count that is wrong for one frame is worse here than a skeleton, because the
+     button beside it is live. */
+  if (!matches || !results || !trainings || !plays) {
+    return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
+  }
 
   return (
     <div className="p-6">

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, Outlet, Link, useLocation } from 'react-router-dom'
 import { Eraser, Lock, LockOpen } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { listPlayers } from '../../persistence/repositories'
+import { usePlayers } from '../../persistence/queries'
 import type { Player } from '../../domain/types'
 import { C, bd, Ic, ICON } from './kit'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
@@ -51,18 +51,17 @@ export function OliveShell() {
   const { pathname } = useLocation()
   const { clubId } = useClub()
   const { playerId, setPlayer } = useAuth()
-  // `null` until the roster is loaded: without that distinction, the guard below
-  // would take the first render's empty array for a real roster and erase the
-  // identity at every opening.
-  const [players, setPlayers] = useState<Player[] | null>(null)
-  // The no-club branch is unreachable as long as `ClubGate` only mounts this shell
-  // with a resolved club; keeping it amounts to saying "empty roster", which would
-  // erase the identity if this component were ever mounted without a club.
-  useEffect(() => { if (clubId) listPlayers(clubId).then(setPlayers); else setPlayers([]) }, [clubId])
+  // `undefined` until the roster is loaded, which the guard below depends on: taken
+  // for a real, empty roster it would erase the identity at every opening. The query
+  // is disabled without a club, so it stays undefined then too — and `ClubGate` only
+  // mounts this shell with a resolved club anyway.
+  const { data: players } = usePlayers(clubId)
 
   // Player removed from the roster while their id survives in localStorage: we
   // forget the identity rather than leave a ghost highlight, the way `ClubProvider`
   // forgets a deleted club.
+  // Depends on `players` keeping a stable reference between renders — see the
+  // `useCallback` around `usePlayers`' filter, without which this effect would loop.
   useEffect(() => {
     if (players && playerId && !players.some((p) => p.id === playerId)) setPlayer(null)
   }, [players, playerId, setPlayer])

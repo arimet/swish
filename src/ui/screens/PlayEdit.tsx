@@ -4,14 +4,15 @@
  * there and then: there is no "Save" button, a coach at the sideline has no hand
  * free for one.
  */
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import {
   BASKET, distanceToSegment, simplifyPath, nextStep, toCourt, addPlayer, removePlayer, markerNear,
   freePosition, MAX_PER_SIDE,
   type Side, type Arrow, type Prop, type Marker, type Point, type Position, type Play, type Step, type Court, type Stroke,
 } from '../../domain/plays'
-import { getPlay, savePlay } from '../../persistence/repositories'
+import { savePlay } from '../../persistence/repositories'
+import { usePlay } from '../../persistence/queries'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { courtWidth, PlayBoard, toSvg } from '../components/PlayBoard'
@@ -202,10 +203,27 @@ export function PlayEdit() {
   const [name, setName] = useState('')
   const [note, setNote] = useState('')
 
+  /**
+   * The play is **local state**, seeded from the read once and then owned here.
+   *
+   * This screen is an editor: every gesture builds the next `Play` and saves it, so the
+   * board on screen is the draft, not the database's answer. Reading it straight from
+   * the query would hand the draft back to whatever the server last confirmed — mid-drag
+   * on a slow link, that is a marker jumping back under the finger.
+   *
+   * Hence the ref: seed once per play, never again. The query still earns its place —
+   * opening the editor from the library costs nothing, because the library already read
+   * this play.
+   */
+  const { data: stored } = usePlay(id)
+  const seeded = useRef<string | null>(null)
   useEffect(() => {
-    if (!id) return
-    getPlay(id).then((s) => { setPlay(s ?? null); setName(s?.name ?? ''); setNote(s?.note ?? '') })
-  }, [id])
+    if (!id || stored === undefined || seeded.current === id) return
+    seeded.current = id
+    setPlay(stored)
+    setName(stored?.name ?? '')
+    setNote(stored?.note ?? '')
+  }, [id, stored])
 
   if (!id) return null
   // The editor writes end to end: placing a marker, drawing an arrow, adding a step —

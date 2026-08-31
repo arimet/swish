@@ -17,7 +17,7 @@ import { useMatch } from '../../app/useMatch'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
 import { shotsOf } from '../../domain/shotchart'
-import { listPlayers, listTeams } from '../../persistence/repositories'
+import { usePlayersById, useTeamsById } from '../../persistence/queries'
 import { periodLength, seedSeconds } from '../../domain/ids'
 import type { Match, Player, ScoreKind, ShotSpot, StatKind, FoulType } from '../../domain/types'
 import { Eye, Pencil, RotateCcw, X } from 'lucide-react'
@@ -41,8 +41,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   const { can, guard } = useAuth()
   const { match, dispatch, dispatchMany, undo, removeLast, finish, error } = useMatch(matchId)
   const [askFinish, setAskFinish] = useState(false)
-  const [players, setPlayers] = useState<Record<string, Player>>({})
-  const [teamNames, setTeamNames] = useState<{ A: string; B: string }>({ A: translate('nav.myTeam'), B: translate('match.opponent') })
+  const { data: players = {} } = usePlayersById(match?.meta.clubId)
+  const { data: byId = {} } = useTeamsById()
+  const teamNames = {
+    A: byId[match?.meta.clubId ?? '']?.name ?? translate('nav.myTeam'),
+    B: byId[match?.meta.opponentId ?? '']?.name ?? translate('match.opponent'),
+  }
   const [seconds, setSeconds] = useState(600)
   const [pick, setPick] = useState<{ id: string; name: string } | null>(null)
   const [starters, setStarters] = useState<string[]>([])
@@ -53,14 +57,6 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
 
   const ls = match ? liveState(match) : null
 
-  useEffect(() => {
-    if (!match) return
-    Promise.all([listPlayers(match.meta.clubId), listTeams()]).then(([a, teams]) => {
-      setPlayers(Object.fromEntries(a.map((p) => [p.id, p])))
-      const byId = Object.fromEntries(teams.map((t) => [t.id, t.name]))
-      setTeamNames({ A: byId[match.meta.clubId] ?? translate('nav.myTeam'), B: byId[match.meta.opponentId] ?? translate('match.opponent') })
-    })
-  }, [match?.meta.clubId, match?.meta.opponentId, translate])
 
   useEffect(() => {
     if (!match || !ls || seededMatchId.current === match.id) return
