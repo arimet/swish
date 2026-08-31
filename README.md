@@ -8,11 +8,55 @@ Swish runs on **one shared Postgres database and nothing else**: no account to c
 one place where the club's data lives, the same for every phone at the table, on the
 bench and in the stands. Spectators follow a game live from a link.
 
+> 🤖 **This project is vibecoded.** The code, the tests, the comments and this file were
+> written by an LLM (Claude) in conversation with the author, over one month and 192
+> commits. Read the section below before you read the code — it changes what you should
+> trust and what you should check.
+
 > 🇫🇷 **The product itself ships in French by default** — that is deliberate, it was
 > built for a French club and its vocabulary follows the French federation's rules.
 > English is a first-class second language inside the app, switchable from the header of
 > every screen. This document, and the design charter it links to, are the reference for
 > anyone picking up the code.
+
+---
+
+## How this was built
+
+Swish was **vibecoded**: the author decided what the product is and rejected what it is
+not, and an LLM wrote it. That is not a disclaimer bolted on afterwards — it is the
+single most useful fact about this codebase, so it belongs before the tour.
+
+One month, 192 commits, ~21 800 lines of which **7 400 are tests**. The author is a
+developer and reviewed the work; the product decisions, the FFBB rules, the refusals and
+the design charter are theirs. The typing was not.
+
+**Why the comments are so long.** A codebase built this way has no oral tradition behind
+it. Nobody can be asked at the coffee machine why the arrow snaps at six per cent of the
+court, why a cascade is one transaction, or why the write token is checked with a *write*
+and not a read. So the reasons are written down where the decision lives, in the shape
+"here is the defect this prevents" rather than "here is what this line does". You will
+find defects described in the past tense throughout — those are real ones that shipped,
+kept as the argument for the code that replaced them.
+
+**Why a third of the lines are tests.** They are the only thing that survives a
+conversation. A rule agreed in chat and not encoded is a rule the next session breaks:
+the palette's contrast ratios are measured from the CSS rather than claimed in a comment,
+the translation catalogue is confronted with the keys the sources actually use, and the
+cascades keep a "two deletions in quick succession" case because that exact defect
+shipped once.
+
+**What to trust, and what to check.** Consistency across files is better than a team of
+humans would keep up: the same naming, the same shape, the same idiom everywhere.
+Judgement in the corners is worse — a rule stated confidently in a comment while the code
+next to it does something slightly different is the failure mode of this method, and it
+happened here more than once. **When a comment and a test disagree, the test is the one
+that ran.** For a live example: this file and `PRODUCT.md` both stated that `DESIGN.md`
+was written in French, for two weeks after it had been translated to English. Neither
+sentence was wrong when written, and nothing failed when it stopped being true.
+
+None of this is an argument for or against building software this way. It is what you
+need to know to work on it.
 
 ---
 
@@ -174,6 +218,13 @@ The full guide is in **[DEPLOY.md](DEPLOY.md)**. In short:
 4. Set **`WRITE_TOKEN`** to a long random string and redeploy. Each device **that
    writes** enters it once, under Administration → Write access; reading needs
    nothing. See [DEPLOY.md](DEPLOY.md) for what that makes public.
+5. **Put the functions in the database's region.** `vercel.json` pins `lhr1` (London),
+   because the original deployment's Neon lives in `eu-west-2`. **If yours is
+   elsewhere, change that line** — Vercel's default is `iad1` (Washington), and a
+   function in Washington querying a database in London crossed the Atlantic twice per
+   read: 300 to 500 ms instead of 120, on screens that read four to seven documents on
+   mount. Nothing on screen explains that latency, which is why it is a step here and a
+   note beside the pool in `api/_db.ts`.
 
 How it works, in two lines: a screen reads what it needs from `GET /api/docs?kind=…`
 and every write goes straight to `POST /api/mutate`, which answers before the screen
@@ -214,13 +265,29 @@ React 19, Vite, TypeScript, Tailwind v4, react-router. Tests with Vitest. The se
 functions in `api/` are the only way to the data: one Postgres table of JSON documents,
 read through `GET /api/docs` and written through `POST /api/mutate`.
 
+**Reads are held for fifteen seconds**, per request, in memory, in
+`src/persistence/api.ts` — otherwise coming back to a screen seen three seconds earlier
+replayed its whole read. Nothing is stored, nothing survives a reload, no write ever
+reads from it, and any write empties it whole. There is no data-fetching library: the
+callers are plain `useEffect` hooks, so thirty lines bought what the complaint actually
+was. The day two devices need to see each other's writes without a reload, that is the
+point to reach for React Query — refetch on focus and invalidation by key are the two
+things this cannot do, and the screens would have to be rewritten to use them.
+
+**Writes are optimistic and roll back.** At the scorer's table an entry must answer the
+finger, so the screen moves first; if the write fails, `src/app/useMatch.ts` puts the
+previous state back and says so. A scoreboard showing 42 while the sheet holds 40 is
+worse than an action refused.
+
 Two documents describe the product and its visual identity, and they are authoritative
 for anyone picking up the code:
 
 - **[PRODUCT.md](PRODUCT.md)** — who Swish is for, what it does, what it will not do,
   and the constraints future work must preserve.
 - **[DESIGN.md](DESIGN.md)** — the design charter: colour tokens, typography, named
-  rules. Read it before touching a screen. *(Written in French, like the product.)*
+  rules. Read it before touching a screen. Its named rules — the fill rule, the one-voice
+  rule, the desk rule, the finger rule — are what the comments in `src/ui/` point at by
+  name.
 
 ## Licence
 
