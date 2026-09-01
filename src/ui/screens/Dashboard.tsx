@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { deleteMessage, saveMessage } from '../../persistence/repositories'
@@ -14,6 +14,9 @@ import type { Convocation, Match, Player, Team } from '../../domain/types'
 import type { Play } from '../../domain/plays'
 import { Check } from 'lucide-react'
 import { useLang, useT } from '../../i18n'
+
+/** The live game this tab has already been sent to follow (sessionStorage). */
+export const LIVE_SEEN_KEY = 'swish-live-seen'
 
 export function Dashboard() {
   const translate = useT()
@@ -48,6 +51,16 @@ export function Dashboard() {
      "there is no fixture yet"; before, the effect had to null the previous call-up by
      hand, and a fixture changing while its read was in flight put the wrong one back. */
   const { data: convocation } = useConvocation(fixtureMatchId)
+
+  /* Whoever keeps no score came to watch: while a game runs, the dashboard is a
+     detour and the follow-along view is the destination. Sent once per game and per
+     tab — that view is full screen with no way out, so redirecting on every visit
+     would lock the dashboard away for as long as the game lasts. The push is
+     deliberate (not `replace`): the browser's back button is then the way back. */
+  if (live && !can('score') && sessionStorage.getItem(LIVE_SEEN_KEY) !== live.id) {
+    sessionStorage.setItem(LIVE_SEEN_KEY, live.id)
+    return <Navigate to={`/match/${live.id}/watch`} />
+  }
 
   if (!clubId || !club) return null
   /**
