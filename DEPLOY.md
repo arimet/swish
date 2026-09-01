@@ -48,8 +48,24 @@ That drops `documents`, re-creates it and re-seeds the demo season. It is
 destructive by name and by design — do not point it at a club's season.
 
 A device carrying an older build of the application also carries its service
-worker. It is un-registered on the first load of this version, so nothing has to be
-done by hand.
+worker, from the days when Swish worked offline. Two things remove it, and both are
+needed:
+
+- `src/main.tsx` un-registers whatever is found, on the way in;
+- `public/sw.js` replaces the old worker with one that wipes the caches,
+  un-registers itself and reloads the open windows.
+
+The second is the one that actually reaches a stale phone. The first only runs if
+the new build loads, and on a device the old worker still controls it never does —
+the worker serves its precached shell, the new code is never executed, and the
+application stays as it was until someone clears the site data by hand. The browser's
+own way out is to re-fetch `/sw.js`; while no such file existed, the SPA rewrite
+answered `index.html` as `text/html`, the update failed on the MIME type, and the
+old worker was kept. Hence a real file at that exact path.
+
+**Never remove `public/sw.js` without checking that no device still carries a
+worker**, and never let the SPA rewrite swallow it: static files are matched before
+rewrites, which is the whole reason this works.
 
 ### Keeping it alive between seasons
 
