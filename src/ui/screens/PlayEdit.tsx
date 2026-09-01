@@ -16,10 +16,12 @@ import { usePlay } from '../../persistence/queries'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { courtWidth, PlayBoard, toSvg } from '../components/PlayBoard'
+import { usePlayback } from '../components/usePlayback'
+import { snapshot } from '../../domain/anim'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { D, W } from '../components/ShotCourt'
 import { C, bd, Ic } from '../olive/kit'
-import { X } from 'lucide-react'
+import { Pause, Play as PlayIcon, Pencil, X } from 'lucide-react'
 
 type Tool = 'move' | Stroke | 'brush' | 'ball' | 'place' | 'eraser'
 /** What the "place" tool drops: a player of either side, or a piece of equipment. The
@@ -202,6 +204,18 @@ export function PlayEdit() {
   const [askDefense, setAskDefense] = useState(false)
   const [name, setName] = useState('')
   const [note, setNote] = useState('')
+  /**
+   * Reading the play, in place.
+   *
+   * "Play" used to leave for the full-screen viewer, which is right during a time-out
+   * and wrong while drawing: you leave, you watch, you come back, and you have lost
+   * which step you were on. Here the same board switches from drawn to running and
+   * back, and the tools stand down while it runs — nothing is being drawn.
+   * The full-screen viewer stays where it belongs: the library, the dashboard and the
+   * play's own page.
+   */
+  const [reading, setReading] = useState(false)
+  const { pos, setPos, playing, setPlaying, last, start } = usePlayback(play)
 
   /**
    * The play is **local state**, seeded from the read once and then owned here.
@@ -437,11 +451,14 @@ export function PlayEdit() {
 
   const shown = grab ? moveTo(play, index, grab.what, grab.at) : play
 
-  // The step strip aligns with the court — it shows its states — but does not shrink
-  // below a usable width: a full court is only 26vh wide, and the header would wrap
-  // onto two lines there while the thumbnails got clipped. The `min(100%, …)` keeps
-  // the promise never to overflow.
-  const stripWidth = `min(100%, max(320px, ${courtWidth(play.court, 'edition')}))`
+  /* Reading the play: the same rules as the viewer. Stopped on a whole step we show
+     the step as drawn, arrows included — it is the notebook you are re-reading. Moving
+     or stopped between two, we show the snapshot: the drawn arrows start from the drawn
+     positions, and the offset would read as an error. */
+  const current = Math.round(pos)
+  const running = !playing && Number.isInteger(pos)
+    ? play.steps[pos]
+    : snapshot(play, { step: Math.floor(pos), part: pos - Math.floor(pos) })
 
   // The only screen in the repo that breathes narrower on a phone (`p-4` instead of
   // `p-6`): the sixteen pixels given back to the court are sixteen more pixels for
@@ -456,35 +473,49 @@ export function PlayEdit() {
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           style={{ ...field, flex: '1 1 180px', minWidth: 0, fontWeight: 800 }}
         />
-        {/* Seeing what you have just drawn means playing it: the viewer is a finger
-            away from the editor, tinted with the accent as everywhere else — the same
-            gesture on all four screens. */}
-        <Link
-          to={`/schemas/${id}/lecteur`}
-          className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
+        {/* Seeing what you have just drawn means playing it — and playing it here,
+            on the board already in front of you. Tinted with the accent as everywhere
+            else: the same gesture on all four screens. */}
+        <button
+          // Entering, the reading starts on the step being drawn; leaving, the drawing
+          // resumes on the step left on screen. Either way the eye keeps its place.
+          onClick={() => { setPlaying(false); if (reading) setStepIndex(current); else setPos(index); setReading((r) => !r) }}
+          className="flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold"
           style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}
         >
-          {translate('play.play')}
-        </Link>
+          {reading
+            ? <><Pencil className="h-4 w-4 shrink-0" strokeWidth={2} />{translate('common.editCaps')}</>
+            : translate('play.play')}
+        </button>
       </div>
 
       {/* `[&>*]:min-w-0`: without it, a non-breaking row of controls imposes its
           intrinsic width on the grid column, which then overflows the screen — and
           takes the court with it. */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px] [&>*]:min-w-0">
-        <div>
-          {/* The toolbar above the court, within thumb reach. `select-none` everywhere
-              people tap: on mobile, a slightly long press otherwise selects the button's
-              label instead of pressing it. */}
-          <div className="mb-3 flex select-none flex-wrap items-center gap-2">
-            <ToolGroup title={translate('edit.handle')}>
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px] lg:items-start [&>*]:min-w-0">
+        {/* The toolbar: above the court on a phone, within thumb reach; beside it in
+            the right-hand column from `lg`.
+            It moved because of what it does when it opens a family's options — the
+            shape row, the placeables row, the eraser's line. Above the court, each of
+            those pushed the court down by forty pixels: you picked "Draw" and the board
+            you were aiming at slid out from under the cursor. In the column, they open
+            into the room the column has and the court never moves.
+            `select-none` everywhere people tap: on mobile, a slightly long press
+            otherwise selects the button's label instead of pressing it. */}
+        <section className="flex select-none flex-col gap-2 lg:col-start-2 lg:row-start-1" hidden={reading}>
+          {/* `lg:contents`: in the column, this row stops being a box, so its three
+              families and the undo become direct children of the section — which is
+              what lets `order` slide each options row in under the family it serves.
+              On a phone it stays what it was, a wrapping row. */}
+          <div className="flex flex-wrap items-center gap-2 lg:contents">
+            <ToolGroup title={translate('edit.handle')} order="lg:order-1">
               {HANDLE.map((o) => (
                 <ToolButton key={o.key} label={translate(o.label)} active={tool === o.key} onClick={() => setTool(o.key)}>
                   <Ic d={o.icon} className="h-[19px] w-[19px]" />
                 </ToolButton>
               ))}
             </ToolGroup>
-            <ToolGroup title={translate('edit.draw')}>
+            <ToolGroup title={translate('edit.draw')} order="lg:order-3">
               {DRAW.map((t) => (
                 <ToolButton key={t.key} label={translate(t.label)} active={tool === t.key} onClick={() => setTool(t.key)}>
                   <StrokeGlyph stroke={t.key} />
@@ -492,10 +523,13 @@ export function PlayEdit() {
               ))}
               {/* The pen, last: it draws no play, it annotates one. */}
               <ToolButton label={translate('tool.brush')} active={tool === 'brush'} onClick={() => setTool('brush')}>
-                <Ic d="M15.5 3.5a2.1 2.1 0 0 1 3 3L8 17l-4 1 1-4Z M13.5 5.5l3 3" className="h-[19px] w-[19px]" />
+                {/* Dropped a point and a half so that its ink sits on the same median
+                    as the four strokes beside it: a pen drawn 1.5 units high in its box
+                    reads as a fifth stroke that missed the line. */}
+                <Ic d="M15.5 5a2.1 2.1 0 0 1 3 3L8 18.5l-4 1 1-4Z M13.5 7l3 3" className="h-[19px] w-[19px]" />
               </ToolButton>
             </ToolGroup>
-            <ToolGroup title={translate('edit.place')}>
+            <ToolGroup title={translate('edit.place')} order="lg:order-5">
               {PLACE.map((o) => (
                 <ToolButton key={o.key} label={translate(o.label)} active={tool === o.key} onClick={() => setTool(o.key)}>
                   <PlaceGlyph what={o.key} active={tool === o.key} />
@@ -506,7 +540,7 @@ export function PlayEdit() {
                 button of the confirmation dialogs. */}
             <button
               onClick={undoLast} disabled={!undoStack[index]?.length} aria-label={translate('edit.undoLast')}
-              className="ml-auto flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-3 text-xs font-bold disabled:opacity-40"
+              className="ml-auto flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-bold disabled:opacity-40 lg:order-7 lg:ml-0 lg:w-full"
               style={{ background: C.card, border: bd, color: C.text }}
             >
               <span className="text-base leading-none">↩</span> {translate('common.cancel')}
@@ -515,7 +549,7 @@ export function PlayEdit() {
           {/* Shown only while a stroke tool is held, like the placeables row: a control
               that cannot act on anything is noise, and this toolbar is already dense. */}
           {DRAW.some((d) => d.key === tool) && (
-            <div className="mb-3 flex select-none items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 lg:order-4 lg:px-2">
               <span className="text-[11px] font-black uppercase tracking-wider" style={{ color: C.faint }}>{translate('edit.shape')}</span>
               {SHAPES.map((f) => (
                 <button
@@ -531,7 +565,7 @@ export function PlayEdit() {
             </div>
           )}
           {tool === 'place' && (
-            <div className="mb-3 flex select-none flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 lg:order-6 lg:px-2">
               {PLACEABLES.map((o) => {
                 // Five per side. A chip that stays enabled and does nothing reads as a
                 // fault, so a full side greys out and says so beside the row.
@@ -557,16 +591,43 @@ export function PlayEdit() {
               player, since adding one touches every step and the undo stack is per
               step. */}
           {tool === 'eraser' && (
-            <p className="mb-3 text-[12px] font-semibold" style={{ color: C.muted }}>{translate('edit.eraserHint')}</p>
+            <p className="text-[12px] font-semibold lg:order-2 lg:px-2" style={{ color: C.muted }}>{translate('edit.eraserHint')}</p>
           )}
+        </section>
 
-          {/* The court is bounded by width, never by height: its box's ratio must stay
-              the viewBox's, otherwise the SVG centres itself inside margins and `toSvg`
-              converts crooked. The bound says three things at once (width available,
-              screen height, ceiling); `courtWidth` is what holds them.
+        {/* The court and the whole play beside it: the left column from `lg`, spanning
+            both of the right column's rows.
+            Below `lg` the filmstrip lies under the court and scrolls sideways, as a
+            phone wants. From `lg` it stands up along the court's right edge — which is
+            where the three hundred empty pixels were, and which lets the court claim
+            back the height the strip was reserving underneath. */}
+        <div className="flex flex-col gap-2 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:flex-row lg:items-start lg:gap-3">
+          {/* The court and the one row of controls that belongs under it, in a box whose
+              width is the court's own ceiling — so everything beneath aligns with the
+              court's edges without a second measurement to keep in step.
+              The bound is a **width**, never a height: the SVG's box must keep the
+              viewBox's ratio, or it centres itself inside margins and `toSvg` converts
+              gestures crooked. `courtWidth` holds the three terms; the two custom
+              properties are what let `.court-box` pick the breakpoint's ceiling.
               `select-none`: without it, a drag selects the markers' numbers. */}
-          <div className="select-none" style={{ maxWidth: courtWidth(play.court, 'edition') }}>
-            <PlayBoard play={shown} stepIndex={index} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
+          <div
+            className="court-box min-w-0 flex-1 select-none"
+            style={{
+              ['--court-narrow' as string]: courtWidth(play.court, 'edition'),
+              ['--court-wide' as string]: courtWidth(play.court, 'edition-wide'),
+              maxWidth: 'var(--court-w)',
+            }}
+          >
+            {/* Same box either way: the court must not resize when the mode flips, or
+                the eye loses the thing it was looking at. Reading it only swaps the
+                step shown and takes the pointer handlers away — a board being watched
+                is not a board being drawn on. */}
+            <PlayBoard
+              play={shown} stepIndex={reading ? current : index} step={reading ? running : undefined}
+              onPointerDown={reading ? undefined : onDown}
+              onPointerMove={reading ? undefined : onMove}
+              onPointerUp={reading ? undefined : onUp}
+            >
               {/* The gesture in progress, raw: it disappears on release, replaced by the
                   simplified arrow — or by nothing at all if the right was refused. */}
               {drawing && drawing.points.length > 1 && (
@@ -576,14 +637,39 @@ export function PlayEdit() {
                 />
               )}
             </PlayBoard>
-          </div>
 
           {/* Reordering and deleting a step are rare gestures: they need not hold a
               full-width row under the strip, where the phone's navigation bar caught up
               with them. They now sit in the strip's header, against the number of the
               step they act on — and the whole strip aligns with the court's width, whose
               states it shows. */}
-          <div className="mt-4 flex select-none items-center gap-2" style={{ maxWidth: stripWidth }}>
+          {/* Reading it, the transport takes the row the step's controls hold while
+              editing: reordering and deleting a step during playback is a gesture
+              nobody makes, and the play/pause has to be where the eye already is. */}
+          {reading ? (
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                onClick={() => (playing ? setPlaying(false) : start())} disabled={last === 0}
+                aria-label={translate(playing ? 'play.pause' : 'play.playback')}
+                className="flex h-11 shrink-0 items-center gap-2 rounded-xl px-5 text-sm font-black text-[var(--c-on-brand)] disabled:opacity-40"
+                style={{ background: C.brand }}
+              >
+                {playing
+                  ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('play.pause')}</>
+                  : <><PlayIcon className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('play.playback')}</>}
+              </button>
+              <input
+                type="range" aria-label={translate('play.progress')} min={0} max={last || 1} step={0.01} value={pos}
+                disabled={last === 0}
+                onChange={(e) => { setPlaying(false); setPos(Number(e.target.value)) }}
+                className="piste min-w-0 flex-1 cursor-pointer appearance-none disabled:opacity-40"
+              />
+              <span className="shrink-0 text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>
+                {translate('play.step', { n: current + 1, total: play.steps.length })}
+              </span>
+            </div>
+          ) : (
+          <div className="mt-4 flex items-center gap-2">
             <p className="text-[12px] font-black uppercase tracking-wider" style={{ color: C.faint }}>
               {translate('play.step', { n: index + 1, total: play.steps.length })}
             </p>
@@ -594,20 +680,28 @@ export function PlayEdit() {
               <StepControl label={translate('edit.deleteStep')} onClick={deleteStep} disabled={play.steps.length === 1} danger><X className="h-4 w-4" strokeWidth={2.5} /></StepControl>
             </div>
           </div>
+          )}
+          </div>
 
-          {/* The step strip under the court: the whole play reads there. */}
-          <div className="mt-2 flex select-none items-stretch gap-2 overflow-x-auto pb-1" style={{ maxWidth: stripWidth }}>
+          {/* The filmstrip: the whole play reads there. A row under the court on a
+              phone, a column along it from `lg` — same thumbnails, same order, the
+              scroll axis following the one the strip is laid on. */}
+          <div className="flex select-none items-stretch gap-2 overflow-x-auto pb-1 lg:w-20 lg:shrink-0 lg:flex-col lg:overflow-x-visible lg:overflow-y-auto lg:max-h-[70vh] lg:pb-0">
             {play.steps.map((_, i) => (
               <button
-                key={i} aria-label={translate('edit.stepN', { n: i + 1 })} aria-pressed={i === index} onClick={() => setStepIndex(i)}
+                key={i} aria-label={translate('edit.stepN', { n: i + 1 })} aria-pressed={i === (reading ? current : index)}
+                // Reading, a thumbnail is a seek and not a selection — and it moves the
+                // edited step with it, so leaving playback lands on what was on screen.
+                onClick={() => { setStepIndex(i); if (reading) { setPlaying(false); setPos(i) } }}
                 className="w-20 shrink-0 rounded-xl p-1"
-                style={{ background: C.card, border: i === index ? `2px solid ${C.accent}` : bd }}
+                style={{ background: C.card, border: i === (reading ? current : index) ? `2px solid ${C.accent}` : bd }}
               >
                 <PlayBoard play={play} stepIndex={i} preview />
-                <span className="mt-1 block text-[12px] font-bold" style={{ color: i === index ? C.accent : C.muted }}>{i + 1}</span>
+                <span className="mt-1 block text-[12px] font-bold" style={{ color: i === (reading ? current : index) ? C.accent : C.muted }}>{i + 1}</span>
               </button>
             ))}
             <button
+              hidden={reading}
               onClick={addStep} aria-label={translate('edit.addStep')}
               className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-[12px] font-bold"
               style={{ background: C.card, border: `1px dashed ${C.border}`, color: C.muted }}
@@ -618,7 +712,11 @@ export function PlayEdit() {
           </div>
         </div>
 
-        <aside className="space-y-4">
+        {/* The settings sit under the toolbar while editing, and take its place while
+            reading — the toolbar is gone then, and an explicitly placed row would have
+            left its height behind as a hole at the top of the column. The note stays in
+            both: it is the instruction the play is being watched for. */}
+        <aside className={`space-y-4 lg:col-start-2 ${reading ? 'lg:row-start-1' : 'lg:row-start-2'}`}>
           <section className="rounded-2xl p-5" style={{ background: C.card, border: bd }}>
             <p className="mb-3 text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('edit.court')}</p>
             <div className="flex gap-2">
@@ -666,12 +764,17 @@ export function PlayEdit() {
 
 /** One family of tools: its own segment, its own background. It is the shape that
  *  says "this does not do the same thing as that" — the title stays for screen
- *  readers, and shows as soon as there is room. */
-function ToolGroup({ title, children }: { title: string; children: ReactNode }) {
+ *  readers, and shows as soon as there is room.
+ *
+ *  From `lg` there is always room: the panel is a column, so the title takes its own
+ *  line above a row of buttons that all start at the same left edge. Three families
+ *  stacked and named is what makes the toolbar readable rather than eight pictograms
+ *  in a hedge. */
+function ToolGroup({ title, order, children }: { title: string; order: string; children: ReactNode }) {
   return (
-    <div role="group" aria-label={title} className="flex shrink-0 items-center gap-1 rounded-2xl p-1" style={{ background: C.panel, border: bd }}>
-      <span className="hidden pl-1.5 pr-0.5 text-[12px] font-black uppercase tracking-wider xl:inline" style={{ color: C.faint }}>{title}</span>
-      {children}
+    <div role="group" aria-label={title} className={`flex shrink-0 items-center gap-1 rounded-2xl p-1 lg:flex-col lg:items-stretch lg:gap-1.5 lg:p-2 ${order}`} style={{ background: C.panel, border: bd }}>
+      <span className="hidden text-[12px] font-black uppercase tracking-wider lg:block lg:px-1" style={{ color: C.faint }}>{title}</span>
+      <div className="flex items-center gap-1">{children}</div>
     </div>
   )
 }
@@ -708,15 +811,20 @@ function PlaceGlyph({ what, active }: { what: Tool; active: boolean }) {
 /** The stroke as the board draws it: solid with a head for a cut, T-barred for a
  *  screen, dashed for a pass, wavy for a dribble. It is the coach's notebook
  *  convention, the same as `PlayBoard` — a word takes three seconds to say what this
- *  glyph says at a glance. */
+ *  glyph says at a glance.
+ *
+ *  Everything is drawn on the box's median (y = 11 of 22). It used to sit on y = 15,
+ *  four pixels under it: alone the glyph looked fine, but beside the 19 × 19
+ *  pictograms of the two neighbouring families the four strokes visibly sagged. A
+ *  toolbar's icons align on one line or they read as a fault. */
 function StrokeGlyph({ stroke }: { stroke: Stroke }) {
   return (
     <svg viewBox="0 0 34 22" className="h-[22px] w-[34px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
       <path
-        d={stroke === 'dribble' ? 'M3 15q2.5-6 5 0t5 0t5 0t5 0' : `M3 15h${stroke === 'screen' ? 24 : 20}`}
+        d={stroke === 'dribble' ? 'M3 11q2.5-6 5 0t5 0t5 0t5 0' : `M3 11h${stroke === 'screen' ? 24 : 20}`}
         strokeDasharray={stroke === 'pass' ? '4.5 3.5' : undefined}
       />
-      <path d={stroke === 'screen' ? 'M27 8v14' : 'm22 10 5 5-5 5'} />
+      <path d={stroke === 'screen' ? 'M27 4v14' : 'm22 6 5 5-5 5'} />
     </svg>
   )
 }

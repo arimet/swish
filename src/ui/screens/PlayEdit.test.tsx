@@ -355,3 +355,38 @@ describe('SchemaEdit — five per side', () => {
     expect(positions).toEqual([1, 2, 3, 4, 5])
   })
 })
+
+describe('SchemaEdit — reading the play without leaving the editor', () => {
+  it('turns the board over to playback, stands the tools down, and comes back', async () => {
+    // Leaving for the full-screen viewer meant losing which step was being drawn. The
+    // same board now switches from drawn to running and back.
+    renderEdit('s1')
+    await userEvent.click(await screen.findByRole('button', { name: /jouer/i }))
+
+    // No tools while it runs: nothing is being drawn.
+    expect(screen.queryByRole('group', { name: 'Tracer' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Lecture' })).toBeInTheDocument()
+    // The board is still there — this is a mode, not a page. It stops carrying the
+    // interactive role: nothing is drawn on a board being watched.
+    expect(screen.queryByRole('application')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('img', { name: /tableau tactique/i }).length).toBeGreaterThan(0)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Modifier' }))
+    expect(screen.getByRole('group', { name: 'Tracer' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Lecture' })).not.toBeInTheDocument()
+  })
+
+  it('seeks with the slider, and the step it lands on is the one still being edited', async () => {
+    await savePlay({ ...halfCourtPlay(), steps: [newPlay('c1', 'half', false).steps[0], newPlay('c1', 'half', false).steps[0], newPlay('c1', 'half', false).steps[0]] })
+    renderEdit('s1')
+    await userEvent.click(await screen.findByRole('button', { name: /jouer/i }))
+    expect(screen.getByText('Temps 1 / 3')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByRole('slider', { name: 'Avancement' }), { target: { value: '2' } })
+    expect(screen.getByText('Temps 3 / 3')).toBeInTheDocument()
+
+    // Back in the editor, the step under the hand is the one that was on screen.
+    await userEvent.click(screen.getByRole('button', { name: 'Modifier' }))
+    expect(screen.getByText('Temps 3 / 3')).toBeInTheDocument()
+  })
+})

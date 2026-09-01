@@ -31,12 +31,18 @@ const depth = (s: Play) => (s.court === 'full' ? D * 2 : D)
  * It is the **width** that is bounded, never the height: the SVG's box must keep
  * exactly the viewBox's ratio, otherwise it centres itself inside margins and
  * `toSvg` converts gestures crooked.
+ *
+ * The vertical reserve therefore says **what else has to fit under the court** on that
+ * surface, and the editor has two answers. `edition` is the narrow one: toolbar above,
+ * step controls and filmstrip below. `edition-wide` is the same editor from `lg`, where
+ * the toolbar has moved into the right column and the filmstrip stands up beside the
+ * court — only one row of controls is left underneath, so the court takes back the room
+ * the other two gave up. On a 1440 × 900 screen that is 648 px of court instead of 468,
+ * in a column that was 788 wide either way.
  */
-export const courtWidth = (court: Play['court'], place: 'lecture' | 'edition' = 'lecture') => {
-  // Editing has more to fit under the court — toolbar, step strip — than reading,
-  // which has only one row of controls. Hence two reserves.
-  const vh = place === 'edition' ? 52 : 77
-  const max = place === 'edition' ? 560 : 840
+export const courtWidth = (court: Play['court'], place: 'lecture' | 'edition' | 'edition-wide' = 'lecture') => {
+  const vh = place === 'edition' ? 52 : place === 'edition-wide' ? 72 : 77
+  const max = place === 'edition' ? 560 : place === 'edition-wide' ? 720 : 840
   const part = court === 'full' ? 2 : 1
   return `min(100%, ${vh / part}vh, ${max / part}px)`
 }

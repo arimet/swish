@@ -248,3 +248,21 @@ input[type='range'].piste::-moz-range-thumb {
     scroll-behavior: auto !important;
   }
 }
+/* The editor's court, which has two ceilings and picks one by breakpoint.
+ *
+ * A ceiling cannot be a Tailwind class here: it is computed from the court's shape
+ * (half or full) and lands in the style attribute, where it would win over any class.
+ * So the component publishes both ceilings as custom properties and this rule chooses
+ * between them — the numbers stay in `courtWidth`, which is the only place that knows
+ * what has to fit under a court.
+ *
+ * The breakpoint is `lg`, the same one at which the toolbar leaves the top of the court
+ * for the right-hand column and the filmstrip stands up beside it. */
+.court-box {
+  --court-w: var(--court-narrow);
+}
+@media (min-width: 64rem) {
+  .court-box {
+    --court-w: var(--court-wide);
+  }
+}
