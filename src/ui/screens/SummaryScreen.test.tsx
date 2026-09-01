@@ -1,9 +1,10 @@
 import { render, screen, within } from '../../test/render'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SummaryScreen } from './SummaryScreen'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
-import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
+import { getMatch, saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { Match } from '../../domain/types'
 
 const MATCH_ID = 'match-finished'
@@ -110,5 +111,60 @@ describe('SummaryScreen — rights', () => {
     // Reading, following and exporting write nothing: those three stay open to all.
     expect(screen.getByRole('button', { name: /exporter en pdf/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /suivi/i })).toBeInTheDocument()
+  })
+})
+
+describe('SummaryScreen — the sheet typed into like a spreadsheet', () => {
+  const openCorrection = async () => {
+    sessionStorage.setItem(ROLE_KEY, 'admin')
+    render(<AuthProvider><MemoryRouter><SummaryScreen matchId={MATCH_ID} onHome={vi.fn()} /></MemoryRouter></AuthProvider>)
+    await userEvent.click(await screen.findByRole('button', { name: /corriger stats/i }))
+  }
+  // The cells are named "<column> de <player>", which is also what a screen reader
+  // announces on landing in one.
+  const cell = (column: string) => screen.getByRole('textbox', { name: `${column} de 4 MARTIN` })
+
+  it('writes the events that add up to the number typed, and the derived columns follow', async () => {
+    await openCorrection()
+    // MARTIN has one 2-inside and nothing else: 2 points, 1 field goal.
+    await userEvent.click(cell('3pts'))
+    await userEvent.keyboard('2{Enter}')
+
+    // Two threes recorded: the sheet now reads 8 points and 3 field goals, neither of
+    // which anyone typed.
+    expect((await getMatch(MATCH_ID))!.events.filter((e) => e.type === 'SCORE' && e.playerId === 'p1' && e.kind === '3')).toHaveLength(2)
+    expect(cell('3pts')).toHaveValue('2')
+    const row = cell('3pts').closest('tr')!
+    expect(within(row).getByText('8')).toBeInTheDocument()
+  })
+
+  it('takes a number back down, down to zero', async () => {
+    await openCorrection()
+    await userEvent.click(cell('2 Int'))
+    await userEvent.keyboard('0{Enter}')
+    expect((await getMatch(MATCH_ID))!.events.filter((e) => e.type === 'SCORE' && e.playerId === 'p1')).toHaveLength(0)
+  })
+
+  it('walks the grid with the arrow keys', async () => {
+    await openCorrection()
+    await userEvent.click(cell('3pts'))
+    await userEvent.keyboard('{ArrowRight}')
+    expect(cell('2 Int')).toHaveFocus()
+    await userEvent.keyboard('{ArrowLeft}')
+    expect(cell('3pts')).toHaveFocus()
+  })
+
+  it('gives up on Escape without writing anything', async () => {
+    await openCorrection()
+    await userEvent.click(cell('Ftes'))
+    await userEvent.keyboard('4{Escape}')
+    expect((await getMatch(MATCH_ID))!.events.filter((e) => e.type === 'FOUL')).toHaveLength(0)
+    expect(cell('Ftes')).toHaveValue('0')
+  })
+
+  it('offers no cell outside correction mode', async () => {
+    render(<AuthProvider><MemoryRouter><SummaryScreen matchId={MATCH_ID} onHome={vi.fn()} /></MemoryRouter></AuthProvider>)
+    await screen.findByText('Visiteurs · VERDUN')
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   })
 })
