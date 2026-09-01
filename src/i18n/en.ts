@@ -132,6 +132,8 @@ export const en: Record<string, string> = {
   'action.missed': 'Missed',
   'action.freeThrow': 'Free throw',
   'action.addFreeThrow': '+ 1 Free throw',
+  'action.addTwo': 'Add 2 points',
+  'action.addThree': 'Add 3 points',
   'action.foul': 'Foul',
   'action.offensive': 'Offensive',
   'action.defensive': 'Defensive',
