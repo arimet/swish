@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { PrintableSummary } from '../../export/PrintableSummary'
@@ -13,7 +13,8 @@ import { docKey, useMatchDoc, usePlayersById, useTeamsById } from '../../persist
 import { removeLastEvent } from '../../domain/reducer'
 import { newId } from '../../domain/ids'
 import { liveState } from '../../rules/ffbb'
-import { playerStats } from '../../domain/boxscore'
+import { playerStats, type PlayerStat } from '../../domain/boxscore'
+import { setCount, type Cell } from '../../domain/correct'
 import { shotsOf } from '../../domain/shotchart'
 import { playingTimes } from '../../domain/playingtime'
 import { teamTotals } from '../../domain/totals'
@@ -91,6 +92,12 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
     return c
   }
   const foulsOf = (id: string) => playerStats(match).find((s) => s.playerId === id)?.fouls ?? 0
+  /* Typing a number into a cell: the domain turns it back into the events that add up
+     to it, in one write. See `domain/correct`. */
+  const setCell = (playerId: string, cell: Cell, n: number) => {
+    const next = setCount(match, playerId, cell, n, ls.period)
+    if (next !== match) persist(next)
+  }
 
   return (
     <div className="p-6">
@@ -168,7 +175,8 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       {/* PER-TEAM TABLES */}
       <div className="mt-6 space-y-6">
         <TeamTable match={match} players={players} name={teamNames.A}
-          onPick={editStats ? (id, label) => setPick({ id, name: label }) : undefined} />
+          onPick={editStats ? (id, label) => setPick({ id, name: label }) : undefined}
+          onSet={editStats ? setCell : undefined} />
         <OpponentCard teamId={meta.opponentId} name={teamNames.B} score={score.b} />
       </div>
 
@@ -256,13 +264,47 @@ function OpponentCard({ teamId, name, score }: { teamId: string; name: string; s
   )
 }
 
+/**
+ * The columns a number can be typed into, in the order they stand in the table.
+ *
+ * Only the raw counters. Points, field goals and the percentage are read off these —
+ * offering them for edit would offer two ways to say the same thing and no way to say
+ * which one won. They recompute under the eye as soon as a counter is corrected, which
+ * is the whole point of leaving them alone.
+ */
+const EDITABLE: { cell: Cell; label: string; read: (s: PlayerStat) => number }[] = [
+  { cell: '3', label: 'summary.th3pt', read: (s) => s.threes },
+  { cell: '2int', label: 'summary.th2in', read: (s) => s.twoInside },
+  { cell: '2ext', label: 'summary.th2out', read: (s) => s.twoOutside },
+  { cell: 'lf', label: 'summary.thFt', read: (s) => s.freeThrows },
+  { cell: 'assist', label: 'summary.thAst', read: (s) => s.assists },
+  { cell: 'reb_off', label: 'summary.thOreb', read: (s) => s.offRebounds },
+  { cell: 'reb_def', label: 'summary.thDreb', read: (s) => s.defRebounds },
+  { cell: 'block', label: 'summary.thBlk', read: (s) => s.blocks },
+  { cell: 'foul', label: 'summary.thPf', read: (s) => s.fouls },
+]
+
 /* `teamId` has gone from the signature: it only served `teamColor` there, and leaving
    a parameter nothing reads invites the next person to believe it matters. */
-function TeamTable({ match, players, name, onPick }: { match: Match; players: Record<string, Player>; name: string; onPick?: (playerId: string, label: string) => void }) {
+function TeamTable({ match, players, name, onPick, onSet }: {
+  match: Match; players: Record<string, Player>; name: string
+  onPick?: (playerId: string, label: string) => void
+  onSet?: (playerId: string, cell: Cell, n: number) => void
+}) {
   const translate = useT()
   const stats = playerStats(match)
   const times = playingTimes(match)
   const totals = teamTotals(match)
+  /* The sheet is a grid, so it is walked like one: the cells carry their coordinates
+     and the move goes looking for the neighbour by them. Nothing is remembered — the
+     DOM already holds where every cell is, and a parallel map of refs would only be a
+     second version of it to keep in step. */
+  const grid = useRef<HTMLTableSectionElement>(null)
+  const move = (row: number, col: number) => {
+    const next = grid.current?.querySelector<HTMLInputElement>(`[data-cell="${row}:${col}"]`)
+    next?.focus()
+    next?.select()
+  }
   // Before this branch the MISS event did not exist: on those games (and on any new
   // game where "Missed" was never used), the denominator fieldGoalsMade + misses is
   // always fieldGoalsMade, so every scorer would wrongly show 100%. We only show the
@@ -282,12 +324,13 @@ function TeamTable({ match, players, name, onPick }: { match: Match; players: Re
               <Th left>{translate('team.number')}</Th><Th left>{translate('summary.thPlayer')}</Th><Th>5</Th><Th>{translate('summary.thTime')}</Th><Th>{translate('summary.thPts')}</Th><Th>{translate('summary.thFg')}</Th><Th>{translate('summary.thFgPct')}</Th><Th>{translate('summary.th3pt')}</Th><Th>{translate('summary.th2in')}</Th><Th>{translate('summary.th2out')}</Th><Th>{translate('summary.thFt')}</Th><Th>{translate('summary.thAst')}</Th><Th>{translate('summary.thOreb')}</Th><Th>{translate('summary.thDreb')}</Th><Th>{translate('summary.thBlk')}</Th><Th>{translate('summary.thPf')}</Th>
             </tr>
           </thead>
-          <tbody>
-            {stats.map((s) => {
+          <tbody ref={grid}>
+            {stats.map((s, row) => {
               const p = players[s.playerId]
               const dnp = (times.get(s.playerId) ?? 0) === 0 && s.points === 0 && s.fouls === 0
+              const who = `${p?.number ?? ''} ${p?.lastName ?? ''}`.trim() || s.playerId
               return (
-                <tr key={s.playerId} onClick={onPick ? () => onPick(s.playerId, `${p?.number ?? ''} ${p?.lastName ?? ''}`.trim()) : undefined}
+                <tr key={s.playerId} onClick={onPick ? () => onPick(s.playerId, who) : undefined}
                   className={onPick ? 'cursor-pointer transition hover:bg-[var(--c-hover)]' : ''}
                   style={{ borderTop: `1px solid ${C.border}`, opacity: dnp && !onPick ? 0.5 : 1 }}>
                   <Td left><span className="font-black">{p?.number ?? '—'}</span></Td>
@@ -297,9 +340,17 @@ function TeamTable({ match, players, name, onPick }: { match: Match; players: Re
                   <Td><span className="font-black" style={{ color: s.points > 0 ? C.text : C.faint }}>{s.points}</span></Td>
                   <Td>{s.fieldGoalsMade}</Td>
                   <Td>{tracksMisses && s.fieldGoalsMade + s.misses > 0 ? `${Math.round((s.fieldGoalsMade / (s.fieldGoalsMade + s.misses)) * 100)} %` : '—'}</Td>
-                  <Td>{s.threes}</Td><Td>{s.twoInside}</Td><Td>{s.twoOutside}</Td><Td>{s.freeThrows}</Td>
-                  <Td>{s.assists}</Td><Td>{s.offRebounds}</Td><Td>{s.defRebounds}</Td><Td>{s.blocks}</Td>
-                  <Td><span style={{ color: s.fouls >= 5 ? C.accent : undefined }}>{s.fouls}</span></Td>
+                  {EDITABLE.map((column, col) => (
+                    <Td key={column.cell} tight={!!onSet}>
+                      {onSet
+                        ? <StatCell
+                            row={row} col={col} value={column.read(s)}
+                            label={translate('summary.cell', { stat: translate(column.label), player: who })}
+                            onCommit={(n) => onSet(s.playerId, column.cell, n)} onMove={move}
+                          />
+                        : <span style={column.cell === 'foul' && s.fouls >= 5 ? { color: C.accent } : undefined}>{column.read(s)}</span>}
+                    </Td>
+                  ))}
                 </tr>
               )
             })}
@@ -319,6 +370,71 @@ function TeamTable({ match, players, name, onPick }: { match: Match; players: Re
 function Th({ children, left }: { children?: ReactNode; left?: boolean }) {
   return <th className={`px-3 py-2.5 ${left ? 'text-left' : 'text-center'}`}>{children}</th>
 }
-function Td({ children, left }: { children?: ReactNode; left?: boolean }) {
-  return <td className={`px-3 py-2.5 tabular-nums ${left ? 'text-left' : 'text-center'}`} style={{ color: C.muted }}>{children}</td>
+/** `tight` is for the cells that hold an input: the box already draws its own edges,
+ *  and the reading gutter on top of it pushed the sheet's nine editable columns wide
+ *  enough to squeeze the name and the percentage into two lines each. */
+function Td({ children, left, tight }: { children?: ReactNode; left?: boolean; tight?: boolean }) {
+  return <td className={`py-2.5 tabular-nums ${tight ? 'px-1' : 'px-3'} ${left ? 'text-left' : 'text-center'}`} style={{ color: C.muted }}>{children}</td>
+}
+
+/**
+ * One cell of the sheet, typed into like a spreadsheet's.
+ *
+ * The keys are the ones a hand already knows there: Enter and the arrows walk the
+ * grid, Tab follows the DOM's order, Escape gives up on what was being typed. The
+ * content is selected on focus, so landing on a cell and typing replaces it — nobody
+ * corrects "12" into "3" by deleting two characters first.
+ *
+ * The value is written on the way out (blur, Enter, an arrow), never on the keystroke:
+ * committing as you type would make "12" pass through "1", and one instant of a row
+ * showing a wrong total is one instant too many on a sheet meant to be trusted.
+ */
+function StatCell({ row, col, value, label, onCommit, onMove }: {
+  row: number; col: number; value: number; label: string
+  onCommit: (n: number) => void; onMove: (row: number, col: number) => void
+}) {
+  // `null` means "showing the sheet's value"; a string means "being typed into". The
+  // two must not be conflated: an empty string is a cell someone is clearing.
+  //
+  // The draft is held in a ref as well as in state, and the ref is what `commit` reads.
+  // Giving up (Escape) clears the draft and blurs in the same breath, and blur commits:
+  // reading the state there would read the render's value — the one just abandoned —
+  // and write it. Escape used to save what it was cancelling.
+  const [draft, setDraft] = useState<string | null>(null)
+  const typing = useRef<string | null>(null)
+  const set = (v: string | null) => { typing.current = v; setDraft(v) }
+  const commit = () => {
+    const d = typing.current
+    if (d === null) return
+    set(null)
+    const n = Number(d)
+    if (d !== '' && n !== value) onCommit(n)
+  }
+  const WALK: Record<string, [number, number]> = {
+    ArrowUp: [-1, 0], ArrowDown: [1, 0], Enter: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1],
+  }
+  return (
+    <input
+      data-cell={`${row}:${col}`} aria-label={label} value={draft ?? String(value)}
+      inputMode="numeric" autoComplete="off"
+      // Digits only: the column counts baskets. A filter is kinder than a rejection
+      // after the fact — the wrong character never lands.
+      onChange={(e) => set(e.target.value.replace(/\D/g, ''))}
+      onFocus={(e) => e.currentTarget.select()}
+      // The row underneath opens the shot dialog; aiming at a cell is not aiming at
+      // the row.
+      onClick={(e) => e.stopPropagation()}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') { set(null); e.currentTarget.blur(); return }
+        const step = WALK[e.key]
+        if (!step) return
+        e.preventDefault()
+        commit()
+        onMove(row + step[0], col + step[1])
+      }}
+      className="h-9 w-12 rounded-md text-center text-sm font-bold tabular-nums outline-none focus:ring-2"
+      style={{ background: C.panel, border: bd, color: C.text, ['--tw-ring-color' as string]: C.accent }}
+    />
+  )
 }
