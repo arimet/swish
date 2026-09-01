@@ -50,12 +50,13 @@ export function devApi(): Plugin {
   }
 }
 
-/** Vercel's routing, reduced to the project's four routes. The brackets in a file
+/** Vercel's routing, reduced to the project's five routes. The brackets in a file
  *  name become a parameter. */
 function resolve(pathname: string): { file: string; params: Record<string, string> } | null {
   const p = pathname.replace(/^\/api\//, '').replace(/\/$/, '')
   if (p === 'docs') return { file: 'docs.ts', params: {} }
   if (p === 'mutate') return { file: 'mutate.ts', params: {} }
+  if (p === 'ping') return { file: 'ping.ts', params: {} }
   const stream = p.match(/^match\/([^/]+)\/stream$/)
   if (stream) return { file: 'match/[id]/stream.ts', params: { id: decodeURIComponent(stream[1]) } }
   const one = p.match(/^match\/([^/]+)$/)

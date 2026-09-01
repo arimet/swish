@@ -51,6 +51,48 @@ A device carrying an older build of the application also carries its service
 worker. It is un-registered on the first load of this version, so nothing has to be
 done by hand.
 
+### Keeping it alive between seasons
+
+A managed database nobody queries for thirty days is treated as abandoned and
+removed — Neon and the Redis add-ons in the Vercel marketplace both work this way
+on their free plans. That is exactly the state Swish is in out of season: the last
+game is in June, the club opens the application again in September, and nothing
+has touched the database in between.
+
+`vercel.json` therefore declares a cron job:
+
+```json
+"crons": [{ "path": "/api/ping", "schedule": "0 5 * * *" }]
+```
+
+Once a day, Vercel calls `/api/ping`, which reads one row from `documents`. It
+reads a row rather than answering `select 1`, because what has to be proved is that
+the **data** is in use, not that a connection can be opened.
+
+Three things to know:
+
+- **Cron jobs run on the production deployment only**, and never on previews. A
+  project that is deployed but whose production is stale still ages out.
+- **On the Hobby plan a cron runs once a day**, at some point inside the hour asked
+  for. That is thirty pings per window, which is twenty-nine more than needed.
+- **The cron is a deployment, not a setting.** It exists from the deploy that
+  carries this `vercel.json`; changing the schedule means redeploying.
+
+If a Redis is added later (there is none today — the SSE stream keeps its
+subscribers in the function's memory), the same route is where its `PING` goes: one
+call in the same handler, guarded by the presence of its URL, so the same daily
+visit keeps both alive.
+
+And because a keepalive only defends against forgetting, keep a dump of the season
+somewhere that is not the same account:
+
+```bash
+pg_dump "$DATABASE_URL" -Fc -f swish-$(date +%F).dump
+```
+
+That is the answer to the other half of the risk — the provider that deletes the
+database anyway, for a reason that has nothing to do with the last query.
+
 ## 3. Set the three access codes
 
 The app has three independent access codes, each read from its own variable.
@@ -137,3 +179,4 @@ carrying the write token.
 | `POST` | `/api/mutate` | Apply a batch of upserts/deletes, in one transaction. **Token required.** |
 | `GET`  | `/api/match/:id` | Spectator payload, projected from the database. Public. |
 | `GET`  | `/api/match/:id/stream` | Realtime SSE stream (Node runtime) |
+| `GET`  | `/api/ping` | Keepalive read, called daily by the cron. **Public.** |
