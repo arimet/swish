@@ -142,10 +142,15 @@ function buzz(): void {
  * The seven buttons under the court give the same result from the keyboard, to the
  * zone's precision.
  */
-export function ShotPicker({ onPick, confirmation, shots }: {
+export function ShotPicker({ onPick, confirmation, shots, made = true }: {
   onPick: (spot: ShotSpot) => void
   confirmation?: { spot: ShotSpot; label: string; made: boolean } | null
   shots?: Shot[]
+  /** Whether the next tap records a basket or a miss. The court wears it: the toggle
+   *  that sets it is forty pixels away and the eye is here, on the spot being aimed
+   *  at — and a shot entered in the wrong mode is a wrong score, which is this
+   *  product's most serious class of defect. */
+  made?: boolean
 }) {
   const translate = useT()
   const locked = !!confirmation
@@ -168,9 +173,20 @@ export function ShotPicker({ onPick, confirmation, shots }: {
           `getBoundingClientRect` above would convert the finger crooked — a shot
           recorded next to the spot touched. Same trap as in `SchemaPlayer`.
           These 240px are enough to aim at a zone with a finger and keep the actions
-          below (free throw, assist, block…) above the fold, at 1440×900 as much as at
-          375×812. */}
-      <div className="mx-auto w-full max-w-[240px]">
+          below (assist, block, fouls…) above the fold, at 375×812.
+          From `sm` the dialog lays the court and the named actions side by side, so
+          nothing is pushed below anything and the ceiling comes off: the court takes
+          its column whole, and the confirmation and the zone list below it share its
+          two edges. A court centred in a column wider than itself puts three different
+          left margins in one stack, which is what "nobody laid this out" looks like. */}
+      {/* An outline and not a border or a ring: it is drawn outside the box, so it costs
+          the court no pixel and cannot shift a coordinate `toSvg` reads back. The
+          offset keeps it clear of the court's own drawn frame — hugging it, the two
+          lines read as one doubled edge. */}
+      <div
+        className="mx-auto w-full max-w-[240px] rounded-2xl sm:max-w-none"
+        style={{ outline: `1px solid ${made ? C.accent : C.border}`, outlineOffset: 3 }}
+      >
         <Court label={translate('shot.entryCourt')} onClick={pickFromEvent}>
           {shots?.map((s, i) => (
             <circle
@@ -199,13 +215,23 @@ export function ShotPicker({ onPick, confirmation, shots }: {
         }}>
         {confirmation?.label ?? ' '}
       </p>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {ZONES.map((z) => (
+      {/* The seven zones, laid out as the court lays them out: the paint across the
+          front, the three mid-range zones on one line, the three-point line on the
+          next — left, centre, right in each, reading the way the court reads.
+          `ZONES` is already in that order, which is why a three-column grid with the
+          paint spanning it needs no mapping table.
+          They wrapped before, as seven pills of seven different widths over three
+          ragged lines directly under the court — debris under the one thing this
+          dialog is about. The grid also gives them equal, larger targets: a zone entry
+          is what a scorer falls back on when they cannot aim, which is exactly when
+          they have least attention to spare. */}
+      <div className="mt-2 grid grid-cols-3 gap-1.5">
+        {ZONES.map((z, rank) => (
           <button
             key={z}
             disabled={locked}
             onClick={() => commit(ZONE_CENTROID[z])}
-            className="rounded-lg px-2 py-1 text-[12px] font-semibold transition hover:brightness-125 disabled:opacity-40"
+            className={`min-h-9 rounded-lg px-2 py-1.5 text-[12px] font-semibold transition hover:brightness-125 disabled:opacity-40 ${rank === 0 ? 'col-span-3' : ''}`}
             style={{ background: C.card2, color: C.muted, border: `1px solid ${C.border}` }}
           >
             {translate(ZONE_LABELS[z])}

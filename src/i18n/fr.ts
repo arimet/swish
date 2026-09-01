@@ -131,6 +131,8 @@ export const fr: Record<string, string> = {
   'action.missed': 'Manqué',
   'action.freeThrow': 'Lancer franc',
   'action.addFreeThrow': '+ 1 Lancer franc',
+  'action.addTwo': 'Ajouter 2 points',
+  'action.addThree': 'Ajouter 3 points',
   'action.foul': 'Faute',
   'action.offensive': 'Offensive',
   'action.defensive': 'Défensive',

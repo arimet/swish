@@ -132,3 +132,18 @@ describe('PlayerActionDialog — the corrections', () => {
     expect(screen.queryByRole('button', { name: /retirer une faute technique/i })).not.toBeInTheDocument()
   })
 })
+
+describe('PlayerActionDialog — a basket with no position', () => {
+  it('records the two and the three, and closes, without a spot on the court', () => {
+    // The way out when nobody saw where the shot came from. A two has to land in one
+    // of the sheet's two columns and it lands in `2int`, the same convention the
+    // opposition's quick buttons follow.
+    const { onScore, onClose } = renderDialog()
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter 2 points' }))
+    expect(onScore).toHaveBeenCalledWith('2int')
+    expect(onClose).toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter 3 points' }))
+    expect(onScore).toHaveBeenLastCalledWith('3')
+  })
+})
