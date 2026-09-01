@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen, waitFor, within } from '../../test/render'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { Dashboard, LIVE_SEEN_KEY } from './Dashboard'
+import { Dashboard } from './Dashboard'
 import { AuthProvider, PLAYER_ID_KEY, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { count } from '../../test/fakeApi'
@@ -69,26 +69,8 @@ describe('Dashboard', () => {
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
   })
 
-  it('sends a visitor to follow the game rather than leaving them on the dashboard', async () => {
+  it('a visitor reads the live score and is offered the follow-along view, not the scorer\'s table', async () => {
     await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live' })
-    render(
-      <MemoryRouter>
-        <ClubProvider><AuthProvider>
-          <Routes>
-            <Route index element={<Dashboard />} />
-            <Route path="/match/:id/watch" element={<p>suivi du match</p>} />
-          </Routes>
-        </AuthProvider></ClubProvider>
-      </MemoryRouter>,
-    )
-    expect(await screen.findByText('suivi du match')).toBeInTheDocument()
-  })
-
-  it('a visitor already sent once reads the live score without being offered the scorer\'s table', async () => {
-    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live' })
-    // Coming back to the dashboard from the follow-along view: the tab has had its
-    // one redirection, so the banner is what is left to read.
-    sessionStorage.setItem(LIVE_SEEN_KEY, 'm2')
     renderDash()
     // The live banner stays whole — the state, the opposition, the score: exactly
     // what a player or a parent comes to look at.
@@ -97,6 +79,8 @@ describe('Dashboard', () => {
     // Six paniers à deux points contre quatre : le bandeau affiche bien 12 – 8.
     expect(screen.getByText(/12/, { selector: '.nums' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /table de marque/i })).not.toBeInTheDocument()
+    // Nobody is redirected: the way to the game is a link they choose to click.
+    expect(screen.getByRole('link', { name: /suivi spectateur/i })).toHaveAttribute('href', '/match/m2/watch')
   })
 
   it('announces the next game when none is in progress', async () => {
