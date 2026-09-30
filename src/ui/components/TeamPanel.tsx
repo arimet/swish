@@ -1,6 +1,7 @@
 import type { Player, ScoreKind } from '../../domain/types'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
+import { ArrowLeftRight } from 'lucide-react'
 
 type Stat = { points: number; fouls: number }
 
@@ -55,9 +56,12 @@ export function TeamPanel({
           >
             TM<span className="nums text-foreground">{timeoutsRemaining}</span>
           </button>
+          {/* Named and in the brand colour: a grey "⇄" with no word was the one control
+              the table kept looking for, on the gesture made a dozen times a quarter. */}
           <button onClick={onSub} title={translate('panel.substitution')} aria-label={translate('panel.substitutionFor', { team: title })}
-            className="grid h-11 w-11 place-items-center rounded-lg bg-muted text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]">
-            ⇄
+            className="flex h-11 items-center gap-1.5 rounded-lg bg-[var(--c-brand)] px-3 text-xs font-black text-[var(--c-on-brand)] transition hover:brightness-110 active:scale-95">
+            <ArrowLeftRight className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+            {translate('panel.substitution')}
           </button>
         </div>
       </header>
