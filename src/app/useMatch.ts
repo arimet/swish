@@ -5,7 +5,7 @@ import { diffEvents, mergeSheet, NO_PENDING, revertWrite, track, untrack, type P
 import { newId } from '../domain/ids'
 import { saveSheet } from '../persistence/repositories'
 import { docKey, useMatchDoc } from '../persistence/queries'
-import { subscribeBundle } from './spectator'
+import { fetchBundle, subscribeBundle, type SpectatorBundle } from './spectator'
 import { useT } from '../i18n'
 import type { GameEvent, Match } from '../domain/types'
 
@@ -53,14 +53,17 @@ export function useMatch(matchId: string) {
    *  before the basket it undoes would archive nothing, and the basket would land. */
   const chain = useRef<Promise<unknown>>(Promise.resolve())
 
-  /* The same stream as the spectator page. Each message is the game as the database
-     holds it — another device's taps included — with this device's pending writes laid
-     over it. */
-  useEffect(() => subscribeBundle(matchId, (b) => {
+  /** Files a server message as the screen's sheet, with this device's pending writes
+   *  laid over it. */
+  const apply = useCallback((b: SpectatorBundle) => {
     const { match: merged, pending: next } = mergeSheet(b.match, pending.current)
     pending.current = next
     client.setQueryData(docKey('match', matchId), merged)
-  }), [client, matchId])
+  }, [client, matchId])
+
+  /* The same stream as the spectator page. Each message is the game as the database
+     holds it — another device's taps included. */
+  useEffect(() => subscribeBundle(matchId, apply), [matchId, apply])
 
   /**
    * Applies the state to the screen, saves it, and **rolls back** if the save fails.
@@ -98,11 +101,15 @@ export function useMatch(matchId: string) {
     } catch {
       pending.current = untrack(pending.current, add, archive)
       const now = client.getQueryData<Match | null>(key)
-      client.setQueryData(key, now && previous ? revertWrite(now, previous, add, archive) : previous)
+      client.setQueryData(key, now && previous ? revertWrite(now, previous, next, add, archive) : previous)
+      /* A failure may be a lost answer, not a refusal: the write may have landed and the
+         stream already shown it, and it only speaks again when the game changes. So the
+         server is asked once, and it is the judge. */
+      void fetchBundle(matchId).then((b) => { if (b) apply(b) })
       setError(translate('error.save'))
       return false
     }
-  }, [client, key, translate])
+  }, [client, key, matchId, apply, translate])
 
   /** The sheet as it stands, read from the cache rather than from a render's closure:
    *  two taps in the same tick must not both start from the same game. */

@@ -3,7 +3,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useMatch } from './useMatch'
 import { doc } from '../test/fakeApi'
 import { saveMatch } from '../persistence/repositories'
-import type { Match } from '../domain/types'
+import { subscribeBundle, type SpectatorBundle } from './spectator'
+import type { GameEvent, Match } from '../domain/types'
+
+/* The real `subscribeBundle`, spied on: the tests below read the callback the hook gave
+   it, to play the part of the live stream. Every other test still gets the real thing. */
+vi.mock('./spectator', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./spectator')>()
+  return { ...actual, subscribeBundle: vi.fn(actual.subscribeBundle) }
+})
+const streamCallback = () => vi.mocked(subscribeBundle).mock.calls.at(-1)![1]
 
 const seed = (): Match => ({
   id: 'm1', meta: { championshipLabel: 'PRM', clubId: 'a', opponentId: 'b' },
@@ -130,5 +139,32 @@ describe('useMatch', () => {
     expect(result.current.match!.events.map((e) => e.type)).toEqual(['PERIOD_END', 'PERIOD_START'])
     const saved = doc<Match>('match', 'm1')
     expect(saved!.events.map((e) => e.type)).toEqual(['PERIOD_END', 'PERIOD_START'])
+  })
+
+  it('a stream message with another device\'s event shows on the screen', async () => {
+    const { result } = renderHook(() => useMatch('m1'))
+    await waitFor(() => expect(result.current.match).not.toBeNull())
+    const theirs: GameEvent = { id: 'theirs', type: 'PERIOD_START', wallClock: 0, period: 1, gameClock: 600 }
+    const bundle = { match: { ...result.current.match!, events: [theirs] }, players: [], teamNames: { A: 'A', B: 'B' } } as SpectatorBundle
+    act(() => streamCallback()(bundle))
+    // React Query tells its observers on a later tick, hence the wait.
+    await waitFor(() => expect(result.current.match!.events.map((e) => e.id)).toEqual(['theirs']))
+  })
+
+  it('two taps in one act, the first write refused: only the first event leaves', async () => {
+    const { result } = renderHook(() => useMatch('m1'))
+    await waitFor(() => expect(result.current.match).not.toBeNull())
+
+    const put = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('coupé'))
+    await act(async () => {
+      await Promise.all([
+        result.current.dispatch({ type: 'PERIOD_END', period: 1, gameClock: 0 }),
+        result.current.dispatch({ type: 'PERIOD_START', period: 2, gameClock: 600 }),
+      ])
+    })
+    put.mockRestore()
+
+    expect(result.current.match!.events.map((e) => e.type)).toEqual(['PERIOD_START'])
+    expect(doc<Match>('match', 'm1')!.events.map((e) => e.type)).toEqual(['PERIOD_START'])
   })
 })

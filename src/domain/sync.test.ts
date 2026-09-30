@@ -22,17 +22,19 @@ describe('mergeSheet', () => {
     expect(pending).toEqual(p)
   })
 
-  it('forgets a pending write once the server shows it', () => {
+  it('forgets an added event once the server shows it, and keeps the archived ids hidden', () => {
     const p = track(NO_PENDING, [ev('mine')], ['a'])
     const { match, pending } = mergeSheet(sheet('b', 'mine'), p)
     expect(ids(match)).toEqual(['b', 'mine'])
-    expect(pending).toEqual(NO_PENDING)
+    expect(pending).toEqual({ added: [], archived: ['a'] })
   })
 
   it('an undo of an event not yet acknowledged cancels it locally', () => {
     const p = track(track(NO_PENDING, [ev('mine')], []), [], ['mine'])
-    expect(ids(mergeSheet(sheet('a'), p).match)).toEqual(['a'])
-    expect(ids(mergeSheet(sheet('a', 'mine'), p).match)).toEqual(['a'])
+    // The add has not landed yet, then it has but the archive has not: two messages in a row.
+    const first = mergeSheet(sheet('a'), p)
+    expect(ids(first.match)).toEqual(['a'])
+    expect(ids(mergeSheet(sheet('a', 'mine'), first.pending).match)).toEqual(['a'])
   })
 
   it('untrack drops a failed write', () => {
@@ -45,16 +47,26 @@ describe('revertWrite', () => {
   it('removes only the events that failed, even with others added since', () => {
     const previous = sheet('a')
     const current = sheet('a', 'failed', 'later')
-    expect(ids(revertWrite(current, previous, [ev('failed')], []))).toEqual(['a', 'later'])
+    expect(ids(revertWrite(current, previous, sheet('a', 'failed'), [ev('failed')], []))).toEqual(['a', 'later'])
   })
 
   it('puts an archived event back where it was', () => {
     const previous = sheet('a', 'b', 'c')
-    expect(ids(revertWrite(sheet('a', 'c', 'later'), previous, [], ['b']))).toEqual(['a', 'b', 'c', 'later'])
+    expect(ids(revertWrite(sheet('a', 'c', 'later'), previous, sheet('a', 'c'), [], ['b']))).toEqual(['a', 'b', 'c', 'later'])
   })
 
-  it('restores the head', () => {
+  it('restores the head when the failed write changed it', () => {
     const previous = sheet('a')
-    expect(revertWrite({ ...previous, status: 'finished' }, previous, [], []).status).toBe('live')
+    const next: Match = { ...previous, status: 'finished' }
+    expect(revertWrite(next, previous, next, [], []).status).toBe('live')
+  })
+
+  it('keeps a head change from elsewhere when the failed write was only events', () => {
+    const previous = sheet('a')
+    const next = sheet('a', 'failed')
+    const current: Match = { ...next, status: 'finished' }
+    const reverted = revertWrite(current, previous, next, [ev('failed')], [])
+    expect(reverted.status).toBe('finished')
+    expect(ids(reverted)).toEqual(['a'])
   })
 })

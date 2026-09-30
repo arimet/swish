@@ -33,20 +33,23 @@ export function untrack(p: Pending, add: GameEvent[], archive: string[]): Pendin
 /**
  * The sheet a server message says, with this device's pending writes laid over it.
  *
- * A write stays pending until a message *shows* it — not until its request answers.
- * A message computed a moment before the write landed would otherwise take the basket
- * off the scoreboard for a second, which at the table reads as "the app lost it".
+ * An added event stays pending until a message *shows* it — not until its request
+ * answers. A message computed a moment before the write landed would otherwise take the
+ * basket off the scoreboard for a second, which at the table reads as "the app lost it".
+ *
+ * An archived id is never forgotten, not even when a message does not show it: for an
+ * add followed by its undo, "not shown" may only mean the add has not landed yet, and the
+ * next message — add landed, archive not yet — would bring the basket back for a moment.
+ * Ids are unique and never un-archived, so keeping them hidden is always right;
+ * `untrack` removes them when the write fails.
  */
 export function mergeSheet(server: Match, p: Pending): { match: Match; pending: Pending } {
   const onServer = new Set(server.events.map((e) => e.id))
-  const pending: Pending = {
-    added: p.added.filter((e) => !onServer.has(e.id)),
-    archived: p.archived.filter((id) => onServer.has(id)),
-  }
-  const hidden = new Set([...p.archived])
+  const added = p.added.filter((e) => !onServer.has(e.id))
+  const hidden = new Set(p.archived)
   return {
-    pending: pending.added.length === p.added.length && pending.archived.length === p.archived.length ? p : pending,
-    match: { ...server, events: [...server.events, ...pending.added].filter((e) => !hidden.has(e.id)) },
+    pending: added.length === p.added.length ? p : { ...p, added },
+    match: { ...server, events: [...server.events, ...added].filter((e) => !hidden.has(e.id)) },
   }
 }
 
@@ -56,9 +59,10 @@ export function mergeSheet(server: Match, p: Pending): { match: Match; pending: 
  * Restoring the whole previous sheet would also take away what arrived since — another
  * tap, another device's basket. So only this write's events leave, only its archived
  * events come back (each after the event that preceded it), and the head returns to
- * what it was.
+ * what it was — but only if this write changed it, so a head change that arrived from
+ * elsewhere in the meantime stays.
  */
-export function revertWrite(current: Match, previous: Match, add: GameEvent[], archive: string[]): Match {
+export function revertWrite(current: Match, previous: Match, next: Match, add: GameEvent[], archive: string[]): Match {
   const added = new Set(add.map((e) => e.id))
   const gone = new Set(archive)
   let events = current.events.filter((e) => !added.has(e.id))
@@ -67,5 +71,7 @@ export function revertWrite(current: Match, previous: Match, add: GameEvent[], a
     const after = i > 0 ? events.findIndex((x) => x.id === previous.events[i - 1].id) : -1
     events = [...events.slice(0, after + 1), e, ...events.slice(after + 1)]
   })
+  const head = (m: Match) => JSON.stringify({ ...m, events: undefined })
+  if (head(previous) === head(next)) return { ...current, events }
   return { ...current, meta: previous.meta, status: previous.status, roster: previous.roster, events }
 }
