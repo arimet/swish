@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from '../../test/render'
-import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { cadre, ShotChart, ShotPicker, ZONE_PATH } from './ShotCourt'
 import type { Shot } from '../../domain/shotchart'
@@ -29,13 +28,6 @@ describe('ShotPicker', () => {
     fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 400, clientY: -20 })
     expect(onPick.mock.calls[0][0]).toEqual({ x: 1, y: 0 })
   })
-
-  it('offers one button per zone for keyboard entry', async () => {
-    const onPick = vi.fn()
-    render(<ShotPicker onPick={onPick} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Corner gauche' }))
-    expect(onPick).toHaveBeenCalledWith({ x: 0.03, y: 0.12 })
-  })
 })
 
 describe('ShotPicker — confirmation', () => {
@@ -57,14 +49,20 @@ describe('ShotPicker — confirmation', () => {
     expect(screen.getByRole('status')).toHaveTextContent('2 PTS · Raquette')
   })
 
-  it('keeps taking taps while a shot is placed: a new one moves it', async () => {
+  it('keeps taking taps while a shot is placed: a new one moves it', () => {
     // Recording is the dialog's "Validate": a second tap here is a correction of the
     // spot, not a second shot.
     const onPick = vi.fn()
     render(<ShotPicker onPick={onPick} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: '2 PTS · Raquette', made: true }} />)
     fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 28 })
-    await userEvent.click(screen.getByRole('button', { name: 'Corner gauche' }))
+    fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 20, clientY: 28 })
     expect(onPick).toHaveBeenCalledTimes(2)
+  })
+
+  it('no longer lays zone buttons under the court', () => {
+    render(<ShotPicker onPick={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: 'Corner gauche' })).not.toBeInTheDocument()
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
   })
 
   it('buzzes the device where the browser allows it', () => {

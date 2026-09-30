@@ -1,7 +1,7 @@
-import { render, screen, waitFor, within } from '../../test/render'
+import { fireEvent, render, screen, waitFor, within } from '../../test/render'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LiveMatch } from './LiveMatch'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { getMatch, saveSheet, savePlayer, saveTeam } from '../../persistence/repositories'
@@ -25,6 +25,8 @@ beforeEach(async () => {
   }
   await saveSheet(null, m)
 })
+
+afterEach(() => { vi.restoreAllMocks() })
 
 const renderLive = () =>
   render(<AuthProvider><MemoryRouter><LiveMatch matchId={MATCH_ID} onFinish={vi.fn()} /></MemoryRouter></AuthProvider>)
@@ -110,6 +112,11 @@ describe('the full run', () => {
     render(<AuthProvider><MemoryRouter><LiveMatch matchId={ID} onFinish={onFinish} /></MemoryRouter></AuthProvider>)
 
   it('starting five → located basket → missed shot → substitution → finish', async () => {
+    // jsdom computes no layout: the court's box is pinned to 300×280, so a tap at
+    // (150, 42) lands in the paint and one at (150, 252) behind the three-point line.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+      left: 0, top: 0, width: 300, height: 280, right: 300, bottom: 280, x: 0, y: 0, toJSON: () => ({}),
+    } as DOMRect)
     const onFinish = vi.fn()
     renderE2E(onFinish)
 
@@ -134,7 +141,7 @@ describe('the full run', () => {
 
     // 3. A two-point basket inside from one of our players, with its shot spot
     await userEvent.click(screen.getByRole('button', { name: /NOM0/ }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Raquette' }))
+    fireEvent.click(await screen.findByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 42 })
     await userEvent.click(screen.getByRole('button', { name: 'Valider le tir' }))
     await waitFor(async () => {
       const s = await getMatch(ID)
@@ -155,7 +162,7 @@ describe('the full run', () => {
     await userEvent.keyboard('{Escape}') // closes the dialog before opening another
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /NOM1/ }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Aile / axe à 3 pts' }))
+    fireEvent.click(await screen.findByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 252 })
     await userEvent.click(screen.getByRole('button', { name: 'Valider le tir' }))
     await waitFor(async () => {
       const s = await getMatch(ID)
@@ -172,7 +179,7 @@ describe('the full run', () => {
     const scoreBefore = (await getMatch(ID))!.events.filter((e) => e.type === 'SCORE').length
     await userEvent.click(screen.getByRole('button', { name: /NOM2/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Manqué' }))
-    await userEvent.click(await screen.findByRole('button', { name: 'Raquette' }))
+    fireEvent.click(await screen.findByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 42 })
     await userEvent.click(screen.getByRole('button', { name: 'Valider le tir' }))
     await waitFor(async () => {
       const s = await getMatch(ID)
