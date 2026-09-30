@@ -36,9 +36,8 @@ export const pool = url ? new Pool({ connectionString: url, max: 1 }) : null
  */
 pool?.on('error', (e) => { console.error('[swish] Postgres connection lost:', e.message) })
 
-/** The kinds the database accepts. Both routes check against this list: an unknown
- *  kind is a client bug or a probe, never a document to store. */
-export const KINDS = new Set(['team', 'player', 'match', 'result', 'convocation', 'training', 'play', 'message'])
+/** The kinds the database accepts: one per store in `_rows/`. */
+export { isKind } from './_rows/index.js'
 
 /** The write token. **No** `VITE_` prefix: it must never enter the bundle, unlike
  *  the three access codes, which are readable in the browser's tools. That is the

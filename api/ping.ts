@@ -11,7 +11,7 @@ import { pool, preamble } from './_db.js'
  * playing in June, opens Swish again in September, and between the two nothing has
  * touched the database — the deletion would be entirely legitimate and entirely fatal.
  *
- * So `vercel.json` calls this route once a day. It reads one row from `documents`
+ * So `vercel.json` calls this route once a day. It reads one row from `teams`
  * rather than answering `select 1`: the point is to prove the **data** is still in use,
  * not that a connection can be opened, and a query that never touches the table is a
  * keepalive that might not count as one.
@@ -22,6 +22,6 @@ import { pool, preamble } from './_db.js'
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (preamble(req, res, 'GET')) return
-  const { rowCount } = await pool!.query('select 1 from documents limit 1')
+  const { rowCount } = await pool!.query('select 1 from teams limit 1')
   res.status(200).json({ ok: true, rows: rowCount })
 }

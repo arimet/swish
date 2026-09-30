@@ -1,13 +1,12 @@
 /**
  * The database, from a terminal.
  *
- *   node scripts/db.mjs init    — create the table (idempotent)
+ *   node scripts/db.mjs init    — apply the migrations (idempotent)
  *   node scripts/db.mjs seed    — fill it with the demo season
  *   node scripts/db.mjs reset   — drop it, re-create it, re-seed it
  *
- * There is nothing else to run: the application has one table and no migrations.
- * When the shape of a document changes, the answer while this project is young is
- * `reset`, not a migration nobody will ever replay.
+ * The schema is the numbered files in `db/migrations/`, applied once each
+ * (`api/_rows/migrate.ts`). `reset` drops everything and re-applies them.
  *
  * Plain `.mjs`, no build step, and **no new dependency**: `pg` already talks to the
  * database for `api/`, and Vite already compiles TypeScript for the application. The
@@ -16,11 +15,8 @@
  * trick `dev-api.ts` uses to serve `api/` inside the dev server. One definition of
  * the demo data, two ways in.
  */
-import { readFileSync } from 'node:fs'
 import { createServer, loadEnv } from 'vite'
 import pg from 'pg'
-
-const KINDS = ['team', 'player', 'match', 'result', 'convocation', 'training', 'play', 'message']
 
 const command = process.argv[2]
 if (!['init', 'seed', 'reset'].includes(command)) {
@@ -41,56 +37,47 @@ if (!connectionString) {
 const client = new pg.Client({ connectionString })
 await client.connect()
 
+// The runner and the stores are TypeScript, in `api/`. Loaded through Vite's SSR
+// loader, like the seed: one definition of the schema and of the mapping, whoever
+// writes.
+const vite = await createServer({ server: { middlewareMode: true }, logLevel: 'warn' })
 try {
+  const { migrate, dropAll } = await vite.ssrLoadModule('/api/_rows/migrate.ts')
   if (command === 'reset') {
-    // Deliberately destructive, and the name says so. This is the command for a
-    // project whose documents are still moving.
-    await client.query('drop table if exists documents')
-    console.log('· table dropped')
+    await dropAll(client)
+    console.log('· schema dropped')
   }
-
-  // Every command applies the schema, `seed` included: it is `create table if not
-  // exists`, so it costs nothing on an existing table, and without it `db:seed` on a
-  // fresh database failed with a raw Postgres stack trace — on the one command
-  // someone is most likely to run first.
-  await client.query(readFileSync('db/schema.sql', 'utf8'))
-  console.log('· schema applied')
+  const applied = await migrate(client)
+  console.log(`· migrations applied: ${applied.length ? applied.join(', ') : 'none'}`)
 
   if (command !== 'init') {
-    const { rows } = await client.query('select count(*)::int as n from documents')
+    const { rows } = await client.query('select count(*)::int as n from teams')
     if (rows[0].n > 0) {
-      console.error(`refusing to seed: the table already holds ${rows[0].n} documents (use \`reset\`)`)
+      console.error(`refusing to seed: the database already holds ${rows[0].n} teams (use \`reset\`)`)
       process.exit(1)
     }
-    console.log(await seed(client), 'documents written')
+    console.log(await seed(client, vite), 'documents written')
   }
 } finally {
+  await vite.close()
   await client.end()
 }
 
-/** Loads the application's own seed module and writes what it hands over. */
-async function seed(db) {
-  const vite = await createServer({ server: { middlewareMode: true }, logLevel: 'warn' })
-  let documents
-  try {
-    const module = await vite.ssrLoadModule('/src/dev/seed.ts')
-    documents = module.seedDocuments()
-    console.log(`· demo club: ${module.SEED_CLUB_ID}`)
-  } finally {
-    await vite.close()
-  }
+/** Writes the demo season through the stores, in one transaction. The order matters:
+ *  a player needs its team, a game its players, an event its game. */
+async function seed(db, vite) {
+  const { seedDocuments, SEED_CLUB_ID } = await vite.ssrLoadModule('/src/dev/seed.ts')
+  const { store } = await vite.ssrLoadModule('/api/_rows/index.ts')
+  const { writeEvents } = await vite.ssrLoadModule('/api/_rows/events.ts')
+  const ORDER = ['team', 'player', 'play', 'match', 'result', 'convocation', 'training', 'message']
+  const documents = seedDocuments().sort((a, b) => ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind))
+  console.log(`· demo club: ${SEED_CLUB_ID}`)
 
-  // One transaction: a seed that lands half-written leaves games pointing at teams
-  // that do not exist, and no screen can say so.
   await db.query('begin')
   try {
     for (const { kind, id, doc } of documents) {
-      if (!KINDS.includes(kind)) throw new Error(`unknown kind: ${kind}`)
-      await db.query(
-        `insert into documents (kind, id, doc) values ($1, $2, $3)
-         on conflict (kind, id) do update set doc = excluded.doc`,
-        [kind, id, doc],
-      )
+      await store(kind).put(db, id, doc)
+      if (kind === 'match') await writeEvents(db, id, doc.events, [])
     }
     await db.query('commit')
   } catch (e) {

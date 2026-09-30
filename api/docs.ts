@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { pool, preamble, KINDS } from './_db.js'
+import { pool, preamble, isKind } from './_db.js'
+import { store } from './_rows/index.js'
 
 /**
  * Reading the source of truth. One kind at a time, optionally one document.
@@ -28,9 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (preamble(req, res, 'GET')) return
 
   const kind = req.query.kind
-  if (typeof kind !== 'string' || !KINDS.has(kind)) {
-    return res.status(400).json({ error: 'unknown kind' })
-  }
+  if (!isKind(kind)) return res.status(400).json({ error: 'unknown kind' })
   const id = typeof req.query.id === 'string' ? req.query.id : null
 
   // The screens read on every mount and expect the current state: a cached answer
@@ -38,13 +37,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('cache-control', 'no-store')
 
   if (id) {
-    const { rows } = await pool!.query<{ doc: unknown }>(
-      'select doc from documents where kind = $1 and id = $2', [kind, id])
-    if (!rows.length) return res.status(404).json({ error: 'not found' })
-    return res.status(200).json(rows[0].doc)
+    const doc = await store(kind).get(pool!, id)
+    return doc ? res.status(200).json(doc) : res.status(404).json({ error: 'not found' })
   }
-
-  const { rows } = await pool!.query<{ doc: unknown }>(
-    'select doc from documents where kind = $1', [kind])
-  return res.status(200).json(rows.map((r) => r.doc))
+  return res.status(200).json(await store(kind).list(pool!))
 }

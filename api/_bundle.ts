@@ -1,4 +1,5 @@
 import { pool } from './_db.js'
+import { matches } from './_rows/match.js'
 
 /**
  * The spectator bundle: the game, the roster and the two team names — everything
@@ -10,35 +11,23 @@ export interface Bundle {
   teamNames: { A: string; B: string }
 }
 
-interface Row { doc: Record<string, unknown> }
-
 export async function bundle(id: string): Promise<Bundle | null> {
   if (!pool) return null
+  const match = await matches.get(pool, id)
+  if (!match) return null
+  const { clubId, opponentId } = match.meta
 
-  const { rows: m } = await pool.query<Row>(
-    "select doc from documents where kind = 'match' and id = $1", [id])
-  if (!m.length) return null
-
-  const match = m[0].doc
-  const meta = (match.meta ?? {}) as { clubId?: string; opponentId?: string }
-  const clubId = meta.clubId ?? ''
-  const opponentId = meta.opponentId ?? ''
-
+  // The club's current roster, plus anyone on this sheet who has since been archived:
+  // a spectator reading an old game still sees who scored.
   const [roster, teams] = await Promise.all([
-    pool.query<Row>(
-      "select doc from documents where kind = 'player' and doc ->> 'teamId' = $1", [clubId]),
-    pool.query<Row>(
-      "select doc from documents where kind = 'team' and id = any($1::text[])", [[clubId, opponentId]]),
+    pool.query<Record<string, unknown>>(
+      `select id, team_id as "teamId", number, last_name as "lastName", first_name as "firstName"
+       from players where team_id = $1 and (archived_at is null or id = any($2::text[]))`, [clubId, match.roster]),
+    pool.query<{ id: string; name: string }>('select id, name from teams where id = any($1::text[])', [[clubId, opponentId]]),
   ])
+  const name = (tid: string) => teams.rows.find((r) => r.id === tid)?.name ?? ''
 
-  const name = (tid: string) =>
-    (teams.rows.find((r) => r.doc.id === tid)?.doc.name as string | undefined) ?? ''
-
-  return {
-    match,
-    players: roster.rows.map((r) => publicPlayer(r.doc)),
-    teamNames: { A: name(clubId), B: name(opponentId) },
-  }
+  return { match, players: roster.rows.map(publicPlayer), teamNames: { A: name(clubId), B: name(opponentId) } }
 }
 
 /**
