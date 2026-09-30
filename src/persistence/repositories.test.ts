@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { count } from '../test/fakeApi'
 import { saveTeam, listTeams, saveMatch, saveSheet, getMatch, listMatches, deleteMatch, deleteTeam, saveResult, listResults, savePlayer, deletePlayer, saveTraining, listTrainings, saveConvocation, getConvocation, savePlay, listPlays, getPlay, deletePlay, deleteMatchesWhere, clearClubStats, deleteAllResults, deleteTrainingsOfClub, deletePlaysOfClub, wipeAll, getMessage, saveMessage, deleteMessage } from './repositories'
 import { newPlay } from '../domain/plays'
@@ -38,6 +38,20 @@ describe('repositories', () => {
     expect((await getMatch('m3'))?.events.map((e) => e.id)).toEqual(['e1', 'e2'])
     await saveSheet(scored, { ...scored, events: [e1], status: 'finished' })
     expect(await getMatch('m3')).toMatchObject({ status: 'finished', events: [e1] })
+  })
+  it('sends no head when only the events changed', async () => {
+    // The guarantee that a device scoring a basket cannot overwrite the status another
+    // device just wrote: an unchanged head is never re-sent.
+    const m = match('m4')
+    await saveSheet(null, m)
+    const spy = vi.spyOn(globalThis, 'fetch')
+    try {
+      const e1 = { id: 'e1', type: 'PERIOD_START' as const, wallClock: 0, period: 1, gameClock: 600 }
+      await saveSheet(m, { ...m, events: [e1] })
+      const urls = spy.mock.calls.map(([u]) => String(u))
+      expect(urls).toContain('/api/match/m4/events')
+      expect(urls.filter((u) => u.includes('/api/mutate'))).toEqual([])
+    } finally { spy.mockRestore() }
   })
   it('deletes entered results mentioning a deleted team, on either side', async () => {
     await saveTeam({ id: 'ta', name: 'VIGNOT' })

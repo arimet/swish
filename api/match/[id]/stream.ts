@@ -36,13 +36,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // number. Only when it moves — an event added or archived, the game rewritten — is
   // the bundle built and sent. Building it every turn cost three queries and a
   // serialisation per viewer per second and a half, to find out nothing had changed.
+  // Read through `active_matches`, so an archived game, which has no bundle, pings.
   let last: string | null = null
   res.write(': ok\n\n')
 
   const start = Date.now()
   while (open && Date.now() - start < WINDOW_MS) {
     try {
-      const { rows } = await pool.query<{ rev: string }>('select rev from matches where id = $1', [id])
+      const { rows } = await pool.query<{ rev: string }>('select rev from active_matches where id = $1', [id])
       const rev = rows[0]?.rev ?? null
       if (rev !== null && rev !== last) {
         const p = await bundle(id)

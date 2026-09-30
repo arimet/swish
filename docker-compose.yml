@@ -4,12 +4,12 @@
 #   docker compose up -d
 #   pnpm db:reset
 #
-# Then, in a `.env`:
+# Then, in a `.env` (see `.env.example`):
 #   DATABASE_URL=postgres://swish:swish@localhost:5433/swish
-#   SYNC_WRITE_TOKEN=dev
-#   VITE_SYNC_URL=/api
+#   WRITE_TOKEN=<any long random string>
 #
-# Without these variables, `pnpm dev` ignores all of it and the app stays 100% local.
+# Without `DATABASE_URL` the application has nothing to read or write: the database
+# is its only store.
 
 services:
   db:
