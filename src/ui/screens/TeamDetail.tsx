@@ -3,8 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { newId } from '../../domain/ids'
 import { savePlayer, deletePlayer, deleteTeam, saveTeam } from '../../persistence/repositories'
 import { useMatches, usePlayers, useTeam, useTeamsById } from '../../persistence/queries'
-import { teamRecord, teamMatches, teamScorers } from '../../domain/teamRecord'
-import type { Player } from '../../domain/types'
+import { teamRecord, teamMatches, teamScorers, type TeamMatchLine } from '../../domain/teamRecord'
+import type { Player, Team } from '../../domain/types'
 import { C, NumBadge, Panel, TeamBadge, bd, fmtDate } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
@@ -105,6 +105,7 @@ export function TeamDetail() {
   const rec = teamRecord(id, matches)
   const lines = teamMatches(id, matches)
   const upcoming = lines.filter((l) => l.match.status !== 'finished')
+  const played = lines.filter((l) => l.match.status === 'finished')
   const scorers = [...teamScorers(id, matches).entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
   const playerById = Object.fromEntries(players.map((p) => [p.id, p]))
   const diff = rec.pointsFor - rec.pointsAgainst
@@ -146,31 +147,11 @@ export function TeamDetail() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px] [&>*]:min-w-0">
         <div className="space-y-6">
-          {lines.length > 0 && <Panel title={translate('team.recentGames')}>
-            {lines.length === 0 ? (
-              <Empty>{translate('team.noGame')}</Empty>
-            ) : (
-              <ul className="space-y-1.5">
-                {lines.slice(0, 8).map((l) => {
-                  const opp = teamsById[l.opponentId]?.name ?? translate('match.opponent')
-                  const f = fmtDate(l.match.meta.date)
-                  const to = l.match.status === 'finished' ? `/match/${l.match.id}/summary` : l.match.status === 'live' ? `/match/${l.match.id}/live` : `/match/${l.match.id}`
-                  return (
-                    <li key={l.match.id}>
-                      <Link to={to} className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-[var(--c-hover)]" style={{ background: C.panel }}>
-                        {l.result && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[12px] font-black" style={{ background: l.result === 'V' ? C.greenBg : C.dangerBg, color: l.result === 'V' ? C.green : C.danger }}>{l.result}</span>}
-                        {!l.result && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[12px] font-black" style={{ background: C.amberBg, color: C.amber }}>·</span>}
-                        <TeamBadge id={l.opponentId} name={opp} size="h-7 w-7 text-[12px]" />
-                        <span className="min-w-0 flex-1 truncate text-sm font-bold">{opp}</span>
-                        <span className="shrink-0 text-[12px] font-semibold" style={{ color: C.faint }}>{f.long || '—'}</span>
-                        <span className="w-16 shrink-0 text-right text-sm font-black tabular-nums">{l.scored === null ? '—' : `${l.scored}–${l.conceded}`}</span>
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </Panel>}
+          {/* What is coming first, in calendar order: the volunteer opens their team to
+              know what is next, and a list sorted newest date first showed the end of
+              the season — May's games — before this weekend's. */}
+          {upcoming.length > 0 && <Panel title={translate('team.upcomingGames')}><GameList lines={[...upcoming].reverse().slice(0, 5)} teamsById={teamsById} /></Panel>}
+          {played.length > 0 && <Panel title={translate('team.recentGames')}><GameList lines={played.slice(0, 5)} teamsById={teamsById} /></Panel>}
 
           {scorers.length > 0 && <Panel title={translate('dashboard.topScorers')}>
             {scorers.length === 0 ? (
@@ -316,4 +297,29 @@ function StatCard({ label, value, hint, accent }: { label: string; value: string
 }
 function Empty({ children }: { children: ReactNode }) {
   return <p className="py-6 text-center text-sm" style={{ color: C.muted }}>{children}</p>
+}
+
+function GameList({ lines, teamsById }: { lines: TeamMatchLine[]; teamsById: Record<string, Team> }) {
+  const translate = useT()
+  return (
+    <ul className="space-y-1.5">
+      {lines.map((l) => {
+        const opp = teamsById[l.opponentId]?.name ?? translate('match.opponent')
+        const f = fmtDate(l.match.meta.date)
+        const to = l.match.status === 'finished' ? `/match/${l.match.id}/summary` : l.match.status === 'live' ? `/match/${l.match.id}/live` : `/match/${l.match.id}`
+        return (
+          <li key={l.match.id}>
+            <Link to={to} className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-[var(--c-hover)]" style={{ background: C.panel }}>
+              {l.result && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[12px] font-black" style={{ background: l.result === 'V' ? C.greenBg : C.dangerBg, color: l.result === 'V' ? C.green : C.danger }}>{l.result}</span>}
+              {!l.result && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[12px] font-black" style={{ background: C.amberBg, color: C.amber }}>·</span>}
+              <TeamBadge id={l.opponentId} name={opp} size="h-7 w-7 text-[12px]" />
+              <span className="min-w-0 flex-1 truncate text-sm font-bold">{opp}</span>
+              <span className="shrink-0 text-[12px] font-semibold" style={{ color: C.faint }}>{f.long || '—'}</span>
+              <span className="w-16 shrink-0 text-right text-sm font-black tabular-nums">{l.scored === null ? '—' : `${l.scored}–${l.conceded}`}</span>
+            </Link>
+          </li>
+        )
+      })}
+    </ul>
+  )
 }

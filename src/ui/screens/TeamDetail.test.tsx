@@ -178,3 +178,22 @@ describe('TeamDetail — top scorers', () => {
     // no point scored, it would render its empty state and the query would fail.
   })
 })
+
+describe('TeamDetail — games', () => {
+  it('lists the next games soonest first, apart from the results', async () => {
+    await saveTeam({ id: 'tb', name: 'VERDUN' })
+    const game = (id: string, date: string, status: 'setup' | 'finished') => saveSheet(null, {
+      id, meta: { championshipLabel: 'Poule A', date, clubId: 'ta', opponentId: 'tb' }, roster: [], status, events: [],
+    } as Parameters<typeof saveSheet>[1])
+    await game('m-may', '2027-05-23', 'setup')
+    await game('m-oct', '2026-10-11', 'setup')
+    await game('m-sep', '2026-09-27', 'finished')
+    renderTeam()
+    const panneau = (await screen.findByRole('heading', { name: 'Prochains matchs' })).closest('section')!
+    // This weekend's game before May's: sorted newest date first, the end of the
+    // season came first.
+    await waitFor(() => expect(within(panneau).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/match/m-oct', '/match/m-may']))
+    const resultats = (await screen.findByRole('heading', { name: 'Derniers matchs' })).closest('section')!
+    expect(within(resultats).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/match/m-sep/summary'])
+  })
+})
