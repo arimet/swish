@@ -60,10 +60,12 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
   const [selected, setSelected] = useState<string | null>(null)
   /** Modifying: the player the action goes to, preselected on the current one. */
   const [who, setWho] = useState<string | null>(null)
+  /** Deleting asks once, on the row itself: an entry gone takes points or a foul with it. */
+  const [confirming, setConfirming] = useState(false)
   const listed = events.filter((e) => LISTED.includes(e.type)).reverse()
   const chosen = listed.find((e) => e.id === selected) ?? null
 
-  const close = () => { setSelected(null); setWho(null); onClose() }
+  const close = () => { setSelected(null); setWho(null); setConfirming(false); onClose() }
   const name = (id?: string) => {
     const p = id ? players[id] : undefined
     return p ? `${p.number} ${p.lastName}` : translate('common.playerWord')
@@ -115,7 +117,7 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
               const on = e.id === selected
               return (
                 <li key={e.id} className="rounded-xl" style={{ background: on ? 'var(--c-panel)' : 'var(--c-card2)' }}>
-                  <button onClick={() => setSelected(on ? null : e.id)} aria-expanded={on}
+                  <button onClick={() => { setSelected(on ? null : e.id); setConfirming(false) }} aria-expanded={on}
                     className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
                     <span className="nums w-16 shrink-0 text-[12px] font-bold text-[var(--c-muted)]">{e.period <= 4 ? `Q${e.period}` : `P${e.period - 4}`} · {fmt(e.gameClock)}</span>
                     <span className="min-w-0 flex-1">
@@ -123,9 +125,20 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
                       <span className="block truncate text-[12px] text-[var(--c-muted)]">{d.who}</span>
                     </span>
                   </button>
-                  {on && (
+                  {on && confirming && (
+                    <div className="px-3 pb-3">
+                      <p className="text-[13px] font-semibold">{translate('history.deleteConfirm')}</p>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <button onClick={() => setConfirming(false)}
+                          className="rounded-xl border border-[var(--c-border)] bg-[var(--c-card)] py-2.5 text-sm font-bold">{translate('common.cancel')}</button>
+                        <button onClick={() => { onDelete(e.id); setSelected(null); setConfirming(false) }}
+                          className="rounded-xl bg-[var(--c-danger-fill)] py-2.5 text-sm font-black text-[var(--c-on-danger)]">{translate('history.deleteYes')}</button>
+                      </div>
+                    </div>
+                  )}
+                  {on && !confirming && (
                     <div className={`grid gap-2 px-3 pb-3 ${onModify && modifiable(e) ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                      <button onClick={() => { onDelete(e.id); setSelected(null) }}
+                      <button onClick={() => setConfirming(true)}
                         className="rounded-xl bg-[var(--c-danger-bg)] py-2.5 text-sm font-bold text-[var(--c-danger)] transition hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)]">
                         {translate('history.delete')}
                       </button>

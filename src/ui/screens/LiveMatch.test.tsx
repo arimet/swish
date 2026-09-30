@@ -61,9 +61,29 @@ describe('LiveMatch', () => {
     expect(rows.map((r) => r.textContent)).toEqual([expect.stringContaining('Panier (+3)'), expect.stringContaining('Panier (+2)')])
     await userEvent.click(rows[1])
     await userEvent.click(within(history).getByRole('button', { name: 'Supprimer' }))
+    // Asked once, on the row: nothing leaves before the yes.
+    expect((await getMatch(MATCH_ID))!.events.filter((e) => e.type === 'SCORE')).toHaveLength(2)
+    await userEvent.click(within(history).getByRole('button', { name: 'Oui, supprimer' }))
     await waitFor(async () => {
       const opp = (await getMatch(MATCH_ID))!.events.filter((e) => e.type === 'SCORE' && e.team === 'B')
       expect(opp.map((e) => e.type === 'SCORE' && e.kind)).toEqual(['3'])
+    })
+  })
+
+  it('asks before moving on to the next period, and says what it resets', async () => {
+    renderLive()
+    await userEvent.click(await screen.findByRole('button', { name: 'Période →' }))
+    const confirm = await screen.findByRole('dialog')
+    expect(confirm).toHaveTextContent('Passer à la période 2 ?')
+    expect(confirm).toHaveTextContent('Le chrono sera remis à 10:00')
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Annuler' }))
+    expect((await getMatch(MATCH_ID))!.events.some((e) => e.type === 'PERIOD_END')).toBe(false)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Période →' }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Période →' }))
+    await waitFor(async () => {
+      const events = (await getMatch(MATCH_ID))!.events
+      expect(events.filter((e) => e.type === 'PERIOD_START').map((e) => e.period)).toEqual([2])
     })
   })
 

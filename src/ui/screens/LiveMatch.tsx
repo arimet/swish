@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { GameClock } from '../components/GameClock'
+import { GameClock, fmt } from '../components/GameClock'
 import { TeamPanel } from '../components/TeamPanel'
 import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { ClockEditDialog } from '../components/ClockEditDialog'
@@ -42,6 +42,9 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   const { can, guard } = useAuth()
   const { match, dispatch, dispatchMany, remove, rewrite, finish, error } = useMatch(matchId)
   const [askFinish, setAskFinish] = useState(false)
+  // "Next period" resets the clock and the team fouls: one tap too many is a quarter
+  // lost, so it asks first — unlike the entries, which the history takes back.
+  const [askPeriod, setAskPeriod] = useState(false)
   const { data: players = {} } = usePlayersById(match?.meta.clubId)
   const { data: byId = {} } = useTeamsById()
   const teamNames = {
@@ -195,7 +198,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
             <Link to={`/match/${match.id}/watch`} target="_blank" aria-label={translate('live.spectatorView')} title={translate('live.spectatorView')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><Eye className="h-[18px] w-[18px]" strokeWidth={2} /></Link>
             <SbButton onClick={() => setHistory(true)} title={translate('live.undoTitle')}>{translate('live.undo')}</SbButton>
-            <SbButton onClick={nextPeriod} title={translate('live.periodTitle')}>{translate('live.period')}</SbButton>
+            <SbButton onClick={() => setAskPeriod(true)} title={translate('live.periodTitle')}>{translate('live.period')}</SbButton>
             {/* A gap before the irreversible. "Finish" freezes the score; it sat eight
                 pixels from "Next period", which is the width of a badly placed
                 thumb. */}
@@ -283,6 +286,9 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
           finished game that is not. */}
       <ConfirmDialog open={askFinish} onClose={() => setAskFinish(false)} onConfirm={async () => { if (await finish()) onFinish() }}
         title={translate('live.finishTitle')} message={translate('live.finishText')} confirmLabel={translate('live.finish')} danger />
+      <ConfirmDialog open={askPeriod} onClose={() => setAskPeriod(false)} onConfirm={nextPeriod}
+        title={translate(ls.period + 1 <= 4 ? 'live.periodConfirm' : 'live.overtimeConfirm', { n: ls.period + 1 <= 4 ? ls.period + 1 : ls.period - 3 })}
+        message={translate('live.periodConfirmText', { clock: fmt(periodLength(ls.period + 1)) })} confirmLabel={translate('live.period')} />
       <SubstitutionDialog open={sub} onClose={() => setSub(false)}
         onCourtPlayers={onCourt()} benchPlayers={bench()}
         onSubmit={(pairs) => dispatchMany(pairs.map(([playerOutId, playerInId]) => ({ type: 'SUBSTITUTION', team: 'A', playerOutId, playerInId, period: ls.period, gameClock: seconds })))} />
