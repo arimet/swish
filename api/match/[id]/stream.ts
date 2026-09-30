@@ -13,7 +13,7 @@ import { bundle } from '../../_bundle.js'
 export const config = { maxDuration: 60 }
 
 const WINDOW_MS = 50_000
-const STEP_MS = 1500
+const STEP_MS = 1000
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -32,20 +32,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let open = true
   req.on('close', () => { open = false })
 
-  // We emit only on a real change. The bundle has to be serialised to be sent
-  // anyway, so comparing the two payloads costs nothing and needs no write counter
-  // in the table.
-  let last = ''
+  // We read the game's `rev` and nothing else, every second: one indexed lookup of a
+  // number. Only when it moves — an event added or archived, the game rewritten — is
+  // the bundle built and sent. Building it every turn cost three queries and a
+  // serialisation per viewer per second and a half, to find out nothing had changed.
+  let last: string | null = null
   res.write(': ok\n\n')
 
   const start = Date.now()
   while (open && Date.now() - start < WINDOW_MS) {
     try {
-      const p = await bundle(id)
-      const next = p ? JSON.stringify(p) : ''
-      if (next && next !== last) {
-        last = next
-        res.write(`data: ${next}\n\n`)
+      const { rows } = await pool.query<{ rev: string }>('select rev from matches where id = $1', [id])
+      const rev = rows[0]?.rev ?? null
+      if (rev !== null && rev !== last) {
+        const p = await bundle(id)
+        if (p) { res.write(`data: ${JSON.stringify(p)}\n\n`); last = rev }
       } else {
         res.write(': ping\n\n')
       }

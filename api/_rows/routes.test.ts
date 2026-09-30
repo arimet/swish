@@ -114,4 +114,26 @@ describe.skipIf(!t.ready)('routes', () => {
     ])
     expect(b!.teamNames).toEqual({ A: 'Club', B: 'Rival' })
   })
+
+  it('the stream sends the game once, then again only when rev moves', async () => {
+    const { mutate, events } = await load()
+    const stream = (await import('../match/[id]/stream.js')).default
+    await call(mutate, { method: 'POST', body: { ops: [
+      { kind: 'team', op: 'put', id: 'a', doc: { id: 'a', name: 'A' } },
+      { kind: 'team', op: 'put', id: 'b', doc: { id: 'b', name: 'B' } },
+      { kind: 'match', op: 'put', id: 'm1', doc: { id: 'm1', meta: { clubId: 'a', opponentId: 'b' }, roster: [], events: [], status: 'live' } },
+    ] } })
+    const sent: string[] = []
+    let close = () => {}
+    const req = { query: { id: 'm1' }, on: (_: string, f: () => void) => { close = f } }
+    const res = { setHeader() {}, writeHead() {}, end() {}, status() { return this }, write: (s: string) => { if (s.startsWith('data:')) sent.push(s) } }
+    const running = stream(req as never, res as never)
+    await new Promise((r) => setTimeout(r, 1500))
+    expect(sent).toHaveLength(1)
+    await call(events, { method: 'POST', query: { id: 'm1' }, body: { add: [{ id: 'e1', type: 'PERIOD_START', wallClock: 1, period: 1, gameClock: 600 }] } })
+    await new Promise((r) => setTimeout(r, 1500))
+    expect(sent).toHaveLength(2)
+    close()
+    await running
+  }, 10_000)
 })
