@@ -23,6 +23,7 @@ describe.skipIf(!t.ready)('routes', () => {
     return {
       docs: (await import('../docs.js')).default,
       mutate: (await import('../mutate.js')).default,
+      bundle: (await import('../_bundle.js')).bundle,
     }
   }
 
@@ -42,6 +43,46 @@ describe.skipIf(!t.ready)('routes', () => {
     expect(broken).toEqual({ status: 400, body: { error: 'players_team_id_fkey' } })
 
     const convocation = await call(mutate, { method: 'POST', body: { ops: [{ kind: 'convocation', op: 'del', id: 'm1' }] } })
-    expect(convocation.status).toBe(400)
+    expect(convocation).toEqual({ status: 400, body: { error: 'convocations cannot be archived on its own' } })
+  })
+
+  it('keeps nothing of a batch whose second op breaks a constraint', async () => {
+    const { docs, mutate } = await load()
+    const res = await call(mutate, { method: 'POST', body: { ops: [
+      { kind: 'team', op: 'put', id: 'z', doc: { id: 'z', name: 'Z' } },
+      { kind: 'player', op: 'put', id: 'p2', doc: { id: 'p2', teamId: 'nope', number: 1, lastName: 'X', firstName: 'Y' } },
+    ] } })
+    expect(res).toEqual({ status: 400, body: { error: 'players_team_id_fkey' } })
+    expect((await call(docs, { method: 'GET', query: { kind: 'team', id: 'z' } })).status).toBe(404)
+  })
+
+  it('projects the spectator bundle: public player fields, archived players only if on the sheet, team names', async () => {
+    const { mutate, bundle } = await load()
+    const put = (kind: string, id: string, doc: unknown) => ({ kind, op: 'put', id, doc })
+    const player = (id: string, number: number, extra = {}) =>
+      put('player', id, { id, teamId: 'a', number, lastName: `L${id}`, firstName: `F${id}`, ...extra })
+    expect((await call(mutate, { method: 'POST', body: { ops: [
+      put('team', 'a', { id: 'a', name: 'Club' }),
+      put('team', 'b', { id: 'b', name: 'Rival' }),
+      player('p1', 4, { license: 'LIC1', birthDate: '2010-01-01', height: 180 }),
+      player('p2', 5),
+      player('p3', 6),
+      put('match', 'm1', {
+        id: 'm1', roster: ['p1', 'p2'], events: [], status: 'live',
+        meta: { clubId: 'a', opponentId: 'b', championshipLabel: 'PRM', date: '2026-10-04', time: '20:30', venue: 'Vignot' },
+      }),
+    ] } })).status).toBe(204)
+    // p2 (on the sheet) and p3 (not on it) leave the club afterwards.
+    expect((await call(mutate, { method: 'POST', body: { ops: [
+      { kind: 'player', op: 'del', id: 'p2' }, { kind: 'player', op: 'del', id: 'p3' },
+    ] } })).status).toBe(204)
+
+    const b = await bundle('m1')
+    const sorted = b!.players.slice().sort((x, y) => (x as { id: string }).id.localeCompare((y as { id: string }).id))
+    expect(sorted).toEqual([
+      { id: 'p1', teamId: 'a', number: 4, lastName: 'Lp1', firstName: 'Fp1' },
+      { id: 'p2', teamId: 'a', number: 5, lastName: 'Lp2', firstName: 'Fp2' },
+    ])
+    expect(b!.teamNames).toEqual({ A: 'Club', B: 'Rival' })
   })
 })
