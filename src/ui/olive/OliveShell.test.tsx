@@ -51,14 +51,18 @@ beforeEach(async () => {
 })
 
 describe('the access entry point', () => {
-  it('states the current role, takes another on entering a code, and locks', async () => {
+  it('states the current role, takes another on entering a code and closes, and locks', async () => {
     renderShell()
     await openAccess()
     expect(await screen.findByText(/accès en cours : visiteur/i)).toBeInTheDocument()
 
     await saisirLeCode('marque')
-    expect(await screen.findByText(/accès en cours : table de marque/i)).toBeInTheDocument()
+    // The code accepted, the dialog closes by itself: the button shows the new role.
+    await waitFor(() => expect(screen.queryByLabelText(/code d.accès/i)).not.toBeInTheDocument())
+    expect(screen.getAllByRole('button', { name: /accès · table de marque/i }).length).toBeGreaterThan(0)
 
+    await openAccess()
+    expect(await screen.findByText(/accès en cours : table de marque/i)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /se verrouiller/i }))
     expect(await screen.findByText(/accès en cours : visiteur/i)).toBeInTheDocument()
   })

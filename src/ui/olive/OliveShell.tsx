@@ -141,9 +141,10 @@ function AccessMenu({ players, compact = false }: { players: Player[]; compact?:
     setCode('')
     if (!obtained) { setError(translate('access.unknownCode')); return }
     setError('')
-    // Only the player code opens the name picker; the others change the role, which
-    // the dialog shows straight away as confirmation.
-    setPicking(obtained === 'player')
+    // Only the player code opens the name picker; the others change the role and close
+    // the dialog — the access button, now showing the new role, is the confirmation.
+    if (obtained === 'player') setPicking(true)
+    else setOpen(false)
   }
 
   return (
