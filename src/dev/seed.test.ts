@@ -1,30 +1,36 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { seedDocuments } from './seed'
 import { mutate, writeEvents } from '../persistence/api'
 import { getConvocation, listMatches, listPlayers, listPlays, listResults, listTeams, listTrainings } from '../persistence/repositories'
-import { playingTimes } from '../domain/playingtime'
-import { nextFixture } from '../domain/fixtures'
 import { folders } from '../domain/plays'
 import { standings } from '../domain/standings'
 import { playerStats } from '../domain/boxscore'
-import { TEAM_FOUL_BONUS } from '../rules/ffbb'
+import { liveState } from '../rules/ffbb'
 import type { Match } from '../domain/types'
 
 /* The season is written the way `scripts/db.mjs seed` writes it: one batch of the
    documents `seedDocuments` hands over, then each game's events through their own
    route, since a game's `put` carries none. Nothing else seeds — the application
-   does not. */
+   does not.
+
+   The clock is pinned to the day the calendar was copied from the federation: the
+   demo plays go to the next session *from today*, and a test that read the real clock
+   would start failing once the season is over. Only `Date` is faked — the fake API's
+   promises must still resolve. */
 beforeEach(async () => {
+  vi.useFakeTimers({ now: new Date('2026-09-30T12:00:00'), toFake: ['Date'] })
   const docs = seedDocuments()
   await mutate(docs.map(({ kind, id, doc }) => ({ kind, op: 'put' as const, id, doc: kind === 'match' ? { ...(doc as Match), events: [] } : doc })))
   for (const { kind, id, doc } of docs) if (kind === 'match') await writeEvents(id, (doc as Match).events, [])
 })
+afterEach(() => { vi.useRealTimers() })
 
 describe('demo data', () => {
   it('creates only the teams that play', async () => {
     const teams = await listTeams()
     const matches = await listMatches()
     const utilisees = new Set(matches.flatMap((m) => [m.meta.clubId, m.meta.opponentId]))
+    expect(teams).toHaveLength(11)
     expect(teams.every((t) => utilisees.has(t.id))).toBe(true)
   })
 
@@ -34,156 +40,52 @@ describe('demo data', () => {
     for (const id of opponents) expect(await listPlayers(id)).toHaveLength(0)
   })
 
-  it('produces rotations, hence credible court time', async () => {
-    const joue = (await listMatches()).find((m) => m.status === 'finished')!
-    const steps = [...playingTimes(joue).values()].filter((t) => t > 0)
-    // Without SUBSTITUTION, only the five starters would have court time.
-    expect(steps.length).toBeGreaterThan(5)
+  it('files the season as published: twenty games, one played, one live, home games at the club', async () => {
+    const matches = await listMatches()
+    expect(matches).toHaveLength(20)
+    expect(matches.filter((m) => m.status === 'finished')).toHaveLength(1)
+    expect(matches.filter((m) => m.status === 'live')).toHaveLength(1)
+    expect(matches.filter((m) => m.status === 'setup')).toHaveLength(18)
+    expect(matches.filter((m) => m.meta.venue === 'SALLE POLYVALENTE DES OUILLONS')).toHaveLength(10)
   })
 
-  it('puts Avenir de Vignot on top, on an equal number of games played', async () => {
-    // FFBB standings count absolute points (W=2, L=1): being top therefore requires
-    // having played as many games as the others. The seed published the results of all
-    // five matchdays while we only have three played, which made first place
-    // arithmetically unreachable — hence the game count checked here, and not only the
-    // rank.
+  it('the game played carries its final score and nothing invented', async () => {
+    const played = (await listMatches()).find((m) => m.status === 'finished')!
+    expect(liveState(played).score).toEqual({ a: 70, b: 62 })
+    // No scorer, no shot, no statistic: the federation publishes the score only.
+    expect(played.events.some((e) => 'playerId' in e && e.playerId)).toBe(false)
+    expect(playerStats(played).every((s) => s.points === 0)).toBe(true)
+  })
+
+  it('opens the live game at tip-off: the named five on court, nothing invented', async () => {
+    const [live] = (await listMatches()).filter((m) => m.status === 'live')
+    const players = await listPlayers(live.meta.clubId)
+    const state = liveState(live)
+    expect(live.meta.date).toBe('2026-10-03')
+    expect(state.score).toEqual({ a: 0, b: 0 })
+    expect(state.onCourt.A.map((id) => players.find((p) => p.id === id)!.number).sort((x, y) => x - y)).toEqual([2, 11, 13, 15, 17])
+  })
+
+  it('gives the standings the federation shows after matchday 1', async () => {
     const [matches, results, teams] = await Promise.all([listMatches(), listResults(), listTeams()])
     const byId = Object.fromEntries(teams.map((t) => [t.id, t]))
     const lines = standings(matches, results, byId)[0].lines
-    expect(lines[0].name).toBe('AVENIR DE VIGNOT')
-    expect(lines[0].wins).toBe(3)
-    expect(lines[0].losses).toBe(0)
-    expect(new Set(lines.map((l) => l.played))).toEqual(new Set([3]))
-    // And top outright: a tie on points broken by the differential would rest on the
-    // luck of the scores, not on an intention.
-    expect(lines[0].pts).toBeGreaterThan(lines[1].pts)
+    expect(lines.slice(0, 4).map((l) => l.name)).toEqual([
+      'CSLB BAR LE DUC - 1', 'ASC CHARNY SUR MEUSE - 2', 'CSLB BAR LE DUC - 2', 'AVENIR DE VIGNOT - 1',
+    ])
+    // All eleven, the three that have not played yet at zero.
+    expect(lines).toHaveLength(11)
+    expect(lines.filter((l) => l.played === 0).map((l) => l.name).sort()).toEqual(
+      ['ASC CHARNY SUR MEUSE - 4', "L'ESPERANCE DE STENAY", 'PAGNY SUR MEUSE BC'])
+    const vignot = lines.find((l) => l.name === 'AVENIR DE VIGNOT - 1')!
+    expect([vignot.wins, vignot.losses, vignot.pts]).toEqual([1, 0, 2])
   })
 
-  it('the starting five is the one the coach named', async () => {
-    const matches = await listMatches()
-    const players = await listPlayers(matches[0].meta.clubId)
-    const five = new Set([2, 11, 13, 15, 17])
-    const match = matches.find((m) => m.events.some((e) => e.type === 'STARTING_FIVE'))!
-    const ev = match.events.find((e) => e.type === 'STARTING_FIVE') as Extract<typeof match.events[number], { type: 'STARTING_FIVE' }>
-    const numeros = ev.playerIds.map((id) => players.find((p) => p.id === id)!.number)
-    expect(new Set(numeros)).toEqual(five)
-  })
-
-  it('distributes the baskets plausibly: BUZZI in front, a credible match sheet', async () => {
-    // Three failed attempts before this one, all invisible without a measurement.
-    // The weighted list grouped by player: `k % length` never left the first block,
-    // and one player took every basket (202 points for a substitute). Interleaved: we
-    // never got past the first two rounds, so the weights changed nothing. And the
-    // allocation counter reset on each of a game's eight segments: the lowest weight was
-    // never
-    // servi, un titulaire finissait à zéro.
-    const matches = await listMatches()
-    const players = await listPlayers(matches[0].meta.clubId)
-    const played = matches.filter((m) => m.status === 'finished')
-    const byPlayer = new Map<string, number>()
-    let total = 0
-    for (const m of played) {
-      for (const s of playerStats(m)) {
-        byPlayer.set(s.playerId, (byPlayer.get(s.playerId) ?? 0) + s.points)
-        total += s.points
-      }
-    }
-    const jersey = (id: string) => players.find((p) => p.id === id)!.number
-    const classe = [...byPlayer.entries()].sort((a, b) => b[1] - a[1])
-
-    // The top scorer is the one the coach named.
-    expect(jersey(classe[0][0])).toBe(11)
-    // He dominates without crushing: a quarter of the team's points is already a lot.
-    expect(classe[0][1] / total).toBeLessThan(0.25)
-    // And the gap from first to last scorer stays that of a match sheet, not that of
-    // an aberration: a ratio of ten meant the weights
-    // étaient trop écartés.
-    const scorers = classe.filter(([, pts]) => pts > 0)
-    expect(classe[0][1] / scorers[scorers.length - 1][1]).toBeLessThan(7)
-    // The bench scores: an allocation that does not reach it is broken.
-    expect(scorers.length).toBeGreaterThanOrEqual(9)
-    // The starting five stay ahead overall — a productive sixth man may pass the fifth
-    // starter, as happens in a real team.
-    const five = new Set([2, 11, 13, 15, 17])
-    expect(classe.slice(0, 5).filter(([id]) => five.has(jersey(id))).length).toBeGreaterThanOrEqual(4)
-  })
-
-  /**
-   * The whole match sheet, and not only its points column.
-   *
-   * Three columns were empty in **every** game — 3PT, BLK, PF — and nothing said so.
-   * The three-point spots existed in the seed but were unreachable (`k % length` over
-   * a list of nine, with five baskets per segment); blocks only went to the fourth
-   * player of the five, because the statistic was chosen by the player's index; and no
-   * foul was ever recorded, so the team counter stayed at zero throughout.
-   *
-   * This test measures the five categories. It has no fine realism requirement — the
-   * weights are invented and can be corrected from the application — but it refuses
-   * zero, which is the one value we know to be wrong.
-   */
-  it('fills the whole match sheet: threes, assists, rebounds, blocks, fouls', async () => {
-    const matches = await listMatches()
-    const players = await listPlayers(matches[0].meta.clubId)
-    const jersey = (id: string) => players.find((p) => p.id === id)!.number
-    const played = matches.filter((m) => m.status === 'finished')
-    expect(played.length).toBeGreaterThan(0)
-
-    for (const m of played) {
-      const stats = playerStats(m)
-      const total = (read: (s: (typeof stats)[number]) => number) => stats.reduce((t, s) => t + read(s), 0)
-
-      // A three is derived from its spot, never declared: a non-zero column therefore
-      // also proves that the seed's spots really do fall behind the line, which no
-      // assertion had to repeat by hand.
-      expect(total((s) => s.threes)).toBeGreaterThan(3)
-      expect(total((s) => s.assists)).toBeGreaterThan(10)
-      expect(total((s) => s.defRebounds)).toBeGreaterThan(total((s) => s.offRebounds))
-      expect(total((s) => s.blocks)).toBeGreaterThan(0)
-      expect(total((s) => s.fouls)).toBeGreaterThan(10)
-
-      // Nobody fouls out: an excluded player leaves the court, while the seed's
-      // rotations still count them present.
-      expect(stats.every((s) => s.fouls < 5)).toBe(true)
-
-      // The roles must read in the figures, otherwise the per-category weights serve no
-      // purpose: the best passer is a guard, the best rebounder a big. A statistic that
-      // followed the player's index in the five would satisfy neither.
-      const best = (read: (s: (typeof stats)[number]) => number) =>
-        jersey([...stats].sort((a, b) => read(b) - read(a))[0].playerId)
-      expect([2, 5]).toContain(best((s) => s.assists))
-      expect([15, 17, 20, 8]).toContain(best((s) => s.defRebounds))
-    }
-
-    // The composed total lands **exactly** on the scores announced. The seed now
-    // composes each segment from shots of three different values; a wrong decomposition
-    // would read as a scoreboard bug, not as a seed bug.
-    const totaux = played.map((m) => playerStats(m).reduce((t, s) => t + s.points, 0)).sort((a, b) => a - b)
-    expect(totaux).toEqual([72, 78, 81])
-
-    // At least one period reaches the bonus (five team fouls under FFBB rules, not
-    // four as in the NBA): the demo must be able to show the pill.
-    const byPeriod = new Map<number, number>()
-    for (const e of played[0].events)
-      if (e.type === 'FOUL' && e.team === 'A') byPeriod.set(e.period, (byPeriod.get(e.period) ?? 0) + 1)
-    expect(Math.max(...byPeriod.values())).toBeGreaterThanOrEqual(TEAM_FOUL_BONUS)
-  })
-
-  it('creates outside results so that the standings make sense', async () => {
+  it('files the other matchday-1 results, none of them ours and none a draw', async () => {
     const results = await listResults()
-    const matches = await listMatches()
-    const clubId = matches[0].meta.clubId
-    // No entered result may concern our own club: our own games are authoritative.
+    const clubId = (await listMatches())[0].meta.clubId
+    expect(results).toHaveLength(3)
     expect(results.every((r) => r.homeId !== clubId && r.awayId !== clubId)).toBe(true)
-    // Every opponent must have played several teams, not only us.
-    const opponents = new Set(matches.map((m) => m.meta.opponentId))
-    for (const id of opponents) {
-      const rencontres = results.filter((r) => r.homeId === id || r.awayId === id).length
-      expect(rencontres).toBeGreaterThanOrEqual(2)
-    }
-  })
-
-  it('produces no draw (a basketball game never ends level)', async () => {
-    const results = await listResults()
     expect(results.every((r) => r.homeScore !== r.awayScore)).toBe(true)
   })
 
@@ -196,32 +98,14 @@ describe('demo data', () => {
     expect(trainings.every((t) => t.clubId === clubId)).toBe(true)
   })
 
-  it('puts the demo call-up on the upcoming game, never on one already played', async () => {
-    const matches = await listMatches()
-    const aVenir = matches.find((m) => m.status === 'setup')!
-    const convocation = await getConvocation(aVenir.id)
-    expect(convocation?.playerIds.length).toBeGreaterThan(0)
+  it('puts the demo call-up on the next game, never on one already played', async () => {
+    const matches = (await listMatches()).sort((a, b) => a.meta.date!.localeCompare(b.meta.date!))
+    const next = matches.find((m) => m.status === 'setup')!
+    expect(next.meta.date).toBe('2026-10-11')
+    expect((await getConvocation(next.id))?.playerIds.length).toBeGreaterThan(0)
     for (const jouee of matches.filter((m) => m.status === 'finished')) {
       expect(await getConvocation(jouee.id)).toBeUndefined()
     }
-  })
-
-  it('the next fixture right after a seed is the game called up, not a training', async () => {
-    // The last matchday's trainings are placed after the game (not before, as on the
-    // other matchdays): otherwise, being closer in time than the game called up, they
-    // would hide the "called up" block for days after a seed — precisely when the demo
-    // is being looked at.
-    const matches = await listMatches()
-    const trainings = await listTrainings()
-    const aVenir = matches.find((m) => m.status === 'setup')!
-    // As on the dashboard (`Dashboard.tsx`): the live game already occupies the
-    // banner, and `nextFixture` does not exclude it itself (that is not its job, the
-    // game is not "finished") — the caller removes it before calling.
-    const fixture = nextFixture(matches.filter((m) => m.status !== 'live'), trainings, new Date())
-    console.log('nextFixture(seedé) =', JSON.stringify(fixture && { kind: fixture.kind, id: fixture.id, date: fixture.date }))
-    expect(fixture?.kind).toBe('match')
-    expect(fixture?.id).toBe(aVenir.id)
-    expect(await getConvocation(fixture!.id)).toBeDefined()
   })
 
   it('the demo holds three plays, one of them on a full court and one with a loose ball', async () => {

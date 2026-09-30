@@ -38,7 +38,14 @@ export function standings(
 
   const ours = new Set<string>()
   for (const m of matches) {
-    if (m.status !== 'finished') continue
+    // A team with a game on the calendar belongs to the league before it has played:
+    // it is listed at zero, as the federation lists it, rather than appearing only
+    // once it has a result.
+    if (m.status !== 'finished') {
+      ensure(leagueLabel(m.meta), m.meta.clubId)
+      ensure(leagueLabel(m.meta), m.meta.opponentId)
+      continue
+    }
     const league = leagueLabel(m.meta)
     const { score } = liveState(m)
     ours.add(fixtureKey(league, m.meta.clubId, m.meta.opponentId, m.meta.date))

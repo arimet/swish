@@ -61,8 +61,11 @@ describe('standings', () => {
     expect(table.lines.slice(0, 2).map((l) => l.id)).toEqual(['a', 'c'])
   })
 
-  it('ignores our unfinished games', () => {
-    const m = { ...our('m1', 'b', 10, 5), status: 'live' as const }
-    expect(standings([m], [], TEAMS)).toEqual([])
+  it('does not count our unfinished games, but lists their teams at zero', () => {
+    const live = { ...our('m1', 'b', 10, 5), status: 'live' as const }
+    const later = { ...our('m2', 'c', 0, 0, '2026-02-10'), status: 'setup' as const }
+    const [{ lines }] = standings([live, later], [], TEAMS)
+    expect(lines.map((l) => l.name).sort()).toEqual(['METZ', 'VERDUN', 'VIGNOT'])
+    expect(lines.every((l) => l.played === 0 && l.pts === 0 && l.pointsFor === 0)).toBe(true)
   })
 })

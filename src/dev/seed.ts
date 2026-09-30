@@ -1,27 +1,51 @@
 import type { Kind } from '../persistence/api'
-import type { Convocation, GameEvent, Match, TeamMessage, Period, Player, ReportedResult, ScoreKind, StatKind, Training } from '../domain/types'
-import { kindAt } from '../domain/shotzones'
+import type { Convocation, GameEvent, Match, TeamMessage, Period, Player, ReportedResult, Training } from '../domain/types'
 import { newPlay, nextStep } from '../domain/plays'
 import type { Side, Arrow, Position, Play, Step, Court, Stroke } from '../domain/plays'
 
 /**
- * Demo data: Avenir de Vignot and its five opponents of the season.
+ * Demo data: Avenir de Vignot - 1 and its real 2026-2027 season in Pré régionale
+ * masculine (comité de la Meuse, poule A), as published on competitions.ffbb.com on
+ * 30 September 2026 — the pool's eleven teams, our twenty games, and the matchday-1
+ * results between the others.
+ *
+ * **Nothing about a game is invented beyond its score.** The one game already played
+ * carries its final score and nothing else: no scorer, no shot, no rebound. It is
+ * entered as team baskets with no player named — the shape the application already
+ * gives the opposition's score — so the scoreboard, the result and the standings are
+ * right, and every player's line stays at zero rather than showing figures nobody
+ * recorded. The trainings, the call-up and the coach's message remain inventions: the
+ * federation publishes none of them, and the dashboard needs them to show anything.
  *
  * **This module writes nothing.** `seedDocuments` builds the season and hands it
  * over; `scripts/db.mjs seed` is what puts it in the database. The application never
- * seeds itself — the front end has no business filling the club's database, and a
- * `seed-version` kept per device to decide when to rewrite shared data was the last
- * piece of local-first thinking left in the repo.
+ * seeds itself.
  *
  * To regenerate after touching the data below: `pnpm db:reset`.
  */
 const LEAGUE = 'Pré régionale masculine · Poule A'
 
-// [name, coach]. The first team is ours; the five that follow are our opponents.
-const TEAMS: [string, string][] = [
-  ['AVENIR DE VIGNOT', 'FRANZONI Jean Marc'], ['BCV VERDUN', 'WEISSE F.'], ['BC BAR-LE-DUC', 'DURAND M.'],
-  ['SLUC NANCY', 'LEROY P.'], ['ÉTOILE DE METZ', 'MOREAU J.'], ['USM SAINT-DIZIER', 'SIMON A.'],
+/** Where Avenir de Vignot plays at home, as the federation names it. Away venues are
+ *  not published on the team's calendar, so away games carry none. */
+const HOME_VENUE = 'SALLE POLYVALENTE DES OUILLONS'
+
+// [name, coach]. The first team is ours. The other clubs' coaches are not published,
+// and no name is invented for real people: they are left empty.
+const TEAMS: [string, string | undefined][] = [
+  ['AVENIR DE VIGNOT - 1', 'FRANZONI Jean Marc'],
+  ['BCV VERDUN', undefined],
+  ['ASC CHARNY SUR MEUSE - 2', undefined],
+  ['ASC CHARNY SUR MEUSE - 3', undefined],
+  ['ASC CHARNY SUR MEUSE - 4', undefined],
+  ['CSLB BAR LE DUC - 1', undefined],
+  ['CSLB BAR LE DUC - 2', undefined],
+  ["L'ESPERANCE DE STENAY", undefined],
+  ['AS SOUILLY-BASKET', undefined],
+  ['PAGNY SUR MEUSE BC', undefined],
+  ['AVENIR DE VIGNOT - 2', undefined],
 ]
+const [VERDUN, CHARNY_2, CHARNY_3, CHARNY_4, BAR_1, BAR_2, STENAY, SOUILLY, PAGNY, VIGNOT_2] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
 /**
  * The real roster, in jersey-number order. Surnames are in capitals, as `TeamCreate`
  * writes them on entry: one convention across the whole application, otherwise the
@@ -29,8 +53,7 @@ const TEAMS: [string, string][] = [
  *
  * Neither birth date nor height: these are real people, and no personal data about
  * them is invented here. Both fields are optional, and the screens handle their
- * absence — that is in fact the case the old seed exercised with its last player left
- * without data. They are filled in from the team record.
+ * absence. They are filled in from the team record.
  */
 const ROSTER_DATA: [jersey: number, name: string, firstName: string][] = [
   [2, 'CAUTENET', 'Louis'],
@@ -57,250 +80,15 @@ const playerId = (i: number) => `seed-p${i}`
 const PLAYERS: Player[] = ROSTER_DATA.map(([number, lastName, firstName], i) => ({
   id: playerId(i), teamId: teamId(0), number, lastName, firstName,
 }))
-/** The id of the player wearing this number. The seed reasons in jersey numbers —
- *  that is what a coach says — and the index in the array is a storage detail. */
-const byJersey = (n: number) => playerId(ROSTER_DATA.findIndex(([num]) => num === n))
 const ROSTER = PLAYERS.map((p) => p.id)
+/** The id of the player wearing this number: a coach names a five by jerseys. */
+const byJersey = (n: number) => playerId(ROSTER_DATA.findIndex(([num]) => num === n))
+/** The starting five the club named: the 2, the 11, the 13, the 15 and the 17. */
+const STARTERS = [2, 11, 13, 15, 17].map(byJersey)
 
 let seq = 0
 const ev = (e: Omit<GameEvent, 'id' | 'wallClock'> & Record<string, unknown>): GameEvent =>
   ({ ...e, id: `seed-ev-${seq}`, wallClock: seq++ } as GameEvent)
-
-/** Plausible shot spots, **separated by value**.
- *
- *  Two lists and not one, because a single list walked with `k % length` never reaches
- *  its tail: a game segment counts five baskets, so `k` never passes index 4, and the
- *  three-pointers at the end would show zero in the 3PT column for the whole roster,
- *  in every game. The seed picks the shot's **value** first, then a spot that carries
- *  it; `kindAt` remains the sole judge of which side of the line it falls on, and the
- *  seed's test checks that these three spots really are behind it. */
-const SPOTS_2: { x: number; y: number }[] = [
-  { x: 0.50, y: 0.14 }, { x: 0.45, y: 0.18 }, { x: 0.56, y: 0.16 }, // in the key
-  { x: 0.24, y: 0.24 }, { x: 0.76, y: 0.24 }, { x: 0.50, y: 0.45 }, // mid-range
-]
-const SPOTS_3: { x: number; y: number }[] = [
-  { x: 0.03, y: 0.10 }, { x: 0.97, y: 0.11 }, { x: 0.50, y: 0.68 }, // corners and top
-]
-
-/** A player's weight in the distribution of baskets, by jersey number.
- *
- *  These values are **invented**, with one exception: BUZZI is the top scorer because
- *  that is what the club said. The rest is merely plausible and can be corrected from
- *  within the application.
- *
- *  They are deliberately tight. A wider spread does not produce a clearer top scorer,
- *  it produces an aberration: at a weight of 12 against 1, BUZZI took thirty-nine
- *  points a game and five players finished on zero. What makes a match sheet credible
- *  is a ratio of about three between first and last, not a ratio of ten.
- *
- *  Keyed on the **jersey number** and not on the rank in the list: the starting five
- *  are not the first five of the roster, so a rank would hand the weights to the wrong
- *  players. */
-const SCORING_WEIGHT: Record<number, number> = {
-  11: 6,                       // BUZZI, the top scorer
-  13: 4, 2: 4,                 // his two outlets
-  15: 3, 17: 2,                // the other two starters
-  5: 3, 20: 3, 10: 2, 7: 2, 6: 2, 8: 2, // the bench
-}
-const jerseyOf = (id: string) => ROSTER_DATA[Number(id.replace('seed-p', ''))]?.[0] ?? 0
-const weightFor = (id: string) => SCORING_WEIGHT[jerseyOf(id)] ?? 1
-
-/**
- * Each jersey's role. One label per player, and not a table of weights per category:
- * that is what a coach writes, and it is enough to distribute all the rest of the
- * match sheet. Invented, like `SCORING_WEIGHT`, except for the starting five, which
- * the club gave.
- */
-type Role = 'guard' | 'wing' | 'big'
-const ROLE_OF: Record<number, Role> = {
-  2: 'guard', 5: 'guard',
-  11: 'wing', 13: 'wing', 7: 'wing', 10: 'wing', 6: 'wing',
-  15: 'big', 17: 'big', 20: 'big', 8: 'big',
-}
-const roleOf = (id: string): Role => ROLE_OF[jerseyOf(id)] ?? 'wing'
-
-/**
- * What each position produces, by category. The ratios matter more than the values: a
- * guard distributes, a big takes the rebound and blocks, and fouls follow contact — so
- * the big takes slightly more.
- *
- * These weights go through the same allocator as the baskets, by design: it is already
- * what guarantees that a rarely served player ends up being served, and that a
- * substitute does not finish the season on zero rebounds.
- */
-const STAT_WEIGHT: Record<StatKind | 'foul', Record<Role, number>> = {
-  assist: { guard: 5, wing: 2, big: 1 },
-  reb_off: { guard: 1, wing: 2, big: 4 },
-  reb_def: { guard: 1, wing: 2, big: 4 },
-  block: { guard: 1, wing: 1, big: 5 },
-  foul: { guard: 2, wing: 2, big: 3 },
-}
-
-/** What one period produces, in team volumes. A full game gives four times as much,
- *  so around thirty rebounds and four blocks: the order of magnitude of a Pré
- *  régionale match sheet. */
-const PER_PERIOD: [StatKind, number][] = [['reb_def', 6], ['reb_off', 2], ['block', 1]]
-
-/** Team fouls, period by period. The third exceeds `TEAM_FOUL_BONUS` (five, under
- *  FFBB rules): that is deliberate, the demo must be able to show the "Bonus" pill
- *  without anyone provoking it by hand. */
-const FOULS_PER_PERIOD = [3, 4, 5, 4]
-
-/** Nobody fouls out. An excluded player leaves the court, while the seed's rotations
- *  still count them present — the inconsistency would read as a bug in the rules. */
-const MAX_FOULS = 4
-
-/**
- * A proportional allocator, by highest quotient: at each award, we serve whoever has
- * the largest `weight / (already served + 1)`.
- *
- * One allocator for six things (baskets, assists, two kinds of rebound, blocks,
- * fouls): it is the same question every time. Written by hand at each call site, the
- * traps come back with it — a pre-filled list walked with a modulo, a counter reset on
- * every segment — five more times over.
- *
- * The counter is held by the allocator, hence by the game: proportionality plays out
- * over the match and not over a segment of five baskets.
- */
-interface Allocator {
-  next: (candidates: string[]) => string
-  count: (id: string) => number
-}
-function allocator(weight: (id: string) => number): Allocator {
-  const served = new Map<string, number>()
-  const count = (id: string) => served.get(id) ?? 0
-  const value = (id: string) => weight(id) / (count(id) + 1)
-  return {
-    count,
-    next(candidates) {
-      const winner = candidates.reduce((best, id) => (value(id) > value(best) ? id : best))
-      served.set(winner, count(winner) + 1)
-      return winner
-    },
-  }
-}
-
-/** A game's six allocators. */
-type Allocators = Record<'basket' | StatKind | 'foul', Allocator>
-const newAllocators = (): Allocators => ({
-  basket: allocator(weightFor),
-  assist: allocator((id) => STAT_WEIGHT.assist[roleOf(id)]),
-  reb_off: allocator((id) => STAT_WEIGHT.reb_off[roleOf(id)]),
-  reb_def: allocator((id) => STAT_WEIGHT.reb_def[roleOf(id)]),
-  block: allocator((id) => STAT_WEIGHT.block[roleOf(id)]),
-  foul: allocator((id) => STAT_WEIGHT.foul[roleOf(id)]),
-})
-
-/** Distributes ~`points` as located baskets among the players currently on court
- *  (`onCourtIds`) — never a player who is not — weighted (the first score more), with
- *  a missed shot every three attempts to feed the hot zones. */
-function baskets(points: number, clock: () => number, period: Period, onCourtIds: string[], r: Allocators): GameEvent[] {
-  /**
-   * The decomposition of the total into real shots, and it must come out **exact**:
-   * the segment receives a number of points to distribute, and a seed that composes
-   * that total from shots of different values without checking the sum makes the
-   * scoreboard and the match sheet say two different things.
-   *
-   * About one three-pointer per nine points scored, so six to eight a game: the order
-   * of magnitude of a team that does not build its system on them. The rest in
-   * two-pointers, and the odd point as a free throw.
-   */
-  const n3 = Math.floor(points / 9)
-  const nLf = (points - 3 * n3) % 2
-  const n2 = (points - 3 * n3 - nLf) / 2
-  const shots = n3 + n2
-
-  const out: GameEvent[] = []
-  let i2 = 0
-  let i3 = 0
-  for (let k = 0; k < shots; k++) {
-    // The three-pointers **spread** through the segment rather than bunched at the
-    // front: a quarter that opens with all its threes looks like nothing on the shot
-    // chart. The integer-threshold test is the same as a line-drawing one — it places
-    // `n3` marks over `shots` positions, as evenly as integers allow.
-    const isThree = Math.floor(((k + 1) * n3) / shots) > Math.floor((k * n3) / shots)
-    const shot = isThree ? SPOTS_3[i3++ % SPOTS_3.length] : SPOTS_2[i2++ % SPOTS_2.length]
-    const playerId = r.basket.next(onCourtIds)
-    out.push(ev({ type: 'SCORE', team: 'A', playerId, kind: kindAt(shot.x, shot.y), shot, period, gameClock: clock() }))
-
-    // An assist on every second basket, credited to a team-mate **on the court** and
-    // never to the scorer themselves. Attached to the basket rather than distributed
-    // by volume: an assist does not exist without the basket it sets up, and that link
-    // is what makes the total plausible without anyone tuning it.
-    const passers = onCourtIds.filter((id) => id !== playerId)
-    if (k % 2 === 0 && passers.length > 0)
-      out.push(ev({ type: 'STAT', team: 'A', playerId: r.assist.next(passers), stat: 'assist', period, gameClock: clock() }))
-
-    if (k % 3 === 2) {
-      const missed = SPOTS_2[(i2 + 3) % SPOTS_2.length]
-      out.push(ev({ type: 'MISS', team: 'A', playerId, kind: kindAt(missed.x, missed.y), shot: missed, period, gameClock: clock() }))
-    }
-  }
-  // The odd point: a free throw, for whoever the allocator serves next — the player
-  // who attacks the rim most is the one sent to the line.
-  if (nLf) out.push(ev({ type: 'SCORE', team: 'A', playerId: r.basket.next(onCourtIds), kind: 'lf' as ScoreKind, period, gameClock: clock() }))
-  return out
-}
-
-/**
- * The rest of the match sheet, period by period: rebounds, blocks and fouls, for the
- * players on the court at that moment only.
- *
- * There was almost none of it: a single statistic per player per period, chosen by the
- * player's **index** in the five — so that a given player always got the same one,
- * that blocks only went to the fourth in the list, and that no foul was ever recorded.
- * Three columns of the match sheet were empty in every game, and the team foul counter
- * stayed at zero from start to finish.
- */
-function secondaryStats(clock: () => number, period: Period, onCourtIds: string[], r: Allocators): GameEvent[] {
-  const out: GameEvent[] = []
-  for (const [stat, howMany] of PER_PERIOD)
-    for (let k = 0; k < howMany; k++)
-      out.push(ev({ type: 'STAT', team: 'A', playerId: r[stat].next(onCourtIds), stat, period, gameClock: clock() }))
-
-  const fouls = FOULS_PER_PERIOD[(period - 1) % FOULS_PER_PERIOD.length]
-  for (let k = 0; k < fouls; k++) {
-    // The cap is applied by **removing** the player from the candidates, and not by
-    // skipping the event: skipping would cost the team counter a foul, and it has to
-    // reach the bonus in the period planned.
-    const eligible = onCourtIds.filter((id) => r.foul.count(id) < MAX_FOULS)
-    if (eligible.length === 0) break
-    const playerId = r.foul.next(eligible)
-    out.push(ev({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId }, foulType: 'personal', period, gameClock: clock() }))
-  }
-  return out
-}
-
-/** The opposition's score: team baskets only, with no player named and no shot spot —
- *  the opposition has no roster to break down. */
-function opponentBaskets(points: number, clock: () => number, period: Period): GameEvent[] {
-  const out: GameEvent[] = []
-  const n2 = Math.floor(points / 2)
-  for (let k = 0; k < n2; k++) out.push(ev({ type: 'SCORE', team: 'B', kind: '2int', period, gameClock: clock() }))
-  if (points % 2) out.push(ev({ type: 'SCORE', team: 'B', kind: 'lf', period, gameClock: clock() }))
-  return out
-}
-
-/** The starting five, named by jersey numbers and not by rank in the list: a coach
- *  says "the 2, the 11, the 13, the 15 and the 17". */
-const STARTERS = [2, 11, 13, 15, 17].map(byJersey)
-/**
- * The rotations, by period: `[jersey out, jersey in]`.
- *
- * The starters **come back**. The previous version took one starter off each period
- * and never called them back: by the end of the game the starting five had a few
- * minutes and their substitutes all the rest, so that the starting point guard
- * finished on eight points and a substitute on fifty-one. A double substitution at a
- * single stoppage is perfectly legal, and it is what allows ten players out of eleven
- * to rotate while keeping the starters the most court time — which `playingTimes`
- * knows how to measure.
- */
-const SUB_SWAPS: [number, number][][] = [
-  [[2, 5]],                     // the point guard takes a breather
-  [[5, 2], [17, 10]],           // he comes back, the big takes one
-  [[10, 17], [15, 20]],         // and so on
-  [[20, 15], [11, 6], [13, 7]], // last quarter: the wing rotates
-]
 
 /** Splits a total into `parts` integers as equal as possible. */
 function splitEvenly(total: number, parts: number): number[] {
@@ -309,192 +97,147 @@ function splitEvenly(total: number, parts: number): number[] {
   return Array.from({ length: parts }, (_, i) => base + (i < rest ? 1 : 0))
 }
 
-/** One period of play: baskets for both teams and secondary stats, with a substitute
- *  coming on at the halfway mark if the period has one — only the players actually on
- *  the court at that moment can score or be credited.
- *  The clock runs down to `stopClock` (0 for a period played in full).
- *  The substitution is placed at the exact middle of the period's time (and not
- *  wherever the number of baskets already elapsed happens to fall): it is that clock
- *  value, not the shot count, that `playingTimes` uses to compute court time. */
-function periodEvents(p: Period, pointsA: number, pointsB: number, onCourtBefore: string[], swaps: [number, number][] | undefined, stopClock: number, r: Allocators): { events: GameEvent[]; onCourtAfter: string[] } {
-  let c = 600
-  const clock = () => (c = Math.max(stopClock, c - 5))
-  const half = Math.round(pointsA / 2)
-  const events = [...baskets(half, clock, p, onCourtBefore, r)]
-  let onCourtAfter = onCourtBefore
-  if (swaps?.length) {
-    // All of the period's substitutions at the same stoppage, at the exact middle of
-    // the time: that clock value is what `playingTimes` reads, not the number of
-    // baskets already elapsed.
-    c = Math.round((600 + stopClock) / 2)
-    for (const [out, into] of swaps) {
-      events.push(ev({ type: 'SUBSTITUTION', team: 'A', playerOutId: byJersey(out), playerInId: byJersey(into), period: p, gameClock: c }))
-      onCourtAfter = onCourtAfter.map((id) => (id === byJersey(out) ? byJersey(into) : id))
-    }
-  }
-  events.push(
-    ...baskets(pointsA - half, clock, p, onCourtAfter, r),
-    ...opponentBaskets(pointsB, clock, p),
-    ...secondaryStats(clock, p, onCourtAfter, r),
-    ev({ type: 'CLOCK_STOP', period: p, gameClock: stopClock }),
-  )
-  return { events, onCourtAfter }
+/**
+ * A final score as events, and nothing more: two-point team baskets and the odd point
+ * as a free throw, with no player named and no shot spot.
+ *
+ * Spread over four periods, because a sheet whose seventy points all fall in the first
+ * quarter reads as a bug on the period-by-period line. The split is even, not
+ * observed — the federation's page gives the final score only.
+ */
+function scoreOnly(team: 'A' | 'B', points: number, period: Period): GameEvent[] {
+  const out: GameEvent[] = []
+  for (let k = 0; k < Math.floor(points / 2); k++) out.push(ev({ type: 'SCORE', team, kind: '2int', period, gameClock: 300 }))
+  if (points % 2) out.push(ev({ type: 'SCORE', team, kind: 'lf', period, gameClock: 300 }))
+  return out
 }
+
+interface Fixture {
+  /** The federation's matchday. Vignot 1 sits out matchdays 6 and 17. */
+  day: number
+  /** The federation's game number (`#1`, `#7`…). */
+  number: number
+  date: string
+  time: string
+  home: boolean
+  opponent: number
+  /** Our points, theirs — only for a game already played. */
+  score?: [number, number]
+  /** The game the demo shows in progress, so the scorer's table and the spectator view
+   *  have something to open. */
+  live?: true
+}
+/** The twenty games of the season, from the team's calendar on competitions.ffbb.com. */
+const FIXTURES: Fixture[] = [
+  { day: 1, number: 1, date: '2026-09-27', time: '15:30', home: true, opponent: VERDUN, score: [70, 62] },
+  { day: 2, number: 7, date: '2026-10-03', time: '20:30', home: false, opponent: CHARNY_2, live: true },
+  { day: 3, number: 13, date: '2026-10-11', time: '15:30', home: true, opponent: CHARNY_3 },
+  { day: 4, number: 19, date: '2026-11-08', time: '13:30', home: false, opponent: CHARNY_4 },
+  { day: 5, number: 25, date: '2026-11-22', time: '15:30', home: true, opponent: BAR_2 },
+  { day: 7, number: 37, date: '2026-12-06', time: '15:00', home: false, opponent: STENAY },
+  { day: 8, number: 43, date: '2026-12-13', time: '15:30', home: true, opponent: SOUILLY },
+  { day: 9, number: 49, date: '2026-12-19', time: '20:30', home: false, opponent: PAGNY },
+  { day: 10, number: 55, date: '2027-01-10', time: '15:30', home: true, opponent: BAR_1 },
+  { day: 11, number: 61, date: '2027-01-17', time: '15:00', home: false, opponent: VIGNOT_2 },
+  { day: 12, number: 67, date: '2027-01-31', time: '13:30', home: false, opponent: VERDUN },
+  { day: 13, number: 73, date: '2027-02-07', time: '15:30', home: true, opponent: CHARNY_2 },
+  { day: 14, number: 79, date: '2027-02-13', time: '18:00', home: false, opponent: CHARNY_3 },
+  { day: 15, number: 85, date: '2027-03-14', time: '15:30', home: true, opponent: CHARNY_4 },
+  { day: 16, number: 91, date: '2027-03-20', time: '18:00', home: false, opponent: BAR_2 },
+  { day: 18, number: 103, date: '2027-04-04', time: '15:30', home: true, opponent: STENAY },
+  { day: 19, number: 109, date: '2027-04-09', time: '20:30', home: false, opponent: SOUILLY },
+  { day: 20, number: 115, date: '2027-04-18', time: '15:30', home: true, opponent: PAGNY },
+  { day: 21, number: 121, date: '2027-05-15', time: '20:30', home: false, opponent: BAR_1 },
+  { day: 22, number: 127, date: '2027-05-23', time: '15:00', home: true, opponent: VIGNOT_2 },
+]
 
 const addDays = (iso: string, delta: number): string => {
   const d = new Date(iso + 'T00:00:00')
   d.setDate(d.getDate() + delta)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-const today = new Date()
-const TODAY_ISO = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
-// The season's five matchdays, anchored on the day the seed runs rather than frozen:
-// otherwise the demo becomes invisible as soon as the real date passes a hard-coded
-// season (`nextFixture` compares against the real clock, never a simulated one). The
-// weekly cadence is unchanged: three matchdays past, one today, one in a week.
-const MATCHDAYS = [-21, -14, -7, 0, 7].map((delta) => addDays(TODAY_ISO, delta))
-
-interface Fixture { opponent: number; date: string; time: string; status: 'finished' | 'live' | 'setup'; score: [number, number] }
-/**
- * Our five games: three played and won, one live, one upcoming.
- *
- * The scores are written out and not computed by a modulo formula. They have to
- * produce a precise table — Avenir de Vignot on top — and a formula cannot be steered:
- * it gave 2W-1L and a differential of −2.
- *
- * For the live game, `score` is the total aimed at over four periods; only two are
- * played, so the screen shows roughly half of it.
- */
-const FIXTURES: Fixture[] = [
-  { opponent: 1, date: MATCHDAYS[0], time: '20:30', status: 'finished', score: [78, 71] },
-  { opponent: 2, date: MATCHDAYS[1], time: '20:00', status: 'finished', score: [72, 64] },
-  { opponent: 3, date: MATCHDAYS[2], time: '18:30', status: 'finished', score: [81, 69] },
-  { opponent: 4, date: MATCHDAYS[3], time: '20:30', status: 'live', score: [82, 70] },
-  { opponent: 5, date: MATCHDAYS[4], time: '18:30', status: 'setup', score: [0, 0] },
-]
 
 const THEMES = ['Défense sur écran', 'Tirs extérieurs', 'Transition rapide', 'Jeu sans ballon', 'Rebond et boxout']
 
-/** Two sessions per game week (the Monday and Wednesday before the Saturday game), so
- *  that the calendar and the "next fixture" block have something to show without
- *  anyone entering anything. Exception for the very last matchday — the one carrying
- *  the demo call-up (`buildConvocation`): its two sessions are placed AFTER the game
- *  rather than before. Without that, being closer in time than the game called up,
- *  they would become the next fixture right after a seed, and the "called up, meeting
- *  point, names" block — the whole reason this demo call-up exists — would stay
- *  invisible for days. */
+/** The first game neither played nor in progress: the one the demo call-up points at,
+ *  since the dashboard's "next fixture" block leaves the live game to the banner. */
+const NEXT = FIXTURES.findIndex((f) => !f.score && !f.live)
+
+/** Two sessions in the week before each game (five and three days ahead), so that the
+ *  calendar has a rhythm to show. Invented: the club's training schedule is not
+ *  published. The next session carries the demo plays, giving the dashboard something
+ *  to announce under "on the programme". */
 function buildTrainings(): Training[] {
-  return FIXTURES.flatMap((f, idx) => {
-    const isLastMatchday = idx === FIXTURES.length - 1
-    const [d0, d1] = isLastMatchday ? [3, 5] : [-5, -3]
-    return [
-      // Only the last matchday's sessions are still ahead: so it is the first of them
-      // that carries the demo plays, giving the dashboard something to announce under
-      // "on the programme" without anyone entering anything.
-      { id: `seed-tr${idx}-0`, clubId: teamId(0), date: addDays(f.date, d0), time: '19:00', place: 'Gymnase de Vignot', theme: THEMES[idx % THEMES.length], playIds: isLastMatchday ? ['seed-sch0', 'seed-sch1'] : undefined },
-      { id: `seed-tr${idx}-1`, clubId: teamId(0), date: addDays(f.date, d1), time: '19:00', place: 'Gymnase de Vignot', theme: THEMES[(idx + 1) % THEMES.length] },
-    ]
-  })
+  const sessions: Training[] = FIXTURES.flatMap((f, idx) => [
+    { id: `seed-tr${idx}-0`, clubId: teamId(0), date: addDays(f.date, -5), time: '19:00', place: HOME_VENUE, theme: THEMES[idx % THEMES.length] },
+    { id: `seed-tr${idx}-1`, clubId: teamId(0), date: addDays(f.date, -3), time: '19:00', place: HOME_VENUE, theme: THEMES[(idx + 1) % THEMES.length] },
+  ])
+  // On the first session still ahead on the day the seed runs, not on a fixed one: a
+  // fixed session slips into the past within the week, and the dashboard only
+  // announces what is to come.
+  const today = new Date()
+  const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const next = sessions.find((t) => t.date >= todayIso)
+  if (next) next.playIds = ['seed-sch0', 'seed-sch1']
+  return sessions
 }
 
-/** A full call-up on the "upcoming" game (status `setup`), never on a game already
- *  played: it is the one the dashboard's "next fixture" block must find filled in
- *  without anyone entering anything. */
+/** A full call-up on the next game, never on one already played: it is the one the
+ *  dashboard's "next fixture" block must find filled in. */
 function buildConvocation(): Convocation {
-  const idx = FIXTURES.findIndex((f) => f.status === 'setup')
   return {
-    matchId: `seed-m${idx}`,
+    matchId: `seed-m${NEXT}`,
     playerIds: ROSTER,
-    meetTime: '17:30',
-    meetPlace: 'Gymnase de Vignot',
-    note: 'Tenue blanche, covoiturage depuis le club à 17h.',
+    meetTime: '14:30',
+    meetPlace: HOME_VENUE,
+    note: 'Tenue blanche, échauffement à 14h45.',
   }
 }
 
 function buildMatch(f: Fixture, idx: number): Match {
   seq = idx * 1000
-  const [sa, sb] = f.score
-  const qA = splitEvenly(sa, 4)
-  const qB = splitEvenly(sb, 4)
-
-  let events: GameEvent[] = []
-  if (f.status !== 'setup') {
-    // The four periods for a finished game. For a live game we stop in the middle of
-    // the second rather than at its end: the game has to stay in progress, not already
-    // played.
-    const lastPeriod = f.status === 'live' ? 2 : 4
-    const lastClock = f.status === 'live' ? 300 : 0
-
+  const events: GameEvent[] = []
+  if (f.score) {
+    const [qA, qB] = [splitEvenly(f.score[0], 4), splitEvenly(f.score[1], 4)]
+    for (let p = 1; p <= 4; p++) {
+      events.push(
+        ev({ type: 'PERIOD_START', period: p, gameClock: 600 }),
+        ev({ type: 'CLOCK_START', period: p, gameClock: 600 }),
+        ...scoreOnly('A', qA[p - 1], p),
+        ...scoreOnly('B', qB[p - 1], p),
+        ev({ type: 'CLOCK_STOP', period: p, gameClock: 0 }),
+        ev({ type: 'PERIOD_END', period: p, gameClock: 0 }),
+      )
+    }
+  } else if (f.live) {
+    // Tip-off and nothing after it: the five on court, the first period open, the
+    // clock at ten minutes and still stopped. The score stays 0-0 — a live game's
+    // points would have to be invented, and the scorer can enter them from here.
     events.push(
       ev({ type: 'PERIOD_START', period: 1, gameClock: 600 }),
       ev({ type: 'STARTING_FIVE', team: 'A', playerIds: STARTERS, period: 1, gameClock: 600 }),
-      ev({ type: 'CLOCK_START', period: 1, gameClock: 600 }),
     )
-    // The allocators are created here, hence owned by the game: proportionality plays
-    // out over the match, not over each segment of five baskets.
-    const r = newAllocators()
-    let onCourt: string[] = STARTERS
-    for (let p = 1; p <= lastPeriod; p++) {
-      const isLast = p === lastPeriod
-      const stopClock = isLast ? lastClock : 0
-      const { events: periodEvs, onCourtAfter } = periodEvents(p, qA[p - 1], qB[p - 1], onCourt, SUB_SWAPS[p - 1], stopClock, r)
-      events.push(...periodEvs)
-      onCourt = onCourtAfter
-      if (!isLast) {
-        events.push(
-          ev({ type: 'PERIOD_END', period: p, gameClock: 0 }),
-          ev({ type: 'PERIOD_START', period: p + 1, gameClock: 600 }),
-          ev({ type: 'CLOCK_START', period: p + 1, gameClock: 600 }),
-        )
-      } else if (f.status === 'finished') {
-        events.push(ev({ type: 'PERIOD_END', period: p, gameClock: 0 }))
-      }
-    }
   }
-
   return {
     id: `seed-m${idx}`,
     meta: {
-      championshipLabel: LEAGUE, matchNumber: String(idx + 1), date: f.date, time: f.time,
-      venue: idx % 2 === 0 ? 'Vignot' : TEAMS[f.opponent][0].split(' ').pop(), coachA: TEAMS[0][1],
-      referee1: 'BART S', referee2: 'WEISSE F', clubId: teamId(0), opponentId: teamId(f.opponent),
+      championshipLabel: LEAGUE, championshipCode: '0055 - PRM', pool: 'A', matchNumber: String(f.number),
+      date: f.date, time: f.time, venue: f.home ? HOME_VENUE : undefined, coachA: TEAMS[0][1],
+      clubId: teamId(0), opponentId: teamId(f.opponent),
     },
     roster: ROSTER,
     events,
-    status: f.status,
+    status: f.score ? 'finished' : f.live ? 'live' : 'setup',
   }
 }
 
-// Fixtures between our five opponents (never our club: our own games are already
-// authoritative, and a duplicate would be ignored by the standings). A full round
-// among the pool's six teams: on every matchday where we play one of the five, the
-// other four split into two games — so that each opponent faces, over the season, the
-// other four in addition to us. The dates reuse those of our FIXTURES (`MATCHDAYS`):
-// same pool, same matchdays.
+/** The matchday-1 games between the other teams, as published. Our own game is not
+ *  among them: it is a `Match`, and the standings read it from there. */
 interface OutsideGame { home: number; away: number; date: string; score: [number, number] }
-/**
- * The fixtures between our five opponents, on the **three matchdays played** only —
- * never today's, never the next.
- *
- * This is what made the standings incoherent: the seed published the results of all
- * five matchdays, so that the other teams showed four or five games while we had
- * three. But FFBB standings count absolute points (W=2, L=1): at three games we cap at
- * six points, while a team with five games has at least five and up to ten. Being top
- * was arithmetically impossible. And publishing the current matchday's results is not
- * what happens in a league anyway.
- *
- * Each therefore plays three games, like us. The scores are chosen so that nobody
- * reaches our six points: `standings.test.ts` and the seed's test check the resulting
- * table.
- */
 const OUTSIDE_GAMES: OutsideGame[] = [
-  { home: 2, away: 3, date: MATCHDAYS[0], score: [74, 68] },
-  { home: 4, away: 5, date: MATCHDAYS[0], score: [80, 72] },
-  { home: 1, away: 4, date: MATCHDAYS[1], score: [77, 70] },
-  { home: 3, away: 5, date: MATCHDAYS[1], score: [65, 73] },
-  { home: 1, away: 5, date: MATCHDAYS[2], score: [82, 75] },
-  { home: 2, away: 4, date: MATCHDAYS[2], score: [69, 76] },
+  { home: SOUILLY, away: BAR_2, date: '2026-09-25', score: [52, 65] },
+  { home: BAR_1, away: CHARNY_3, date: '2026-09-26', score: [109, 30] },
+  { home: VIGNOT_2, away: CHARNY_2, date: '2026-09-27', score: [21, 97] },
 ]
 
 function buildResult(g: OutsideGame, idx: number): ReportedResult {
@@ -668,7 +411,7 @@ function buildMessage(): TeamMessage {
 export function seedDocuments(): SeedDoc[] {
   const now = new Date().toISOString()
   return [
-    ...TEAMS.map((t, i): SeedDoc => ({ kind: 'team', id: teamId(i), doc: { id: teamId(i), name: t[0], coach: t[1] } })),
+    ...TEAMS.map(([name, coach], i): SeedDoc => ({ kind: 'team', id: teamId(i), doc: coach ? { id: teamId(i), name, coach } : { id: teamId(i), name } })),
     ...PLAYERS.map((p): SeedDoc => ({ kind: 'player', id: p.id, doc: p })),
     ...FIXTURES.map((f, idx): SeedDoc => { const m = buildMatch(f, idx); return { kind: 'match', id: m.id, doc: m } }),
     ...OUTSIDE_GAMES.map((g, idx): SeedDoc => { const r = buildResult(g, idx); return { kind: 'result', id: r.id, doc: r } }),
