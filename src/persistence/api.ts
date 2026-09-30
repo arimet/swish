@@ -148,11 +148,25 @@ export async function mutate(ops: Op[]): Promise<void> {
   for (const f of writeListeners) f(ops)
 }
 
+const eventListeners = new Set<(matchId: string) => void>()
+
+/**
+ * Subscribes to accepted event writes, with the game they touched. Returns an unsubscribe.
+ *
+ * Separate from `onWrite`, which files documents: an event batch carries no document to
+ * file. The sheet's own cache belongs to `useMatch` or the screen that made the change,
+ * but every list of games shows what the sheets hold, so those must re-read.
+ */
+export function onEvents(f: (matchId: string) => void): () => void {
+  eventListeners.add(f)
+  return () => { eventListeners.delete(f) }
+}
+
 /**
  * Adds and archives a game's events, in one transaction.
  *
  * Not announced to `onWrite`: the sheet's cache is `useMatch`'s to keep, and it has
- * already applied this change before sending it.
+ * already applied this change before sending it. `onEvents` tells the lists.
  */
 export async function writeEvents(matchId: string, add: GameEvent[], archive: string[]): Promise<void> {
   if (!add.length && !archive.length) return
@@ -166,6 +180,7 @@ export async function writeEvents(matchId: string, add: GameEvent[], archive: st
   } catch { fail() }
   if (!r.ok) fail(r.status)
   announce('ok')
+  for (const f of eventListeners) f(matchId)
 }
 
 /**

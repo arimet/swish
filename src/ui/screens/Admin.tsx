@@ -60,8 +60,9 @@ export function Admin() {
   // open that it would have no right to confirm.
   const ask = (op: Operation) => guard('manage', () => setPending(op))
   /* No reload after the operation. Every one of them empties something through
-     `mutate`, and `WriteBridge` invalidates the kinds it names — which is what makes
-     this screen's counters fall to zero as soon as the deletion lands. Reloading four
+     `mutate` or, for the sheets, `writeEvents`, and `WriteBridge` invalidates what each
+     names — which is what makes this screen's counters fall to zero as soon as the
+     deletion lands. Reloading four
      lists by hand was the previous answer, and it read the state back even when the
      operation had failed. */
   const confirm = async () => {

@@ -1,6 +1,6 @@
 import { QueryClient, useQuery, useQueryClient, type QueryObserverOptions, type UseQueryResult } from '@tanstack/react-query'
 import { useCallback, useEffect } from 'react'
-import { onWrite, type Kind } from './api'
+import { onEvents, onWrite, type Kind } from './api'
 import {
   getConvocation, getMatch, getMessage, getPlay, getPlayer, getTeam,
   listAllPlayers, listAllPlays, listMatches, listResults, listTeams, listTrainings,
@@ -200,6 +200,9 @@ export const DEPENDENTS: Record<Kind, Kind[]> = {
  * else the database holds — but only if a screen is showing one. In the play editor,
  * where releasing a marker is a write, nothing is mounted that lists plays: the
  * gesture costs one request instead of two.
+ *
+ * **Events lists the games too**: a batch of events carries no document, so it only
+ * invalidates the list of games (`exact`, never the sheet `useMatch` keeps optimistically).
  */
 export function WriteBridge(): null {
   const client = useQueryClient()
@@ -217,6 +220,7 @@ export function WriteBridge(): null {
       client.invalidateQueries({ queryKey: docKey(kind) })
     }
   }), [client])
+  useEffect(() => onEvents(() => { client.invalidateQueries({ queryKey: docKey('match'), exact: true }) }), [client])
   return null
 }
 

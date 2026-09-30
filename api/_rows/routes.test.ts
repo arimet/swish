@@ -62,6 +62,19 @@ describe.skipIf(!t.ready)('routes', () => {
     expect((await call(events, { method: 'POST', query: { id: 'm1' }, body: { add: [{ id: 'x', type: 'SCORE', wallClock: 1, period: 1, gameClock: 1 }] } })).status).toBe(400)
   })
 
+  it('refuses a starting five outside the roster, and a request without the token', async () => {
+    const { mutate, events } = await load()
+    await call(mutate, { method: 'POST', body: { ops: [
+      { kind: 'team', op: 'put', id: 'a', doc: { id: 'a', name: 'A' } },
+      { kind: 'team', op: 'put', id: 'b', doc: { id: 'b', name: 'B' } },
+      { kind: 'match', op: 'put', id: 'm1', doc: { id: 'm1', meta: { clubId: 'a', opponentId: 'b' }, roster: [], events: [], status: 'live' } },
+    ] } })
+    const five = { id: 'f1', type: 'STARTING_FIVE', team: 'A', playerIds: ['ghost'], wallClock: 1, period: 1, gameClock: 600 }
+    expect(await call(events, { method: 'POST', query: { id: 'm1' }, body: { add: [five] } }))
+      .toEqual({ status: 400, body: { error: 'starting five outside the roster' } })
+    expect((await call(events, { method: 'POST', query: { id: 'm1' }, headers: {}, body: { add: [] } })).status).toBe(401)
+  })
+
   it('keeps nothing of a batch whose second op breaks a constraint', async () => {
     const { docs, mutate } = await load()
     const res = await call(mutate, { method: 'POST', body: { ops: [

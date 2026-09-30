@@ -113,6 +113,8 @@ describe('Administration — scopes', () => {
     expect(restantes.find((m) => m.id === 'm1')?.meta.date).toBe('2026-01-10')
     // Emptying is not deleting: the call-ups stay attached to their game.
     expect(await getConvocation('m1')).toBeDefined()
+    // The counter reads the list of games, which has to follow the archived events.
+    await waitFor(() => expect(row('Vider les feuilles de VIGNOT')).toHaveTextContent('0 feuille à vider'))
   })
 
   it('deletes the entered results in bulk, without touching the games', async () => {
