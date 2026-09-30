@@ -168,14 +168,14 @@ export function onEvents(f: (matchId: string) => void): () => void {
  * Not announced to `onWrite`: the sheet's cache is `useMatch`'s to keep, and it has
  * already applied this change before sending it. `onEvents` tells the lists.
  */
-export async function writeEvents(matchId: string, add: GameEvent[], archive: string[]): Promise<void> {
+export async function writeEvents(matchId: string, add: GameEvent[], archive: string[], before: Record<string, string> = {}): Promise<void> {
   if (!add.length && !archive.length) return
   let r: Response
   try {
     r = await fetch(`${BASE}/match/${encodeURIComponent(matchId)}/events`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-swish-token': token() },
-      body: JSON.stringify({ add, archive }),
+      body: JSON.stringify(Object.keys(before).length ? { add, archive, before } : { add, archive }),
     })
   } catch { fail() }
   if (!r.ok) fail(r.status)

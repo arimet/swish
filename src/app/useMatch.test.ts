@@ -26,7 +26,7 @@ describe('useMatch', () => {
    * The write fails: the screen must return to its previous state.
    *
    * The display preceded the write without ever checking it — and for three of the five
-   * paths (`undo`, `removeLast`, `finish`), the write did not even have a `catch`: a
+   * paths (the undos of the time, and `finish`), the write did not even have a `catch`: a
    * promise rejected into the void. The scoreboard could therefore announce a basket
    * the store did not have, and the point vanished on reload. On an official score, a
    * state that lies is worse than an action refused.
@@ -53,6 +53,28 @@ describe('useMatch', () => {
     expect(doc<Match>('match', 'm1')!.events).toHaveLength(2)
     expect(result.current.error).toMatch(/enregistrement impossible/i)
     expect(result.current.error).not.toMatch(/QuotaExceededError/)
+  })
+
+  it('the history\'s delete and modify: one event out, its replacement in its place', async () => {
+    const { result } = renderHook(() => useMatch('m1'))
+    await waitFor(() => expect(result.current.match).not.toBeNull())
+    await act(async () => {
+      await result.current.dispatchMany([
+        { type: 'PERIOD_START', period: 1, gameClock: 600 },
+        { type: 'CLOCK_START', period: 1, gameClock: 600 },
+        { type: 'STAT', team: 'A', playerId: 'p1', stat: 'block', period: 1, gameClock: 500 },
+        { type: 'TIMEOUT', team: 'A', period: 1, gameClock: 400 },
+      ])
+    })
+    const [, , block, timeout] = result.current.match!.events
+    let ids: string[] = []
+    await act(async () => {
+      ids = await result.current.rewrite([{ type: 'STAT', team: 'A', playerId: 'p1', stat: 'reb_def', period: 1, gameClock: 500 }], { id: block.id, mode: 'replace' })
+    })
+    await act(async () => { await result.current.remove(timeout.id) })
+    const saved = doc<Match>('match', 'm1')!.events
+    expect(saved.map((e) => e.type)).toEqual(['PERIOD_START', 'CLOCK_START', 'STAT'])
+    expect(saved[2]).toMatchObject({ id: ids[0], stat: 'reb_def', gameClock: 500 })
   })
 
   it('"Finish" reports its failure, so that the caller does not leave the game', async () => {

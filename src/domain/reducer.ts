@@ -48,11 +48,6 @@ export function appendEvent(match: Match, event: GameEvent): Match {
   return { ...match, events: [...match.events, event] }
 }
 
-export function undoLast(match: Match): Match {
-  if (match.events.length === 0) return match
-  return { ...match, events: match.events.slice(0, -1) }
-}
-
 /** Removes the last event matching the predicate (correcting a mis-entry: a basket,
  * foul or timeout logged by mistake). No-op when none matches. Selectors replay the
  * log, so points, fouls and timeouts recompute themselves. */

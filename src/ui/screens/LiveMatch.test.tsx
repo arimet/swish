@@ -50,13 +50,53 @@ describe('LiveMatch', () => {
     })
   })
 
-  it('removes the last opposition basket', async () => {
+  it('deletes any entry from the history, the opposition\'s basket included, and the score follows', async () => {
     renderLive()
     await userEvent.click(await screen.findByRole('button', { name: 'Ajouter 2 points à VERDUN' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Retirer le dernier panier de VERDUN' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter 3 points à VERDUN' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
+    const history = await screen.findByRole('dialog')
+    // The latest on top: the three, then the two.
+    const rows = within(history).getAllByRole('button', { expanded: false })
+    expect(rows.map((r) => r.textContent)).toEqual([expect.stringContaining('Panier (+3)'), expect.stringContaining('Panier (+2)')])
+    await userEvent.click(rows[1])
+    await userEvent.click(within(history).getByRole('button', { name: 'Supprimer' }))
     await waitFor(async () => {
-      const saved = await getMatch(MATCH_ID)
-      expect(saved!.events.filter((e) => e.type === 'SCORE' && e.team === 'B')).toHaveLength(0)
+      const opp = (await getMatch(MATCH_ID))!.events.filter((e) => e.type === 'SCORE' && e.team === 'B')
+      expect(opp.map((e) => e.type === 'SCORE' && e.kind)).toEqual(['3'])
+    })
+  })
+
+  it('modifies a player\'s action: another player, another action, same place, same clock', async () => {
+    await savePlayer({ id: 'p2', teamId: 'ta', number: 7, lastName: 'DURAND', firstName: 'Théo' })
+    const m = (await getMatch(MATCH_ID))!
+    await saveSheet(m, {
+      ...m, roster: ['p1', 'p2'],
+      events: [
+        ...m.events,
+        { id: 'f1', wallClock: 2, period: 1, gameClock: 480, type: 'FOUL', team: 'A', target: { kind: 'player', playerId: 'p1' }, foulType: 'personal' },
+        { id: 't1', wallClock: 3, period: 1, gameClock: 300, type: 'TIMEOUT', team: 'A' },
+      ],
+    })
+    renderLive()
+    await userEvent.click(await screen.findByRole('button', { name: 'Annuler' }))
+    const history = await screen.findByRole('dialog')
+    await userEvent.click(within(history).getByRole('button', { name: /Faute/ }))
+    await userEvent.click(within(history).getByRole('button', { name: 'Modifier' }))
+    // Preselected on the current player; DURAND takes it.
+    expect(within(history).getByRole('radio', { name: /MARTIN/ })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(within(history).getByRole('radio', { name: /DURAND/ }))
+    await userEvent.click(within(history).getByRole('button', { name: 'Continuer' }))
+    // DURAND's dialog: the entry is a block now, not a foul.
+    await screen.findByText('Modifier · 7 DURAND')
+    await userEvent.click(screen.getByRole('button', { name: /Contre/ }))
+    await waitFor(async () => {
+      const events = (await getMatch(MATCH_ID))!.events
+      expect(events.some((e) => e.id === 'f1')).toBe(false)
+      const at = events.findIndex((e) => e.type === 'STAT')
+      expect(events[at]).toMatchObject({ playerId: 'p2', stat: 'block', period: 1, gameClock: 480 })
+      // Where the foul stood: before the timeout, not after it.
+      expect(events[at + 1].id).toBe('t1')
     })
   })
 

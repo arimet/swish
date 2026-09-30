@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { appendEvent, undoLast, removeLastEvent } from '../domain/reducer'
+import { appendEvent } from '../domain/reducer'
 import { diffEvents, mergeSheet, NO_PENDING, revertWrite, track, untrack, type Pending } from '../domain/sync'
 import { newId } from '../domain/ids'
 import { saveSheet } from '../persistence/repositories'
@@ -10,7 +10,7 @@ import { useT } from '../i18n'
 import type { GameEvent, Match } from '../domain/types'
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
-type EventInput = DistributiveOmit<GameEvent, 'id' | 'wallClock'>
+export type EventInput = DistributiveOmit<GameEvent, 'id' | 'wallClock'>
 
 /**
  * The match sheet, at the scorer's table.
@@ -160,20 +160,38 @@ export function useMatch(matchId: string) {
     await persist(next)
   }, [current, persist, translate])
 
-  const undo = useCallback(async () => {
+  /** Removes one event, whichever it is: the history's "Delete". */
+  const remove = useCallback(async (id: string) => {
     const sheet = current()
-    if (!sheet) return
-    await persist(undoLast(sheet))
+    if (!sheet || !sheet.events.some((e) => e.id === id)) return
+    await persist({ ...sheet, events: sheet.events.filter((e) => e.id !== id) })
   }, [current, persist])
 
-  /** Targeted correction: removes the last event satisfying the predicate. */
-  const removeLast = useCallback(async (predicate: (e: GameEvent) => boolean) => {
+  /**
+   * Writes events at a given place in the log rather than at the end: in place of the
+   * event `at.id` (the history's "Modify"), or right after it (what follows a modified
+   * basket — its pass, its and-one). The caller gives them the period and game clock
+   * of the action they replace. Returns the new ids, `[]` when nothing was written.
+   */
+  const rewrite = useCallback(async (inputs: EventInput[], at: { id: string; mode: 'replace' | 'after' }): Promise<string[]> => {
     const sheet = current()
-    if (!sheet) return
-    const next = removeLastEvent(sheet, predicate)
-    if (next === sheet) return
-    await persist(next)
-  }, [current, persist])
+    if (!sheet) return []
+    const i = sheet.events.findIndex((e) => e.id === at.id)
+    if (i < 0) return []
+    const rest = at.mode === 'replace' ? [...sheet.events.slice(0, i), ...sheet.events.slice(i + 1)] : sheet.events
+    const created = inputs.map((input) => ({ ...input, id: newId(), wallClock: Date.now() }) as GameEvent)
+    try {
+      // The rules read the log as it will stand; the order they see does not matter
+      // to them, only what is in it.
+      created.reduce((m, e) => appendEvent(m, e), { ...sheet, events: rest })
+    } catch (e) {
+      setError(translate((e as Error).message))
+      return []
+    }
+    const cut = at.mode === 'replace' ? i : i + 1
+    const events = [...rest.slice(0, cut), ...created, ...rest.slice(cut)]
+    return (await persist({ ...sheet, events })) ? created.map((e) => e.id) : []
+  }, [current, persist, translate])
 
   /** Closes the game for good (spec §8): moves the status to 'finished' and saves.
    *  Returns `false` if the write failed — the caller must then not leave the game,
@@ -184,5 +202,5 @@ export function useMatch(matchId: string) {
     return persist({ ...sheet, status: 'finished' })
   }, [current, persist])
 
-  return { match, dispatch, dispatchMany, undo, removeLast, finish, error }
+  return { match, dispatch, dispatchMany, remove, rewrite, finish, error }
 }

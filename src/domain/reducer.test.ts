@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appendEvent, undoLast, removeLastEvent, validateEvent } from './reducer'
+import { appendEvent, removeLastEvent, validateEvent } from './reducer'
 import type { Match, GameEvent } from './types'
 
 const baseMatch = (): Match => ({
@@ -43,20 +43,6 @@ describe('appendEvent', () => {
     m = appendEvent(m, ev({ type: 'CLOCK_START' }))
     m = appendEvent(m, ev({ type: 'CLOCK_STOP' }))
     expect(() => appendEvent(m, ev({ type: 'CLOCK_STOP' }))).toThrow()
-  })
-})
-
-describe('undoLast', () => {
-  it('removes the last event', () => {
-    let m = baseMatch()
-    m = appendEvent(m, ev({ type: 'PERIOD_START' }))
-    m = appendEvent(m, ev({ type: 'CLOCK_START' }))
-    const m2 = undoLast(m)
-    expect(m2.events).toHaveLength(1)
-    expect(m2.events[0].type).toBe('PERIOD_START')
-  })
-  it('undoLast on an empty log does not break', () => {
-    expect(undoLast(baseMatch()).events).toHaveLength(0)
   })
 })
 

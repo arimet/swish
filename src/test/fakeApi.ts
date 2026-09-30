@@ -143,10 +143,16 @@ async function route(url: URL, init?: RequestInit): Promise<Response> {
     const id = decodeURIComponent(events[1])
     const m = store.get(key('match', id)) as Match | undefined
     if (!m) return json({ error: 'match_events_match_id_fkey' }, 400)
-    const { add = [], archive = [] } = JSON.parse(String(init?.body ?? '{}')) as { add?: GameEvent[]; archive?: string[] }
+    const { add = [], archive = [], before = {} } = JSON.parse(String(init?.body ?? '{}')) as { add?: GameEvent[]; archive?: string[]; before?: Record<string, string> }
     const known = new Set(m.events.map((e) => e.id))
     const gone = new Set(archive)
-    store.set(key('match', id), { ...m, events: [...m.events, ...add.filter((e) => !known.has(e.id))].filter((e) => !gone.has(e.id)) })
+    // As the server: an event with an anchor goes just before it, the others at the end.
+    const sheet = [...m.events]
+    for (const e of add.filter((x) => !known.has(x.id))) {
+      const at = before[e.id] ? sheet.findIndex((x) => x.id === before[e.id]) : -1
+      if (at >= 0) sheet.splice(at, 0, e); else sheet.push(e)
+    }
+    store.set(key('match', id), { ...m, events: sheet.filter((e) => !gone.has(e.id)) })
     return new Response(null, { status: 204 })
   }
 

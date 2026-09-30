@@ -8,19 +8,20 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { StartingFiveGate } from '../components/StartingFiveGate'
 import { AccessGate } from '../components/AccessGate'
 import { SubstitutionDialog } from '../components/SubstitutionDialog'
+import { HistoryDialog } from '../components/HistoryDialog'
 import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
 import { ConnectionState } from '../components/ConnectionState'
 import { useAuth } from '../../app/auth'
-import { useMatch } from '../../app/useMatch'
+import { useMatch, type EventInput } from '../../app/useMatch'
 import { liveState } from '../../rules/ffbb'
 import { playerStats } from '../../domain/boxscore'
 import { shotsOf } from '../../domain/shotchart'
 import { usePlayersById, useTeamsById } from '../../persistence/queries'
 import { periodLength, seedSeconds } from '../../domain/ids'
-import type { Match, Player, ScoreKind, ShotSpot, StatKind, FoulType } from '../../domain/types'
-import { Eye, Pencil, RotateCcw, X } from 'lucide-react'
+import type { GameEvent, Player, ScoreKind, ShotSpot, FoulType } from '../../domain/types'
+import { Eye, Pencil, X } from 'lucide-react'
 
 /* Our team's accent, and it is the brand — not a separate `--team-a` token. That
    one was a near-black in the light theme, which gave the roster panel a black top
@@ -39,7 +40,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   const translate = useT()
   const navigate = useNavigate()
   const { can, guard } = useAuth()
-  const { match, dispatch, dispatchMany, undo, removeLast, finish, error } = useMatch(matchId)
+  const { match, dispatch, dispatchMany, remove, rewrite, finish, error } = useMatch(matchId)
   const [askFinish, setAskFinish] = useState(false)
   const { data: players = {} } = usePlayersById(match?.meta.clubId)
   const { data: byId = {} } = useTeamsById()
@@ -52,6 +53,11 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   const [starters, setStarters] = useState<string[]>([])
   const [sub, setSub] = useState(false)
   const [editClock, setEditClock] = useState(false)
+  const [history, setHistory] = useState(false)
+  /** An action being modified from the history: what the player dialog enters goes in
+   *  its place (`replace`), then right after what replaced it (`after`) — a modified
+   *  basket's pass — at the period and game clock of the action it replaces. */
+  const [editing, setEditing] = useState<{ id: string; mode: 'replace' | 'after'; period: number; gameClock: number } | null>(null)
   const timer = useRef<number | undefined>(undefined)
   const seededMatchId = useRef<string | null>(null)
 
@@ -103,52 +109,40 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     for (const s of playerStats(match)) map.set(s.playerId, { points: s.points, fouls: s.fouls })
     return map
   }
-  const score = (kind: ScoreKind, shot?: ShotSpot) => pick &&
-    dispatch({ type: 'SCORE', team: 'A', playerId: pick.id, kind, shot, period: ls.period, gameClock: seconds })
-  const miss = (kind: ScoreKind, shot: ShotSpot) => pick &&
-    dispatch({ type: 'MISS', team: 'A', playerId: pick.id, kind, shot, period: ls.period, gameClock: seconds })
+  /** When the player dialog's entries happen: now, or when the action being modified did. */
+  const when = () => editing ? { period: editing.period, gameClock: editing.gameClock } : { period: ls.period, gameClock: seconds }
+  /** Everything the player dialog enters goes through here: one write, at the end of
+   *  the log — or where the action being modified stood. */
+  const write = async (inputs: EventInput[]) => {
+    if (!editing) return dispatchMany(inputs)
+    const ids = await rewrite(inputs, editing)
+    if (ids.length) setEditing({ ...editing, id: ids[ids.length - 1], mode: 'after' })
+  }
+  const shot = (made: boolean, kind: ScoreKind, spot?: ShotSpot): EventInput => made
+    ? { type: 'SCORE', team: 'A', playerId: pick!.id, kind, shot: spot, ...when() }
+    : { type: 'MISS', team: 'A', playerId: pick!.id, kind, shot: spot, ...when() }
+  const score = (kind: ScoreKind, spot?: ShotSpot) => pick && write([shot(true, kind, spot)])
+  const miss = (kind: ScoreKind, spot: ShotSpot) => pick && write([shot(false, kind, spot)])
   // One write for the whole trip to the line, in the order the attempts were shot.
-  const freeThrows = (results: boolean[]) => pick &&
-    dispatchMany(results.map((ok) => ok
-      ? { type: 'SCORE' as const, team: 'A' as const, playerId: pick.id, kind: 'lf' as const, period: ls.period, gameClock: seconds }
-      : { type: 'MISS' as const, team: 'A' as const, playerId: pick.id, kind: 'lf' as const, period: ls.period, gameClock: seconds }))
+  const freeThrows = (results: boolean[]) => pick && write(results.map((ok) => shot(ok, 'lf')))
   // The and-one: the opposition's foul on the shot, then the free throw it gives.
-  const andOne = (made: boolean) => pick && dispatchMany([
-    { type: 'FOUL', team: 'B', target: { kind: 'team' }, foulType: 'defensive', period: ls.period, gameClock: seconds },
-    made
-      ? { type: 'SCORE', team: 'A', playerId: pick.id, kind: 'lf', period: ls.period, gameClock: seconds }
-      : { type: 'MISS', team: 'A', playerId: pick.id, kind: 'lf', period: ls.period, gameClock: seconds },
+  const andOne = (made: boolean) => pick && write([
+    { type: 'FOUL', team: 'B', target: { kind: 'team' }, foulType: 'defensive', ...when() },
+    shot(made, 'lf'),
   ])
   const foul = (type: FoulType) => pick &&
-    dispatch({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId: pick.id }, foulType: type, period: ls.period, gameClock: seconds })
+    write([{ type: 'FOUL', team: 'A', target: { kind: 'player', playerId: pick.id }, foulType: type, ...when() }])
 
   // An opposition basket: no player named, only the score counts.
   const oppScore = (kind: ScoreKind) =>
     dispatch({ type: 'SCORE', team: 'B', kind, period: ls.period, gameClock: seconds })
-  const removeOppScore = () =>
-    removeLast((e) => e.type === 'SCORE' && e.team === 'B' && !e.playerId)
 
-  const countOf = <T extends string>(keys: T[], read: (e: Match['events'][number]) => T | null): Record<T, number> => {
-    const c = Object.fromEntries(keys.map((k) => [k, 0])) as Record<T, number>
-    for (const e of match.events) { const k = read(e); if (k) c[k]++ }
-    return c
-  }
-  const scoreCounts = (id: string) =>
-    countOf<ScoreKind>(['2int', '2ext', '3', 'lf'], (e) =>
-      e.type === 'SCORE' && e.team === 'A' && e.playerId === id ? e.kind : null)
-  const statCounts = (id: string) =>
-    countOf<StatKind>(['assist', 'reb_off', 'reb_def', 'block'], (e) =>
-      e.type === 'STAT' && e.team === 'A' && e.playerId === id ? e.stat : null)
-  const missCount = (id: string) =>
-    match.events.filter((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === id).length
-  /** This player's fouls, by type. Only the types actually recorded appear, so the
-   *  corrections can name what they will take back. */
-  const foulCounts = (id: string): Partial<Record<FoulType, number>> => {
-    const c: Partial<Record<FoulType, number>> = {}
-    for (const e of match.events)
-      if (e.type === 'FOUL' && e.team === 'A' && e.target.kind === 'player' && e.target.playerId === id)
-        c[e.foulType] = (c[e.foulType] ?? 0) + 1
-    return c
+  /** The history's "Modify": the dialog of the player chosen, whose entry replaces the
+   *  action at its period and clock. */
+  const modify = (e: GameEvent, playerId: string) => {
+    const p = players[playerId]
+    setEditing({ id: e.id, mode: 'replace', period: e.period, gameClock: e.gameClock })
+    setPick({ id: playerId, name: p ? `${p.number} ${p.lastName}` : playerId })
   }
 
   const clampClock = (s: number) => Math.min(periodLength(ls.period), Math.max(0, s))
@@ -200,7 +194,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Link to={`/match/${match.id}/watch`} target="_blank" aria-label={translate('live.spectatorView')} title={translate('live.spectatorView')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><Eye className="h-[18px] w-[18px]" strokeWidth={2} /></Link>
-            <SbButton onClick={undo} title={translate('live.undoTitle')}>{translate('live.undo')}</SbButton>
+            <SbButton onClick={() => setHistory(true)} title={translate('live.undoTitle')}>{translate('live.undo')}</SbButton>
             <SbButton onClick={nextPeriod} title={translate('live.periodTitle')}>{translate('live.period')}</SbButton>
             {/* A gap before the irreversible. "Finish" freezes the score; it sat eight
                 pixels from "Next period", which is the width of a badly placed
@@ -252,10 +246,6 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
               +{n}
             </button>
           ))}
-          <button onClick={removeOppScore} aria-label={translate('live.removeBasket', { team: teamNames.B })}
-            className="h-11 w-11 rounded-lg bg-[var(--c-card2)] text-sm font-bold text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90">
-            <RotateCcw className="mx-auto h-4 w-4" strokeWidth={2.5} />
-          </button>
         </div>
       </div>
 
@@ -266,33 +256,25 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         <TeamPanel
           title={teamNames.A.toUpperCase()} color={TEAM_A} players={onCourt()}
           statsByPlayer={statsByPlayer()} teamFouls={ls.teamFoulsThisPeriod.A}
-          bonus={ls.bonus.A} timeoutsRemaining={ls.timeoutsRemaining.A} timeoutsUsed={ls.timeoutsUsed.A}
+          bonus={ls.bonus.A} timeoutsRemaining={ls.timeoutsRemaining.A}
           onPick={(id, name) => setPick({ id, name })}
           onScore={(id, kind) => dispatch({ type: 'SCORE', team: 'A', playerId: id, kind, period: ls.period, gameClock: seconds })}
           onFoul={(id) => dispatch({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId: id }, foulType: 'personal', period: ls.period, gameClock: seconds })}
           onSub={() => setSub(true)}
           onTimeout={() => dispatch({ type: 'TIMEOUT', team: 'A', period: ls.period, gameClock: seconds })}
-          onUndoTimeout={() => removeLast((e) => e.type === 'TIMEOUT' && e.team === 'A')}
         />
       </div>
 
       <PlayerActionDialog
-        open={!!pick} playerName={pick?.name ?? ''} color={TEAM_A}
+        open={!!pick} playerName={pick ? (editing ? translate('history.modifying', { name: pick.name }) : pick.name) : ''} color={TEAM_A}
         teammates={onCourt().filter((p) => p.id !== pick?.id).map((p) => ({ id: p.id, name: `${p.number} ${p.lastName}` }))}
-        onAssist={(playerId) => dispatch({ type: 'STAT', team: 'A', playerId, stat: 'assist', period: ls.period, gameClock: seconds })}
-        scoreCounts={pick ? scoreCounts(pick.id) : undefined}
-        statCounts={pick ? statCounts(pick.id) : undefined}
-        foulCounts={pick ? foulCounts(pick.id) : undefined}
-        fouls={pick ? statsByPlayer().get(pick.id)?.fouls ?? 0 : 0}
-        misses={pick ? missCount(pick.id) : 0}
+        onAssist={(playerId) => write([{ type: 'STAT', team: 'A', playerId, stat: 'assist', ...when() }])}
         shots={pick ? shotsOf([match], pick.id) : undefined}
-        onClose={() => setPick(null)} onScore={score} onMiss={miss} onFreeThrows={freeThrows} onAndOne={andOne} onFoul={foul}
-        onStat={(kind) => pick && dispatch({ type: 'STAT', team: 'A', playerId: pick.id, stat: kind, period: ls.period, gameClock: seconds })}
-        onRemoveScore={(kind) => pick && removeLast((e) => e.type === 'SCORE' && e.team === 'A' && e.playerId === pick.id && e.kind === kind)}
-        onRemoveFoul={(type) => pick && removeLast((e) => e.type === 'FOUL' && e.team === 'A' && e.foulType === type && e.target.kind === 'player' && e.target.playerId === pick.id)}
-        onRemoveStat={(kind) => pick && removeLast((e) => e.type === 'STAT' && e.team === 'A' && e.playerId === pick.id && e.stat === kind)}
-        onRemoveMiss={() => pick && removeLast((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === pick.id)}
+        onClose={() => { setPick(null); setEditing(null) }} onScore={score} onMiss={miss} onFreeThrows={freeThrows} onAndOne={andOne} onFoul={foul}
+        onStat={(kind) => pick && write([{ type: 'STAT', team: 'A', playerId: pick.id, stat: kind, ...when() }])}
       />
+      <HistoryDialog open={history} events={match.events} players={players} teamNames={teamNames} roster={rosterPlayers}
+        onClose={() => setHistory(false)} onDelete={remove} onModify={modify} />
       <ClockEditDialog open={editClock} seconds={seconds} max={periodLength(ls.period)}
         onClose={() => setEditClock(false)} onSubmit={(s) => setSeconds(clampClock(s))} />
       {/* We only leave the game if it really is closed: `finish()` reports whether the

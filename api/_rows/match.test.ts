@@ -76,6 +76,17 @@ describe.skipIf(!t.ready)('match store', () => {
     expect((await matches.get(db, 'm1'))?.events).toEqual([])
   })
 
+  it('writes a replacement where the event it replaces stood, in the order given', async () => {
+    const db = await setup()
+    const at = (id: string): GameEvent => ({ id, type: 'STAT', team: 'A', playerId: 'p1', stat: 'block', ...base })
+    await writeEvents(db, 'm1', [at('a'), at('b'), at('c')], [])
+    await writeEvents(db, 'm1', [at('x'), at('y')], ['b'], { x: 'b', y: 'b' })
+    expect((await matches.get(db, 'm1'))?.events.map((e) => e.id)).toEqual(['a', 'x', 'y', 'c'])
+    // Before the very first event too, and the plain appends still go to the end.
+    await writeEvents(db, 'm1', [at('z'), at('w')], [], { z: 'a' })
+    expect((await matches.get(db, 'm1'))?.events.map((e) => e.id)).toEqual(['z', 'a', 'x', 'y', 'c', 'w'])
+  })
+
   it('refuses a missed field goal with no spot: only a free throw goes without one', async () => {
     const db = await setup()
     const bad = { id: 'x', type: 'MISS', team: 'A', playerId: 'p1', kind: '2int', ...base } as GameEvent

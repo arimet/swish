@@ -62,19 +62,32 @@ export function eventFromRow(r: EventRow, starters: string[]): GameEvent {
  * An id already stored is skipped rather than refused: a request retried after its
  * answer was lost must not score the basket twice. An archive of an id unknown or
  * already archived does nothing, for the same reason — the state asked for is reached.
+ *
+ * `before` places an added event ahead of another one rather than at the end: an
+ * action corrected from the history takes the place of the one it replaces. It lands
+ * halfway between the anchor and whatever stands just before it — archived rows
+ * included, so an anchor archived meanwhile still gives the right place.
  */
-export async function writeEvents(db: Db, matchId: string, add: GameEvent[], archive: string[]): Promise<void> {
+export async function writeEvents(db: Db, matchId: string, add: GameEvent[], archive: string[], before: Record<string, string> = {}): Promise<void> {
   for (const e of add) {
+    let position: number | null = null
+    if (before[e.id]) {
+      const { rows } = await db.query<{ hi: number; lo: number | null }>(
+        `select a.position as hi, (select max(position) from match_events
+            where match_id = $2 and position < a.position) as lo
+         from match_events a where a.id = $1 and a.match_id = $2`, [before[e.id], matchId])
+      if (rows[0]) position = ((rows[0].lo ?? rows[0].hi - 1) + rows[0].hi) / 2
+    }
     // The opponent has no roster here: a team B five would overwrite the club's starters.
     if (e.type === 'STARTING_FIVE' && e.team !== 'A') throw new BadRequest('only the club has a starting five')
     const r = eventToRow(matchId, e)
     await db.query(
       `insert into match_events (id, match_id, wall_clock, period, game_clock, type, team, player_id,
-         player_in_id, player_out_id, score_kind, stat, foul_type, foul_target, shot_x, shot_y)
-       values ($1, $2, to_timestamp($3 / 1000.0), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+         player_in_id, player_out_id, score_kind, stat, foul_type, foul_target, shot_x, shot_y, position)
+       values ($1, $2, to_timestamp($3 / 1000.0), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
        on conflict (id) do nothing`,
       [r.id, r.match_id, r.wall_clock_ms, r.period, r.game_clock, r.type, r.team, r.player_id,
-        r.player_in_id, r.player_out_id, r.score_kind, r.stat, r.foul_type, r.foul_target, r.shot_x, r.shot_y])
+        r.player_in_id, r.player_out_id, r.score_kind, r.stat, r.foul_type, r.foul_target, r.shot_x, r.shot_y, position])
     if (e.type === 'STARTING_FIVE') {
       const { rowCount } = await db.query(
         `update match_roster set starter_rank = array_position($2::text[], player_id) - 1 where match_id = $1`,

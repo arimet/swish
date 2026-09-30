@@ -6,11 +6,11 @@ import { ProgressionChart } from '../../export/ProgressionChart'
 import { printSummary } from '../../export/print'
 import { MatchMetaDialog } from '../components/MatchMetaDialog'
 import { PlayerActionDialog } from '../components/PlayerActionDialog'
+import { HistoryDialog } from '../components/HistoryDialog'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { saveSheet } from '../../persistence/repositories'
 import { docKey, useMatchDoc, usePlayersById, useTeamsById } from '../../persistence/queries'
-import { removeLastEvent } from '../../domain/reducer'
 import { newId } from '../../domain/ids'
 import { liveState } from '../../rules/ffbb'
 import { playerStats, type PlayerStat } from '../../domain/boxscore'
@@ -43,6 +43,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const [showEdit, setShowEdit] = useState(false)
   const [editStats, setEditStats] = useState(false)
   const [pick, setPick] = useState<{ id: string; name: string } | null>(null)
+  const [history, setHistory] = useState(false)
 
 
   if (match === undefined) return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
@@ -69,10 +70,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const addEvents = (list: EventInput[]) =>
     persist({ ...match, events: [...match.events, ...list.map((e) => ({ ...e, id: newId(), wallClock: Date.now() }) as GameEvent)] })
   const addEvent = (e: EventInput) => addEvents([e])
-  const removeLast = (pred: (e: GameEvent) => boolean) => {
-    const next = removeLastEvent(match, pred)
-    if (next !== match) persist(next)
-  }
+  const removeEvent = (id: string) => persist({ ...match, events: match.events.filter((e) => e.id !== id) })
   // Stats correction only touches our roster (side A): the opposition has no players
   // recorded.
   const addScore = (playerId: string, kind: ScoreKind, shot?: ShotSpot) => addEvent({ type: 'SCORE', team: 'A', playerId, kind, shot, period: ls.period, gameClock: 0 })
@@ -88,22 +86,6 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       : { type: 'MISS', team: 'A', playerId, kind: 'lf', period: ls.period, gameClock: 0 },
   ])
   const addMiss = (playerId: string, kind: ScoreKind, shot: ShotSpot) => addEvent({ type: 'MISS', team: 'A', playerId, kind, shot, period: ls.period, gameClock: 0 })
-  const removeMiss = (id: string) => removeLast((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === id)
-  const missesOf = (id: string) => match.events.filter((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === id).length
-  const removeScoreKind = (id: string, kind: ScoreKind) => removeLast((e) => e.type === 'SCORE' && e.team === 'A' && e.playerId === id && e.kind === kind)
-  const removeFoul = (id: string) => removeLast((e) => e.type === 'FOUL' && e.team === 'A' && e.target.kind === 'player' && e.target.playerId === id)
-  const removeStatKind = (id: string, stat: StatKind) => removeLast((e) => e.type === 'STAT' && e.team === 'A' && e.playerId === id && e.stat === stat)
-  const scoreCountsOf = (id: string): Record<ScoreKind, number> => {
-    const c: Record<ScoreKind, number> = { '2int': 0, '2ext': 0, '3': 0, lf: 0 }
-    for (const e of match.events) if (e.type === 'SCORE' && e.team === 'A' && e.playerId === id) c[e.kind]++
-    return c
-  }
-  const statCountsOf = (id: string): Record<StatKind, number> => {
-    const c: Record<StatKind, number> = { assist: 0, reb_off: 0, reb_def: 0, block: 0 }
-    for (const e of match.events) if (e.type === 'STAT' && e.team === 'A' && e.playerId === id) c[e.stat]++
-    return c
-  }
-  const foulsOf = (id: string) => playerStats(match).find((s) => s.playerId === id)?.fouls ?? 0
   /* Typing a number into a cell: the domain turns it back into the events that add up
      to it, in one write. See `domain/correct`. */
   const setCell = (playerId: string, cell: Cell, n: number) => {
@@ -142,8 +124,11 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         </div>
       </div>
       {editStats && (
-        <div className="mb-4 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}>
-          {translate('summary.correctionMode')}
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}>
+          <span className="min-w-0 flex-1">{translate('summary.correctionMode')}</span>
+          {/* What the player dialog's "Correct" used to take back — a miss, a foul of a
+              given type — is deleted here, like at the table. */}
+          <button onClick={() => setHistory(true)} className="shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-bold" style={{ border: `1px solid ${C.accentBd}` }}>{translate('history.title')}</button>
         </div>
       )}
       <MatchMetaDialog open={showEdit} meta={match.meta} onClose={() => setShowEdit(false)} onSave={saveMeta} />
@@ -152,23 +137,18 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         // After the game nobody knows who was on the court: the whole roster can pass.
         teammates={match.roster.filter((id) => id !== pick?.id && players[id]).map((id) => ({ id, name: `${players[id].number} ${players[id].lastName}` }))}
         onAssist={(playerId) => addStat(playerId, 'assist')}
-        scoreCounts={pick ? scoreCountsOf(pick.id) : undefined}
-        statCounts={pick ? statCountsOf(pick.id) : undefined}
-        fouls={pick ? foulsOf(pick.id) : 0}
         shots={pick ? shotsOf([match], pick.id) : undefined}
         onClose={() => setPick(null)}
         onScore={(k, shot) => pick && addScore(pick.id, k, shot)}
         onFoul={() => pick && addFoul(pick.id)}
         onStat={(k) => pick && addStat(pick.id, k)}
-        onRemoveScore={(k) => pick && removeScoreKind(pick.id, k)}
-        onRemoveFoul={() => pick && removeFoul(pick.id)}
-        onRemoveStat={(k) => pick && removeStatKind(pick.id, k)}
-        misses={pick ? missesOf(pick.id) : 0}
         onMiss={(k, shot) => pick && addMiss(pick.id, k, shot)}
         onFreeThrows={(results) => pick && addFreeThrows(pick.id, results)}
         onAndOne={(made) => pick && addAndOne(pick.id, made)}
-        onRemoveMiss={() => pick && removeMiss(pick.id)}
       />
+      <HistoryDialog open={history} events={match.events} players={players} teamNames={teamNames}
+        roster={match.roster.map((id) => players[id]).filter(Boolean)}
+        onClose={() => setHistory(false)} onDelete={removeEvent} />
 
       {/* FINAL SCOREBOARD */}
       <div className="overflow-hidden rounded-3xl" style={{ background: C.frame, border: bd }}>

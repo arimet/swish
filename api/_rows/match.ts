@@ -43,7 +43,7 @@ async function assemble(db: Db, rows: Row[]): Promise<Match[]> {
   const ids = rows.map((r) => r.id)
   const [roster, events] = await Promise.all([
     db.query<RosterRow>('select match_id, player_id, starter_rank from match_roster where match_id = any($1::text[]) order by match_id, rank', [ids]),
-    db.query<EventRow>(`select ${EVENT_COLUMNS} from active_match_events where match_id = any($1::text[]) order by seq`, [ids]),
+    db.query<EventRow>(`select ${EVENT_COLUMNS} from active_match_events where match_id = any($1::text[]) order by position`, [ids]),
   ])
   return rows.map((r) => {
     const own = roster.rows.filter((x) => x.match_id === r.id)

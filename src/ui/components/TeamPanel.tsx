@@ -1,15 +1,14 @@
 import type { Player, ScoreKind } from '../../domain/types'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
-import { RotateCcw } from 'lucide-react'
 
 type Stat = { points: number; fouls: number }
 
 /** A team column: header (fouls/bonus/timeouts), player cards with free-throw and
  * foul shortcuts; a tap on the name opens the dialog with the shot chart. */
 export function TeamPanel({
-  title, color, players, statsByPlayer, teamFouls, bonus, timeoutsRemaining, timeoutsUsed,
-  onPick, onScore, onFoul, onSub, onTimeout, onUndoTimeout,
+  title, color, players, statsByPlayer, teamFouls, bonus, timeoutsRemaining,
+  onPick, onScore, onFoul, onSub, onTimeout,
 }: {
   title: string
   color: string
@@ -18,13 +17,11 @@ export function TeamPanel({
   teamFouls: number
   bonus: boolean
   timeoutsRemaining: number
-  timeoutsUsed: number
   onPick: (playerId: string, name: string) => void
   onScore: (playerId: string, kind: ScoreKind) => void
   onFoul: (playerId: string) => void
   onSub: () => void
   onTimeout: () => void
-  onUndoTimeout: () => void
 }) {
   const translate = useT()
   // `bg-card` at full opacity, not `bg-card/50`: a fifty per cent veil brings the
@@ -48,28 +45,16 @@ export function TeamPanel({
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Chip label={translate('panel.fouls')} value={teamFouls} warn={teamFouls >= 4} />
-          {/* Timeout, undo and substitution: three controls that lived between twenty
-              and twenty-eight pixels tall, in a gym, under a thumb. They are now a
-              finger tall. */}
-          <span className="flex items-center overflow-hidden rounded-lg bg-muted">
-            <button
-              onClick={onTimeout}
-              disabled={timeoutsRemaining <= 0}
-              title={translate('panel.timeout')}
-              className="flex h-11 items-center gap-1 px-3 text-xs font-bold text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] disabled:opacity-40"
-            >
-              TM<span className="nums text-foreground">{timeoutsRemaining}</span>
-            </button>
-            <button
-              onClick={onUndoTimeout}
-              disabled={timeoutsUsed <= 0}
-              title={translate('panel.undoTimeoutTitle')}
-              aria-label={translate('panel.undoTimeout', { team: title })}
-              className="h-11 w-11 border-l border-background/60 text-xs text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] disabled:opacity-30"
-            >
-              <RotateCcw className="mx-auto h-4 w-4" strokeWidth={2.5} />
-            </button>
-          </span>
+          {/* Timeout and substitution: controls a finger tall, in a gym, under a thumb.
+              A timeout taken by mistake is deleted from the history, like any entry. */}
+          <button
+            onClick={onTimeout}
+            disabled={timeoutsRemaining <= 0}
+            title={translate('panel.timeout')}
+            className="flex h-11 items-center gap-1 rounded-lg bg-muted px-3 text-xs font-bold text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] disabled:opacity-40"
+          >
+            TM<span className="nums text-foreground">{timeoutsRemaining}</span>
+          </button>
           <button onClick={onSub} title={translate('panel.substitution')} aria-label={translate('panel.substitutionFor', { team: title })}
             className="grid h-11 w-11 place-items-center rounded-lg bg-muted text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]">
             ⇄

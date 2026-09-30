@@ -8,7 +8,6 @@ function renderDialog(over: Partial<Parameters<typeof PlayerActionDialog>[0]> = 
   const props = {
     open: true, playerName: '4 ROUX',
     onClose: vi.fn(), onScore: vi.fn(), onMiss: vi.fn(), onFreeThrows: vi.fn(), onAndOne: vi.fn(), onAssist: vi.fn(), onFoul: noop, onStat: noop,
-    onRemoveScore: noop, onRemoveFoul: noop, onRemoveStat: noop, onRemoveMiss: noop,
     ...over,
   }
   render(<PlayerActionDialog {...props} />)
@@ -84,8 +83,7 @@ describe('PlayerActionDialog — the foul and its type', () => {
       const onFoul = vi.fn()
       const { unmount } = render(
         <PlayerActionDialog open playerName="4 ROUX"
-          onClose={vi.fn()} onScore={vi.fn()} onMiss={vi.fn()} onFreeThrows={vi.fn()} onAndOne={vi.fn()} onAssist={vi.fn()} onFoul={onFoul} onStat={noop}
-          onRemoveScore={noop} onRemoveFoul={noop} onRemoveStat={noop} onRemoveMiss={noop} />,
+          onClose={vi.fn()} onScore={vi.fn()} onMiss={vi.fn()} onFreeThrows={vi.fn()} onAndOne={vi.fn()} onAssist={vi.fn()} onFoul={onFoul} onStat={noop} />,
       )
       fireEvent.click(screen.getByRole('button', { name: aria }))
       expect(onFoul).toHaveBeenCalledWith(expected)
@@ -97,51 +95,6 @@ describe('PlayerActionDialog — the foul and its type', () => {
     const { onClose } = renderDialog()
     fireEvent.click(screen.getByRole('button', { name: 'Faute offensive' }))
     expect(onClose).toHaveBeenCalled()
-  })
-})
-
-/**
- * Correcting a mis-entry.
- *
- * It stays folded — this dialog is opened to record, and unfolded corrections push
- * half of it below the fold — but it reads as a button and carries the count of what
- * it can take back. A mis-entered basket is the second reason anyone opens this
- * dialog, not a footnote behind a small grey caption.
- */
-describe('PlayerActionDialog — the corrections', () => {
-  it('says how many actions it can take back', () => {
-    renderDialog({ scoreCounts: { '2int': 2, '2ext': 0, '3': 1, lf: 0 }, fouls: 1, misses: 1 })
-    // 2 + 1 baskets, one foul, one miss.
-    expect(screen.getByText('(5)')).toBeInTheDocument()
-  })
-
-  it('stays out of the way entirely when there is nothing to correct', () => {
-    // An enabled control that can do nothing reads as a fault; so does a count of
-    // zero next to the word "correct".
-    renderDialog()
-    expect(screen.queryByText(/corriger/i)).not.toBeInTheDocument()
-  })
-
-  it('names the foul type it will remove, and removes that one', () => {
-    // A type you can enter and never read back is a type nobody trusts: these buttons
-    // are the only place the recorded type is shown.
-    const { onRemoveFoul } = renderDialog({
-      fouls: 3, foulCounts: { defensive: 2, technical: 1 }, onRemoveFoul: vi.fn(),
-    })
-    fireEvent.click(screen.getByText(/corriger/i))
-
-    expect(screen.getByRole('button', { name: /retirer une faute défensive/i })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /retirer une faute technique/i }))
-    expect(onRemoveFoul).toHaveBeenCalledWith('technical')
-  })
-
-  it('offers no removal for a type that was never recorded', () => {
-    // The regex has to say "retirer": the three recording buttons carry the same type
-    // names and are always on screen.
-    renderDialog({ fouls: 1, foulCounts: { offensive: 1 } })
-    fireEvent.click(screen.getByText(/corriger/i))
-    expect(screen.getByRole('button', { name: /retirer une faute offensive/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /retirer une faute technique/i })).not.toBeInTheDocument()
   })
 })
 
@@ -255,15 +208,21 @@ describe('PlayerActionDialog — the assist, asked after the basket', () => {
 
 describe('PlayerActionDialog — missed mode', () => {
   it('shows nothing but the court, and brings everything back on "Made"', () => {
-    renderDialog({ scoreCounts: { '2int': 1, '2ext': 0, '3': 0, lf: 0 } })
+    renderDialog()
     fireEvent.click(screen.getByRole('button', { name: 'Manqué' }))
     for (const name of ['Ajouter 2 points', 'Lancer franc', 'Faute offensive', 'Contre'])
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
-    expect(screen.queryByText(/corriger/i)).not.toBeInTheDocument()
     expect(court()).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Réussi' }))
     expect(screen.getByRole('button', { name: 'Ajouter 2 points' })).toBeInTheDocument()
-    expect(screen.getByText(/corriger/i)).toBeInTheDocument()
+  })
+})
+
+describe('PlayerActionDialog — no corrections of its own', () => {
+  it('takes nothing back: that is the history\'s job', () => {
+    renderDialog()
+    expect(screen.queryByText(/corriger/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /retirer/i })).not.toBeInTheDocument()
   })
 })
