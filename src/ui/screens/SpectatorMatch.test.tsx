@@ -101,3 +101,26 @@ describe('SpectatorMatch — per-player shot chart', () => {
     expect(await screen.findAllByLabelText('Carte des tirs')).toHaveLength(1)
   })
 })
+
+describe('SpectatorMatch — before the first point', () => {
+  beforeEach(async () => {
+    await saveTeam({ id: 'ta3', name: 'VIGNOT' }); await saveTeam({ id: 'tb3', name: 'VERDUN' })
+    const ids = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']
+    for (const [i, id] of ids.entries()) {
+      await savePlayer({ id, teamId: 'ta3', number: i + 1, lastName: `JOUEUR${i + 1}`, firstName: 'X' })
+    }
+    const m: Match = {
+      id: 'spec-tipoff', meta: { clubId: 'ta3', opponentId: 'tb3' },
+      roster: ids, status: 'live',
+      // The first player on the roster starts on the bench.
+      events: [ev({ type: 'STARTING_FIVE', team: 'A', playerIds: ['q2', 'q3', 'q4', 'q5', 'q6'] }, 0)],
+    }
+    await saveSheet(null, m)
+  })
+
+  it('lists the five on court, not the first five of the roster', async () => {
+    render(<MemoryRouter><SpectatorMatch matchId="spec-tipoff" /></MemoryRouter>)
+    expect(await screen.findByText(/JOUEUR6/)).toBeInTheDocument()
+    expect(screen.queryByText(/JOUEUR1/)).not.toBeInTheDocument()
+  })
+})

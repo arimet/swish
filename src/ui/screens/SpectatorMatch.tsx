@@ -184,7 +184,10 @@ function StatList({ name, match, players, openId, onToggle }: {
   const t = teamTotals(match).team
   const top = stats[0]?.points ?? 0
   const active = stats.filter((s) => s.points || s.fouls || s.assists || s.offRebounds || s.defRebounds || s.blocks)
-  const rows = active.length > 0 ? active : stats.slice(0, 5)
+  // Before anyone has done anything, the five on court — not the first five of the
+  // roster, which at tip-off may be sitting on the bench.
+  const onCourt = new Set(liveState(match).onCourt.A)
+  const rows = active.length > 0 ? active : onCourt.size > 0 ? stats.filter((s) => onCourt.has(s.playerId)) : stats.slice(0, 5)
   return (
     <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: `1px solid ${C.border}` }}>
       <div className="flex items-center gap-2.5 px-4 py-3" style={{ borderBottom: `1px solid ${C.border}` }}>
