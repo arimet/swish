@@ -23,7 +23,7 @@ export function eventToRow(matchId: string, e: GameEvent): EventRow {
   switch (e.type) {
     case 'STARTING_FIVE': return { ...row, team: e.team }
     case 'SCORE': return { ...row, team: e.team, player_id: e.playerId ?? null, score_kind: e.kind, shot_x: e.shot?.x ?? null, shot_y: e.shot?.y ?? null }
-    case 'MISS': return { ...row, team: e.team, player_id: e.playerId, score_kind: e.kind, shot_x: e.shot.x, shot_y: e.shot.y }
+    case 'MISS': return { ...row, team: e.team, player_id: e.playerId, score_kind: e.kind, shot_x: e.shot?.x ?? null, shot_y: e.shot?.y ?? null }
     case 'FOUL': return { ...row, team: e.team, foul_type: e.foulType, foul_target: e.target.kind, player_id: e.target.kind === 'player' ? e.target.playerId : null }
     case 'TIMEOUT': return { ...row, team: e.team }
     case 'SUBSTITUTION': return { ...row, team: e.team, player_in_id: e.playerInId, player_out_id: e.playerOutId }
@@ -44,7 +44,7 @@ export function eventFromRow(r: EventRow, starters: string[]): GameEvent {
       ...base, type: r.type, team, kind: r.score_kind as never,
       ...(r.player_id ? { playerId: r.player_id } : {}), ...(shot ? { shot } : {}),
     }
-    case 'MISS': return { ...base, type: r.type, team, playerId: r.player_id!, kind: r.score_kind as never, shot: shot! }
+    case 'MISS': return { ...base, type: r.type, team, playerId: r.player_id!, kind: r.score_kind as never, ...(shot ? { shot } : {}) }
     case 'FOUL': return {
       ...base, type: r.type, team, foulType: r.foul_type as never,
       target: r.foul_target === 'player' ? { kind: 'player', playerId: r.player_id! } : { kind: r.foul_target as 'coach' | 'bench' },

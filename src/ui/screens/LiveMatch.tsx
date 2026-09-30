@@ -107,6 +107,11 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     dispatch({ type: 'SCORE', team: 'A', playerId: pick.id, kind, shot, period: ls.period, gameClock: seconds })
   const miss = (kind: ScoreKind, shot: ShotSpot) => pick &&
     dispatch({ type: 'MISS', team: 'A', playerId: pick.id, kind, shot, period: ls.period, gameClock: seconds })
+  // One write for the whole trip to the line, in the order the attempts were shot.
+  const freeThrows = (results: boolean[]) => pick &&
+    dispatchMany(results.map((ok) => ok
+      ? { type: 'SCORE' as const, team: 'A' as const, playerId: pick.id, kind: 'lf' as const, period: ls.period, gameClock: seconds }
+      : { type: 'MISS' as const, team: 'A' as const, playerId: pick.id, kind: 'lf' as const, period: ls.period, gameClock: seconds }))
   const foul = (type: FoulType) => pick &&
     dispatch({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId: pick.id }, foulType: type, period: ls.period, gameClock: seconds })
 
@@ -265,7 +270,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         fouls={pick ? statsByPlayer().get(pick.id)?.fouls ?? 0 : 0}
         misses={pick ? missCount(pick.id) : 0}
         shots={pick ? shotsOf([match], pick.id) : undefined}
-        onClose={() => setPick(null)} onScore={score} onMiss={miss} onFoul={foul}
+        onClose={() => setPick(null)} onScore={score} onMiss={miss} onFreeThrows={freeThrows} onFoul={foul}
         onStat={(kind) => pick && dispatch({ type: 'STAT', team: 'A', playerId: pick.id, stat: kind, period: ls.period, gameClock: seconds })}
         onRemoveScore={(kind) => pick && removeLast((e) => e.type === 'SCORE' && e.team === 'A' && e.playerId === pick.id && e.kind === kind)}
         onRemoveFoul={(type) => pick && removeLast((e) => e.type === 'FOUL' && e.team === 'A' && e.foulType === type && e.target.kind === 'player' && e.target.playerId === pick.id)}

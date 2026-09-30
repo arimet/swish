@@ -8,6 +8,8 @@ export interface PlayerStat {
   twoInside: number
   twoOutside: number
   freeThrows: number
+  /** Free throws missed: they make the attempts, and stay out of `misses`. */
+  freeThrowsMissed: number
   fouls: number
   /** Missed field goals. Free throws have no position and do not count here. */
   misses: number
@@ -33,7 +35,7 @@ export function playerStats(match: Match): PlayerStat[] {
   for (const id of roster)
     stats.set(id, {
       playerId: id, points: 0, fieldGoalsMade: 0, threes: 0,
-      twoInside: 0, twoOutside: 0, freeThrows: 0, fouls: 0, misses: 0,
+      twoInside: 0, twoOutside: 0, freeThrows: 0, freeThrowsMissed: 0, fouls: 0, misses: 0,
       assists: 0, offRebounds: 0, defRebounds: 0, blocks: 0, isStarter: false,
     })
 
@@ -50,7 +52,8 @@ export function playerStats(match: Match): PlayerStat[] {
       else s.freeThrows++
     }
     if (e.type === 'MISS' && e.team === 'A') {
-      const s = stats.get(e.playerId); if (s) s.misses++
+      const s = stats.get(e.playerId); if (!s) continue
+      if (e.kind === 'lf') s.freeThrowsMissed++; else s.misses++
     }
     if (e.type === 'FOUL' && e.team === 'A' && e.target.kind === 'player') {
       const s = stats.get(e.target.playerId); if (s) s.fouls++

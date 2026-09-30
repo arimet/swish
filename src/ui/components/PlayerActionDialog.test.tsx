@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '../../test/render'
+import { render, screen, fireEvent, within } from '../../test/render'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PlayerActionDialog } from './PlayerActionDialog'
 
@@ -7,7 +7,7 @@ const noop = vi.fn()
 function renderDialog(over: Partial<Parameters<typeof PlayerActionDialog>[0]> = {}) {
   const props = {
     open: true, playerName: '4 ROUX',
-    onClose: vi.fn(), onScore: vi.fn(), onMiss: vi.fn(), onFoul: noop, onStat: noop,
+    onClose: vi.fn(), onScore: vi.fn(), onMiss: vi.fn(), onFreeThrows: vi.fn(), onFoul: noop, onStat: noop,
     onRemoveScore: noop, onRemoveFoul: noop, onRemoveStat: noop, onRemoveMiss: noop,
     ...over,
   }
@@ -82,7 +82,7 @@ describe('PlayerActionDialog — the foul and its type', () => {
       const onFoul = vi.fn()
       const { unmount } = render(
         <PlayerActionDialog open playerName="4 ROUX"
-          onClose={vi.fn()} onScore={vi.fn()} onMiss={vi.fn()} onFoul={onFoul} onStat={noop}
+          onClose={vi.fn()} onScore={vi.fn()} onMiss={vi.fn()} onFreeThrows={vi.fn()} onFoul={onFoul} onStat={noop}
           onRemoveScore={noop} onRemoveFoul={noop} onRemoveStat={noop} onRemoveMiss={noop} />,
       )
       fireEvent.click(screen.getByRole('button', { name: aria }))
@@ -155,5 +155,36 @@ describe('PlayerActionDialog — a basket with no position', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Ajouter 3 points' }))
     expect(onScore).toHaveBeenLastCalledWith('3')
+  })
+})
+
+describe('PlayerActionDialog — the free-throw line', () => {
+  it('enters two attempts, one made and one missed, in one validation', () => {
+    const { onFreeThrows, onScore, onClose } = renderDialog()
+    fireEvent.click(screen.getByRole('button', { name: 'Lancer franc' }))
+    // Two attempts by default, both made.
+    fireEvent.click(within(screen.getByRole('group', { name: 'LF 2' })).getByRole('button', { name: 'Manqué' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Valider les lancers francs' }))
+    expect(onFreeThrows).toHaveBeenCalledWith([true, false])
+    expect(onScore).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('takes one to three attempts', () => {
+    const { onFreeThrows } = renderDialog()
+    fireEvent.click(screen.getByRole('button', { name: 'Lancer franc' }))
+    fireEvent.click(within(screen.getByRole('group', { name: 'Tentatives' })).getByRole('button', { name: '3' }))
+    expect(screen.getAllByRole('group', { name: /^LF \d$/ })).toHaveLength(3)
+    fireEvent.click(within(screen.getByRole('group', { name: 'Tentatives' })).getByRole('button', { name: '1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Valider les lancers francs' }))
+    expect(onFreeThrows).toHaveBeenCalledWith([true])
+  })
+
+  it('goes back to the court without recording anything', () => {
+    const { onFreeThrows } = renderDialog()
+    fireEvent.click(screen.getByRole('button', { name: 'Lancer franc' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Retour' }))
+    expect(court()).toBeInTheDocument()
+    expect(onFreeThrows).not.toHaveBeenCalled()
   })
 })

@@ -57,6 +57,9 @@ function TeamBox({ match, players }: { match: Match; players: Record<string, Pla
   const stats = playerStats(match)
   const times = playingTimes(match)
   const totals = teamTotals(match)
+  // Made/attempts once a free throw was entered missed; before that, only made are known.
+  const tracksFtMisses = match.events.some((e) => e.type === 'MISS' && e.team === 'A' && e.kind === 'lf')
+  const ft = (made: number, missed: number) => (tracksFtMisses ? `${made}/${made + missed}` : made)
   return (
     <section>
       <h3 className="font-bold mb-2">{translate('print.home')}</h3>
@@ -80,7 +83,7 @@ function TeamBox({ match, players }: { match: Match; players: Record<string, Pla
                 <TableCell>{fmt(times.get(s.playerId) ?? 0)}</TableCell>
                 <TableCell>{s.points}</TableCell><TableCell>{s.fieldGoalsMade}</TableCell>
                 <TableCell>{s.threes}</TableCell><TableCell>{s.twoInside}</TableCell>
-                <TableCell>{s.twoOutside}</TableCell><TableCell>{s.freeThrows}</TableCell>
+                <TableCell>{s.twoOutside}</TableCell><TableCell>{ft(s.freeThrows, s.freeThrowsMissed)}</TableCell>
                 <TableCell>{s.fouls}</TableCell>
               </TableRow>
             )
@@ -89,7 +92,7 @@ function TeamBox({ match, players }: { match: Match; players: Record<string, Pla
             <TableCell colSpan={4}>{translate('print.teamTotal')}</TableCell>
             <TableCell>{totals.team.points}</TableCell><TableCell>{totals.team.fieldGoalsMade}</TableCell>
             <TableCell>{totals.team.threes}</TableCell><TableCell>{totals.team.twoInside}</TableCell>
-            <TableCell>{totals.team.twoOutside}</TableCell><TableCell>{totals.team.freeThrows}</TableCell>
+            <TableCell>{totals.team.twoOutside}</TableCell><TableCell>{ft(totals.team.freeThrows, totals.team.freeThrowsMissed)}</TableCell>
             <TableCell>{totals.team.fouls}</TableCell>
           </TableRow>
         </TableBody>

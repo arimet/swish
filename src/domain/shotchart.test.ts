@@ -23,6 +23,14 @@ describe('shotsOf', () => {
     expect(shots.map((s) => s.matchId)).toEqual(['m1', 'm2'])
   })
 
+  it('leaves the free throws off the chart, missed ones included', () => {
+    const shots = shotsOf([mk('m1', [
+      { type: 'SCORE', team: 'A', playerId: 'p1', kind: 'lf' },
+      { type: 'MISS', team: 'A', playerId: 'p1', kind: 'lf' },
+    ])], 'p1')
+    expect(shots).toEqual([])
+  })
+
   it('excludes other players\' shots', () => {
     const m = mk('m1', [
       { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },

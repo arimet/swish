@@ -57,6 +57,18 @@ describe('LiveMatch', () => {
       expect(saved!.events.filter((e) => e.type === 'SCORE' && e.team === 'B')).toHaveLength(0)
     })
   })
+
+  it('files a trip to the line as one basket and one miss, in the order shot', async () => {
+    renderLive()
+    await userEvent.click(await screen.findByRole('button', { name: /MARTIN/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Lancer franc' }))
+    await userEvent.click(within(screen.getByRole('group', { name: 'LF 1' })).getByRole('button', { name: 'Manqué' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Valider les lancers francs' }))
+    await waitFor(async () => {
+      const shots = (await getMatch(MATCH_ID))!.events.filter((e) => e.type === 'SCORE' || e.type === 'MISS')
+      expect(shots.map((e) => [e.type, 'kind' in e && e.kind])).toEqual([['MISS', 'lf'], ['SCORE', 'lf']])
+    })
+  })
 })
 
 // The screen's full wiring, on our team's side: the scorer's table had had no

@@ -15,7 +15,7 @@ export function shotsOf(matches: Match[], playerId: string): Shot[] {
     for (const e of m.events) {
       if (e.type === 'SCORE' && e.playerId === playerId && e.shot)
         out.push({ matchId: m.id, spot: e.shot, zone: zoneAt(e.shot.x, e.shot.y), made: true })
-      else if (e.type === 'MISS' && e.playerId === playerId)
+      else if (e.type === 'MISS' && e.playerId === playerId && e.shot)
         out.push({ matchId: m.id, spot: e.shot, zone: zoneAt(e.shot.x, e.shot.y), made: false })
     }
   return out

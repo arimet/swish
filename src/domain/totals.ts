@@ -8,6 +8,7 @@ export interface StatTotals {
   twoInside: number
   twoOutside: number
   freeThrows: number
+  freeThrowsMissed: number
   fouls: number
   assists: number
   offRebounds: number
@@ -32,6 +33,7 @@ const empty = (): StatTotals => ({
   twoInside: 0,
   twoOutside: 0,
   freeThrows: 0,
+  freeThrowsMissed: 0,
   fouls: 0,
   assists: 0,
   offRebounds: 0,
@@ -46,6 +48,7 @@ const addStat = (acc: StatTotals, s: PlayerStat) => {
   acc.twoInside += s.twoInside
   acc.twoOutside += s.twoOutside
   acc.freeThrows += s.freeThrows
+  acc.freeThrowsMissed += s.freeThrowsMissed
   acc.fouls += s.fouls
   acc.assists += s.assists
   acc.offRebounds += s.offRebounds

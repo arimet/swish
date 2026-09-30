@@ -20,6 +20,7 @@ const EVENTS: GameEvent[] = [
   { id: 'e8', type: 'TIMEOUT', team: 'B', ...base },
   { id: 'e9', type: 'SUBSTITUTION', team: 'A', playerInId: 'p3', playerOutId: 'p2', ...base },
   { id: 'e10', type: 'STAT', team: 'A', playerId: 'p1', stat: 'assist', ...base },
+  { id: 'e13', type: 'MISS', team: 'A', playerId: 'p1', kind: 'lf', ...base },
   { id: 'e11', type: 'CLOCK_STOP', ...base },
   { id: 'e12', type: 'PERIOD_END', ...base },
 ]
@@ -72,6 +73,12 @@ describe.skipIf(!t.ready)('match store', () => {
     expect((await matches.get(db, 'm1'))?.events).toHaveLength(1)
     await writeEvents(db, 'm1', [], ['e1', 'unknown'])
     expect((await matches.get(db, 'm1'))?.events).toEqual([])
+  })
+
+  it('refuses a missed field goal with no spot: only a free throw goes without one', async () => {
+    const db = await setup()
+    const bad = { id: 'x', type: 'MISS', team: 'A', playerId: 'p1', kind: '2int', ...base } as GameEvent
+    await expect(writeEvents(db, 'm1', [bad], [])).rejects.toThrow(/event_shape/)
   })
 
   it('refuses a starting five outside the roster', async () => {

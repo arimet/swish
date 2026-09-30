@@ -64,8 +64,11 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const saveMeta = async (patch: Partial<Match['meta']>) => persist({ ...match, meta: { ...match.meta, ...patch } })
 
   // Correcting stats after the game (admin only): we add and remove events.
-  const addEvent = (e: EventInput) =>
-    persist({ ...match, events: [...match.events, { ...e, id: newId(), wallClock: Date.now() } as GameEvent] })
+  // Several at once go in one write: each `addEvent` starts from this render's game,
+  // so two in a row would keep only the second.
+  const addEvents = (list: EventInput[]) =>
+    persist({ ...match, events: [...match.events, ...list.map((e) => ({ ...e, id: newId(), wallClock: Date.now() }) as GameEvent)] })
+  const addEvent = (e: EventInput) => addEvents([e])
   const removeLast = (pred: (e: GameEvent) => boolean) => {
     const next = removeLastEvent(match, pred)
     if (next !== match) persist(next)
@@ -75,6 +78,9 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const addScore = (playerId: string, kind: ScoreKind, shot?: ShotSpot) => addEvent({ type: 'SCORE', team: 'A', playerId, kind, shot, period: ls.period, gameClock: 0 })
   const addFoul = (playerId: string) => addEvent({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId }, foulType: 'personal', period: ls.period, gameClock: 0 })
   const addStat = (playerId: string, stat: StatKind) => addEvent({ type: 'STAT', team: 'A', playerId, stat, period: ls.period, gameClock: 0 })
+  const addFreeThrows = (playerId: string, results: boolean[]) => addEvents(results.map((ok): EventInput => ok
+    ? { type: 'SCORE', team: 'A', playerId, kind: 'lf', period: ls.period, gameClock: 0 }
+    : { type: 'MISS', team: 'A', playerId, kind: 'lf', period: ls.period, gameClock: 0 }))
   const addMiss = (playerId: string, kind: ScoreKind, shot: ShotSpot) => addEvent({ type: 'MISS', team: 'A', playerId, kind, shot, period: ls.period, gameClock: 0 })
   const removeMiss = (id: string) => removeLast((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === id)
   const missesOf = (id: string) => match.events.filter((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === id).length
@@ -150,6 +156,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         onRemoveStat={(k) => pick && removeStatKind(pick.id, k)}
         misses={pick ? missesOf(pick.id) : 0}
         onMiss={(k, shot) => pick && addMiss(pick.id, k, shot)}
+        onFreeThrows={(results) => pick && addFreeThrows(pick.id, results)}
         onRemoveMiss={() => pick && removeMiss(pick.id)}
       />
 
@@ -309,7 +316,10 @@ function TeamTable({ match, players, name, onPick, onSet }: {
   // game where "Missed" was never used), the denominator fieldGoalsMade + misses is
   // always fieldGoalsMade, so every scorer would wrongly show 100%. We only show the
   // percentage if our club tracked at least one missed shot.
-  const tracksMisses = match.events.some((e) => e.type === 'MISS' && e.team === 'A')
+  const tracksMisses = match.events.some((e) => e.type === 'MISS' && e.team === 'A' && e.kind !== 'lf')
+  // Same reasoning for the line: made/attempts only once a free throw was entered missed.
+  const tracksFtMisses = match.events.some((e) => e.type === 'MISS' && e.team === 'A' && e.kind === 'lf')
+  const ft = (made: number, missed: number) => (tracksFtMisses ? `${made}/${made + missed}` : String(made))
   return (
     <section className="overflow-hidden rounded-2xl" style={{ background: C.card, border: bd, ...(onPick ? { boxShadow: `0 0 0 1px ${C.accentBd}` } : {}) }}>
       <div className="flex items-center gap-2.5 px-5 py-3.5" style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -348,7 +358,7 @@ function TeamTable({ match, players, name, onPick, onSet }: {
                             label={translate('summary.cell', { stat: translate(column.label), player: who })}
                             onCommit={(n) => onSet(s.playerId, column.cell, n)} onMove={move}
                           />
-                        : <span style={column.cell === 'foul' && s.fouls >= 5 ? { color: C.accent } : undefined}>{column.read(s)}</span>}
+                        : <span style={column.cell === 'foul' && s.fouls >= 5 ? { color: C.accent } : undefined}>{column.cell === 'lf' ? ft(s.freeThrows, s.freeThrowsMissed) : column.read(s)}</span>}
                     </Td>
                   ))}
                 </tr>
@@ -357,7 +367,7 @@ function TeamTable({ match, players, name, onPick, onSet }: {
             <tr style={{ borderTop: `2px solid ${C.border}`, background: C.panel }}>
               <Td left></Td><Td left><span className="font-black uppercase text-[12px]">{translate('summary.teamTotal')}</span></Td><Td></Td><Td></Td>
               <Td><span className="font-black" style={{ color: C.accent }}>{totals.team.points}</span></Td>
-              <Td><b>{totals.team.fieldGoalsMade}</b></Td><Td></Td><Td><b>{totals.team.threes}</b></Td><Td><b>{totals.team.twoInside}</b></Td><Td><b>{totals.team.twoOutside}</b></Td><Td><b>{totals.team.freeThrows}</b></Td>
+              <Td><b>{totals.team.fieldGoalsMade}</b></Td><Td></Td><Td><b>{totals.team.threes}</b></Td><Td><b>{totals.team.twoInside}</b></Td><Td><b>{totals.team.twoOutside}</b></Td><Td><b>{ft(totals.team.freeThrows, totals.team.freeThrowsMissed)}</b></Td>
               <Td><b>{totals.team.assists}</b></Td><Td><b>{totals.team.offRebounds}</b></Td><Td><b>{totals.team.defRebounds}</b></Td><Td><b>{totals.team.blocks}</b></Td>
               <Td><b>{totals.team.fouls}</b></Td>
             </tr>

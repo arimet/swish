@@ -66,7 +66,7 @@ const POINTS_LABEL: Record<'2int' | '2ext' | '3', string> = { '2int': '2 PTS', '
 
 export function PlayerActionDialog({
   open, playerName, color = C.text, scoreCounts, statCounts, foulCounts, fouls = 0, misses = 0, shots,
-  onClose, onScore, onMiss, onFoul, onStat, onRemoveScore, onRemoveFoul, onRemoveStat, onRemoveMiss,
+  onClose, onScore, onMiss, onFreeThrows, onFoul, onStat, onRemoveScore, onRemoveFoul, onRemoveStat, onRemoveMiss,
 }: {
   open: boolean; playerName: string; color?: string
   scoreCounts?: Record<ScoreKind, number>; statCounts?: Record<StatKind, number>
@@ -77,6 +77,8 @@ export function PlayerActionDialog({
   onClose: () => void
   onScore: (kind: ScoreKind, shot?: ShotSpot) => void
   onMiss: (kind: ScoreKind, shot: ShotSpot) => void
+  /** A trip to the line, one entry per attempt in the order shot: `true` went in. */
+  onFreeThrows: (results: boolean[]) => void
   onFoul: (type: FoulType) => void; onStat: (kind: StatKind) => void
   onRemoveScore: (kind: ScoreKind) => void; onRemoveFoul: (type: FoulType) => void
   onRemoveStat: (kind: StatKind) => void; onRemoveMiss: () => void
@@ -88,6 +90,8 @@ export function PlayerActionDialog({
    *  longer costs a wrong basket. Whether it went in is read from the mode at validation,
    *  so switching made/missed after placing it is not a second shot. */
   const [placed, setPlaced] = useState<ShotSpot | null>(null)
+  /** What the dialog shows: the court and the actions, or the free-throw line. */
+  const [step, setStep] = useState<'main' | 'ft'>('main')
   const sc = scoreCounts ?? ZERO_S
   const tc = statCounts ?? ZERO_T
   // Only the types actually recorded: a list of six removal buttons, five of them
@@ -102,6 +106,7 @@ export function PlayerActionDialog({
   const close = () => {
     setMade(true)
     setPlaced(null)
+    setStep('main')
     onClose()
   }
 
@@ -138,6 +143,10 @@ export function PlayerActionDialog({
             the corrections took a scroll to reach at all — on a screen with eight
             hundred wasted pixels either side. Side by side, the whole dialog is one
             screenful and the court gains eighty pixels to be aimed at. */}
+        {step === 'ft' && (
+          <FreeThrowLine onBack={() => setStep('main')} onValidate={(results) => { onFreeThrows(results); close() }} />
+        )}
+        {step === 'main' && <>
         <div className="grid gap-x-5 sm:grid-cols-2">
           <div>
             {/* SHOT: made or missed, then the spot on the court. */}
@@ -169,10 +178,10 @@ export function PlayerActionDialog({
                 </button>
               ))}
             </div>
-            <button onClick={() => { onScore('lf'); close() }}
+            <button onClick={() => setStep('ft')}
               className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[15px] font-black transition hover:brightness-110 active:scale-[0.98]"
               style={{ background: C.brand, color: C.onBrand }}>
-              {translate('action.addFreeThrow')}
+              {translate('action.freeThrow')}
             </button>
 
             {/* OTHER STATS */}
@@ -256,8 +265,47 @@ export function PlayerActionDialog({
           style={{ background: C.brand, color: C.onBrand }}>
           {translate('action.validateShot')}
         </button>
+        </>}
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * The free-throw line, as the federation's e-Marque enters it: how many attempts, then
+ * made or missed for each, then one validation. Every attempt starts "made" — the
+ * common case — so a trip to the line that went two for two is three taps.
+ */
+function FreeThrowLine({ onBack, onValidate }: { onBack: () => void; onValidate: (results: boolean[]) => void }) {
+  const translate = useT()
+  const [results, setResults] = useState<boolean[]>([true, true])
+  const setCount = (n: number) => setResults((r) => Array.from({ length: n }, (_, i) => r[i] ?? true))
+  return (
+    <div className="mt-3">
+      <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('ft.attempts')}</p>
+      <div role="group" aria-label={translate('ft.attempts')} className="mt-1.5 grid grid-cols-3 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
+        {[1, 2, 3].map((n) => (
+          <Toggle key={n} active={results.length === n} onClick={() => setCount(n)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{n}</Toggle>
+        ))}
+      </div>
+      <ul className="mt-3 space-y-2">
+        {results.map((ok, i) => (
+          <li key={i} className="flex items-center gap-3">
+            <span className="w-14 shrink-0 text-sm font-black">{translate('ft.attempt', { n: i + 1 })}</span>
+            <div role="group" aria-label={translate('ft.attempt', { n: i + 1 })} className="grid flex-1 grid-cols-2 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
+              <Toggle active={ok} onClick={() => setResults((r) => r.map((v, j) => (j === i ? true : v)))} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{translate('action.made')}</Toggle>
+              <Toggle active={!ok} onClick={() => setResults((r) => r.map((v, j) => (j === i ? false : v)))} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">{translate('action.missed')}</Toggle>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-4 grid grid-cols-[auto_1fr] gap-2">
+        <button onClick={onBack} className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] px-5 py-3.5 text-sm font-bold transition hover:bg-[var(--c-panel)]">{translate('ft.back')}</button>
+        <button onClick={() => onValidate(results)} className="rounded-2xl py-3.5 text-[15px] font-black transition hover:brightness-110 active:scale-[0.98]" style={{ background: C.brand, color: C.onBrand }}>
+          {translate('ft.validate')}
+        </button>
+      </div>
+    </div>
   )
 }
 

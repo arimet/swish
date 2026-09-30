@@ -81,6 +81,15 @@ describe('playerStats — missed shots and team baskets', () => {
     expect(p1.misses).toBe(2)
   })
 
+  it('counts a missed free throw as an attempt at the line, not as a missed field goal', () => {
+    const m = mk([
+      { type: 'SCORE', team: 'A', playerId: 'p1', kind: 'lf' },
+      { type: 'MISS', team: 'A', playerId: 'p1', kind: 'lf' },
+    ])
+    const [p1] = playerStats(m)
+    expect([p1.points, p1.freeThrows, p1.freeThrowsMissed, p1.misses]).toEqual([1, 1, 1, 0])
+  })
+
   it('ignores a basket with no player named in the individual rows, but it counts in the score', () => {
     const m = mk([
       { type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int' },

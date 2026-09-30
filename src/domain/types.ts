@@ -49,7 +49,8 @@ export type GameEvent =
   // No playerId = a team basket with no identified player (the opponent's score).
   // No shot = a shot entered without a position (free throw, or a game predating the shot chart).
   | (EventBase & { type: 'SCORE'; team: TeamSide; playerId?: string; kind: ScoreKind; shot?: ShotSpot })
-  | (EventBase & { type: 'MISS'; team: TeamSide; playerId: string; kind: ScoreKind; shot: ShotSpot })
+  // No shot = a missed free throw: a field goal missed always carries its spot.
+  | (EventBase & { type: 'MISS'; team: TeamSide; playerId: string; kind: ScoreKind; shot?: ShotSpot })
   | (EventBase & { type: 'FOUL'; team: TeamSide; target: FoulTarget; foulType: FoulType })
   | (EventBase & { type: 'TIMEOUT'; team: TeamSide })
   | (EventBase & { type: 'SUBSTITUTION'; team: TeamSide; playerInId: string; playerOutId: string })
