@@ -45,6 +45,11 @@ describe.skipIf(!t.ready)('routes', () => {
 
     const convocation = await call(mutate, { method: 'POST', body: { ops: [{ kind: 'convocation', op: 'del', id: 'm1' }] } })
     expect(convocation).toEqual({ status: 400, body: { error: 'convocations cannot be archived on its own' } })
+
+    // A tab left open from before per-event writes still sends a whole sheet.
+    const sheet = { id: 'm1', meta: { clubId: 'a', opponentId: 'a' }, roster: [], status: 'live', events: [{ id: 'e1', type: 'PERIOD_START', wallClock: 1, period: 1, gameClock: 600 }] }
+    expect(await call(mutate, { method: 'POST', body: { ops: [put('match', 'm1', sheet)] } }))
+      .toEqual({ status: 400, body: { error: 'a game\'s events go through /api/match/:id/events' } })
   })
 
   it('adds and archives events, and refuses a malformed one', async () => {

@@ -3,8 +3,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { act, render, renderHook, screen, waitFor } from '../test/render'
 import { count, put } from '../test/fakeApi'
 import { docKey, usePlayerCounts, usePlayers, useTeams } from './queries'
-import { deletePlayer, deleteTeam, savePlayer, saveTeam } from './repositories'
-import type { Player, Team } from '../domain/types'
+import { deletePlayer, deleteTeam, saveMatch, savePlayer, saveTeam } from './repositories'
+import type { Match, Player, Team } from '../domain/types'
 
 /**
  * The reading layer, and what it promises the screens.
@@ -89,6 +89,19 @@ describe('what a write does to the cache', () => {
     // exactly this document.
     expect(result.current.client.getQueryData(docKey('team', 'ta')))
       .toEqual({ id: 'ta', name: 'A', coach: 'Dupont' })
+  })
+
+  it('a game\'s head keeps the events already cached for it', async () => {
+    // The put carries no events: filing it as-is would blank the sheet another device
+    // or the stream had filled, until the next read.
+    const m: Match = { id: 'm1', meta: { clubId: 'ta', opponentId: 'tb' }, roster: [], events: [], status: 'live' }
+    const e1 = { id: 'e1', type: 'PERIOD_START' as const, wallClock: 0, period: 1, gameClock: 600 }
+    const { result } = renderHook(() => useQueryClient())
+    result.current.setQueryData(docKey('match', 'm1'), { ...m, events: [e1] })
+
+    await act(async () => { await saveMatch({ ...m, status: 'finished' }) })
+
+    expect(result.current.getQueryData(docKey('match', 'm1'))).toEqual({ ...m, status: 'finished', events: [e1] })
   })
 
   it('a deletion becomes `null`, which is how an absent document is spelled', async () => {

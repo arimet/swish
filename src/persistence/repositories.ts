@@ -42,8 +42,9 @@ export const listAllPlayers = () => list<Player>('player')
 export const listPlayers = async (teamId: string) => (await listAllPlayers()).filter((p) => p.teamId === teamId)
 export const deletePlayer = (id: string) => gone('player', id)
 
-/** A game's head — meta, status, roster. Its events are never written here: see `saveSheet`. */
-export const saveMatch = (m: Match) => one('match', m.id, m)
+/** A game's head — meta, status, roster — sent with no events: those go through
+ *  `saveSheet`, and the server refuses a game's `put` that still carries some. */
+export const saveMatch = (m: Match) => one('match', m.id, { ...m, events: [] })
 export const getMatch = (id: string) => get<Match>('match', id)
 export const listMatches = () => list<Match>('match')
 /** Archives the game. Its call-up follows it through the server's views. */

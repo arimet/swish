@@ -36,6 +36,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!isKind(o.kind)) return res.status(400).json({ error: `unknown kind: ${o.kind}` })
     if (o.op !== 'put' && o.op !== 'del') return res.status(400).json({ error: 'op must be put or del' })
     if (o.op === 'put' && (typeof o.doc !== 'object' || o.doc === null)) return res.status(400).json({ error: 'doc missing' })
+    // A tab opened before the move to per-event writes still sends whole sheets:
+    // refusing them makes its saves fail visibly instead of silently dropping events.
+    const events = (o.doc as { events?: unknown } | undefined)?.events
+    if (o.op === 'put' && o.kind === 'match' && Array.isArray(events) && events.length) {
+      return res.status(400).json({ error: 'a game\'s events go through /api/match/:id/events' })
+    }
   }
 
   const client = await pool!.connect()

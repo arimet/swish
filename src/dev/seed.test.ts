@@ -12,11 +12,11 @@ import type { Match } from '../domain/types'
 
 /* The season is written the way `scripts/db.mjs seed` writes it: one batch of the
    documents `seedDocuments` hands over, then each game's events through their own
-   route, since a game's `put` never writes them. Nothing else seeds — the application
+   route, since a game's `put` carries none. Nothing else seeds — the application
    does not. */
 beforeEach(async () => {
   const docs = seedDocuments()
-  await mutate(docs.map(({ kind, id, doc }) => ({ kind, op: 'put' as const, id, doc })))
+  await mutate(docs.map(({ kind, id, doc }) => ({ kind, op: 'put' as const, id, doc: kind === 'match' ? { ...(doc as Match), events: [] } : doc })))
   for (const { kind, id, doc } of docs) if (kind === 'match') await writeEvents(id, (doc as Match).events, [])
 })
 

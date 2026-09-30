@@ -23,8 +23,10 @@ better than one that shows 42 while the official sheet says 40.
 1. In the Vercel project: **Storage → create a Postgres database** (Neon).
    Vercel then injects `DATABASE_URL`. Use the **pooled** connection string —
    its host ends in `-pooler` — because serverless functions hold no connection.
-2. Create the tables: `DATABASE_URL=… pnpm db:init` applies the migrations in
-   `db/migrations/`.
+2. Create the tables. On a **fresh** database, `DATABASE_URL=… pnpm db:init`
+   applies the migrations in `db/migrations/`. A database that still holds the old
+   `documents` table is upgraded once, differently: see
+   [Upgrading from the `documents` table](#upgrading-from-the-documents-table-once).
 3. Add **`WRITE_TOKEN`** — any long random string. It guards every **write**.
    Without it `POST /api/mutate` refuses, on purpose: an open database is worse
    than a broken one.
@@ -53,6 +55,23 @@ DATABASE_URL=… pnpm db:reset
 `db:reset` drops the whole schema (the old `documents` table included), re-applies the
 migrations and re-seeds the demo season. It is destructive by name and by design — do
 not point it at a club's season.
+
+### Upgrading from the `documents` table (once)
+
+A deployment from before the relational tables keeps everything in one `documents`
+table, which nothing reads any more. There is no migration of its content: the move is
+a reset.
+
+1. Pick a moment with **no game in progress**: a sheet being scored during the move is
+   lost with the rest.
+2. `DATABASE_URL=<production pooled url> pnpm db:reset`. It drops the old table,
+   applies the migrations **and seeds the demo season** — there is no command that
+   leaves production empty. A club starting from nothing then uses **Administration →
+   Erase everything**, which archives it all.
+3. Redeploy.
+4. **Reload every device that writes.** A tab left open from before still sends whole
+   match sheets, which `POST /api/mutate` now refuses: its saves fail with an error
+   until the page is reloaded, rather than silently dropping the events.
 
 A device carrying an older build of the application also carries its service
 worker, from the days when Swish worked offline. Two things remove it, and both are
@@ -166,8 +185,10 @@ carrying the write token.
 - **Deleting archives.** Nothing is ever removed from an entity table: a delete sets
   `archived_at`, and the `active_*` views hide the row and whatever hangs off it (an
   archived team hides its players, games, results, sessions, plays and message).
-  Un-archiving the parent brings them back, and writing an archived id again
-  un-archives it. Only the link rows — roster, call-up, plays of a session — are
+  Un-archiving the parent brings them back, and writing an archived entity's id again
+  un-archives it — an entity, not an event: an archived event stays archived, and
+  sending its id again adds nothing. A call-up cannot be archived on its own: it
+  follows its game. Only the link rows — roster, call-up, plays of a session — are
   really deleted.
 - **A game's events are written one batch at a time**, through
   `POST /api/match/:id/events` (`{ add, archive }`, one transaction). A tap adds its own

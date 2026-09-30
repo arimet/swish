@@ -208,7 +208,11 @@ export function WriteBridge(): null {
   const client = useQueryClient()
   useEffect(() => onWrite((ops) => {
     for (const op of ops) {
-      if (op.op === 'put') client.setQueryData(docKey(op.kind, op.id), op.doc)
+      // A game's `put` carries only its head: the sheet's events belong to `useMatch`
+      // and the stream, so the cached ones are kept rather than replaced by none.
+      if (op.op === 'put' && op.kind === 'match') {
+        client.setQueryData<Match>(docKey('match', op.id), (cur) => cur ? { ...(op.doc as Match), events: cur.events } : op.doc as Match)
+      } else if (op.op === 'put') client.setQueryData(docKey(op.kind, op.id), op.doc)
       else client.setQueryData(docKey(op.kind, op.id), null)
     }
     for (const kind of new Set(ops.map((o) => o.kind))) {

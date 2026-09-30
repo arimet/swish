@@ -121,6 +121,9 @@ async function route(url: URL, init?: RequestInit): Promise<Response> {
   if (path === '/api/mutate') {
     const ops = (JSON.parse(String(init?.body ?? '{}')).ops ?? []) as Op[]
     if (ops.some((o) => o.kind === 'convocation' && o.op === 'del')) return json({ error: 'convocations cannot be archived on its own' }, 400)
+    if (ops.some((o) => o.kind === 'match' && o.op === 'put' && (o.doc as Match).events?.length)) {
+      return json({ error: 'a game\'s events go through /api/match/:id/events' }, 400)
+    }
     for (const o of ops) {
       if (o.op === 'del') { store.delete(key(o.kind, o.id)); archived.add(key(o.kind, o.id)) }
       else {
