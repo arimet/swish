@@ -2,7 +2,7 @@
 # protocol, same code.
 #
 #   docker compose up -d
-#   psql "postgres://swish:swish@localhost:5433/swish" -f db/schema.sql
+#   pnpm db:reset
 #
 # Then, in a `.env`:
 #   DATABASE_URL=postgres://swish:swish@localhost:5433/swish

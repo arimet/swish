@@ -23,8 +23,8 @@ better than one that shows 42 while the official sheet says 40.
 1. In the Vercel project: **Storage → create a Postgres database** (Neon).
    Vercel then injects `DATABASE_URL`. Use the **pooled** connection string —
    its host ends in `-pooler` — because serverless functions hold no connection.
-2. Create the table: `DATABASE_URL=… pnpm db:init` (or
-   `psql "$DATABASE_URL" -f db/schema.sql` — it is the same file).
+2. Create the tables: `DATABASE_URL=… pnpm db:init` applies the migrations in
+   `db/migrations/`.
 3. Add **`WRITE_TOKEN`** — any long random string. It guards every **write**.
    Without it `POST /api/mutate` refuses, on purpose: an open database is worse
    than a broken one.
@@ -34,18 +34,25 @@ better than one that shows 42 while the official sheet says 40.
    check*. The device says whether the server accepted it. A device that only
    reads needs nothing: reading is public (see below).
 
-### There are no migrations
+### Migrations
 
-One table, no versioning, and that is deliberate while the documents are still
-moving: when their shape changes, the answer is to re-create the table, not to
-replay a migration nobody will run twice.
+The schema is the numbered SQL files in `db/migrations/`. `pnpm db:init` applies each
+one once, in name order, each in its own transaction, and records it in
+`schema_migrations`; running it again does nothing. The runner is
+`api/_rows/migrate.ts`.
+
+- **Never edit a migration that has been applied.** Add the next number.
+- A migration that adds a column must also re-create the `active_*` view that exposes
+  it: the views are `select t.*`, and Postgres freezes their column list when they are
+  created.
 
 ```bash
 DATABASE_URL=… pnpm db:reset
 ```
 
-That drops `documents`, re-creates it and re-seeds the demo season. It is
-destructive by name and by design — do not point it at a club's season.
+`db:reset` drops the whole schema (the old `documents` table included), re-applies the
+migrations and re-seeds the demo season. It is destructive by name and by design — do
+not point it at a club's season.
 
 A device carrying an older build of the application also carries its service
 worker, from the days when Swish worked offline. Two things remove it, and both are
@@ -81,7 +88,7 @@ has touched the database in between.
 "crons": [{ "path": "/api/ping", "schedule": "0 5 * * *" }]
 ```
 
-Once a day, Vercel calls `/api/ping`, which reads one row from `documents`. It
+Once a day, Vercel calls `/api/ping`, which reads one row from `teams`. It
 reads a row rather than answering `select 1`, because what has to be proved is that
 the **data** is in use, not that a connection can be opened.
 
@@ -141,29 +148,33 @@ match", which freezes the score for good.
 DATABASE_URL=… pnpm db:seed
 ```
 
-It refuses a table that already holds documents, so it cannot erase a season by
+It refuses a database that already holds teams, so it cannot erase a season by
 accident. The application never seeds itself: filling the club's database is not
 the front end's business, and a browser could only do it on a device already
 carrying the write token.
 
 ## How it works
 
-- **Everything a club owns is in one table**: teams, players, matches, call-ups,
-  trainings, plays, entered results and the coach's message — eight kinds of JSON
-  document, keyed on `(kind, id)`. A screen reads what it needs from
-  `GET /api/docs?kind=…` when it mounts; every write goes to
-  `POST /api/mutate` and the screen rolls back if that fails.
-- **A cascade is one batch, hence one transaction.** Deleting a team takes its
-  players, its results, its sessions, its plays and its message: half of that
-  applied would leave the club in a state no screen can describe.
-- **Deletions really delete the row.** There is no tombstone, because there is no
-  mirror left to inform.
-- **A write replaces, every kind alike**, the match sheet included. There is no
-  merge and no retraction any more: both existed to reconcile copies held on
-  devices, and there are no copies. The consequence is worth knowing — the sheet is
-  written whole, so **one game should be kept by one device**. A second tab left
-  open on the bench holds the log as it was when it loaded, and its next write
-  would file that version.
+- **Everything a club owns is in relational tables**: `teams`, `players`, `matches`
+  (with `match_roster` and `match_events`), `reported_results`, `convocations` (with
+  `convocation_players`), `trainings`, `plays` (with `training_plays`) and
+  `team_messages`. The client still speaks documents: a screen reads what it needs from
+  `GET /api/docs?kind=…` when it mounts, and every write goes to `POST /api/mutate`,
+  which maps each document to its rows; the screen rolls back if that fails.
+- **A cascade is one batch, hence one transaction.** Deleting a team is a single
+  `del`, and it is the views that do the rest.
+- **Deleting archives.** Nothing is ever removed from an entity table: a delete sets
+  `archived_at`, and the `active_*` views hide the row and whatever hangs off it (an
+  archived team hides its players, games, results, sessions, plays and message).
+  Un-archiving the parent brings them back, and writing an archived id again
+  un-archives it. Only the link rows — roster, call-up, plays of a session — are
+  really deleted.
+- **A game's events are written one batch at a time**, through
+  `POST /api/match/:id/events` (`{ add, archive }`, one transaction). A tap adds its own
+  row and an undo archives one, so the sheet is never written whole: several devices can
+  keep one game, each seeing the other's events. `mutate` writes a game's head and
+  roster, never its events. The game clock is the exception: it runs on the device that
+  started it.
 - **A failed exchange is visible.** The header shows a pill for as long as the
   server is silent or refusing the token, and it does not claim anything is kept:
   nothing is.
@@ -171,8 +182,12 @@ carrying the write token.
   number and name. Licence numbers, birth dates and heights stay in the database.
 - **Live following**: spectators open `…/match/:id/watch` and receive updates
   over **SSE** (`GET /api/match/:id/stream`), falling back to polling if the
-  stream is unavailable. The payload is derived from the database — nothing is
-  published separately, and nothing expires.
+  stream is unavailable. Every second the stream reads one number, `matches.rev`,
+  which a trigger bumps on each event added or archived and which a write of the game
+  bumps too; it builds and sends the game only when that number moves. The scorer's
+  table follows the same stream, which is how a second device sees the first one's
+  taps. The payload is derived from the database — nothing is published separately,
+  and nothing expires.
 - Everything persists. There is no TTL.
 
 ## Environment variables
@@ -193,6 +208,7 @@ carrying the write token.
 |--------|-------|---------|
 | `GET`  | `/api/docs?kind=<kind>[&id=<id>]` | Every document of a kind, or one of them. **Public.** |
 | `POST` | `/api/mutate` | Apply a batch of upserts/deletes, in one transaction. **Token required.** |
+| `POST` | `/api/match/:id/events` | Add and archive a game's events, in one transaction. **Token required.** |
 | `GET`  | `/api/match/:id` | Spectator payload, projected from the database. Public. |
 | `GET`  | `/api/match/:id/stream` | Realtime SSE stream (Node runtime) |
 | `GET`  | `/api/ping` | Keepalive read, called daily by the cron. **Public.** |

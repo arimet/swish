@@ -175,7 +175,7 @@ pnpm db:reset
 pnpm dev
 ```
 
-`db:reset` creates the table and fills it with the demo season — a club, its roster,
+`db:reset` creates the tables and fills it with the demo season — a club, its roster,
 five games (one live), the standings, two months of practices and three plays. The
 app opens on `http://localhost:5173` already full.
 
@@ -185,12 +185,13 @@ up before you do anything.
 
 | Command | What it does |
 |---|---|
-| `pnpm db:init` | Creates the table if it is not there. Touches no data. |
-| `pnpm db:seed` | Creates the table if needed, then fills it with the demo season. Refuses a table that already holds documents. |
-| `pnpm db:reset` | Drops the table, re-creates it, re-seeds it. Destructive. |
+| `pnpm db:init` | Applies the migrations in `db/migrations/` not yet applied. Touches no data. |
+| `pnpm db:seed` | Applies the migrations if needed, then fills the tables with the demo season. Refuses a database that already holds teams. |
+| `pnpm db:reset` | Drops the whole schema, re-applies the migrations, re-seeds it. Destructive. |
 
-There are no migrations: while the documents are still moving, `db:reset` is the
-answer to a change of shape.
+The schema is the numbered SQL files in `db/migrations/`: never edit one that has been
+applied, add the next number (see [DEPLOY.md](DEPLOY.md)). The constraint tests need a
+separate database: see `TEST_DATABASE_URL` in `.env.example`.
 
 Other useful commands:
 
@@ -214,7 +215,7 @@ The full guide is in **[DEPLOY.md](DEPLOY.md)**. In short:
    and the `api/` folder is deployed as serverless functions.
 2. **Storage → create a Postgres database** (Neon). Vercel then injects
    `DATABASE_URL` — use the pooled connection string.
-3. Create the table: `psql "$DATABASE_URL" -f db/schema.sql`.
+3. Create the tables: `DATABASE_URL=… pnpm db:init`.
 4. Set **`WRITE_TOKEN`** to a long random string and redeploy. Each device **that
    writes** enters it once, under Administration → Write access; reading needs
    nothing. See [DEPLOY.md](DEPLOY.md) for what that makes public.
@@ -226,9 +227,9 @@ The full guide is in **[DEPLOY.md](DEPLOY.md)**. In short:
    mount. Nothing on screen explains that latency, which is why it is a step here and a
    note beside the pool in `api/_db.ts`.
 
-How it works, in two lines: a screen reads what it needs from `GET /api/docs?kind=…`
-and every write goes straight to `POST /api/mutate`, which answers before the screen
-believes itself saved. Spectators receive a game over **SSE**
+How it works, in a few lines: a screen reads what it needs from `GET /api/docs?kind=…`
+and every write goes straight to `POST /api/mutate` (a game's events, to
+`POST /api/match/:id/events`), which answers before the screen believes itself saved. Spectators receive a game over **SSE**
 (`GET /api/match/:id/stream`), falling back to polling.
 
 ### 2. Setting the access codes
@@ -262,8 +263,9 @@ admin code leaves the scorer's table open on the French word `marque`.
 ## Under the hood
 
 React 19, Vite, TypeScript, Tailwind v4, react-router. Tests with Vitest. The serverless
-functions in `api/` are the only way to the data: one Postgres table of JSON documents,
-read through `GET /api/docs` and written through `POST /api/mutate`.
+functions in `api/` are the only way to the data: relational Postgres tables
+(nothing is deleted, only archived), read through `GET /api/docs` and written through
+`POST /api/mutate`, plus `POST /api/match/:id/events` for a game's events.
 
 **Every read goes through React Query**, in `src/persistence/queries.ts`. The screens
 used to fetch in `useEffect` and hold the answer in `useState`, which meant a screen
