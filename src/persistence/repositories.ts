@@ -1,6 +1,6 @@
 import { list, get, mutate, writeEvents, type Op } from './api'
 import { hasEvents } from '../domain/cleanup'
-import { diffEvents } from '../domain/sync'
+import { diffEvents, sameHead } from '../domain/sync'
 import type { Team, Player, Match, ReportedResult, Convocation, Training, TeamMessage } from '../domain/types'
 import type { Play } from '../domain/plays'
 
@@ -59,8 +59,7 @@ export const deleteMatch = (id: string) => gone('match', id)
  * never a basket pointing at nothing.
  */
 export async function saveSheet(before: Match | null, after: Match): Promise<void> {
-  const head = (m: Match) => JSON.stringify({ ...m, events: undefined })
-  if (!before || head(before) !== head(after)) await saveMatch(after)
+  if (!before || !sameHead(before, after)) await saveMatch(after)
   const { add, archive } = diffEvents(before?.events ?? [], after.events)
   await writeEvents(after.id, add, archive)
 }

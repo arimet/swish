@@ -11,6 +11,10 @@ export function diffEvents(before: GameEvent[], after: GameEvent[]): { add: Game
   return { add: after.filter((e) => !was.has(e.id)), archive: before.filter((e) => !is.has(e.id)).map((e) => e.id) }
 }
 
+/** Whether two versions of a sheet have the same head: everything but the events. */
+export const sameHead = (a: Match, b: Match): boolean =>
+  JSON.stringify({ ...a, events: undefined }) === JSON.stringify({ ...b, events: undefined })
+
 /** This device's writes not yet seen in a server message. */
 export interface Pending { added: GameEvent[]; archived: string[] }
 export const NO_PENDING: Pending = { added: [], archived: [] }
@@ -71,7 +75,6 @@ export function revertWrite(current: Match, previous: Match, next: Match, add: G
     const after = i > 0 ? events.findIndex((x) => x.id === previous.events[i - 1].id) : -1
     events = [...events.slice(0, after + 1), e, ...events.slice(after + 1)]
   })
-  const head = (m: Match) => JSON.stringify({ ...m, events: undefined })
-  if (head(previous) === head(next)) return { ...current, events }
+  if (sameHead(previous, next)) return { ...current, events }
   return { ...current, meta: previous.meta, status: previous.status, roster: previous.roster, events }
 }

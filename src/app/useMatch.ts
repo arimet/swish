@@ -53,6 +53,10 @@ export function useMatch(matchId: string) {
    *  before the basket it undoes would archive nothing, and the basket would land. */
   const chain = useRef<Promise<unknown>>(Promise.resolve())
 
+  /** How many stream messages have arrived. A one-off re-read (see `persist`) is stale
+   *  once one has. */
+  const messages = useRef(0)
+
   /** Files a server message as the screen's sheet, with this device's pending writes
    *  laid over it. */
   const apply = useCallback((b: SpectatorBundle) => {
@@ -63,7 +67,7 @@ export function useMatch(matchId: string) {
 
   /* The same stream as the spectator page. Each message is the game as the database
      holds it — another device's taps included. */
-  useEffect(() => subscribeBundle(matchId, apply), [matchId, apply])
+  useEffect(() => subscribeBundle(matchId, (b) => { messages.current++; apply(b) }), [matchId, apply])
 
   /**
    * Applies the state to the screen, saves it, and **rolls back** if the save fails.
@@ -104,8 +108,11 @@ export function useMatch(matchId: string) {
       client.setQueryData(key, now && previous ? revertWrite(now, previous, next, add, archive) : previous)
       /* A failure may be a lost answer, not a refusal: the write may have landed and the
          stream already shown it, and it only speaks again when the game changes. So the
-         server is asked once, and it is the judge. */
-      void fetchBundle(matchId).then((b) => { if (b) apply(b) })
+         server is asked once, and it is the judge. Unless a stream message arrives before
+         the answer: that one is newer, it has settled the question already, and applying
+         the older answer over it could hide a tap made since. */
+      const seen = messages.current
+      void fetchBundle(matchId).then((b) => { if (b && messages.current === seen) apply(b) })
       setError(translate('error.save'))
       return false
     }

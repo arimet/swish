@@ -3,14 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useMatch } from './useMatch'
 import { doc } from '../test/fakeApi'
 import { saveMatch } from '../persistence/repositories'
-import { subscribeBundle, type SpectatorBundle } from './spectator'
+import { fetchBundle, subscribeBundle, type SpectatorBundle } from './spectator'
 import type { GameEvent, Match } from '../domain/types'
 
 /* The real `subscribeBundle`, spied on: the tests below read the callback the hook gave
    it, to play the part of the live stream. Every other test still gets the real thing. */
 vi.mock('./spectator', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./spectator')>()
-  return { ...actual, subscribeBundle: vi.fn(actual.subscribeBundle) }
+  return { ...actual, subscribeBundle: vi.fn(actual.subscribeBundle), fetchBundle: vi.fn(actual.fetchBundle) }
 })
 const streamCallback = () => vi.mocked(subscribeBundle).mock.calls.at(-1)![1]
 
@@ -166,5 +166,30 @@ describe('useMatch', () => {
 
     expect(result.current.match!.events.map((e) => e.type)).toEqual(['PERIOD_START'])
     expect(doc<Match>('match', 'm1')!.events.map((e) => e.type)).toEqual(['PERIOD_START'])
+  })
+
+  it('a late one-off re-read does not hide a tap a newer stream message showed', async () => {
+    const { result } = renderHook(() => useMatch('m1'))
+    await waitFor(() => expect(result.current.match).not.toBeNull())
+    const bundleOf = (events: GameEvent[]) =>
+      ({ match: { ...result.current.match!, events }, players: [], teamNames: { A: 'A', B: 'B' } }) as SpectatorBundle
+
+    // Tap A is refused; the re-read it triggers leaves, and its answer is held back.
+    let answer!: (b: SpectatorBundle) => void
+    vi.mocked(fetchBundle).mockImplementationOnce(() => new Promise((resolve) => { answer = resolve }))
+    const put = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('coupé'))
+    await act(async () => { await result.current.dispatch({ type: 'PERIOD_END', period: 1, gameClock: 0 }) })
+    put.mockRestore()
+    const stale = bundleOf([])
+
+    // Tap B lands, and the stream shows it.
+    await act(async () => { await result.current.dispatch({ type: 'PERIOD_START', period: 2, gameClock: 600 }) })
+    const b = result.current.match!.events
+    expect(b.map((e) => e.type)).toEqual(['PERIOD_START'])
+    act(() => streamCallback()(bundleOf(b)))
+
+    // The older answer arrives last.
+    await act(async () => { answer(stale) })
+    await waitFor(() => expect(result.current.match!.events.map((e) => e.type)).toEqual(['PERIOD_START']))
   })
 })
