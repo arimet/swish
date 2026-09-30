@@ -78,6 +78,7 @@ describe.skipIf(!t.ready)('match store', () => {
     const db = await setup()
     const bad: GameEvent = { id: 'x', type: 'STARTING_FIVE', team: 'A', playerIds: ['p1', 'ghost'], ...base }
     await expect(writeEvents(db, 'm1', [bad], [])).rejects.toThrow(/starting five/)
+    await expect(writeEvents(db, 'm1', [{ ...bad, team: 'B', playerIds: ['p1'] }], [])).rejects.toThrow(/only the club/)
   })
 
   it('keeps an archived player on the sheets they played', async () => {

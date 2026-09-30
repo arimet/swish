@@ -65,6 +65,8 @@ export function eventFromRow(r: EventRow, starters: string[]): GameEvent {
  */
 export async function writeEvents(db: Db, matchId: string, add: GameEvent[], archive: string[]): Promise<void> {
   for (const e of add) {
+    // The opponent has no roster here: a team B five would overwrite the club's starters.
+    if (e.type === 'STARTING_FIVE' && e.team !== 'A') throw new BadRequest('only the club has a starting five')
     const r = eventToRow(matchId, e)
     await db.query(
       `insert into match_events (id, match_id, wall_clock, period, game_clock, type, team, player_id,

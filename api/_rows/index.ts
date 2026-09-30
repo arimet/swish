@@ -9,11 +9,11 @@ import { plays } from './play.js'
 import { messages } from './message.js'
 
 /** The eight document kinds the client speaks, each mapped to its tables. */
-// A `Store<T>` is invariant in `T`, so no narrower bound accepts all eight kinds.
-// oxlint-disable-next-line no-explicit-any
 export const STORES = {
   team: teams, player: players, match: matches, result: results,
   convocation: convocations, training: trainings, play: plays, message: messages,
+// A `Store<T>` is invariant in `T`, so no narrower bound accepts all eight kinds.
+// oxlint-disable-next-line no-explicit-any
 } as const satisfies Record<string, Store<any>>
 
 export type Kind = keyof typeof STORES

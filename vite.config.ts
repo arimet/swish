@@ -36,6 +36,10 @@ export default defineConfig(({ mode }) => {
     // progress and fails them on an `@` alias pointing elsewhere. Two hundred
     // failures that say nothing about `main`'s code.
     exclude: ['**/node_modules/**', '**/dist/**', '**/.claude/**'],
+    // The database tests share one database, which each file rebuilds: two files at
+    // once would drop each other's tables. Without the variable nothing touches a
+    // database, so the suite keeps its parallelism.
+    fileParallelism: !process.env.TEST_DATABASE_URL,
   },
   }
 })
