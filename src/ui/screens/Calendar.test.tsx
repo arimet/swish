@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '../../test/render'
+import { fireEvent, render, screen, waitFor, within } from '../../test/render'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -186,6 +186,21 @@ describe('Calendar — the session\'s plays', () => {
     expect(screen.queryByText(/2 schémas/)).not.toBeInTheDocument()
     expect(screen.getAllByRole('checkbox')).toHaveLength(1)
     expect(screen.getByRole('checkbox', { name: /pick and roll haut/i })).toBeChecked()
+  })
+
+  it('keeps both plays ticked in quick succession, without waiting for the reload', async () => {
+    // At the sideline people tick fast: if every toggle started from the session as it
+    // was at render time, the second write would erase the first.
+    await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Séance' })
+    await savePlay(play('s1', 'Pick and roll haut'))
+    await savePlay(play('s2', 'Corner pour le 4'))
+    renderCal()
+    await openPlays()
+
+    fireEvent.click(await screen.findByRole('checkbox', { name: /pick and roll haut/i }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /corner pour le 4/i }))
+    await waitFor(async () => expect((await listTrainings())[0].playIds).toHaveLength(2))
+    expect([...(await listTrainings())[0].playIds!].sort()).toEqual(['s1', 's2'])
   })
 
   it('attaching a play is administrative: the scorer\'s table gets no checkbox, and nothing is saved', async () => {

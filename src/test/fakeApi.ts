@@ -38,7 +38,7 @@ export const clear = (kind: string) => {
 }
 
 /** Files a document directly, bypassing the API — the arrangement half of a test. */
-export const put = (kind: string, id: string, doc: unknown) => { store.set(key(kind, id), doc) }
+export const put = (kind: string, id: string, doc: unknown) => { store.set(key(kind, id), doc); archived.delete(key(kind, id)) }
 
 /**
  * What the `active_*` views hide: a document whose parent is gone. The server archives
@@ -57,7 +57,7 @@ function visible(kind: string, d: Record<string, unknown>): Record<string, unkno
     case 'result': return has('team', d.homeId as string) && has('team', d.awayId as string) ? d : undefined
     case 'training': {
       if (!has('team', d.clubId as string)) return undefined
-      const ids = (d.playIds as string[] | undefined)?.filter((id) => has('play', id))
+      const ids = (d.playIds as string[] | undefined)?.filter((id) => { const p = store.get(key('play', id)); return !!p && !!visible('play', p as never) })
       const rest = { ...d }
       delete rest.playIds
       return ids?.length ? { ...rest, playIds: ids } : rest

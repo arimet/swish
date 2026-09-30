@@ -120,9 +120,9 @@ export async function get<T>(kind: Kind, id: string): Promise<T | undefined> {
 /**
  * Applies a batch of writes, all or nothing.
  *
- * The batch is not an optimisation: a cascade (deleting a team takes its players,
- * its results, its sessions, its plays and its message) must not land half-applied,
- * and one transaction is the only way to promise that. See `repositories.ts`.
+ * The batch is not an optimisation: a bulk change (archiving every game of a league,
+ * wiping the database) must not land half-applied, and one transaction is the only
+ * way to promise that. See `repositories.ts`.
  *
  * Throws when the server did not take the writes. Callers that show the result of a
  * write must let that exception through — a screen that swallows it goes back to

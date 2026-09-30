@@ -104,8 +104,8 @@ export function Calendar() {
     guard('manage', async () => { await deleteTraining(t.id); setToDelete(null) }) }
 
   // Attaching a play to a session is administrative: guard first, write second. The
-  // toggle itself is transactional (cf. `toggleTrainingPlay`), so that two boxes ticked
-  // in quick succession do not erase each other.
+  // toggles run one after another in this tab (cf. `toggleTrainingPlay`), so that two
+  // boxes ticked in quick succession do not erase each other.
   const togglePlay = (id: string, playId: string) => guard('manage', () => toggleTrainingPlay(id, playId))
 
   return (

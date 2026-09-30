@@ -67,16 +67,25 @@ export const getMessage = (clubId: string) => get<TeamMessage>('message', clubId
 export const saveMessage = (m: TeamMessage) => one('message', m.clubId, m)
 export const deleteMessage = (clubId: string) => gone('message', clubId)
 
+/* A toggle reads the session before it writes it, so two ticks launched in one round
+   trip would both start from the same session and the second write would erase the
+   first. They run one after another instead. */
+let toggling: Promise<unknown> = Promise.resolve()
+
 /** Attaches a play to a training session, or detaches it.
  *
- *  ponytail: read-modify-write, so two boxes ticked within the same round trip lose
- *  the first tick. One coach, one phone, one session: a per-field API endpoint would
- *  cost more than the defect it prevents. */
-export const toggleTrainingPlay = async (trainingId: string, playId: string) => {
-  const training = await get<Training>('training', trainingId)
-  if (!training) return
-  const ids = training.playIds ?? []
-  await one('training', training.id, { ...training, playIds: ids.includes(playId) ? ids.filter((id) => id !== playId) : [...ids, playId] })
+ *  ponytail: the chain covers one tab; two devices ticking at the same instant can
+ *  still cross. A per-field API endpoint would cost more than the defect it prevents. */
+export const toggleTrainingPlay = (trainingId: string, playId: string) => {
+  const next = toggling.then(async () => {
+    const training = await get<Training>('training', trainingId)
+    if (!training) return
+    const ids = training.playIds ?? []
+    await one('training', training.id, { ...training, playIds: ids.includes(playId) ? ids.filter((id) => id !== playId) : [...ids, playId] })
+  })
+  // A failed toggle must not jam the next one.
+  toggling = next.catch(() => undefined)
+  return next
 }
 
 /** The playbook belongs to the club. */

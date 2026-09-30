@@ -48,7 +48,7 @@ const STALE = 30_000
 
 /** `['doc', kind]` is the kind's list; `['doc', kind, id]` is one document. So
  *  invalidating `['doc', kind]` reaches both, which is what a write wants: it knows
- *  the kind it touched, and the cascade behind it may have touched any id. */
+ *  the kind it touched, and the server's views may have hidden any id of a dependent kind. */
 export const docKey = (kind: Kind, id?: string) => id ? ['doc', kind, id] as const : ['doc', kind] as const
 
 /* React Query refuses `undefined` as query data — it is how it spells "nothing has
@@ -176,7 +176,7 @@ export const DEPENDENTS: Record<Kind, Kind[]> = {
 /**
  * Wires accepted writes to the cache. Mounted once, under the provider.
  *
- * Every write in the application goes through `api.mutate`, cascades included, so one
+ * Every write in the application goes through `api.mutate`, bulk batches included, so one
  * subscription covers all of them and **no call site can forget to invalidate**. That
  * is the whole reason this is a bridge and not a `useMutation` per screen: the screens
  * used to call a `reload()` of their own after each write, and the defects were always
@@ -194,7 +194,8 @@ export const DEPENDENTS: Record<Kind, Kind[]> = {
  * spelled everywhere here. Not `removeQueries`, which would leave a mounted screen to
  * fetch a 404 to learn what this batch already said.
  *
- * **Only the kind's list is invalidated**, and `exact` so it is the list alone. A list
+ * **Only the kind's list is invalidated** (`exact`, so it is the list alone), plus, after
+ * a `del`, the kinds the server's views then hide (`DEPENDENTS`). A list
  * genuinely has to be re-read — a batch says nothing about the order or about what
  * else the database holds — but only if a screen is showing one. In the play editor,
  * where releasing a marker is a write, nothing is mounted that lists plays: the
