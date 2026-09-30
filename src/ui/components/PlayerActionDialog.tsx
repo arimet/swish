@@ -206,7 +206,9 @@ export function PlayerActionDialog({
             hundred wasted pixels either side. Side by side, the whole dialog is one
             screenful and the court gains eighty pixels to be aimed at. */}
         {step === 'main' && <>
-        <div className="grid gap-x-5 sm:grid-cols-2">
+        {/* A miss is only ever aimed: in "Missed" mode the named actions go, and the
+            court stands alone — nothing left to tap by mistake but the spot. */}
+        <div className={made ? 'grid gap-x-5 sm:grid-cols-2' : 'mx-auto w-full sm:max-w-sm'}>
           <div>
             {/* SHOT: made or missed, then the spot on the court. */}
             <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
@@ -219,7 +221,7 @@ export function PlayerActionDialog({
             <div className="mt-2"><ShotPicker onPick={setPlaced} confirmation={confirmation} shots={shots} made={made} /></div>
           </div>
 
-          <div className="flex flex-col">
+          {made && <div className="flex flex-col">
             {/* THE POINTS, named rather than aimed — the whole reason this column
                 exists. Two ordinary baskets and the free throw, in that order.
                 The two and the three are the way out when nobody saw where the shot
@@ -315,7 +317,7 @@ export function PlayerActionDialog({
                 ))}
               </details>
             )}
-          </div>
+          </div>}
         </div>
         {/* At the very bottom, under both columns: the last thing the eye reaches after
             aiming, and greyed until there is something to validate. */}

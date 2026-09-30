@@ -252,3 +252,18 @@ describe('PlayerActionDialog — the assist, asked after the basket', () => {
     expect(screen.queryByText('Passe décisive de…')).not.toBeInTheDocument()
   })
 })
+
+describe('PlayerActionDialog — missed mode', () => {
+  it('shows nothing but the court, and brings everything back on "Made"', () => {
+    renderDialog({ scoreCounts: { '2int': 1, '2ext': 0, '3': 0, lf: 0 } })
+    fireEvent.click(screen.getByRole('button', { name: 'Manqué' }))
+    for (const name of ['Ajouter 2 points', 'Lancer franc', 'Faute offensive', 'Contre'])
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
+    expect(screen.queryByText(/corriger/i)).not.toBeInTheDocument()
+    expect(court()).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Réussi' }))
+    expect(screen.getByRole('button', { name: 'Ajouter 2 points' })).toBeInTheDocument()
+    expect(screen.getByText(/corriger/i)).toBeInTheDocument()
+  })
+})
