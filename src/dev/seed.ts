@@ -165,20 +165,19 @@ const NEXT = FIXTURES.findIndex((f) => !f.score && !f.live)
 
 /** Two sessions in the week before each game (five and three days ahead), so that the
  *  calendar has a rhythm to show. Invented: the club's training schedule is not
- *  published. The next session carries the demo plays, giving the dashboard something
- *  to announce under "on the programme". */
+ *  published — so only the sessions already behind us on the day the seed runs. The
+ *  coach plans what is ahead; a demo that filled the season's calendar in advance
+ *  would leave them trainings to delete one by one. The latest session carries the
+ *  demo plays, so that the calendar shows what a session with plays looks like. */
 function buildTrainings(): Training[] {
-  const sessions: Training[] = FIXTURES.flatMap((f, idx) => [
-    { id: `seed-tr${idx}-0`, clubId: teamId(0), date: addDays(f.date, -5), time: '19:00', place: HOME_VENUE, theme: THEMES[idx % THEMES.length] },
-    { id: `seed-tr${idx}-1`, clubId: teamId(0), date: addDays(f.date, -3), time: '19:00', place: HOME_VENUE, theme: THEMES[(idx + 1) % THEMES.length] },
-  ])
-  // On the first session still ahead on the day the seed runs, not on a fixed one: a
-  // fixed session slips into the past within the week, and the dashboard only
-  // announces what is to come.
   const today = new Date()
   const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-  const next = sessions.find((t) => t.date >= todayIso)
-  if (next) next.playIds = ['seed-sch0', 'seed-sch1']
+  const sessions: Training[] = FIXTURES.flatMap((f, idx): Training[] => [
+    { id: `seed-tr${idx}-0`, clubId: teamId(0), date: addDays(f.date, -5), time: '19:00', place: HOME_VENUE, theme: THEMES[idx % THEMES.length] },
+    { id: `seed-tr${idx}-1`, clubId: teamId(0), date: addDays(f.date, -3), time: '19:00', place: HOME_VENUE, theme: THEMES[(idx + 1) % THEMES.length] },
+  ]).filter((t) => t.date < todayIso)
+  const latest = sessions.at(-1)
+  if (latest) latest.playIds = ['seed-sch0', 'seed-sch1']
   return sessions
 }
 

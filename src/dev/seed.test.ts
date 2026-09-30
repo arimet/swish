@@ -14,7 +14,7 @@ import type { Match } from '../domain/types'
    does not.
 
    The clock is pinned to the day the calendar was copied from the federation: the
-   demo plays go to the next session *from today*, and a test that read the real clock
+   trainings stop *at today*, and a test that read the real clock
    would start failing once the season is over. Only `Date` is faked — the fake API's
    promises must still resolve. */
 beforeEach(async () => {
@@ -96,6 +96,8 @@ describe('demo data', () => {
     expect(trainings.length).toBeGreaterThan(0)
     // Without a clubId, a training would leak into any other club's calendar.
     expect(trainings.every((t) => t.clubId === clubId)).toBe(true)
+    // None ahead: the coach plans those.
+    expect(trainings.every((t) => t.date < '2026-09-30')).toBe(true)
   })
 
   it('puts the demo call-up on the next game, never on one already played', async () => {
@@ -120,7 +122,7 @@ describe('demo data', () => {
     for (const s of plays) for (const t of s.steps) expect(t.markers).toHaveLength(s.defense ? 10 : 5)
   })
 
-  it('files the demo plays and attaches some to the next session', async () => {
+  it('files the demo plays and attaches some to the latest session', async () => {
     const matches = await listMatches()
     const clubId = matches[0].meta.clubId
     const plays = await listPlays(clubId)
@@ -141,13 +143,11 @@ describe('demo data', () => {
     // Near the basket (y = 0 at the baseline), and not halfway.
     expect(fiveAfter.at.y).toBeLessThan(0.25)
 
-    // The next upcoming session carries two plays, both of which exist — an orphan id
-    // would make the calendar's count lie.
-    const today = new Date()
-    const jour = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    const prochaine = (await listTrainings()).filter((t) => t.date >= jour).sort((a, b) => a.date.localeCompare(b.date))[0]
-    expect(prochaine.playIds).toHaveLength(2)
+    // The latest session carries two plays, both of which exist — an orphan id would
+    // make the calendar's count lie.
+    const derniere = (await listTrainings()).sort((a, b) => b.date.localeCompare(a.date))[0]
+    expect(derniere.playIds).toHaveLength(2)
     const existing = new Set(plays.map((s) => s.id))
-    expect(prochaine.playIds!.every((id) => existing.has(id))).toBe(true)
+    expect(derniere.playIds!.every((id) => existing.has(id))).toBe(true)
   })
 })
