@@ -285,7 +285,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         title={translate('live.finishTitle')} message={translate('live.finishText')} confirmLabel={translate('live.finish')} danger />
       <SubstitutionDialog open={sub} onClose={() => setSub(false)}
         onCourtPlayers={onCourt()} benchPlayers={bench()}
-        onSubmit={(playerOutId, playerInId) => dispatch({ type: 'SUBSTITUTION', team: 'A', playerOutId, playerInId, period: ls.period, gameClock: seconds })} />
+        onSubmit={(pairs) => dispatchMany(pairs.map(([playerOutId, playerInId]) => ({ type: 'SUBSTITUTION', team: 'A', playerOutId, playerInId, period: ls.period, gameClock: seconds })))} />
     </div>
   )
 }

@@ -3,20 +3,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import type { Player } from '../../domain/types'
 import { useT } from '../../i18n'
 
-/** The substitution dialog: pick a player going off and a player coming on. */
+/**
+ * The substitution dialog: the players going off, the players coming on, one
+ * validation. Several at once, because a coach changes three or five at a time between
+ * two free throws, and one dialog per pair was that many round trips.
+ *
+ * Validate waits for as many coming on as going off: the five on the court stays five.
+ * Who replaces whom is the order picked in — it has no effect on playing time, which
+ * reads who is on the court.
+ */
 export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers, onSubmit }: {
   open: boolean; onClose: () => void
   onCourtPlayers: Player[]; benchPlayers: Player[]
-  onSubmit: (playerOutId: string, playerInId: string) => void
+  /** One pair per substitution: [going off, coming on]. */
+  onSubmit: (pairs: [string, string][]) => void
 }) {
   const translate = useT()
-  const [out, setOut] = useState<string | null>(null)
-  const [inId, setInId] = useState<string | null>(null)
+  const [outs, setOuts] = useState<string[]>([])
+  const [ins, setIns] = useState<string[]>([])
+  const toggle = (set: typeof setOuts) => (id: string) => set((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
 
-  const close = () => { setOut(null); setInId(null); onClose() }
+  const ready = outs.length > 0 && outs.length === ins.length
+  const close = () => { setOuts([]); setIns([]); onClose() }
   const submit = () => {
-    if (!out || !inId) return
-    onSubmit(out, inId)
+    if (!ready) return
+    onSubmit(outs.map((out, i) => [out, ins[i]]))
     close()
   }
 
@@ -26,13 +37,16 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
         <DialogHeader><DialogTitle>{translate('panel.substitution')}</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <PickGroup title={translate('sub.out')} accent="text-[var(--c-danger)]" players={onCourtPlayers}
-            selected={out} onSelect={setOut} activeClass="border-transparent bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]" />
+            selected={outs} onSelect={toggle(setOuts)} activeClass="border-transparent bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]" />
           <PickGroup title={translate('sub.in')} accent="text-[var(--c-green)]" players={benchPlayers}
-            selected={inId} onSelect={setInId} activeClass="border-transparent bg-[var(--c-green-fill)] text-[var(--c-on-green)]" />
+            selected={ins} onSelect={toggle(setIns)} activeClass="border-transparent bg-[var(--c-green-fill)] text-[var(--c-on-green)]" />
         </div>
-        <DialogFooter>
+        <DialogFooter className="flex-col gap-2 sm:flex-col">
+          {(outs.length > 0 || ins.length > 0) && !ready && (
+            <p role="status" className="text-center text-[13px] font-semibold text-[var(--c-muted)]">{translate('sub.unbalanced', { out: outs.length, in: ins.length })}</p>
+          )}
           <button
-            disabled={!out || !inId}
+            disabled={!ready}
             onClick={submit}
             className="w-full rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground transition enabled:hover:brightness-110 disabled:opacity-40"
           >
@@ -45,7 +59,7 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
 }
 
 function PickGroup({ title, accent, players, selected, onSelect, activeClass }: {
-  title: string; accent: string; players: Player[]; selected: string | null
+  title: string; accent: string; players: Player[]; selected: string[]
   onSelect: (id: string) => void; activeClass: string
 }) {
   const translate = useT()
@@ -56,9 +70,10 @@ function PickGroup({ title, accent, players, selected, onSelect, activeClass }: 
         {players.map((p) => (
           <button
             key={p.id}
+            aria-pressed={selected.includes(p.id)}
             onClick={() => onSelect(p.id)}
             className={`rounded-xl border px-3 py-2.5 text-sm font-bold transition active:scale-95 ${
-              selected === p.id ? activeClass : 'border-border/60 bg-background hover:bg-muted'
+              selected.includes(p.id) ? activeClass : 'border-border/60 bg-background hover:bg-muted'
             }`}
           >
             {p.number} {p.lastName}
