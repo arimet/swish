@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { act, render, renderHook, screen, waitFor } from '../test/render'
 import { count, put } from '../test/fakeApi'
 import { docKey, usePlayerCounts, usePlayers, useTeams } from './queries'
-import { deletePlayer, savePlayer, saveTeam } from './repositories'
+import { deletePlayer, deleteTeam, savePlayer, saveTeam } from './repositories'
 import type { Player, Team } from '../domain/types'
 
 /**
@@ -101,6 +101,15 @@ describe('what a write does to the cache', () => {
 
     expect(result.current.client.getQueryData(docKey('player', 'p1'))).toBeNull()
     await waitFor(() => expect(result.current.players.data).toHaveLength(0))
+  })
+
+  it('re-reads the players when their team is archived', async () => {
+    await saveTeam(team('ta', 'A'))
+    await savePlayer(player('p1', 'ta', 4))
+    const { result } = renderHook(() => usePlayers('ta'))
+    await waitFor(() => expect(result.current.data).toHaveLength(1))
+    await act(async () => { await deleteTeam('ta') })
+    await waitFor(() => expect(result.current.data).toEqual([]))
   })
 
   it('leaves the kinds it did not touch alone', async () => {

@@ -17,6 +17,8 @@ import type { Match } from '../domain/types'
  */
 
 const store = new Map<string, unknown>()
+/** Keys deleted through `/api/mutate`, i.e. archived on the server. */
+const archived = new Set<string>()
 
 const key = (kind: string, id: string) => `${kind}:${id}`
 
@@ -27,7 +29,7 @@ const key = (kind: string, id: string) => `${kind}:${id}`
    with fixtures filed behind its back. */
 
 /** Empties the database between two tests. Called for every test by `setupTests`. */
-export const resetStore = () => store.clear()
+export const resetStore = () => { store.clear(); archived.clear() }
 
 /** Drops every document of a kind. Some tests file a fixture in `beforeEach` and then
  *  need one kind emptied to describe their own case ("a player with no game"). */
@@ -38,12 +40,48 @@ export const clear = (kind: string) => {
 /** Files a document directly, bypassing the API — the arrangement half of a test. */
 export const put = (kind: string, id: string, doc: unknown) => { store.set(key(kind, id), doc) }
 
+/**
+ * What the `active_*` views hide: a document whose parent is gone. The server archives
+ * rather than deletes, and archiving a team hides its players, games, results, sessions,
+ * plays and message; the fake deletes the one document and hides the rest the same way.
+ * Call-ups and sessions also drop the ids of players and plays no longer visible.
+ */
+const has = (kind: string, id: string | undefined) => !!id && !archived.has(key(kind, id))
+function visible(kind: string, d: Record<string, unknown>): Record<string, unknown> | undefined {
+  switch (kind) {
+    case 'player': return has('team', d.teamId as string) ? d : undefined
+    case 'match': {
+      const meta = d.meta as { clubId?: string; opponentId?: string } | undefined
+      return has('team', meta?.clubId) && has('team', meta?.opponentId) ? d : undefined
+    }
+    case 'result': return has('team', d.homeId as string) && has('team', d.awayId as string) ? d : undefined
+    case 'training': {
+      if (!has('team', d.clubId as string)) return undefined
+      const ids = (d.playIds as string[] | undefined)?.filter((id) => has('play', id))
+      const rest = { ...d }
+      delete rest.playIds
+      return ids?.length ? { ...rest, playIds: ids } : rest
+    }
+    case 'play': case 'message': return has('team', d.clubId as string) ? d : undefined
+    case 'convocation': {
+      const m = store.get(key('match', d.matchId as string)) as Record<string, unknown> | undefined
+      if (archived.has(key('match', d.matchId as string)) || (m && !visible('match', m))) return undefined
+      return { ...d, playerIds: (d.playerIds as string[]).filter((id) => { const p = store.get(key('player', id)); return !!p && !!visible('player', p as never) }) }
+    }
+    default: return d
+  }
+}
+
 /** Reads a document back, to assert on what a screen actually wrote. */
-export const doc = <T>(kind: string, id: string): T | undefined => store.get(key(kind, id)) as T | undefined
+export const doc = <T>(kind: string, id: string): T | undefined => {
+  const d = store.get(key(kind, id)) as Record<string, unknown> | undefined
+  return (d && visible(kind, d)) as T | undefined
+}
 
 /** Every document of a kind, in insertion order. */
 export const docs = <T>(kind: string): T[] =>
-  [...store.entries()].filter(([k]) => k.startsWith(`${kind}:`)).map(([, v]) => v as T)
+  [...store.entries()].filter(([k]) => k.startsWith(`${kind}:`))
+    .map(([, v]) => visible(kind, v as Record<string, unknown>)).filter(Boolean) as T[]
 
 export const count = (kind: string): number => docs(kind).length
 
@@ -82,9 +120,10 @@ async function route(url: URL, init?: RequestInit): Promise<Response> {
 
   if (path === '/api/mutate') {
     const ops = (JSON.parse(String(init?.body ?? '{}')).ops ?? []) as Op[]
+    if (ops.some((o) => o.kind === 'convocation' && o.op === 'del')) return json({ error: 'convocations cannot be archived on its own' }, 400)
     for (const o of ops) {
-      if (o.op === 'del') store.delete(key(o.kind, o.id))
-      else store.set(key(o.kind, o.id), o.doc)
+      if (o.op === 'del') { store.delete(key(o.kind, o.id)); archived.add(key(o.kind, o.id)) }
+      else { store.set(key(o.kind, o.id), o.doc); archived.delete(key(o.kind, o.id)) }
     }
     return new Response(null, { status: 204 })
   }

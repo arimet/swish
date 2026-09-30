@@ -161,6 +161,19 @@ export const usePlay = (id: string | null | undefined): UseQueryResult<Play | nu
 // ----------------------------------------------------------------- the write bridge
 
 /**
+ * The kinds an archived document hides, through the server's views. The batch names
+ * only what was archived; without this a team archived would leave its players on the
+ * screen until the next refetch.
+ */
+export const DEPENDENTS: Record<Kind, Kind[]> = {
+  team: ['player', 'match', 'result', 'convocation', 'training', 'play', 'message'],
+  player: ['convocation'],
+  match: ['convocation'],
+  play: ['training'],
+  result: [], convocation: [], training: [], message: [],
+}
+
+/**
  * Wires accepted writes to the cache. Mounted once, under the provider.
  *
  * Every write in the application goes through `api.mutate`, cascades included, so one
@@ -196,6 +209,11 @@ export function WriteBridge(): null {
     }
     for (const kind of new Set(ops.map((o) => o.kind))) {
       client.invalidateQueries({ queryKey: docKey(kind), exact: true })
+    }
+    // Not `exact`: a call-up is cached per game (`['doc', 'convocation', matchId]`), and
+    // every one of them may have lost a player.
+    for (const kind of new Set(ops.filter((o) => o.op === 'del').flatMap((o) => DEPENDENTS[o.kind]))) {
+      client.invalidateQueries({ queryKey: docKey(kind) })
     }
   }), [client])
   return null

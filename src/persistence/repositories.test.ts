@@ -102,16 +102,15 @@ describe('repositories', () => {
   })
 
   it('deletes two plays in quick succession without an id coming back', async () => {
-    // Reading the sessions before the transaction is taking a snapshot: both deletions
-    // would start from the same state and the second would reinstate the id the first
-    // had just removed, for good.
+    // Each deletion is one archive and reads nothing first, so the two cannot reinstate
+    // an id for one another; the views hide both plays from the session.
     await savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
     await savePlay({ id: 's2', ...newPlay('ta', 'half', false), name: 'B' })
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-09-01', playIds: ['s1', 's2'] })
 
     await Promise.all([deletePlay('s1'), deletePlay('s2')])
 
-    expect((await listTrainings())[0].playIds).toEqual([])
+    expect((await listTrainings())[0].playIds).toBeUndefined()
     expect(await listPlays('ta')).toEqual([])
   })
 })
@@ -241,20 +240,19 @@ describe('bulk cleanup', () => {
 
     await deletePlaysOfClub('ta')
 
-    expect((await listTrainings())[0].playIds).toEqual([])
+    expect((await listTrainings())[0].playIds).toBeUndefined()
   })
 
   it('deletes two clubs\' plays in quick succession without an id coming back', async () => {
-    // The same trap as `deletePlay`: reading the sessions before the transaction is
-    // taking a snapshot — both cleanups would start from the same state and the second
-    // would reinstate the id the first had just removed, for good.
+    // Same as `deletePlay`: the cleanups archive plays and read no session, so neither
+    // can undo the other.
     await savePlay({ id: 's1', ...newPlay('ta', 'half', false), name: 'A' })
     await savePlay({ id: 's2', ...newPlay('tz', 'half', false), name: 'B' })
     await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-09-01', playIds: ['s1', 's2'] })
 
     await Promise.all([deletePlaysOfClub('ta'), deletePlaysOfClub('tz')])
 
-    expect((await listTrainings())[0].playIds).toEqual([])
+    expect((await listTrainings())[0].playIds).toBeUndefined()
   })
 
   it('empties the database, every kind of document', async () => {
