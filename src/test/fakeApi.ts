@@ -1,4 +1,4 @@
-import type { Match } from '../domain/types'
+import type { GameEvent, Match } from '../domain/types'
 
 /**
  * The API, in memory, for the test suite.
@@ -8,8 +8,8 @@ import type { Match } from '../domain/types'
  * (`GET /api/docs`, `POST /api/mutate`) plus the public spectator bundle, over a
  * `Map`.
  *
- * A `put` replaces the stored document, exactly as `api/mutate` does — every kind,
- * the match sheet included.
+ * A `put` replaces the stored document, exactly as `api/mutate` does — except a
+ * game's events, which only `/api/match/:id/events` writes.
  *
  * Writing is accepted without a token: the token is the server's business and has
  * its own test (`persistence/api.test.ts`). Modelling a *valid* token here keeps
@@ -123,8 +123,27 @@ async function route(url: URL, init?: RequestInit): Promise<Response> {
     if (ops.some((o) => o.kind === 'convocation' && o.op === 'del')) return json({ error: 'convocations cannot be archived on its own' }, 400)
     for (const o of ops) {
       if (o.op === 'del') { store.delete(key(o.kind, o.id)); archived.add(key(o.kind, o.id)) }
-      else { store.set(key(o.kind, o.id), o.doc); archived.delete(key(o.kind, o.id)) }
+      else {
+        if (o.kind === 'match') {
+          // As the server: a game's `put` never writes its events.
+          const stored = store.get(key('match', o.id)) as Match | undefined
+          store.set(key('match', o.id), { ...(o.doc as Match), events: stored?.events ?? [] })
+        } else store.set(key(o.kind, o.id), o.doc)
+        archived.delete(key(o.kind, o.id))
+      }
     }
+    return new Response(null, { status: 204 })
+  }
+
+  const events = path.match(/^\/api\/match\/([^/]+)\/events$/)
+  if (events) {
+    const id = decodeURIComponent(events[1])
+    const m = store.get(key('match', id)) as Match | undefined
+    if (!m) return json({ error: 'match_events_match_id_fkey' }, 400)
+    const { add = [], archive = [] } = JSON.parse(String(init?.body ?? '{}')) as { add?: GameEvent[]; archive?: string[] }
+    const known = new Set(m.events.map((e) => e.id))
+    const gone = new Set(archive)
+    store.set(key('match', id), { ...m, events: [...m.events, ...add.filter((e) => !known.has(e.id))].filter((e) => !gone.has(e.id)) })
     return new Response(null, { status: 204 })
   }
 

@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LiveMatch } from './LiveMatch'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
-import { getMatch, saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
+import { getMatch, saveSheet, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { Match } from '../../domain/types'
 
 const MATCH_ID = 'match-1'
@@ -23,7 +23,7 @@ beforeEach(async () => {
       { id: 'e1', wallClock: 1, period: 1, gameClock: 600, type: 'CLOCK_START' },
     ],
   }
-  await saveMatch(m)
+  await saveSheet(null, m)
 })
 
 const renderLive = () =>
@@ -75,7 +75,7 @@ describe('the full run', () => {
       roster: ['p0', 'p1', 'p2', 'p3', 'p4', 'p5'],
       events: [], status: 'live',
     }
-    await saveMatch(m)
+    await saveSheet(null, m)
   })
 
   const renderE2E = (onFinish = vi.fn()) =>

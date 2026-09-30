@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { TeamDetail } from './TeamDetail'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
-import { getTeam, listPlayers, saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
+import { getTeam, listPlayers, saveSheet, savePlayer, saveTeam } from '../../persistence/repositories'
 
 beforeEach(async () => {
   sessionStorage.setItem(ROLE_KEY, 'admin')
@@ -143,7 +143,7 @@ describe('TeamDetail — rights', () => {
 describe('TeamDetail — top scorers', () => {
   /** A game played where MARTIN scores: with no points, the panel stays empty. */
   const matchWithPoints = async () => {
-    await saveMatch({
+    await saveSheet(null, {
       id: 'm1',
       meta: { championshipLabel: 'Poule A', date: '2026-01-10', clubId: 'ta', opponentId: 'tb' },
       roster: ['p1'],
@@ -152,7 +152,7 @@ describe('TeamDetail — top scorers', () => {
         { id: 'e0', wallClock: 0, type: 'STARTING_FIVE', team: 'A', playerIds: ['p1'], period: 1, gameClock: 600 },
         { id: 'e1', wallClock: 1, type: 'SCORE', team: 'A', playerId: 'p1', kind: '2int', period: 1, gameClock: 500 },
       ],
-    } as Parameters<typeof saveMatch>[0])
+    } as Parameters<typeof saveSheet>[1])
   }
 
   it('every scorer leads to their record', async () => {

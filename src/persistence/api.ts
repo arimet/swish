@@ -12,6 +12,8 @@
  * header pill says so for as long as it lasts.
  */
 
+import type { GameEvent } from '../domain/types'
+
 const BASE = '/api'
 
 /** The eight document kinds. The server checks the same list (`api/_db.ts`). */
@@ -144,6 +146,26 @@ export async function mutate(ops: Op[]): Promise<void> {
   // throwing away good cached data over it would make every failure look like a
   // network outage on the next screen.
   for (const f of writeListeners) f(ops)
+}
+
+/**
+ * Adds and archives a game's events, in one transaction.
+ *
+ * Not announced to `onWrite`: the sheet's cache is `useMatch`'s to keep, and it has
+ * already applied this change before sending it.
+ */
+export async function writeEvents(matchId: string, add: GameEvent[], archive: string[]): Promise<void> {
+  if (!add.length && !archive.length) return
+  let r: Response
+  try {
+    r = await fetch(`${BASE}/match/${encodeURIComponent(matchId)}/events`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-swish-token': token() },
+      body: JSON.stringify({ add, archive }),
+    })
+  } catch { fail() }
+  if (!r.ok) fail(r.status)
+  announce('ok')
 }
 
 /**

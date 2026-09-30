@@ -6,7 +6,7 @@ import { Dashboard } from './Dashboard'
 import { AuthProvider, PLAYER_ID_KEY, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { count } from '../../test/fakeApi'
-import { getMessage, saveConvocation, saveMatch, saveMessage, savePlay, savePlayer, saveTeam, saveTraining } from '../../persistence/repositories'
+import { getMessage, saveConvocation, saveSheet, saveMessage, savePlay, savePlayer, saveTeam, saveTraining } from '../../persistence/repositories'
 import { newPlay, type Play } from '../../domain/plays'
 import type { GameEvent, Match } from '../../domain/types'
 
@@ -54,7 +54,7 @@ beforeEach(async () => {
 
 describe('Dashboard', () => {
   it('shows the club\'s record', async () => {
-    await saveMatch(finished('m1', 10, 4))
+    await saveSheet(null, finished('m1', 10, 4))
     renderDash()
     expect(await screen.findByText('VIGNOT')).toBeInTheDocument()
     expect(await screen.findByText('1V – 0D')).toBeInTheDocument()
@@ -64,13 +64,13 @@ describe('Dashboard', () => {
     // The shortcut to the scorer's table is reserved for whoever keeps it: this test
     // stands on their side, the visitor's case is checked just below.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
-    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live' })
+    await saveSheet(null, { ...finished('m2', 6, 4), id: 'm2', status: 'live' })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
   })
 
   it('a visitor reads the live score and is offered the follow-along view, not the scorer\'s table', async () => {
-    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live' })
+    await saveSheet(null, { ...finished('m2', 6, 4), id: 'm2', status: 'live' })
     renderDash()
     // The live banner stays whole — the state, the opposition, the score: exactly
     // what a player or a parent comes to look at.
@@ -84,7 +84,7 @@ describe('Dashboard', () => {
   })
 
   it('announces the next game when none is in progress', async () => {
-    await saveMatch({ ...finished('m3', 0, 0), id: 'm3', status: 'setup', meta: { championshipLabel: 'Poule A', date: inNDays(5), clubId: 'ta', opponentId: 'tb' } })
+    await saveSheet(null, { ...finished('m3', 0, 0), id: 'm3', status: 'setup', meta: { championshipLabel: 'Poule A', date: inNDays(5), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByText(/prochaine rencontre/i)).toBeInTheDocument()
   })
@@ -94,34 +94,34 @@ describe('Dashboard', () => {
     // played. The banner must apply the same rule as `nextFixture` (which excludes
     // the past), otherwise it would announce "Next game" next to a contradictory
     // "Nothing planned yet" block.
-    await saveMatch({ ...finished('m3', 0, 0), id: 'm3', status: 'setup', meta: { championshipLabel: 'Poule A', date: '2020-01-10', clubId: 'ta', opponentId: 'tb' } })
+    await saveSheet(null, { ...finished('m3', 0, 0), id: 'm3', status: 'setup', meta: { championshipLabel: 'Poule A', date: '2020-01-10', clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
     expect(screen.queryByText(/prochaine rencontre/i)).not.toBeInTheDocument()
   })
 
   it('does not show an empty hot zone with no explanation', async () => {
-    await saveMatch(finished('m1', 10, 4))
+    await saveSheet(null, finished('m1', 10, 4))
     renderDash()
     expect(await screen.findByText(/aucun tir localisé/i)).toBeInTheDocument()
   })
 
   it('shows the club\'s hot zone as soon as one shot is located', async () => {
-    await saveMatch(finished('m1', 10, 4, [{ type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 }]))
+    await saveSheet(null, finished('m1', 10, 4, [{ type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 }]))
     renderDash()
     expect(await screen.findByLabelText('Carte des tirs')).toBeInTheDocument()
   })
 
   it('announces no game played for a club that is no game\'s clubId', async () => {
     // 'tb' only appears as m1's `opponentId`: it is never "our" game.
-    await saveMatch(finished('m1', 10, 4))
+    await saveSheet(null, finished('m1', 10, 4))
     localStorage.setItem('swish-club-id', 'tb')
     renderDash()
     expect(await screen.findByText('Aucune rencontre jouée')).toBeInTheDocument()
   })
 
   it('shows the number called up and the meeting point of the next fixture called up', async () => {
-    await saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: inNDays(5), clubId: 'ta', opponentId: 'tb' } })
+    await saveSheet(null, { ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: inNDays(5), clubId: 'ta', opponentId: 'tb' } })
     await saveConvocation({ matchId: 'm4', playerIds: ['p1'], meetTime: '18:00', meetPlace: 'Gymnase Colette' })
     renderDash()
     expect(await screen.findByText(/prochaine échéance/i)).toBeInTheDocument()
@@ -135,7 +135,7 @@ describe('Dashboard', () => {
     // One game played, and that premise carries the test: "no fixture scheduled"
     // describes a club **in season** with nothing ahead of it. A club with no game at
     // all is another state — getting started — and that is the next test.
-    await saveMatch(finished('m1', 10, 4))
+    await saveSheet(null, finished('m1', 10, 4))
     renderDash()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
   })
@@ -176,7 +176,7 @@ describe('Dashboard', () => {
     // No fixture other than the live game: the block must invite planning rather than
     // repeat the opposition already shown in the banner.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
-    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(0), clubId: 'ta', opponentId: 'tb' } })
+    await saveSheet(null, { ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(0), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
@@ -188,8 +188,8 @@ describe('Dashboard', () => {
     // be announced as the "next fixture" although it
     // a déjà commencé.
     sessionStorage.setItem(ROLE_KEY, 'scorer')
-    await saveMatch({ ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(0), clubId: 'ta', opponentId: 'tb' } })
-    await saveMatch({ ...finished('m5', 2, 1), id: 'm5', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(1), clubId: 'ta', opponentId: 'tb' } })
+    await saveSheet(null, { ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(0), clubId: 'ta', opponentId: 'tb' } })
+    await saveSheet(null, { ...finished('m5', 2, 1), id: 'm5', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(1), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
     expect(await screen.findByText(/rien de planifié/i)).toBeInTheDocument()
@@ -238,7 +238,7 @@ describe('the player\'s identity', () => {
   it('highlights the identified player\'s row and offers a shortcut to their record', async () => {
     localStorage.setItem(PLAYER_ID_KEY, 'p1')
     await savePlayer({ id: 'p2', teamId: 'ta', number: 9, lastName: 'DURAND', firstName: 'Théo' })
-    await saveMatch({ ...finished('m1', 10, 4, [{ type: 'SCORE', team: 'A', playerId: 'p2', kind: '2int' }]), roster: ['p1', 'p2'] })
+    await saveSheet(null, { ...finished('m1', 10, 4, [{ type: 'SCORE', team: 'A', playerId: 'p2', kind: '2int' }]), roster: ['p1', 'p2'] })
     renderDash()
 
     const scorers = (await screen.findByText('Meilleurs marqueurs')).closest('section')!
@@ -255,7 +255,7 @@ describe('the player\'s identity', () => {
     // A player removed from the roster, their id surviving in localStorage: no ghost
     // highlight, no shortcut to a record that no longer exists.
     localStorage.setItem(PLAYER_ID_KEY, 'parti')
-    await saveMatch(finished('m1', 10, 4))
+    await saveSheet(null, finished('m1', 10, 4))
     renderDash()
 
     const scorers = (await screen.findByText('Meilleurs marqueurs')).closest('section')!
@@ -397,7 +397,7 @@ describe('Dashboard — the message to the team', () => {
 
 describe('Dashboard — reaching the call-up', () => {
   const rencontreAVenir = async () =>
-    saveMatch({ ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: inNDays(5), clubId: 'ta', opponentId: 'tb' } })
+    saveSheet(null, { ...finished('m4', 0, 0), id: 'm4', status: 'setup', meta: { championshipLabel: 'Poule A', date: inNDays(5), clubId: 'ta', opponentId: 'tb' } })
 
   // Calling up writes: the shortcut is the coach's, so these tests stand on their
   // side. Showing who is called up is checked without the right further down.

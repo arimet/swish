@@ -24,6 +24,7 @@ describe.skipIf(!t.ready)('routes', () => {
       docs: (await import('../docs.js')).default,
       mutate: (await import('../mutate.js')).default,
       bundle: (await import('../_bundle.js')).bundle,
+      events: (await import('../match/[id]/events.js')).default,
     }
   }
 
@@ -44,6 +45,21 @@ describe.skipIf(!t.ready)('routes', () => {
 
     const convocation = await call(mutate, { method: 'POST', body: { ops: [{ kind: 'convocation', op: 'del', id: 'm1' }] } })
     expect(convocation).toEqual({ status: 400, body: { error: 'convocations cannot be archived on its own' } })
+  })
+
+  it('adds and archives events, and refuses a malformed one', async () => {
+    const { mutate, events, docs } = await load()
+    await call(mutate, { method: 'POST', body: { ops: [
+      { kind: 'team', op: 'put', id: 'a', doc: { id: 'a', name: 'A' } },
+      { kind: 'team', op: 'put', id: 'b', doc: { id: 'b', name: 'B' } },
+      { kind: 'match', op: 'put', id: 'm1', doc: { id: 'm1', meta: { clubId: 'a', opponentId: 'b' }, roster: [], events: [], status: 'live' } },
+    ] } })
+    const e = { id: 'e1', type: 'PERIOD_START', wallClock: 1, period: 1, gameClock: 600 }
+    expect((await call(events, { method: 'POST', query: { id: 'm1' }, body: { add: [e] } })).status).toBe(204)
+    expect(((await call(docs, { method: 'GET', query: { kind: 'match', id: 'm1' } })).body as { events: unknown[] }).events).toHaveLength(1)
+    expect((await call(events, { method: 'POST', query: { id: 'm1' }, body: { archive: ['e1'] } })).status).toBe(204)
+    expect(((await call(docs, { method: 'GET', query: { kind: 'match', id: 'm1' } })).body as { events: unknown[] }).events).toEqual([])
+    expect((await call(events, { method: 'POST', query: { id: 'm1' }, body: { add: [{ id: 'x', type: 'SCORE', wallClock: 1, period: 1, gameClock: 1 }] } })).status).toBe(400)
   })
 
   it('keeps nothing of a batch whose second op breaks a constraint', async () => {

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { SpectatorMatch } from './SpectatorMatch'
-import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
+import { saveSheet, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { GameEvent, Match } from '../../domain/types'
 
 const MATCH_ID = 'match-spectator'
@@ -25,7 +25,7 @@ beforeEach(async () => {
       { id: 'e3', wallClock: 3, period: 1, gameClock: 570, type: 'SCORE', team: 'B', kind: '3' },
     ],
   }
-  await saveMatch(m)
+  await saveSheet(null, m)
 })
 
 describe('SpectatorMatch', () => {
@@ -68,7 +68,7 @@ describe('SpectatorMatch — per-player shot chart', () => {
       roster: ['p2', 'p2b'], status: 'live',
       events: rawEvents.map(ev),
     }
-    await saveMatch(m)
+    await saveSheet(null, m)
   })
 
   it('unfolds the player\'s chart on a click on their row', async () => {

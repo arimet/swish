@@ -1,5 +1,6 @@
-import { list, get, mutate, type Op } from './api'
+import { list, get, mutate, writeEvents, type Op } from './api'
 import { hasEvents } from '../domain/cleanup'
+import { diffEvents } from '../domain/sync'
 import type { Team, Player, Match, ReportedResult, Convocation, Training, TeamMessage } from '../domain/types'
 import type { Play } from '../domain/plays'
 
@@ -15,7 +16,7 @@ import type { Play } from '../domain/plays'
  * results, sessions, plays and message; a player in the call-ups; a play in the
  * sessions. So a deletion here is one op, and there is no cascade left to forget.
  *
- * **A write replaces**, every kind alike, the match sheet included: `api/mutate`
+ * **A write replaces**, every kind alike, except a game's events: `api/mutate`
  * applies the document that arrives and keeps nothing of the one stored. So what a
  * screen sends is what the database will hold — which is only safe because the
  * screen read that document from the database in the first place.
@@ -41,11 +42,28 @@ export const listAllPlayers = () => list<Player>('player')
 export const listPlayers = async (teamId: string) => (await listAllPlayers()).filter((p) => p.teamId === teamId)
 export const deletePlayer = (id: string) => gone('player', id)
 
+/** A game's head — meta, status, roster. Its events are never written here: see `saveSheet`. */
 export const saveMatch = (m: Match) => one('match', m.id, m)
 export const getMatch = (id: string) => get<Match>('match', id)
 export const listMatches = () => list<Match>('match')
 /** Archives the game. Its call-up follows it through the server's views. */
 export const deleteMatch = (id: string) => gone('match', id)
+
+/**
+ * Writes what changed between two versions of a game: its head (meta, status, roster)
+ * when it changed, then the events added and archived.
+ *
+ * In that order, because an event needs its game: a sheet created and scored in one
+ * call must exist before its first basket. The two are separate requests, and that is
+ * accepted — a head written without its events leaves a correct game with less on it,
+ * never a basket pointing at nothing.
+ */
+export async function saveSheet(before: Match | null, after: Match): Promise<void> {
+  const head = (m: Match) => JSON.stringify({ ...m, events: undefined })
+  if (!before || head(before) !== head(after)) await saveMatch(after)
+  const { add, archive } = diffEvents(before?.events ?? [], after.events)
+  await writeEvents(after.id, add, archive)
+}
 
 export const listResults = () => list<ReportedResult>('result')
 export const saveResult = (r: ReportedResult) => one('result', r.id, r)
@@ -118,9 +136,9 @@ export const deleteMatchesWhere = async (filter: (m: Match) => boolean): Promise
  *  call-up stay. The status drops back to "upcoming" — a "finished" game without a
  *  single event would show 0–0 everywhere, like a score actually observed. */
 export const clearClubStats = async (clubId: string): Promise<number> => {
-  const cleared = (await listMatches()).filter(hasEvents(clubId)).map((m) => ({ ...m, events: [], status: 'setup' as const }))
-  await mutate(cleared.map((m): Op => ({ kind: 'match', op: 'put', id: m.id, doc: m })))
-  return cleared.length
+  const full = (await listMatches()).filter(hasEvents(clubId))
+  for (const m of full) await saveSheet(m, { ...m, events: [], status: 'setup' })
+  return full.length
 }
 
 /** The hand-entered results, in bulk. Nothing hangs off them. */

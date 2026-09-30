@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { seedDocuments } from './seed'
-import { mutate } from '../persistence/api'
+import { mutate, writeEvents } from '../persistence/api'
 import { getConvocation, listMatches, listPlayers, listPlays, listResults, listTeams, listTrainings } from '../persistence/repositories'
 import { playingTimes } from '../domain/playingtime'
 import { nextFixture } from '../domain/fixtures'
@@ -8,12 +8,16 @@ import { folders } from '../domain/plays'
 import { standings } from '../domain/standings'
 import { playerStats } from '../domain/boxscore'
 import { TEAM_FOUL_BONUS } from '../rules/ffbb'
+import type { Match } from '../domain/types'
 
 /* The season is written the way `scripts/db.mjs seed` writes it: one batch of the
-   documents `seedDocuments` hands over. Nothing else seeds — the application does
-   not. */
+   documents `seedDocuments` hands over, then each game's events through their own
+   route, since a game's `put` never writes them. Nothing else seeds — the application
+   does not. */
 beforeEach(async () => {
-  await mutate(seedDocuments().map(({ kind, id, doc }) => ({ kind, op: 'put' as const, id, doc })))
+  const docs = seedDocuments()
+  await mutate(docs.map(({ kind, id, doc }) => ({ kind, op: 'put' as const, id, doc })))
+  for (const { kind, id, doc } of docs) if (kind === 'match') await writeEvents(id, (doc as Match).events, [])
 })
 
 describe('demo data', () => {

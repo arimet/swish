@@ -8,7 +8,7 @@ import { MatchMetaDialog } from '../components/MatchMetaDialog'
 import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
-import { saveMatch } from '../../persistence/repositories'
+import { saveSheet } from '../../persistence/repositories'
 import { docKey, useMatchDoc, usePlayersById, useTeamsById } from '../../persistence/queries'
 import { removeLastEvent } from '../../domain/reducer'
 import { newId } from '../../domain/ids'
@@ -59,7 +59,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
      a basket during one, and the `ConnectionState` pill carries a failed write. */
   const persist = async (next: Match) => {
     client.setQueryData(docKey('match', matchId), next)
-    await saveMatch(next)
+    await saveSheet(match, next)
   }
   const saveMeta = async (patch: Partial<Match['meta']>) => persist({ ...match, meta: { ...match.meta, ...patch } })
 

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { appendEvent, undoLast, removeLastEvent } from '../domain/reducer'
 import { newId } from '../domain/ids'
-import { saveMatch } from '../persistence/repositories'
+import { saveSheet } from '../persistence/repositories'
 import { docKey, useMatchDoc } from '../persistence/queries'
 import { useT } from '../i18n'
 import type { GameEvent, Match } from '../domain/types'
@@ -68,7 +68,7 @@ export function useMatch(matchId: string) {
     client.setQueryData(key, next)
     setError(null)
     try {
-      await saveMatch(next)
+      await saveSheet(previous, next)
       return true
     } catch {
       client.setQueryData(key, previous)

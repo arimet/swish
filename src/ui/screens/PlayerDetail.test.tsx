@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { PlayerDetail } from './PlayerDetail'
 import { AuthProvider, PLAYER_ID_KEY } from '../../app/auth'
-import { saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
+import { saveSheet, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { GameEvent, Match } from '../../domain/types'
 import { clear } from '../../test/fakeApi'
 
@@ -19,7 +19,7 @@ beforeEach(async () => {
   localStorage.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await savePlayer({ id: 'p1', teamId: 'ta', number: 7, lastName: 'MARTIN', firstName: 'Lucas' })
-  await saveMatch(match('m1', [
+  await saveSheet(null, match('m1', [
     { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
     { type: 'SCORE', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },
     { type: 'MISS', team: 'A', playerId: 'p1', kind: '3', shot: TOP3 },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { count } from '../test/fakeApi'
-import { saveTeam, listTeams, saveMatch, getMatch, listMatches, deleteMatch, deleteTeam, saveResult, listResults, savePlayer, deletePlayer, saveTraining, listTrainings, saveConvocation, getConvocation, savePlay, listPlays, getPlay, deletePlay, deleteMatchesWhere, clearClubStats, deleteAllResults, deleteTrainingsOfClub, deletePlaysOfClub, wipeAll, getMessage, saveMessage, deleteMessage } from './repositories'
+import { saveTeam, listTeams, saveMatch, saveSheet, getMatch, listMatches, deleteMatch, deleteTeam, saveResult, listResults, savePlayer, deletePlayer, saveTraining, listTrainings, saveConvocation, getConvocation, savePlay, listPlays, getPlay, deletePlay, deleteMatchesWhere, clearClubStats, deleteAllResults, deleteTrainingsOfClub, deletePlaysOfClub, wipeAll, getMessage, saveMessage, deleteMessage } from './repositories'
 import { newPlay } from '../domain/plays'
 import { hasEvents, ofYear, ofLeague } from '../domain/cleanup'
 import type { GameEvent, Match } from '../domain/types'
@@ -22,11 +22,22 @@ describe('repositories', () => {
     await deleteMatch('m1')
     expect(await getMatch('m1')).toBeUndefined()
   })
-  it('persists the event log', async () => {
+  it('never writes events through a game\'s put', async () => {
     const m = match('m2')
     m.events.push({ id: 'e1', type: 'PERIOD_START', wallClock: 0, period: 1, gameClock: 600 })
     await saveMatch(m)
-    expect((await getMatch('m2'))?.events).toHaveLength(1)
+    expect((await getMatch('m2'))?.events).toEqual([])
+  })
+  it('writes a sheet\'s head and its events, and archives what was removed', async () => {
+    const m = match('m3')
+    await saveSheet(null, m)
+    const e1 = { id: 'e1', type: 'PERIOD_START' as const, wallClock: 0, period: 1, gameClock: 600 }
+    const e2 = { id: 'e2', type: 'CLOCK_START' as const, wallClock: 0, period: 1, gameClock: 600 }
+    const scored = { ...m, events: [e1, e2] }
+    await saveSheet(m, scored)
+    expect((await getMatch('m3'))?.events.map((e) => e.id)).toEqual(['e1', 'e2'])
+    await saveSheet(scored, { ...scored, events: [e1], status: 'finished' })
+    expect(await getMatch('m3')).toMatchObject({ status: 'finished', events: [e1] })
   })
   it('deletes entered results mentioning a deleted team, on either side', async () => {
     await saveTeam({ id: 'ta', name: 'VIGNOT' })
@@ -198,8 +209,8 @@ describe('bulk cleanup', () => {
   })
 
   it('empties a club\'s sheets without deleting its games or their dates', async () => {
-    await saveMatch(rencontre('m1', 'Poule A', '2026-01-10', 'ta', [evt('e1'), evt('e2')]))
-    await saveMatch(rencontre('m2', 'Poule A', '2026-01-17', 'tz', [evt('e3')]))
+    await saveSheet(null, rencontre('m1', 'Poule A', '2026-01-10', 'ta', [evt('e1'), evt('e2')]))
+    await saveSheet(null, rencontre('m2', 'Poule A', '2026-01-17', 'tz', [evt('e3')]))
     await saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
 
     const cleared = await clearClubStats('ta')
@@ -258,7 +269,7 @@ describe('bulk cleanup', () => {
   it('empties the database, every kind of document', async () => {
     await saveTeam({ id: 'ta', name: 'VIGNOT' })
     await savePlayer({ id: 'p1', teamId: 'ta', number: 4, lastName: 'MARTIN', firstName: 'Lucas' })
-    await saveMatch(rencontre('m1', 'Poule A', '2026-01-10', 'ta', [evt('e1')]))
+    await saveSheet(null, rencontre('m1', 'Poule A', '2026-01-10', 'ta', [evt('e1')]))
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     await saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
     await saveTraining({ id: 'tr1', clubId: 'ta', date: '2026-01-05' })
@@ -277,7 +288,7 @@ describe('bulk cleanup', () => {
     // The count announced on screen is that of what will actually be destroyed: a game
     // still blank has nothing to lose and must not inflate it.
     await saveMatch(rencontre('vierge', 'Poule A', '2026-01-10', 'ta'))
-    await saveMatch(rencontre('remplie', 'Poule A', '2026-01-17', 'ta', [evt('e1')]))
+    await saveSheet(null, rencontre('remplie', 'Poule A', '2026-01-17', 'ta', [evt('e1')]))
 
     expect((await listMatches()).filter(hasEvents('ta'))).toHaveLength(1)
     expect(await clearClubStats('ta')).toBe(1)

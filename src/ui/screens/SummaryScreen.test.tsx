@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SummaryScreen } from './SummaryScreen'
 import { AuthProvider, ROLE_KEY } from '../../app/auth'
-import { getMatch, saveMatch, savePlayer, saveTeam } from '../../persistence/repositories'
+import { getMatch, saveSheet, savePlayer, saveTeam } from '../../persistence/repositories'
 import type { Match } from '../../domain/types'
 
 const MATCH_ID = 'match-finished'
@@ -27,7 +27,7 @@ beforeEach(async () => {
       { id: 'e3', wallClock: 3, period: 1, gameClock: 570, type: 'SCORE', team: 'B', kind: '3' },
     ],
   }
-  await saveMatch(m)
+  await saveSheet(null, m)
 })
 
 describe('SummaryScreen', () => {
@@ -70,7 +70,7 @@ describe('SummaryScreen — the shooting percentage column', () => {
         { id: 'e1', wallClock: 1, period: 1, gameClock: 590, type: 'SCORE', team: 'A', playerId: 'p9', kind: '2int' },
       ],
     }
-    await saveMatch(m)
+    await saveSheet(null, m)
 
     render(
       <AuthProvider>

@@ -9,7 +9,7 @@ import { clear, count } from '../../test/fakeApi'
 import { newPlay } from '../../domain/plays'
 import {
   getConvocation, listMatches, listPlays, listResults, listTrainings, saveConvocation,
-  saveMatch, savePlay, saveResult, saveTeam, saveTraining,
+  saveSheet, savePlay, saveResult, saveTeam, saveTraining,
 } from '../../persistence/repositories'
 import type { GameEvent, Match } from '../../domain/types'
 
@@ -25,9 +25,9 @@ beforeEach(async () => {
   localStorage.clear()
   await saveTeam({ id: 'ta', name: 'VIGNOT' })
   await saveTeam({ id: 'tb', name: 'VERDUN' })
-  await saveMatch(rencontre('m1', 'Poule A', '2026-01-10', [evt('e1')]))
-  await saveMatch(rencontre('m2', 'Poule A', '2026-01-17'))
-  await saveMatch(rencontre('m3', 'Poule B', '2025-11-08', [evt('e2')]))
+  await saveSheet(null, rencontre('m1', 'Poule A', '2026-01-10', [evt('e1')]))
+  await saveSheet(null, rencontre('m2', 'Poule A', '2026-01-17'))
+  await saveSheet(null, rencontre('m3', 'Poule B', '2025-11-08', [evt('e2')]))
   await saveConvocation({ matchId: 'm1', playerIds: ['p1'] })
   await saveConvocation({ matchId: 'm3', playerIds: ['p1'] })
   await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'ta', homeScore: 70, awayScore: 60 })
