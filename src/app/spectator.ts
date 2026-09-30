@@ -32,7 +32,12 @@ export function subscribeBundle(id: string, onData: (b: SpectatorBundle) => void
   if (typeof EventSource !== 'undefined') {
     es = new EventSource(`${BASE}/match/${id}/stream`)
     es.onmessage = (e) => { try { onData(JSON.parse(e.data) as SpectatorBundle) } catch { /* ignore */ } }
-    es.onerror = () => { startPoll() } // EventSource retries on its own; polling is the safety net
+    // The server ends the stream every fifty seconds and `EventSource` reconnects on
+    // its own, firing `error` each time: polling only covers a stream the browser has
+    // given up on, and stops once one opens again. Left running beside a live stream,
+    // its unordered replies could land after a newer message and hide a basket.
+    es.onopen = () => { if (poll) { clearInterval(poll); poll = undefined } }
+    es.onerror = () => { if (es?.readyState === EventSource.CLOSED) startPoll() }
   } else {
     startPoll()
   }
