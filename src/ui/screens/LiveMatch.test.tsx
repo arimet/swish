@@ -107,6 +107,7 @@ describe('the full run', () => {
     // 3. A two-point basket inside from one of our players, with its shot spot
     await userEvent.click(screen.getByRole('button', { name: /NOM0/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Raquette' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Valider le tir' }))
     await waitFor(async () => {
       const s = await getMatch(ID)
       expect(s!.events.filter((e) => e.type === 'SCORE' && e.team === 'A')).toHaveLength(1)
@@ -121,6 +122,7 @@ describe('the full run', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /NOM1/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Aile / axe à 3 pts' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Valider le tir' }))
     await waitFor(async () => {
       const s = await getMatch(ID)
       expect(s!.events.filter((e) => e.type === 'SCORE' && e.playerId === 'p1')).toHaveLength(1)
@@ -137,6 +139,7 @@ describe('the full run', () => {
     await userEvent.click(screen.getByRole('button', { name: /NOM2/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Manqué' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Raquette' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Valider le tir' }))
     await waitFor(async () => {
       const s = await getMatch(ID)
       expect(s!.events.filter((e) => e.type === 'MISS')).toHaveLength(1)

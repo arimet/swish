@@ -1,7 +1,6 @@
-import { render, screen, fireEvent, act } from '../../test/render'
+import { render, screen, fireEvent } from '../../test/render'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PlayerActionDialog } from './PlayerActionDialog'
-import { SHOT_FEEDBACK_MS } from './ShotCourt'
 
 const noop = vi.fn()
 
@@ -28,29 +27,40 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 describe('PlayerActionDialog — recording a shot', () => {
-  it('records a single shot even if the court is touched twice', () => {
-    const { onScore } = renderDialog()
-    fireEvent.click(court(), { clientX: 150, clientY: 42 })
-    fireEvent.click(court(), { clientX: 40, clientY: 200 })
-    expect(onScore).toHaveBeenCalledTimes(1)
-  })
+  const validate = () => screen.getByRole('button', { name: 'Valider le tir' })
 
-  it('shows the points and the zone before closing', () => {
-    const { onClose } = renderDialog()
+  it('a tap only places the shot: closing records nothing', () => {
+    const { onScore, onMiss, onClose } = renderDialog()
     fireEvent.click(court(), { clientX: 150, clientY: 42 })
     expect(screen.getByRole('status')).toHaveTextContent('2 PTS · Raquette')
-    expect(onClose).not.toHaveBeenCalled()
-    act(() => { vi.advanceTimersByTime(SHOT_FEEDBACK_MS) })
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onScore).not.toHaveBeenCalled()
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalled()
+    expect(onScore).not.toHaveBeenCalled()
+    expect(onMiss).not.toHaveBeenCalled()
   })
 
-  it('announces a missed shot without counting points', () => {
+  it('a second tap moves the shot, and validating records it once, at the last spot', () => {
+    const { onScore, onClose } = renderDialog()
+    expect(validate()).toBeDisabled()
+    fireEvent.click(court(), { clientX: 150, clientY: 42 })
+    fireEvent.click(court(), { clientX: 150, clientY: 250 })
+    expect(screen.getByRole('status')).toHaveTextContent('3 PTS')
+    fireEvent.click(validate())
+    expect(onScore).toHaveBeenCalledTimes(1)
+    expect(onScore).toHaveBeenCalledWith('3', expect.objectContaining({ y: expect.any(Number) }))
+    expect(vi.mocked(onScore).mock.calls[0][1]!.y).toBeGreaterThan(0.8)
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('records a missed shot without counting points', () => {
     const { onScore, onMiss } = renderDialog()
     fireEvent.click(screen.getByRole('button', { name: 'Manqué' }))
     fireEvent.click(court(), { clientX: 150, clientY: 42 })
+    expect(screen.getByRole('status')).toHaveTextContent('MANQUÉ · Raquette')
+    fireEvent.click(validate())
     expect(onScore).not.toHaveBeenCalled()
     expect(onMiss).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('status')).toHaveTextContent('MANQUÉ · Raquette')
   })
 })
 

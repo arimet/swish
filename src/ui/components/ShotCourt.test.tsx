@@ -57,12 +57,14 @@ describe('ShotPicker — confirmation', () => {
     expect(screen.getByRole('status')).toHaveTextContent('2 PTS · Raquette')
   })
 
-  it('neutralises the court and the zone buttons while the confirmation shows', async () => {
+  it('keeps taking taps while a shot is placed: a new one moves it', async () => {
+    // Recording is the dialog's "Validate": a second tap here is a correction of the
+    // spot, not a second shot.
     const onPick = vi.fn()
     render(<ShotPicker onPick={onPick} confirmation={{ spot: { x: 0.5, y: 0.15 }, label: '2 PTS · Raquette', made: true }} />)
     fireEvent.click(screen.getByLabelText('Demi-terrain — toucher le point de tir'), { clientX: 150, clientY: 28 })
     await userEvent.click(screen.getByRole('button', { name: 'Corner gauche' }))
-    expect(onPick).not.toHaveBeenCalled()
+    expect(onPick).toHaveBeenCalledTimes(2)
   })
 
   it('buzzes the device where the browser allows it', () => {

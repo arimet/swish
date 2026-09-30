@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ShotPicker, SHOT_FEEDBACK_MS } from './ShotCourt'
+import { ShotPicker } from './ShotCourt'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
 import { kindAt, ZONE_LABELS, zoneAt } from '../../domain/shotzones'
@@ -83,8 +83,11 @@ export function PlayerActionDialog({
 }) {
   const translate = useT()
   const [made, setMade] = useState(true)
-  const [confirmation, setConfirmation] = useState<{ spot: ShotSpot; label: string; made: boolean } | null>(null)
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  /** The shot placed on the court and not yet recorded. A tap only places it — a new
+   *  tap moves it, "Validate" records it: a finger that slips on a moving bench no
+   *  longer costs a wrong basket. Whether it went in is read from the mode at validation,
+   *  so switching made/missed after placing it is not a second shot. */
+  const [placed, setPlaced] = useState<ShotSpot | null>(null)
   const sc = scoreCounts ?? ZERO_S
   const tc = statCounts ?? ZERO_T
   // Only the types actually recorded: a list of six removal buttons, five of them
@@ -94,23 +97,23 @@ export function PlayerActionDialog({
     Object.values(sc).reduce((a, b) => a + b, 0) + Object.values(tc).reduce((a, b) => a + b, 0) + fouls + misses
   const hasCorrections = removable > 0
 
-  // Without this cancellation, closing the popup by hand during the delay would
-  // trigger a state update on an unmounted component.
-  useEffect(() => () => clearTimeout(closeTimer.current), [])
-
-  // The mode returns to "Made" on every close: that is the common case.
+  // The mode returns to "Made" on every close: that is the common case. A shot placed
+  // and never validated goes with the dialog — closing records nothing.
   const close = () => {
-    clearTimeout(closeTimer.current)
     setMade(true)
-    setConfirmation(null)
+    setPlaced(null)
     onClose()
   }
 
-  const pick = (spot: ShotSpot) => {
-    const kind = kindAt(spot.x, spot.y)
-    if (made) onScore(kind, spot); else onMiss(kind, spot)
-    setConfirmation({ spot, made, label: `${made ? POINTS_LABEL[kind] : translate('action.missedCaps')} · ${translate(ZONE_LABELS[zoneAt(spot.x, spot.y)])}` })
-    closeTimer.current = setTimeout(close, SHOT_FEEDBACK_MS)
+  const confirmation = placed && {
+    spot: placed, made,
+    label: `${made ? POINTS_LABEL[kindAt(placed.x, placed.y)] : translate('action.missedCaps')} · ${translate(ZONE_LABELS[zoneAt(placed.x, placed.y)])}`,
+  }
+  const validate = () => {
+    if (!placed) return
+    const kind = kindAt(placed.x, placed.y)
+    if (made) onScore(kind, placed); else onMiss(kind, placed)
+    close()
   }
 
   return (
@@ -145,7 +148,7 @@ export function PlayerActionDialog({
             <p className="mt-2 text-[12px] font-semibold text-[var(--c-muted)]">
               {made ? translate('action.madeHint') : translate('action.missedHint')}
             </p>
-            <div className="mt-2"><ShotPicker onPick={pick} confirmation={confirmation} shots={shots} made={made} /></div>
+            <div className="mt-2"><ShotPicker onPick={setPlaced} confirmation={confirmation} shots={shots} made={made} /></div>
           </div>
 
           <div className="flex flex-col">
@@ -246,6 +249,13 @@ export function PlayerActionDialog({
             )}
           </div>
         </div>
+        {/* At the very bottom, under both columns: the last thing the eye reaches after
+            aiming, and greyed until there is something to validate. */}
+        <button onClick={validate} disabled={!placed}
+          className="mt-4 w-full rounded-2xl py-3.5 text-[15px] font-black transition hover:brightness-110 active:scale-[0.98] disabled:opacity-35 disabled:hover:brightness-100"
+          style={{ background: C.brand, color: C.onBrand }}>
+          {translate('action.validateShot')}
+        </button>
       </DialogContent>
     </Dialog>
   )

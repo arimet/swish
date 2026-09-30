@@ -126,7 +126,7 @@ function Court({ children, label, onClick }: { children: ReactNode; label: strin
 
 export const clamp01 = (n: number) => Math.min(1, Math.max(0, n))
 
-/** How long the visual feedback stays after a tap, before the popup closes. */
+/** How long the ring around a freshly placed shot takes to expand. */
 export const SHOT_FEEDBACK_MS = 350
 
 /** A short buzz where the browser supports it. iOS implements it in no browser: the
@@ -136,9 +136,9 @@ function buzz(): void {
 }
 
 /**
- * The entry court, **controlled**: it is the caller that holds the last shot's
- * confirmation. While it stands, all input is neutralised — without that guard, a
- * second tap during the 350 ms of feedback would record a second shot.
+ * The entry court, **controlled**: it is the caller that holds the shot placed. A tap
+ * places it, another tap moves it; recording it is the caller's "Validate", so no tap
+ * here can count a shot twice.
  * The seven buttons under the court give the same result from the keyboard, to the
  * zone's precision.
  */
@@ -153,14 +153,11 @@ export function ShotPicker({ onPick, confirmation, shots, made = true }: {
   made?: boolean
 }) {
   const translate = useT()
-  const locked = !!confirmation
   const commit = (spot: ShotSpot) => {
-    if (locked) return
     buzz()
     onPick(spot)
   }
   const pickFromEvent = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (locked) return
     const r = e.currentTarget.getBoundingClientRect()
     if (!r.width || !r.height) return
     commit({ x: clamp01((e.clientX - r.left) / r.width), y: clamp01((e.clientY - r.top) / r.height) })
@@ -199,14 +196,13 @@ export function ShotPicker({ onPick, confirmation, shots, made = true }: {
             />
           ))}
           <CourtLines />
-          {confirmation && <Confirmation spot={confirmation.spot} made={confirmation.made} />}
+          {/* Keyed on the spot, so the ring expands again each time the shot moves. */}
+          {confirmation && <Confirmation key={`${confirmation.spot.x},${confirmation.spot.y}`} spot={confirmation.spot} made={confirmation.made} />}
         </Court>
       </div>
-      {/* Always rendered (empty content without a confirmation): the pill must never
-          appear or disappear, otherwise everything after it — including the zone
-          buttons and "+ 1 free throw" — shifts while the anti-double-count lock is
-          still protecting them, opening a window where a second tap aims at a ghost
-          target. */}
+      {/* Always rendered (empty content without a shot placed): the pill must never
+          appear or disappear, otherwise everything after it shifts under a finger
+          already on its way to it. */}
       <p role="status" className="mt-2 rounded-lg px-3 py-1.5 text-center text-[13px] font-black uppercase tracking-wide"
         style={{
           visibility: confirmation ? 'visible' : 'hidden',
@@ -229,7 +225,6 @@ export function ShotPicker({ onPick, confirmation, shots, made = true }: {
         {ZONES.map((z, rank) => (
           <button
             key={z}
-            disabled={locked}
             onClick={() => commit(ZONE_CENTROID[z])}
             className={`min-h-9 rounded-lg px-2 py-1.5 text-[12px] font-semibold transition hover:brightness-125 disabled:opacity-40 ${rank === 0 ? 'col-span-3' : ''}`}
             style={{ background: C.card2, color: C.muted, border: `1px solid ${C.border}` }}
