@@ -20,6 +20,8 @@ export type FoulTarget =
   | { kind: 'player'; playerId: string }
   | { kind: 'coach' }
   | { kind: 'bench' }
+  /** The team as a whole, for a side with no roster: the opposition's foul on an and-one. */
+  | { kind: 'team' }
 export type Period = number // 1..4 = periods, 5+ = overtimes
 
 export interface Team { id: string; name: string; coach?: string }

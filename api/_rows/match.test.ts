@@ -21,6 +21,7 @@ const EVENTS: GameEvent[] = [
   { id: 'e9', type: 'SUBSTITUTION', team: 'A', playerInId: 'p3', playerOutId: 'p2', ...base },
   { id: 'e10', type: 'STAT', team: 'A', playerId: 'p1', stat: 'assist', ...base },
   { id: 'e13', type: 'MISS', team: 'A', playerId: 'p1', kind: 'lf', ...base },
+  { id: 'e14', type: 'FOUL', team: 'B', target: { kind: 'team' }, foulType: 'defensive', ...base },
   { id: 'e11', type: 'CLOCK_STOP', ...base },
   { id: 'e12', type: 'PERIOD_END', ...base },
 ]

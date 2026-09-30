@@ -7,7 +7,7 @@ const noop = vi.fn()
 function renderDialog(over: Partial<Parameters<typeof PlayerActionDialog>[0]> = {}) {
   const props = {
     open: true, playerName: '4 ROUX',
-    onClose: vi.fn(), onScore: vi.fn(), onMiss: vi.fn(), onFreeThrows: vi.fn(), onFoul: noop, onStat: noop,
+    onClose: vi.fn(), onScore: vi.fn(), onMiss: vi.fn(), onFreeThrows: vi.fn(), onAndOne: vi.fn(), onFoul: noop, onStat: noop,
     onRemoveScore: noop, onRemoveFoul: noop, onRemoveStat: noop, onRemoveMiss: noop,
     ...over,
   }
@@ -50,7 +50,9 @@ describe('PlayerActionDialog — recording a shot', () => {
     expect(onScore).toHaveBeenCalledTimes(1)
     expect(onScore).toHaveBeenCalledWith('3', expect.objectContaining({ y: expect.any(Number) }))
     expect(vi.mocked(onScore).mock.calls[0][1]!.y).toBeGreaterThan(0.8)
-    expect(onClose).toHaveBeenCalled()
+    // The basket is in; the dialog stays for what follows it.
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole('status')).toHaveTextContent('Panier enregistré · 3 PTS')
   })
 
   it('records a missed shot without counting points', () => {
@@ -82,7 +84,7 @@ describe('PlayerActionDialog — the foul and its type', () => {
       const onFoul = vi.fn()
       const { unmount } = render(
         <PlayerActionDialog open playerName="4 ROUX"
-          onClose={vi.fn()} onScore={vi.fn()} onMiss={vi.fn()} onFreeThrows={vi.fn()} onFoul={onFoul} onStat={noop}
+          onClose={vi.fn()} onScore={vi.fn()} onMiss={vi.fn()} onFreeThrows={vi.fn()} onAndOne={vi.fn()} onFoul={onFoul} onStat={noop}
           onRemoveScore={noop} onRemoveFoul={noop} onRemoveStat={noop} onRemoveMiss={noop} />,
       )
       fireEvent.click(screen.getByRole('button', { name: aria }))
@@ -144,17 +146,17 @@ describe('PlayerActionDialog — the corrections', () => {
 })
 
 describe('PlayerActionDialog — a basket with no position', () => {
-  it('records the two and the three, and closes, without a spot on the court', () => {
+  it('records the two and the three without a spot on the court', () => {
     // The way out when nobody saw where the shot came from. A two has to land in one
     // of the sheet's two columns and it lands in `2int`, the same convention the
     // opposition's quick buttons follow.
-    const { onScore, onClose } = renderDialog()
+    const { onScore } = renderDialog()
     fireEvent.click(screen.getByRole('button', { name: 'Ajouter 2 points' }))
-    expect(onScore).toHaveBeenCalledWith('2int')
-    expect(onClose).toHaveBeenCalled()
+    expect(onScore).toHaveBeenCalledWith('2int', undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'Terminé' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Ajouter 3 points' }))
-    expect(onScore).toHaveBeenLastCalledWith('3')
+    expect(onScore).toHaveBeenLastCalledWith('3', undefined)
   })
 })
 
@@ -186,5 +188,28 @@ describe('PlayerActionDialog — the free-throw line', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retour' }))
     expect(court()).toBeInTheDocument()
     expect(onFreeThrows).not.toHaveBeenCalled()
+  })
+})
+
+describe('PlayerActionDialog — the and-one', () => {
+  it('is offered after a basket, and records its one free throw', () => {
+    const { onAndOne, onClose } = renderDialog()
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter 2 points' }))
+    fireEvent.click(screen.getByRole('button', { name: 'And one' }))
+    // One attempt, and no choosing how many.
+    expect(screen.queryByRole('group', { name: 'Tentatives' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('group', { name: /^LF \d$/ })).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Valider les lancers francs' }))
+    expect(onAndOne).toHaveBeenCalledWith(true)
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('is not offered after a miss', () => {
+    const { onClose } = renderDialog()
+    fireEvent.click(screen.getByRole('button', { name: 'Manqué' }))
+    fireEvent.click(court(), { clientX: 150, clientY: 42 })
+    fireEvent.click(screen.getByRole('button', { name: 'Valider le tir' }))
+    expect(onClose).toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'And one' })).not.toBeInTheDocument()
   })
 })

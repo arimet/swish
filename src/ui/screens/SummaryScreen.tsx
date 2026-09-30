@@ -81,6 +81,12 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const addFreeThrows = (playerId: string, results: boolean[]) => addEvents(results.map((ok): EventInput => ok
     ? { type: 'SCORE', team: 'A', playerId, kind: 'lf', period: ls.period, gameClock: 0 }
     : { type: 'MISS', team: 'A', playerId, kind: 'lf', period: ls.period, gameClock: 0 }))
+  const addAndOne = (playerId: string, made: boolean) => addEvents([
+    { type: 'FOUL', team: 'B', target: { kind: 'team' }, foulType: 'defensive', period: ls.period, gameClock: 0 },
+    made
+      ? { type: 'SCORE', team: 'A', playerId, kind: 'lf', period: ls.period, gameClock: 0 }
+      : { type: 'MISS', team: 'A', playerId, kind: 'lf', period: ls.period, gameClock: 0 },
+  ])
   const addMiss = (playerId: string, kind: ScoreKind, shot: ShotSpot) => addEvent({ type: 'MISS', team: 'A', playerId, kind, shot, period: ls.period, gameClock: 0 })
   const removeMiss = (id: string) => removeLast((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === id)
   const missesOf = (id: string) => match.events.filter((e) => e.type === 'MISS' && e.team === 'A' && e.playerId === id).length
@@ -157,6 +163,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         misses={pick ? missesOf(pick.id) : 0}
         onMiss={(k, shot) => pick && addMiss(pick.id, k, shot)}
         onFreeThrows={(results) => pick && addFreeThrows(pick.id, results)}
+        onAndOne={(made) => pick && addAndOne(pick.id, made)}
         onRemoveMiss={() => pick && removeMiss(pick.id)}
       />
 

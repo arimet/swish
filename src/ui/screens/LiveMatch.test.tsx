@@ -69,6 +69,22 @@ describe('LiveMatch', () => {
       expect(shots.map((e) => [e.type, 'kind' in e && e.kind])).toEqual([['MISS', 'lf'], ['SCORE', 'lf']])
     })
   })
+
+  it('files an and-one as the basket, the opposition\'s foul and the free throw', async () => {
+    renderLive()
+    await userEvent.click(await screen.findByRole('button', { name: /MARTIN/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Ajouter 2 points' }))
+    await userEvent.click(screen.getByRole('button', { name: 'And one' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Valider les lancers francs' }))
+    await waitFor(async () => {
+      const saved = (await getMatch(MATCH_ID))!
+      const ours = saved.events.filter((e) => e.type === 'SCORE' && e.team === 'A')
+      expect(ours.map((e) => e.type === 'SCORE' && e.kind)).toEqual(['2int', 'lf'])
+      expect(saved.events.filter((e) => e.type === 'FOUL')).toEqual([expect.objectContaining({ team: 'B', target: { kind: 'team' } })])
+    })
+    // Their team fouls show, one of them, next to ours.
+    await waitFor(() => expect(screen.getAllByText('Fautes')).toHaveLength(2))
+  })
 })
 
 // The screen's full wiring, on our team's side: the scorer's table had had no

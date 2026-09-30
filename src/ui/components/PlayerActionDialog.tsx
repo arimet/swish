@@ -6,6 +6,7 @@ import { useT } from '../../i18n'
 import { kindAt, ZONE_LABELS, zoneAt } from '../../domain/shotzones'
 import type { Shot } from '../../domain/shotchart'
 import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types'
+import { pointsForKind } from '../../domain/boxscore'
 import { TriangleAlert, Undo2, ChevronDown } from 'lucide-react'
 
 const SCORES: { k: ScoreKind; label: string; pts: number }[] = [
@@ -66,7 +67,7 @@ const POINTS_LABEL: Record<'2int' | '2ext' | '3', string> = { '2int': '2 PTS', '
 
 export function PlayerActionDialog({
   open, playerName, color = C.text, scoreCounts, statCounts, foulCounts, fouls = 0, misses = 0, shots,
-  onClose, onScore, onMiss, onFreeThrows, onFoul, onStat, onRemoveScore, onRemoveFoul, onRemoveStat, onRemoveMiss,
+  onClose, onScore, onMiss, onFreeThrows, onAndOne, onFoul, onStat, onRemoveScore, onRemoveFoul, onRemoveStat, onRemoveMiss,
 }: {
   open: boolean; playerName: string; color?: string
   scoreCounts?: Record<ScoreKind, number>; statCounts?: Record<StatKind, number>
@@ -79,6 +80,8 @@ export function PlayerActionDialog({
   onMiss: (kind: ScoreKind, shot: ShotSpot) => void
   /** A trip to the line, one entry per attempt in the order shot: `true` went in. */
   onFreeThrows: (results: boolean[]) => void
+  /** The free throw after a basket and a foul: the opposition's foul goes with it. */
+  onAndOne: (made: boolean) => void
   onFoul: (type: FoulType) => void; onStat: (kind: StatKind) => void
   onRemoveScore: (kind: ScoreKind) => void; onRemoveFoul: (type: FoulType) => void
   onRemoveStat: (kind: StatKind) => void; onRemoveMiss: () => void
@@ -90,8 +93,11 @@ export function PlayerActionDialog({
    *  longer costs a wrong basket. Whether it went in is read from the mode at validation,
    *  so switching made/missed after placing it is not a second shot. */
   const [placed, setPlaced] = useState<ShotSpot | null>(null)
-  /** What the dialog shows: the court and the actions, or the free-throw line. */
-  const [step, setStep] = useState<'main' | 'ft'>('main')
+  /** What the dialog shows: the court and the actions, the free-throw line, or what
+   *  follows a basket — the and-one, then (for the and-one) its single free throw. */
+  const [step, setStep] = useState<'main' | 'ft' | 'basket' | 'andOne'>('main')
+  /** The basket just recorded, named back on the step that follows it. */
+  const [basket, setBasket] = useState<ScoreKind | null>(null)
   const sc = scoreCounts ?? ZERO_S
   const tc = statCounts ?? ZERO_T
   // Only the types actually recorded: a list of six removal buttons, five of them
@@ -107,7 +113,17 @@ export function PlayerActionDialog({
     setMade(true)
     setPlaced(null)
     setStep('main')
+    setBasket(null)
     onClose()
+  }
+
+  /** A field goal made: recorded now, and the dialog moves on to what can follow it
+   *  rather than closing — the foul on the shot is decided in the same breath. */
+  const scored = (kind: ScoreKind, shot?: ShotSpot) => {
+    onScore(kind, shot)
+    setPlaced(null)
+    setBasket(kind)
+    setStep('basket')
   }
 
   const confirmation = placed && {
@@ -117,8 +133,8 @@ export function PlayerActionDialog({
   const validate = () => {
     if (!placed) return
     const kind = kindAt(placed.x, placed.y)
-    if (made) onScore(kind, placed); else onMiss(kind, placed)
-    close()
+    if (made) scored(kind, placed)
+    else { onMiss(kind, placed); close() }
   }
 
   return (
@@ -135,6 +151,28 @@ export function PlayerActionDialog({
           </DialogTitle>
         </DialogHeader>
 
+        {step === 'ft' && (
+          <FreeThrowLine onBack={() => setStep('main')} onValidate={(results) => { onFreeThrows(results); close() }} />
+        )}
+        {step === 'andOne' && (
+          <FreeThrowLine fixed={1} onBack={() => setStep('basket')} onValidate={([ok]) => { onAndOne(ok); close() }} />
+        )}
+        {step === 'basket' && basket && (
+          <div className="mt-3">
+            <p role="status" className="rounded-lg px-3 py-2 text-center text-[13px] font-black uppercase tracking-wide" style={{ background: C.accentBg, color: C.accent }}>
+              {translate('basket.recorded', { points: pointsForKind(basket) })}
+            </p>
+            <button onClick={() => setStep('andOne')}
+              className="mt-3 w-full rounded-2xl py-3.5 text-[15px] font-black transition hover:brightness-110 active:scale-[0.98]"
+              style={{ background: C.brand, color: C.onBrand }}>
+              {translate('basket.andOne')}
+            </button>
+            <button onClick={close}
+              className="mt-2 w-full rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] py-3 text-sm font-bold transition hover:bg-[var(--c-panel)]">
+              {translate('basket.done')}
+            </button>
+          </div>
+        )}
         {/* Two columns from `sm`, one below it — and the source order is the phone's,
             so the breakpoint reshuffles nothing.
             The split follows the gesture, not the taxonomy: on the left what is
@@ -143,9 +181,6 @@ export function PlayerActionDialog({
             the corrections took a scroll to reach at all — on a screen with eight
             hundred wasted pixels either side. Side by side, the whole dialog is one
             screenful and the court gains eighty pixels to be aimed at. */}
-        {step === 'ft' && (
-          <FreeThrowLine onBack={() => setStep('main')} onValidate={(results) => { onFreeThrows(results); close() }} />
-        )}
         {step === 'main' && <>
         <div className="grid gap-x-5 sm:grid-cols-2">
           <div>
@@ -171,7 +206,7 @@ export function PlayerActionDialog({
                 all. */}
             <div className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-1">
               {QUICK.map((q) => (
-                <button key={q.label} aria-label={translate(q.aria)} onClick={() => { onScore(q.k); close() }}
+                <button key={q.label} aria-label={translate(q.aria)} onClick={() => scored(q.k)}
                   className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] py-3 text-lg font-black tabular-nums transition hover:border-[var(--c-accent)] hover:bg-[var(--c-panel)] active:scale-[0.97]"
                   style={{ color: C.accent }}>
                   {q.label}
@@ -276,18 +311,24 @@ export function PlayerActionDialog({
  * made or missed for each, then one validation. Every attempt starts "made" — the
  * common case — so a trip to the line that went two for two is three taps.
  */
-function FreeThrowLine({ onBack, onValidate }: { onBack: () => void; onValidate: (results: boolean[]) => void }) {
+function FreeThrowLine({ fixed, onBack, onValidate }: {
+  /** A set number of attempts, and no choosing it: the and-one is one free throw. */
+  fixed?: number
+  onBack: () => void; onValidate: (results: boolean[]) => void
+}) {
   const translate = useT()
-  const [results, setResults] = useState<boolean[]>([true, true])
+  const [results, setResults] = useState<boolean[]>(() => Array(fixed ?? 2).fill(true))
   const setCount = (n: number) => setResults((r) => Array.from({ length: n }, (_, i) => r[i] ?? true))
   return (
     <div className="mt-3">
-      <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('ft.attempts')}</p>
-      <div role="group" aria-label={translate('ft.attempts')} className="mt-1.5 grid grid-cols-3 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
-        {[1, 2, 3].map((n) => (
-          <Toggle key={n} active={results.length === n} onClick={() => setCount(n)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{n}</Toggle>
-        ))}
-      </div>
+      {fixed === undefined ? <>
+        <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('ft.attempts')}</p>
+        <div role="group" aria-label={translate('ft.attempts')} className="mt-1.5 grid grid-cols-3 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
+          {[1, 2, 3].map((n) => (
+            <Toggle key={n} active={results.length === n} onClick={() => setCount(n)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{n}</Toggle>
+          ))}
+        </div>
+      </> : <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('basket.andOneHint')}</p>}
       <ul className="mt-3 space-y-2">
         {results.map((ok, i) => (
           <li key={i} className="flex items-center gap-3">

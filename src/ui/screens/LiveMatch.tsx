@@ -112,6 +112,13 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     dispatchMany(results.map((ok) => ok
       ? { type: 'SCORE' as const, team: 'A' as const, playerId: pick.id, kind: 'lf' as const, period: ls.period, gameClock: seconds }
       : { type: 'MISS' as const, team: 'A' as const, playerId: pick.id, kind: 'lf' as const, period: ls.period, gameClock: seconds }))
+  // The and-one: the opposition's foul on the shot, then the free throw it gives.
+  const andOne = (made: boolean) => pick && dispatchMany([
+    { type: 'FOUL', team: 'B', target: { kind: 'team' }, foulType: 'defensive', period: ls.period, gameClock: seconds },
+    made
+      ? { type: 'SCORE', team: 'A', playerId: pick.id, kind: 'lf', period: ls.period, gameClock: seconds }
+      : { type: 'MISS', team: 'A', playerId: pick.id, kind: 'lf', period: ls.period, gameClock: seconds },
+  ])
   const foul = (type: FoulType) => pick &&
     dispatch({ type: 'FOUL', team: 'A', target: { kind: 'player', playerId: pick.id }, foulType: type, period: ls.period, gameClock: seconds })
 
@@ -231,6 +238,13 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
           and the third row it forced on a phone was taken out of the roster. */}
       <div className="mx-auto mt-2 flex w-full max-w-4xl shrink-0 items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 sm:mt-4 sm:px-4">
         <span className="min-w-0 truncate text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
+        {/* Their team fouls: the only fouls of theirs entered are the and-ones', but
+            they count towards the bonus all the same. */}
+        {ls.teamFoulsThisPeriod.B > 0 && (
+          <span className={`shrink-0 rounded-lg px-2 py-1 text-[12px] font-bold ${ls.bonus.B ? 'bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]' : 'bg-muted text-muted-foreground'}`}>
+            {ls.bonus.B ? translate('panel.bonus') : translate('panel.fouls')} <span className="nums">{ls.teamFoulsThisPeriod.B}</span>
+          </span>
+        )}
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {OPP_POINTS.map(({ k, n }) => (
             <button key={k} onClick={() => oppScore(k)} aria-label={translate('live.addPoints', { count: n, team: teamNames.B })}
@@ -270,7 +284,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         fouls={pick ? statsByPlayer().get(pick.id)?.fouls ?? 0 : 0}
         misses={pick ? missCount(pick.id) : 0}
         shots={pick ? shotsOf([match], pick.id) : undefined}
-        onClose={() => setPick(null)} onScore={score} onMiss={miss} onFreeThrows={freeThrows} onFoul={foul}
+        onClose={() => setPick(null)} onScore={score} onMiss={miss} onFreeThrows={freeThrows} onAndOne={andOne} onFoul={foul}
         onStat={(kind) => pick && dispatch({ type: 'STAT', team: 'A', playerId: pick.id, stat: kind, period: ls.period, gameClock: seconds })}
         onRemoveScore={(kind) => pick && removeLast((e) => e.type === 'SCORE' && e.team === 'A' && e.playerId === pick.id && e.kind === kind)}
         onRemoveFoul={(type) => pick && removeLast((e) => e.type === 'FOUL' && e.team === 'A' && e.foulType === type && e.target.kind === 'player' && e.target.playerId === pick.id)}

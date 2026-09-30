@@ -47,7 +47,7 @@ export function eventFromRow(r: EventRow, starters: string[]): GameEvent {
     case 'MISS': return { ...base, type: r.type, team, playerId: r.player_id!, kind: r.score_kind as never, ...(shot ? { shot } : {}) }
     case 'FOUL': return {
       ...base, type: r.type, team, foulType: r.foul_type as never,
-      target: r.foul_target === 'player' ? { kind: 'player', playerId: r.player_id! } : { kind: r.foul_target as 'coach' | 'bench' },
+      target: r.foul_target === 'player' ? { kind: 'player', playerId: r.player_id! } : { kind: r.foul_target as 'coach' | 'bench' | 'team' },
     }
     case 'TIMEOUT': return { ...base, type: r.type, team }
     case 'SUBSTITUTION': return { ...base, type: r.type, team, playerInId: r.player_in_id!, playerOutId: r.player_out_id! }
