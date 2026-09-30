@@ -65,6 +65,22 @@ describe('useMatch', () => {
     expect(doc<Match>('match', 'm1')!.status).toBe('finished')
   })
 
+  it('two devices on one game: neither loses the other\'s events', async () => {
+    const a = renderHook(() => useMatch('m1'))
+    const b = renderHook(() => useMatch('m1'))
+    await waitFor(() => expect(a.result.current.match).not.toBeNull())
+    await waitFor(() => expect(b.result.current.match).not.toBeNull())
+
+    await act(async () => {
+      await Promise.all([
+        a.result.current.dispatch({ type: 'PERIOD_START', period: 1, gameClock: 600 }),
+        b.result.current.dispatch({ type: 'TIMEOUT', team: 'A', period: 1, gameClock: 600 }),
+      ])
+    })
+
+    expect(doc<Match>('match', 'm1')!.events.map((e) => e.type).sort()).toEqual(['PERIOD_START', 'TIMEOUT'])
+  })
+
   it('loads the game, dispatches an event and saves', async () => {
     const { result } = renderHook(() => useMatch('m1'))
     await waitFor(() => expect(result.current.match).not.toBeNull())

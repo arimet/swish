@@ -1,9 +1,11 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { appendEvent, undoLast, removeLastEvent } from '../domain/reducer'
+import { diffEvents, mergeSheet, NO_PENDING, revertWrite, track, untrack, type Pending } from '../domain/sync'
 import { newId } from '../domain/ids'
 import { saveSheet } from '../persistence/repositories'
 import { docKey, useMatchDoc } from '../persistence/queries'
+import { subscribeBundle } from './spectator'
 import { useT } from '../i18n'
 import type { GameEvent, Match } from '../domain/types'
 
@@ -28,6 +30,11 @@ type EventInput = DistributiveOmit<GameEvent, 'id' | 'wallClock'>
  * apply below is **synchronous**, which no mutation lifecycle can be, and wrapping the
  * remaining `await` in a `useMutation` would buy a spinner nobody shows.
  *
+ * **A tap writes one event, not the sheet.** `saveSheet` sends what changed — the
+ * events added, the ids archived — so a second device on the same game adds its own
+ * rows instead of overwriting these. Both devices follow the game through the live
+ * stream.
+ *
  * The read is `useQuery` all the same, and that is where the library pays here: the
  * sheet is cached, it refetches when a phone that slept comes back, and the summary
  * screen opens on it without a round trip.
@@ -39,6 +46,21 @@ export function useMatch(matchId: string) {
   const key = docKey('match', matchId)
   const { data } = useMatchDoc(matchId)
   const match = data ?? null
+
+  /** This device's writes the server has not shown back yet. See `mergeSheet`. */
+  const pending = useRef<Pending>(NO_PENDING)
+  /** The writes leave one after the other, in the order of the taps: an undo sent
+   *  before the basket it undoes would archive nothing, and the basket would land. */
+  const chain = useRef<Promise<unknown>>(Promise.resolve())
+
+  /* The same stream as the spectator page. Each message is the game as the database
+     holds it — another device's taps included — with this device's pending writes laid
+     over it. */
+  useEffect(() => subscribeBundle(matchId, (b) => {
+    const { match: merged, pending: next } = mergeSheet(b.match, pending.current)
+    pending.current = next
+    client.setQueryData(docKey('match', matchId), merged)
+  }), [client, matchId])
 
   /**
    * Applies the state to the screen, saves it, and **rolls back** if the save fails.
@@ -54,9 +76,8 @@ export function useMatch(matchId: string) {
    * before the tap back on screen. It is not awaited, because the apply on the line
    * below must stay synchronous; cancelling is fire-and-forget by nature.
    *
-   * Nothing is written back on success. The server accepted this exact document, and
-   * `WriteBridge` files it under the same key: asking the database to confirm what it
-   * has just been told would be one round trip per basket.
+   * Nothing is written back on success: the stream brings the game as the database
+   * holds it, and `mergeSheet` retires this write once it shows.
    *
    * Returns the outcome, because "Finish" navigates out of the game right after:
    * leaving in the belief the game is closed when nothing was written is the same
@@ -67,11 +88,17 @@ export function useMatch(matchId: string) {
     void client.cancelQueries({ queryKey: key })
     client.setQueryData(key, next)
     setError(null)
+    const { add, archive } = diffEvents(previous?.events ?? [], next.events)
+    pending.current = track(pending.current, add, archive)
+    const write = chain.current.then(() => saveSheet(previous, next))
+    chain.current = write.catch(() => undefined)
     try {
-      await saveSheet(previous, next)
+      await write
       return true
     } catch {
-      client.setQueryData(key, previous)
+      pending.current = untrack(pending.current, add, archive)
+      const now = client.getQueryData<Match | null>(key)
+      client.setQueryData(key, now && previous ? revertWrite(now, previous, add, archive) : previous)
       setError(translate('error.save'))
       return false
     }
