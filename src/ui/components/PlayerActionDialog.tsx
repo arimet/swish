@@ -21,6 +21,10 @@ const STATS: { k: StatKind; label: string }[] = [
   { k: 'reb_off', label: 'action.offRebound' },
   { k: 'reb_def', label: 'action.defRebound' },
 ]
+/** The stats entered from the grid. Not the assist: it is asked for right after the
+ *  basket it led to, from the passer's side — a separate button meant reopening the
+ *  passer's dialog after the scorer's, which nobody did mid-possession. */
+const GRID_STATS = STATS.filter((s) => s.k !== 'assist')
 /**
  * The three fouls a scorer's table actually calls out, each one tap.
  *
@@ -66,10 +70,12 @@ const ZERO_T: Record<StatKind, number> = { assist: 0, reb_off: 0, reb_def: 0, bl
 const POINTS_LABEL: Record<'2int' | '2ext' | '3', string> = { '2int': '2 PTS', '2ext': '2 PTS', '3': '3 PTS' }
 
 export function PlayerActionDialog({
-  open, playerName, color = C.text, scoreCounts, statCounts, foulCounts, fouls = 0, misses = 0, shots,
-  onClose, onScore, onMiss, onFreeThrows, onAndOne, onFoul, onStat, onRemoveScore, onRemoveFoul, onRemoveStat, onRemoveMiss,
+  open, playerName, color = C.text, teammates = [], scoreCounts, statCounts, foulCounts, fouls = 0, misses = 0, shots,
+  onClose, onScore, onMiss, onFreeThrows, onAndOne, onAssist, onFoul, onStat, onRemoveScore, onRemoveFoul, onRemoveStat, onRemoveMiss,
 }: {
   open: boolean; playerName: string; color?: string
+  /** Who can have given the pass: the others on the court. */
+  teammates?: { id: string; name: string }[]
   scoreCounts?: Record<ScoreKind, number>; statCounts?: Record<StatKind, number>
   /** Fouls already recorded for this player, by type. It is what lets the corrections
    *  name what they will remove — "remove a defensive foul", not "remove a foul". */
@@ -82,6 +88,7 @@ export function PlayerActionDialog({
   onFreeThrows: (results: boolean[]) => void
   /** The free throw after a basket and a foul: the opposition's foul goes with it. */
   onAndOne: (made: boolean) => void
+  onAssist: (playerId: string) => void
   onFoul: (type: FoulType) => void; onStat: (kind: StatKind) => void
   onRemoveScore: (kind: ScoreKind) => void; onRemoveFoul: (type: FoulType) => void
   onRemoveStat: (kind: StatKind) => void; onRemoveMiss: () => void
@@ -98,6 +105,7 @@ export function PlayerActionDialog({
   const [step, setStep] = useState<'main' | 'ft' | 'basket' | 'andOne'>('main')
   /** The basket just recorded, named back on the step that follows it. */
   const [basket, setBasket] = useState<ScoreKind | null>(null)
+  const [andOneDone, setAndOneDone] = useState(false)
   const sc = scoreCounts ?? ZERO_S
   const tc = statCounts ?? ZERO_T
   // Only the types actually recorded: a list of six removal buttons, five of them
@@ -114,6 +122,7 @@ export function PlayerActionDialog({
     setPlaced(null)
     setStep('main')
     setBasket(null)
+    setAndOneDone(false)
     onClose()
   }
 
@@ -155,22 +164,37 @@ export function PlayerActionDialog({
           <FreeThrowLine onBack={() => setStep('main')} onValidate={(results) => { onFreeThrows(results); close() }} />
         )}
         {step === 'andOne' && (
-          <FreeThrowLine fixed={1} onBack={() => setStep('basket')} onValidate={([ok]) => { onAndOne(ok); close() }} />
+          <FreeThrowLine fixed={1} onBack={() => setStep('basket')} onValidate={([ok]) => { onAndOne(ok); setAndOneDone(true); setStep('basket') }} />
         )}
         {step === 'basket' && basket && (
           <div className="mt-3">
             <p role="status" className="rounded-lg px-3 py-2 text-center text-[13px] font-black uppercase tracking-wide" style={{ background: C.accentBg, color: C.accent }}>
               {translate('basket.recorded', { points: pointsForKind(basket) })}
             </p>
-            <button onClick={() => setStep('andOne')}
-              className="mt-3 w-full rounded-2xl py-3.5 text-[15px] font-black transition hover:brightness-110 active:scale-[0.98]"
-              style={{ background: C.brand, color: C.onBrand }}>
-              {translate('basket.andOne')}
-            </button>
+            {teammates.length > 0 && <>
+              <p className="mt-4 text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('basket.assistFrom')}</p>
+              <div className="mt-1.5 grid grid-cols-2 gap-2">
+                {teammates.map((t) => (
+                  <button key={t.id} onClick={() => { onAssist(t.id); close() }}
+                    className="truncate rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] px-3 py-3.5 text-sm font-bold transition hover:border-[var(--c-green)] hover:bg-[var(--c-panel)] active:scale-[0.97]">
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            </>}
             <button onClick={close}
               className="mt-2 w-full rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] py-3 text-sm font-bold transition hover:bg-[var(--c-panel)]">
-              {translate('basket.done')}
+              {translate(teammates.length > 0 ? 'basket.noAssist' : 'basket.done')}
             </button>
+            {/* After the pass, because the pass is asked on every basket and the and-one
+                on one in ten: the frequent answer goes where the thumb already is. */}
+            {!andOneDone && (
+              <button onClick={() => setStep('andOne')}
+                className="mt-4 w-full rounded-2xl py-3 text-sm font-black transition hover:brightness-110 active:scale-[0.98]"
+                style={{ background: C.accentBg, color: C.accent }}>
+                {translate('basket.andOne')}
+              </button>
+            )}
           </div>
         )}
         {/* Two columns from `sm`, one below it — and the source order is the phone's,
@@ -220,11 +244,11 @@ export function PlayerActionDialog({
             </button>
 
             {/* OTHER STATS */}
-            <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-              {STATS.map((s) => (
+            <div className="mt-2.5 grid grid-cols-3 gap-2">
+              {GRID_STATS.map((s) => (
                 <button key={s.k} onClick={() => { onStat(s.k); close() }}
-                  className="flex items-center justify-between rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] px-3.5 py-2.5 text-left transition hover:border-[var(--c-green)] hover:bg-[var(--c-panel)] active:scale-[0.97]">
-                  <span className="text-[13px] font-semibold text-[var(--c-text)]">{translate(s.label)}</span>
+                  className="flex items-center justify-between gap-1 rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] px-2.5 py-2.5 text-left transition hover:border-[var(--c-green)] hover:bg-[var(--c-panel)] active:scale-[0.97]">
+                  <span className="truncate text-[13px] font-semibold text-[var(--c-text)]">{translate(s.label)}</span>
                   <span className="text-base font-black text-[var(--c-green)]">+1</span>
                 </button>
               ))}

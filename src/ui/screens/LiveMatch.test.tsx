@@ -144,6 +144,12 @@ describe('the full run', () => {
     expect(afterScore!.events.find((e) => e.type === 'SCORE')).toMatchObject({
       kind: '2int', playerId: 'p0', shot: { x: expect.any(Number), y: expect.any(Number) },
     })
+    // The pass, asked right after: one of the four others on the court.
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '5 NOM1' }))
+    await waitFor(async () => {
+      const s = await getMatch(ID)
+      expect(s!.events.filter((e) => e.type === 'STAT')).toEqual([expect.objectContaining({ stat: 'assist', playerId: 'p1' })])
+    })
 
     // 4. A three-pointer from another player, shot spot recorded
     await userEvent.keyboard('{Escape}') // closes the dialog before opening another

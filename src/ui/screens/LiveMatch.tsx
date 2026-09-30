@@ -278,6 +278,8 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
 
       <PlayerActionDialog
         open={!!pick} playerName={pick?.name ?? ''} color={TEAM_A}
+        teammates={onCourt().filter((p) => p.id !== pick?.id).map((p) => ({ id: p.id, name: `${p.number} ${p.lastName}` }))}
+        onAssist={(playerId) => dispatch({ type: 'STAT', team: 'A', playerId, stat: 'assist', period: ls.period, gameClock: seconds })}
         scoreCounts={pick ? scoreCounts(pick.id) : undefined}
         statCounts={pick ? statCounts(pick.id) : undefined}
         foulCounts={pick ? foulCounts(pick.id) : undefined}

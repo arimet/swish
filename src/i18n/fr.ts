@@ -168,6 +168,8 @@ export const fr: Record<string, string> = {
   'basket.andOne': 'And one',
   'basket.andOneHint': 'And one — la faute adverse est enregistrée avec le lancer franc.',
   'basket.done': 'Terminé',
+  'basket.assistFrom': 'Passe décisive de…',
+  'basket.noAssist': 'Aucune passe décisive',
   'action.missedCaps': 'MANQUÉ',
   'action.removeMiss': '− Retirer le dernier tir manqué',
   'action.removeOne': '− Retirer une {what}',

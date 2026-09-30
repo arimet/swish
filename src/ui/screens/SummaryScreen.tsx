@@ -149,6 +149,9 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       <MatchMetaDialog open={showEdit} meta={match.meta} onClose={() => setShowEdit(false)} onSave={saveMeta} />
       <PlayerActionDialog
         open={!!pick} playerName={pick?.name ?? ''} color={C.brand}
+        // After the game nobody knows who was on the court: the whole roster can pass.
+        teammates={match.roster.filter((id) => id !== pick?.id && players[id]).map((id) => ({ id, name: `${players[id].number} ${players[id].lastName}` }))}
+        onAssist={(playerId) => addStat(playerId, 'assist')}
         scoreCounts={pick ? scoreCountsOf(pick.id) : undefined}
         statCounts={pick ? statCountsOf(pick.id) : undefined}
         fouls={pick ? foulsOf(pick.id) : 0}

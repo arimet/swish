@@ -7,7 +7,7 @@ const noop = vi.fn()
 function renderDialog(over: Partial<Parameters<typeof PlayerActionDialog>[0]> = {}) {
   const props = {
     open: true, playerName: '4 ROUX',
-    onClose: vi.fn(), onScore: vi.fn(), onMiss: vi.fn(), onFreeThrows: vi.fn(), onAndOne: vi.fn(), onFoul: noop, onStat: noop,
+    onClose: vi.fn(), onScore: vi.fn(), onMiss: vi.fn(), onFreeThrows: vi.fn(), onAndOne: vi.fn(), onAssist: vi.fn(), onFoul: noop, onStat: noop,
     onRemoveScore: noop, onRemoveFoul: noop, onRemoveStat: noop, onRemoveMiss: noop,
     ...over,
   }
@@ -84,7 +84,7 @@ describe('PlayerActionDialog — the foul and its type', () => {
       const onFoul = vi.fn()
       const { unmount } = render(
         <PlayerActionDialog open playerName="4 ROUX"
-          onClose={vi.fn()} onScore={vi.fn()} onMiss={vi.fn()} onFreeThrows={vi.fn()} onAndOne={vi.fn()} onFoul={onFoul} onStat={noop}
+          onClose={vi.fn()} onScore={vi.fn()} onMiss={vi.fn()} onFreeThrows={vi.fn()} onAndOne={vi.fn()} onAssist={vi.fn()} onFoul={onFoul} onStat={noop}
           onRemoveScore={noop} onRemoveFoul={noop} onRemoveStat={noop} onRemoveMiss={noop} />,
       )
       fireEvent.click(screen.getByRole('button', { name: aria }))
@@ -201,6 +201,10 @@ describe('PlayerActionDialog — the and-one', () => {
     expect(screen.getAllByRole('group', { name: /^LF \d$/ })).toHaveLength(1)
     fireEvent.click(screen.getByRole('button', { name: 'Valider les lancers francs' }))
     expect(onAndOne).toHaveBeenCalledWith(true)
+    // Back on the basket, for its pass — and the and-one is not offered twice.
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'And one' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Terminé' }))
     expect(onClose).toHaveBeenCalled()
   })
 
@@ -211,5 +215,40 @@ describe('PlayerActionDialog — the and-one', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Valider le tir' }))
     expect(onClose).toHaveBeenCalled()
     expect(screen.queryByRole('button', { name: 'And one' })).not.toBeInTheDocument()
+  })
+})
+
+describe('PlayerActionDialog — the assist, asked after the basket', () => {
+  const teammates = [{ id: 'p2', name: '7 DURAND' }, { id: 'p3', name: '9 PETIT' }]
+
+  it('credits the passer in one more tap', () => {
+    const { onScore, onAssist, onClose } = renderDialog({ teammates })
+    fireEvent.click(court(), { clientX: 150, clientY: 42 })
+    fireEvent.click(screen.getByRole('button', { name: 'Valider le tir' }))
+    fireEvent.click(screen.getByRole('button', { name: '7 DURAND' }))
+    expect(onScore).toHaveBeenCalledTimes(1)
+    expect(onAssist).toHaveBeenCalledWith('p2')
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('"none" closes and records nothing more', () => {
+    const { onAssist, onClose } = renderDialog({ teammates })
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter 3 points' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Aucune passe décisive' }))
+    expect(onAssist).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('is no longer a button of its own in the grid', () => {
+    renderDialog({ teammates })
+    expect(screen.queryByRole('button', { name: /passe déc/i })).not.toBeInTheDocument()
+  })
+
+  it('is not asked after a free throw', () => {
+    const { onClose } = renderDialog({ teammates })
+    fireEvent.click(screen.getByRole('button', { name: 'Lancer franc' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Valider les lancers francs' }))
+    expect(onClose).toHaveBeenCalled()
+    expect(screen.queryByText('Passe décisive de…')).not.toBeInTheDocument()
   })
 })

@@ -169,6 +169,8 @@ export const en: Record<string, string> = {
   'basket.andOne': 'And one',
   'basket.andOneHint': 'And one — the opposition’s foul is recorded with the free throw.',
   'basket.done': 'Done',
+  'basket.assistFrom': 'Assist from…',
+  'basket.noAssist': 'No assist',
   'action.missedCaps': 'MISSED',
   'action.removeMiss': '− Remove the last missed shot',
   'action.removeOne': '− Remove one {what}',
