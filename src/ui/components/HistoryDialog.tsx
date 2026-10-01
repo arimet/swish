@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useT } from '../../i18n'
 import { fmt } from './GameClock'
-import { BTN, DANGER, DANGER_FILLED, PRIMARY, SECONDARY, SEGMENT_BRAND } from './buttons'
+import { BTN, DANGER, DANGER_FILLED, PICKED, PRIMARY, SECONDARY } from './buttons'
 import { Check } from 'lucide-react'
 import type { FoulType, GameEvent, Player, ScoreKind, StatKind, TeamSide } from '../../domain/types'
 
@@ -88,8 +88,8 @@ export function EntryList({ items, selected, onToggle, label }: {
         return (
           <li key={it.id}>
             <button role="checkbox" aria-checked={on} onClick={() => onToggle(it.id)}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${on ? 'bg-[var(--c-accent-bg)]' : 'hover:bg-[var(--c-hover)]'}`}>
-              <span aria-hidden className={`grid h-5 w-5 shrink-0 place-items-center rounded-md transition-colors ${on ? 'bg-[var(--c-brand)] text-[var(--c-on-brand)]' : 'bg-[var(--c-card2)] ring-1 ring-inset ring-[var(--c-border)]'}`}>
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${on ? 'bg-[var(--c-card2)]' : 'hover:bg-[var(--c-hover)]'}`}>
+              <span aria-hidden className={`grid h-5 w-5 shrink-0 place-items-center rounded transition-colors ${on ? 'bg-[var(--c-text)] text-[var(--c-card)]' : 'ring-1 ring-inset ring-[var(--c-muted)]'}`}>
                 {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
               </span>
               <span className="nums w-[4.5rem] shrink-0 text-[12px] font-bold text-[var(--c-muted)]">{it.when}</span>
@@ -151,7 +151,7 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
             <div role="radiogroup" aria-label={translate('history.whoNowLabel')} className="mt-2 grid grid-cols-2 gap-2">
               {roster.map((p) => (
                 <button key={p.id} role="radio" aria-checked={who === p.id} onClick={() => setWho(p.id)}
-                  className={`${BTN} truncate ${who === p.id ? SEGMENT_BRAND : SECONDARY}`}>
+                  className={`${BTN} truncate ${who === p.id ? PICKED : SECONDARY}`}>
                   {p.number} {p.lastName}
                 </button>
               ))}

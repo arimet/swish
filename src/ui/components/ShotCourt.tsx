@@ -181,7 +181,7 @@ export function ShotPicker({ onPick, confirmation, shots, made = true, idle }: {
           lines read as one doubled edge. */}
       <div
         className="mx-auto w-full max-w-[240px] rounded-2xl sm:max-w-none"
-        style={{ outline: `1px solid ${made ? C.accent : C.border}`, outlineOffset: 3 }}
+        style={{ outline: `1px solid ${made ? C.muted : C.border}`, outlineOffset: 3 }}
       >
         <Court label={translate('shot.entryCourt')} onClick={pickFromEvent}>
           {shots?.map((s, i) => (
@@ -205,8 +205,8 @@ export function ShotPicker({ onPick, confirmation, shots, made = true, idle }: {
       <p role="status" className={`mt-2 truncate rounded-lg px-3 py-1.5 text-center text-[13px] ${confirmation ? 'font-black uppercase tracking-wide' : 'font-semibold'}`}
         style={{
           visibility: confirmation || idle ? 'visible' : 'hidden',
-          background: confirmation?.made ? C.accentBg : C.card2,
-          color: confirmation?.made ? C.accent : C.muted,
+          background: C.card2,
+          color: confirmation ? C.text : C.muted,
         }}>
         {confirmation?.label ?? idle ?? ' '}
       </p>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import type { Player } from '../../domain/types'
 import { useT } from '../../i18n'
-import { BTN, PRIMARY, SECONDARY } from './buttons'
+import { BTN, PICKED, PRIMARY, SECONDARY } from './buttons'
 
 /**
  * The substitution dialog: the players going off, the players coming on, one
@@ -37,10 +37,10 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
       <DialogContent className="border-none bg-[var(--c-card)] p-5 text-[var(--c-text)] sm:max-w-md">
         <DialogHeader><DialogTitle className="text-lg font-extrabold">{translate('panel.substitution')}</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <PickGroup title={translate('sub.out')} accent="text-[var(--c-danger)]" players={onCourtPlayers}
-            selected={outs} onSelect={toggle(setOuts)} activeClass="bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]" />
-          <PickGroup title={translate('sub.in')} accent="text-[var(--c-green)]" players={benchPlayers}
-            selected={ins} onSelect={toggle(setIns)} activeClass="bg-[var(--c-green-fill)] text-[var(--c-on-green)]" />
+          <PickGroup title={translate('sub.out')} accent="text-[var(--c-muted)]" players={onCourtPlayers}
+            selected={outs} onSelect={toggle(setOuts)} activeClass={PICKED} />
+          <PickGroup title={translate('sub.in')} accent="text-[var(--c-muted)]" players={benchPlayers}
+            selected={ins} onSelect={toggle(setIns)} activeClass={PICKED} />
         </div>
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           {(outs.length > 0 || ins.length > 0) && !ready && (

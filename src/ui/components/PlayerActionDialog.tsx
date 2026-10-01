@@ -9,7 +9,7 @@ import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types
 import { pointsForKind } from '../../domain/boxscore'
 import { TriangleAlert } from 'lucide-react'
 import { EntryList, type EntryItem } from './HistoryDialog'
-import { ACCENT, BTN, DANGER, DANGER_FILLED, PRIMARY, SECONDARY, SEGMENT, SEGMENT_BRAND, SEGMENT_OFF, SEGMENT_PLAIN, SEGMENTS } from './buttons'
+import { BTN, DANGER, DANGER_FILLED, OUTLINE, PRIMARY, SECONDARY, SEGMENT, SEGMENT_OFF, SEGMENT_ON, SEGMENTS } from './buttons'
 
 /** The stats entered from the grid. Not the assist: it is asked for right after the
  *  basket it led to, from the passer's side — a separate button meant reopening the
@@ -143,7 +143,7 @@ export function PlayerActionDialog({
         )}
         {step === 'basket' && basket && (
           <div className="mt-3">
-            <p role="status" className="rounded-xl px-3 py-2.5 text-center text-[13px] font-black uppercase tracking-wide" style={{ background: C.accentBg, color: C.accent }}>
+            <p role="status" className="rounded-lg bg-[var(--c-card2)] px-3 py-2.5 text-center text-[13px] font-bold uppercase tracking-wide text-[var(--c-text)]">
               {translate('basket.recorded', { points: pointsForKind(basket) })}
             </p>
             {teammates.length > 0 && <>
@@ -162,7 +162,7 @@ export function PlayerActionDialog({
             {/* After the pass, because the pass is asked on every basket and the and-one
                 on one in ten: the frequent answer goes where the thumb already is. */}
             {!andOneDone && (
-              <button onClick={() => setStep('andOne')} className={`${BTN} ${ACCENT} mt-4 w-full`}>
+              <button onClick={() => setStep('andOne')} className={`${BTN} ${OUTLINE} mt-4 w-full`}>
                 {translate('basket.andOne')}
               </button>
             )}
@@ -179,8 +179,8 @@ export function PlayerActionDialog({
         <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
           <div>
             <div role="group" aria-label={translate('action.shot')} className={`${SEGMENTS} grid-cols-2`}>
-              <Toggle active={made} onClick={() => setMade(true)} activeClass={SEGMENT_BRAND}>{translate('action.made')}</Toggle>
-              <Toggle active={!made} onClick={() => setMade(false)} activeClass={SEGMENT_PLAIN}>{translate('action.missed')}</Toggle>
+              <Toggle active={made} onClick={() => setMade(true)} activeClass={SEGMENT_ON}>{translate('action.made')}</Toggle>
+              <Toggle active={!made} onClick={() => setMade(false)} activeClass={SEGMENT_ON}>{translate('action.missed')}</Toggle>
             </div>
             <div className="mt-3">
               <ShotPicker onPick={setPlaced} confirmation={confirmation} shots={shots} made={made}
@@ -197,7 +197,7 @@ export function PlayerActionDialog({
                 free throw with them, since it is points too and has no spot at all. */}
             <Section label={translate('action.noSpot')}>
               {QUICK.map((q) => (
-                <button key={q.label} aria-label={translate(q.aria)} onClick={() => scored(q.k)} className={`${BTN} ${SECONDARY} text-lg font-black tabular-nums`} style={{ color: C.accent }}>
+                <button key={q.label} aria-label={translate(q.aria)} onClick={() => scored(q.k)} className={`${BTN} ${SECONDARY} text-lg font-bold tabular-nums`}>
                   {q.label}
                 </button>
               ))}
@@ -266,7 +266,7 @@ function FreeThrowLine({ fixed, onBack, onValidate }: {
         <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('ft.attempts')}</p>
         <div role="group" aria-label={translate('ft.attempts')} className={`${SEGMENTS} mt-1.5 grid-cols-3`}>
           {[1, 2, 3].map((n) => (
-            <Toggle key={n} active={results.length === n} onClick={() => setCount(n)} activeClass={SEGMENT_BRAND}>{n}</Toggle>
+            <Toggle key={n} active={results.length === n} onClick={() => setCount(n)} activeClass={SEGMENT_ON}>{n}</Toggle>
           ))}
         </div>
       </> : <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('basket.andOneHint')}</p>}
@@ -275,8 +275,8 @@ function FreeThrowLine({ fixed, onBack, onValidate }: {
           <li key={i} className="flex items-center gap-3">
             <span className="w-14 shrink-0 text-sm font-black">{translate('ft.attempt', { n: i + 1 })}</span>
             <div role="group" aria-label={translate('ft.attempt', { n: i + 1 })} className={`${SEGMENTS} flex-1 grid-cols-2`}>
-              <Toggle active={ok} onClick={() => setResults((r) => r.map((v, j) => (j === i ? true : v)))} activeClass={SEGMENT_BRAND}>{translate('action.made')}</Toggle>
-              <Toggle active={!ok} onClick={() => setResults((r) => r.map((v, j) => (j === i ? false : v)))} activeClass={SEGMENT_PLAIN}>{translate('action.missed')}</Toggle>
+              <Toggle active={ok} onClick={() => setResults((r) => r.map((v, j) => (j === i ? true : v)))} activeClass={SEGMENT_ON}>{translate('action.made')}</Toggle>
+              <Toggle active={!ok} onClick={() => setResults((r) => r.map((v, j) => (j === i ? false : v)))} activeClass={SEGMENT_ON}>{translate('action.missed')}</Toggle>
             </div>
           </li>
         ))}
