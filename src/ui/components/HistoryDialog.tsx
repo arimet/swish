@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useT } from '../../i18n'
 import { fmt } from './GameClock'
+import { BTN, DANGER, DANGER_FILLED, PRIMARY, SECONDARY, SEGMENT_BRAND } from './buttons'
+import { Check } from 'lucide-react'
 import type { FoulType, GameEvent, Player, ScoreKind, StatKind, TeamSide } from '../../domain/types'
 
 /** What the history lists: what the table enters. The clock, the periods and the
@@ -67,14 +69,51 @@ export function useDescribe(players: Record<string, Player>, teamNames: Record<T
   }
 }
 
+/** One row of an entry list, already worded. */
+export interface EntryItem { id: string; when: string; what: string; who?: string }
+
 /**
- * Every entry of the game, the latest on top, and the one place to take one back.
+ * A list of entries to tick, the latest on top. Ticking rather than one row at a time,
+ * because a mis-entry rarely comes alone — a basket and its pass, a whole free-throw
+ * trip — and taking them back one dialog after the other is how the table falls
+ * behind the game.
+ */
+export function EntryList({ items, selected, onToggle, label }: {
+  items: EntryItem[]; selected: string[]; onToggle: (id: string) => void; label: string
+}) {
+  return (
+    <ul aria-label={label} className="space-y-1">
+      {items.map((it) => {
+        const on = selected.includes(it.id)
+        return (
+          <li key={it.id}>
+            <button role="checkbox" aria-checked={on} onClick={() => onToggle(it.id)}
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${on ? 'bg-[var(--c-accent-bg)]' : 'hover:bg-[var(--c-hover)]'}`}>
+              <span aria-hidden className={`grid h-5 w-5 shrink-0 place-items-center rounded-md transition-colors ${on ? 'bg-[var(--c-brand)] text-[var(--c-on-brand)]' : 'bg-[var(--c-card2)] ring-1 ring-inset ring-[var(--c-border)]'}`}>
+                {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+              </span>
+              <span className="nums w-[4.5rem] shrink-0 text-[12px] font-bold text-[var(--c-muted)]">{it.when}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-bold">{it.what}</span>
+                {it.who && <span className="block truncate text-[12px] text-[var(--c-muted)]">{it.who}</span>}
+              </span>
+            </button>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/**
+ * Every entry of the game, the latest on top, and the one place to take entries back.
  *
  * It replaced four ways of undoing — the header's "Undo" (the last event, whatever it
  * was), "Correct" in the player dialog, and the ↺ next to the opposition's score and
  * the timeouts — which each reached a different subset and none reached an entry made
- * three actions ago. Here any entry is deleted, and a player's action can be modified:
- * another player, another action, or both, at its period and game clock.
+ * three actions ago. Here any entries are ticked and deleted together, and a single
+ * player's action can be modified: another player, another action, or both, at its
+ * period and game clock.
  */
 export function HistoryDialog({ open, events, players, teamNames, roster, onClose, onDelete, onModify }: {
   open: boolean
@@ -84,88 +123,73 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
   /** Who a modified action can be given to. */
   roster: Player[]
   onClose: () => void
-  onDelete: (id: string) => void
+  onDelete: (ids: string[]) => void
   /** Absent where an action cannot be re-entered (after the game). */
   onModify?: (event: GameEvent, playerId: string) => void
 }) {
   const translate = useT()
   const describe = useDescribe(players, teamNames)
-  const [selected, setSelected] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string[]>([])
   /** Modifying: the player the action goes to, preselected on the current one. */
   const [who, setWho] = useState<string | null>(null)
-  /** Deleting asks once, on the row itself: an entry gone takes points or a foul with it. */
+  /** Deleting asks once: entries gone take points or fouls with them. */
   const [confirming, setConfirming] = useState(false)
   const listed = events.filter(isEntry).reverse()
-  const chosen = listed.find((e) => e.id === selected) ?? null
+  const chosen = selected.length === 1 ? listed.find((e) => e.id === selected[0]) ?? null : null
+  const items = listed.map((e): EntryItem => ({ id: e.id, when: whenOf(e), ...describe(e) }))
 
-  const close = () => { setSelected(null); setWho(null); setConfirming(false); onClose() }
+  const toggle = (id: string) => { setConfirming(false); setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id])) }
+  const close = () => { setSelected([]); setWho(null); setConfirming(false); onClose() }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="sm:max-w-lg max-h-[88vh] gap-0 overflow-y-auto border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
+      <DialogContent className="flex max-h-[88vh] flex-col gap-0 border-none bg-[var(--c-card)] p-5 text-[var(--c-text)] sm:max-w-lg">
         <DialogHeader><DialogTitle className="text-lg font-extrabold">{translate(who && chosen ? 'history.modifyTitle' : 'history.title')}</DialogTitle></DialogHeader>
 
         {who && chosen && onModify ? (
-          <div className="mt-3">
+          <div className="mt-3 overflow-y-auto">
             <p className="text-[13px] font-semibold text-[var(--c-muted)]">{translate('history.whoNow', { what: describe(chosen).what.toLowerCase() })}</p>
             <div role="radiogroup" aria-label={translate('history.whoNowLabel')} className="mt-2 grid grid-cols-2 gap-2">
               {roster.map((p) => (
                 <button key={p.id} role="radio" aria-checked={who === p.id} onClick={() => setWho(p.id)}
-                  className={`truncate rounded-xl border px-3 py-2.5 text-sm font-bold transition ${who === p.id ? 'border-transparent bg-[var(--c-brand)] text-[var(--c-on-brand)]' : 'border-[var(--c-border)] bg-[var(--c-card2)] hover:bg-[var(--c-panel)]'}`}>
+                  className={`${BTN} truncate ${who === p.id ? SEGMENT_BRAND : SECONDARY}`}>
                   {p.number} {p.lastName}
                 </button>
               ))}
             </div>
             <div className="mt-4 grid grid-cols-[auto_1fr] gap-2">
-              <button onClick={() => setWho(null)} className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] px-5 py-3 text-sm font-bold">{translate('ft.back')}</button>
-              <button onClick={() => { onModify(chosen, who); close() }} className="rounded-2xl bg-[var(--c-brand)] py-3 text-sm font-black text-[var(--c-on-brand)]">{translate('history.continue')}</button>
+              <button onClick={() => setWho(null)} className={`${BTN} ${SECONDARY} px-5`}>{translate('ft.back')}</button>
+              <button onClick={() => { onModify(chosen, who); close() }} className={`${BTN} ${PRIMARY}`}>{translate('history.continue')}</button>
             </div>
           </div>
         ) : listed.length === 0 ? (
           <p className="mt-3 py-8 text-center text-sm text-[var(--c-muted)]">{translate('history.empty')}</p>
         ) : (
-          <ul className="mt-3 space-y-1.5">
-            {listed.map((e) => {
-              const d = describe(e)
-              const on = e.id === selected
-              return (
-                <li key={e.id} className="rounded-xl" style={{ background: on ? 'var(--c-panel)' : 'var(--c-card2)' }}>
-                  <button onClick={() => { setSelected(on ? null : e.id); setConfirming(false) }} aria-expanded={on}
-                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
-                    <span className="nums w-16 shrink-0 text-[12px] font-bold text-[var(--c-muted)]">{whenOf(e)}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold">{d.what}</span>
-                      <span className="block truncate text-[12px] text-[var(--c-muted)]">{d.who}</span>
-                    </span>
-                  </button>
-                  {on && confirming && (
-                    <div className="px-3 pb-3">
-                      <p className="text-[13px] font-semibold">{translate('history.deleteConfirm')}</p>
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <button onClick={() => setConfirming(false)}
-                          className="rounded-xl border border-[var(--c-border)] bg-[var(--c-card)] py-2.5 text-sm font-bold">{translate('common.cancel')}</button>
-                        <button onClick={() => { onDelete(e.id); setSelected(null); setConfirming(false) }}
-                          className="rounded-xl bg-[var(--c-danger-fill)] py-2.5 text-sm font-black text-[var(--c-on-danger)]">{translate('history.deleteYes')}</button>
-                      </div>
-                    </div>
+          <>
+            <div className="-mx-2 mt-3 min-h-0 flex-1 overflow-y-auto px-2">
+              <EntryList items={items} selected={selected} onToggle={toggle} label={translate('history.title')} />
+            </div>
+            {/* The actions stay under the list, never scrolled away with it. */}
+            <div className="mt-3 border-t border-[var(--c-border)] pt-3">
+              {selected.length === 0 ? (
+                <p className="py-3 text-center text-[13px] font-semibold text-[var(--c-muted)]">{translate('history.tickHint')}</p>
+              ) : confirming ? (
+                <>
+                  <p className="text-[13px] font-semibold">{translate('history.deleteConfirm', { count: selected.length })}</p>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <button onClick={() => setConfirming(false)} className={`${BTN} ${SECONDARY}`}>{translate('common.cancel')}</button>
+                    <button onClick={() => { onDelete(selected); setSelected([]); setConfirming(false) }} className={`${BTN} ${DANGER_FILLED}`}>{translate('history.deleteYes')}</button>
+                  </div>
+                </>
+              ) : (
+                <div className={`grid gap-2 ${onModify && chosen && modifiable(chosen) ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {onModify && chosen && modifiable(chosen) && (
+                    <button onClick={() => setWho(playerOf(chosen) ?? roster[0]?.id ?? null)} className={`${BTN} ${SECONDARY}`}>{translate('history.modify')}</button>
                   )}
-                  {on && !confirming && (
-                    <div className={`grid gap-2 px-3 pb-3 ${onModify && modifiable(e) ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                      <button onClick={() => setConfirming(true)}
-                        className="rounded-xl bg-[var(--c-danger-bg)] py-2.5 text-sm font-bold text-[var(--c-danger)] transition hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)]">
-                        {translate('history.delete')}
-                      </button>
-                      {onModify && modifiable(e) && (
-                        <button onClick={() => setWho(playerOf(e) ?? roster[0]?.id ?? null)}
-                          className="rounded-xl border border-[var(--c-border)] bg-[var(--c-card)] py-2.5 text-sm font-bold transition hover:border-[var(--c-accent)]">
-                          {translate('history.modify')}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+                  <button onClick={() => setConfirming(true)} className={`${BTN} ${DANGER}`}>{translate('history.delete', { count: selected.length })}</button>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </DialogContent>
     </Dialog>

@@ -222,19 +222,29 @@ describe('PlayerActionDialog — missed mode', () => {
   })
 })
 
-describe('PlayerActionDialog — undoing this player\'s last entry', () => {
-  it('names what it takes back, asks once, then takes it back', () => {
+describe('PlayerActionDialog — the player\'s own history', () => {
+  const entries = [
+    { id: 'e9', when: 'Q1 · 09:25', what: '3 points' },
+    { id: 'e8', when: 'Q1 · 09:40', what: 'Contre' },
+    { id: 'e7', when: 'Q1 · 09:58', what: 'Faute défensive' },
+  ]
+
+  it('shows the entries directly, and undoes the ones ticked together, after one confirmation', () => {
     const onUndo = vi.fn()
-    const { onClose } = renderDialog({ lastEntry: { id: 'e9', label: '3 points · Q1 · 09:25' }, onUndo })
-    fireEvent.click(screen.getByRole('button', { name: 'Annuler : 3 points · Q1 · 09:25' }))
+    const { onClose } = renderDialog({ entries, onUndo })
+    const undo = screen.getByRole('button', { name: 'Cochez les actions à annuler' })
+    expect(undo).toBeDisabled()
+    fireEvent.click(screen.getByRole('checkbox', { name: /3 points/ }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /Faute défensive/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler les 2 actions cochées' }))
     expect(onUndo).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Oui, annuler' }))
-    expect(onUndo).toHaveBeenCalledWith('e9')
+    expect(onUndo).toHaveBeenCalledWith(['e9', 'e7'])
     expect(onClose).toHaveBeenCalled()
   })
 
   it('is absent while the player has nothing to take back', () => {
-    renderDialog({ lastEntry: null, onUndo: vi.fn() })
-    expect(screen.queryByRole('button', { name: /^Annuler :/ })).not.toBeInTheDocument()
+    renderDialog({ entries: [], onUndo: vi.fn() })
+    expect(screen.queryByText('Historique du joueur')).not.toBeInTheDocument()
   })
 })

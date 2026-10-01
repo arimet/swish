@@ -160,11 +160,12 @@ export function useMatch(matchId: string) {
     await persist(next)
   }, [current, persist, translate])
 
-  /** Removes one event, whichever it is: the history's "Delete". */
-  const remove = useCallback(async (id: string) => {
+  /** Removes events, whichever they are, in one write: the history's "Delete". */
+  const remove = useCallback(async (ids: string[]) => {
     const sheet = current()
-    if (!sheet || !sheet.events.some((e) => e.id === id)) return
-    await persist({ ...sheet, events: sheet.events.filter((e) => e.id !== id) })
+    const gone = new Set(ids)
+    if (!sheet || !sheet.events.some((e) => gone.has(e.id))) return
+    await persist({ ...sheet, events: sheet.events.filter((e) => !gone.has(e.id)) })
   }, [current, persist])
 
   /**

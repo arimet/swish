@@ -57,7 +57,7 @@ describe('LiveMatch', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
     const history = await screen.findByRole('dialog')
     // The latest on top: the three, then the two.
-    const rows = within(history).getAllByRole('button', { expanded: false })
+    const rows = within(history).getAllByRole('checkbox')
     expect(rows.map((r) => r.textContent)).toEqual([expect.stringContaining('Panier (+3)'), expect.stringContaining('Panier (+2)')])
     await userEvent.click(rows[1])
     await userEvent.click(within(history).getByRole('button', { name: 'Supprimer' }))
@@ -76,7 +76,8 @@ describe('LiveMatch', () => {
     await userEvent.click(screen.getByRole('button', { name: /MARTIN/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Faute défensive' }))
     await userEvent.click(screen.getByRole('button', { name: /MARTIN/ }))
-    await userEvent.click(await screen.findByRole('button', { name: /^Annuler : Faute défensive/ }))
+    await userEvent.click(await screen.findByRole('checkbox', { name: /Faute défensive/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Annuler l’action cochée' }))
     await userEvent.click(screen.getByRole('button', { name: 'Oui, annuler' }))
     await waitFor(async () => {
       const events = (await getMatch(MATCH_ID))!.events
@@ -103,6 +104,27 @@ describe('LiveMatch', () => {
     })
   })
 
+  it('deletes several ticked entries in one go', async () => {
+    renderLive()
+    await userEvent.click(await screen.findByRole('button', { name: 'Ajouter 2 points à VERDUN' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter 3 points à VERDUN' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Ajouter 1 point à VERDUN' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Annuler' }))
+    const history = await screen.findByRole('dialog')
+    const rows = within(history).getAllByRole('checkbox')
+    await userEvent.click(rows[0])
+    await userEvent.click(rows[2])
+    // Modifying takes one entry at a time: with two ticked, only deleting is offered.
+    expect(within(history).queryByRole('button', { name: 'Modifier' })).not.toBeInTheDocument()
+    await userEvent.click(within(history).getByRole('button', { name: 'Supprimer les 2' }))
+    expect(history).toHaveTextContent('Supprimer ces 2 actions ?')
+    await userEvent.click(within(history).getByRole('button', { name: 'Oui, supprimer' }))
+    await waitFor(async () => {
+      const opp = (await getMatch(MATCH_ID))!.events.filter((e) => e.type === 'SCORE' && e.team === 'B')
+      expect(opp.map((e) => e.type === 'SCORE' && e.kind)).toEqual(['3'])
+    })
+  })
+
   it('modifies a player\'s action: another player, another action, same place, same clock', async () => {
     await savePlayer({ id: 'p2', teamId: 'ta', number: 7, lastName: 'DURAND', firstName: 'Théo' })
     const m = (await getMatch(MATCH_ID))!
@@ -117,7 +139,7 @@ describe('LiveMatch', () => {
     renderLive()
     await userEvent.click(await screen.findByRole('button', { name: 'Annuler' }))
     const history = await screen.findByRole('dialog')
-    await userEvent.click(within(history).getByRole('button', { name: /Faute/ }))
+    await userEvent.click(within(history).getByRole('checkbox', { name: /Faute/ }))
     await userEvent.click(within(history).getByRole('button', { name: 'Modifier' }))
     // Preselected on the current player; DURAND takes it.
     expect(within(history).getByRole('radio', { name: /MARTIN/ })).toHaveAttribute('aria-checked', 'true')

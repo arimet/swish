@@ -7,7 +7,9 @@ import { kindAt, ZONE_LABELS, zoneAt } from '../../domain/shotzones'
 import type { Shot } from '../../domain/shotchart'
 import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types'
 import { pointsForKind } from '../../domain/boxscore'
-import { TriangleAlert, Undo2 } from 'lucide-react'
+import { TriangleAlert } from 'lucide-react'
+import { EntryList, type EntryItem } from './HistoryDialog'
+import { ACCENT, BTN, DANGER, DANGER_FILLED, PRIMARY, SECONDARY, SEGMENT, SEGMENT_BRAND, SEGMENT_OFF, SEGMENT_PLAIN, SEGMENTS } from './buttons'
 
 /** The stats entered from the grid. Not the assist: it is asked for right after the
  *  basket it led to, from the passer's side — a separate button meant reopening the
@@ -45,26 +47,18 @@ const QUICK: { k: ScoreKind; label: string; aria: string }[] = [
   { k: '3', label: '+3', aria: 'action.addThree' },
 ]
 
-/** One size for every button of the dialog — a finger tall, 48 px — and four looks:
- *  the one primary action, the ordinary entries, the fouls, and the destructive yes. */
-const BTN = 'h-12 rounded-xl text-sm font-bold transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-35'
-const PRIMARY = 'bg-[var(--c-brand)] text-[var(--c-on-brand)] font-black hover:brightness-110'
-const SECONDARY = 'border border-[var(--c-border)] bg-[var(--c-card2)] text-[var(--c-text)] hover:border-[var(--c-accent)] hover:bg-[var(--c-panel)]'
-const DANGER = 'bg-[var(--c-danger-bg)] text-[var(--c-danger)] hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)]'
-const DANGER_FILLED = 'bg-[var(--c-danger-fill)] text-[var(--c-on-danger)] font-black'
-
 const POINTS_LABEL: Record<'2int' | '2ext' | '3', string> = { '2int': '2 PTS', '2ext': '2 PTS', '3': '3 PTS' }
 
 export function PlayerActionDialog({
-  open, playerName, color = C.text, teammates = [], shots, lastEntry,
+  open, playerName, color = C.text, teammates = [], shots, entries = [],
   onClose, onScore, onMiss, onFreeThrows, onAndOne, onAssist, onFoul, onStat, onUndo,
 }: {
   open: boolean; playerName: string; color?: string
   /** Who can have given the pass: the others on the court. */
   teammates?: { id: string; name: string }[]
   shots?: Shot[]
-  /** This player's latest entry, named — what the undo button takes back. */
-  lastEntry?: { id: string; label: string } | null
+  /** This player's entries, latest first: what the dialog's own history can take back. */
+  entries?: EntryItem[]
   onClose: () => void
   onScore: (kind: ScoreKind, shot?: ShotSpot) => void
   onMiss: (kind: ScoreKind, shot: ShotSpot) => void
@@ -74,7 +68,7 @@ export function PlayerActionDialog({
   onAndOne: (made: boolean) => void
   onAssist: (playerId: string) => void
   onFoul: (type: FoulType) => void; onStat: (kind: StatKind) => void
-  onUndo?: (id: string) => void
+  onUndo?: (ids: string[]) => void
 }) {
   const translate = useT()
   const [made, setMade] = useState(true)
@@ -89,7 +83,9 @@ export function PlayerActionDialog({
   /** The basket just recorded, named back on the step that follows it. */
   const [basket, setBasket] = useState<ScoreKind | null>(null)
   const [andOneDone, setAndOneDone] = useState(false)
-  /** The undo asks once, in place: it names what goes, and nothing brings it back. */
+  /** The entries ticked in the player's history, and whether their removal is being
+   *  confirmed — it asks once, in place: nothing brings them back. */
+  const [ticked, setTicked] = useState<string[]>([])
   const [undoing, setUndoing] = useState(false)
 
   // The mode returns to "Made" on every close: that is the common case. A shot placed
@@ -100,6 +96,7 @@ export function PlayerActionDialog({
     setStep('main')
     setBasket(null)
     setAndOneDone(false)
+    setTicked([])
     setUndoing(false)
     onClose()
   }
@@ -146,7 +143,7 @@ export function PlayerActionDialog({
         )}
         {step === 'basket' && basket && (
           <div className="mt-3">
-            <p role="status" className="rounded-lg px-3 py-2 text-center text-[13px] font-black uppercase tracking-wide" style={{ background: C.accentBg, color: C.accent }}>
+            <p role="status" className="rounded-xl px-3 py-2.5 text-center text-[13px] font-black uppercase tracking-wide" style={{ background: C.accentBg, color: C.accent }}>
               {translate('basket.recorded', { points: pointsForKind(basket) })}
             </p>
             {teammates.length > 0 && <>
@@ -165,8 +162,7 @@ export function PlayerActionDialog({
             {/* After the pass, because the pass is asked on every basket and the and-one
                 on one in ten: the frequent answer goes where the thumb already is. */}
             {!andOneDone && (
-              <button onClick={() => setStep('andOne')} className={`${BTN} mt-4 w-full border border-[var(--c-accent-bd)] font-black`}
-                style={{ background: C.accentBg, color: C.accent }}>
+              <button onClick={() => setStep('andOne')} className={`${BTN} ${ACCENT} mt-4 w-full`}>
                 {translate('basket.andOne')}
               </button>
             )}
@@ -182,9 +178,9 @@ export function PlayerActionDialog({
         {step === 'main' && (
         <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
           <div>
-            <div role="group" aria-label={translate('action.shot')} className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--c-card2)] p-1">
-              <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{translate('action.made')}</Toggle>
-              <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-text)] text-[var(--c-card)]">{translate('action.missed')}</Toggle>
+            <div role="group" aria-label={translate('action.shot')} className={`${SEGMENTS} grid-cols-2`}>
+              <Toggle active={made} onClick={() => setMade(true)} activeClass={SEGMENT_BRAND}>{translate('action.made')}</Toggle>
+              <Toggle active={!made} onClick={() => setMade(false)} activeClass={SEGMENT_PLAIN}>{translate('action.missed')}</Toggle>
             </div>
             <div className="mt-3">
               <ShotPicker onPick={setPlaced} confirmation={confirmation} shots={shots} made={made}
@@ -201,7 +197,7 @@ export function PlayerActionDialog({
                 free throw with them, since it is points too and has no spot at all. */}
             <Section label={translate('action.noSpot')}>
               {QUICK.map((q) => (
-                <button key={q.label} aria-label={translate(q.aria)} onClick={() => scored(q.k)} className={`${BTN} ${SECONDARY} text-base font-black tabular-nums`} style={{ color: C.accent }}>
+                <button key={q.label} aria-label={translate(q.aria)} onClick={() => scored(q.k)} className={`${BTN} ${SECONDARY} text-lg font-black tabular-nums`} style={{ color: C.accent }}>
                   {q.label}
                 </button>
               ))}
@@ -220,23 +216,28 @@ export function PlayerActionDialog({
                 </button>
               ))}
             </Section>
-            {/* The undo sinks to the bottom: recording is what this dialog is opened for,
-                taking back is the exception — and it names what it takes back, so a tap
-                does not undo blind. The full history stays under the header's "Undo". */}
-            {lastEntry && onUndo && (
-              <div className="mt-5 border-t border-[var(--c-border)] pt-4 sm:mt-auto">
+            {/* The player's own history sinks to the bottom: recording is what this
+                dialog is opened for, taking back is the exception. Entries are ticked
+                — one or several — then taken back together, after one confirmation.
+                The whole game's history stays under the header's "Undo". */}
+            {entries.length > 0 && onUndo && (
+              <section className="mt-5 border-t border-[var(--c-border)] pt-4 sm:mt-auto">
+                <h3 className="mb-1.5 text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('action.history')}</h3>
+                <div className="-mx-1 max-h-36 overflow-y-auto px-1">
+                  <EntryList items={entries} selected={ticked} label={translate('action.history')}
+                    onToggle={(id) => { setUndoing(false); setTicked((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id])) }} />
+                </div>
                 {undoing ? (
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="mt-2 grid grid-cols-2 gap-2">
                     <button onClick={() => setUndoing(false)} className={`${BTN} ${SECONDARY}`}>{translate('common.cancel')}</button>
-                    <button onClick={() => { onUndo(lastEntry.id); close() }} className={`${BTN} ${DANGER_FILLED}`}>{translate('action.undoYes')}</button>
+                    <button onClick={() => { onUndo(ticked); close() }} className={`${BTN} ${DANGER_FILLED}`}>{translate('action.undoYes')}</button>
                   </div>
                 ) : (
-                  <button onClick={() => setUndoing(true)} className={`${BTN} ${SECONDARY} flex w-full items-center justify-center gap-2 px-3`}>
-                    <Undo2 className="h-4 w-4 shrink-0" strokeWidth={2.2} />
-                    <span className="truncate">{translate('action.undoLast', { what: lastEntry.label })}</span>
+                  <button onClick={() => setUndoing(true)} disabled={ticked.length === 0} className={`${BTN} ${DANGER} mt-2 w-full`}>
+                    {ticked.length ? translate('action.undoTicked', { count: ticked.length }) : translate('action.undoTickHint')}
                   </button>
                 )}
-              </div>
+              </section>
             )}
           </div>
         </div>
@@ -263,9 +264,9 @@ function FreeThrowLine({ fixed, onBack, onValidate }: {
     <div className="mt-3">
       {fixed === undefined ? <>
         <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('ft.attempts')}</p>
-        <div role="group" aria-label={translate('ft.attempts')} className="mt-1.5 grid grid-cols-3 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
+        <div role="group" aria-label={translate('ft.attempts')} className={`${SEGMENTS} mt-1.5 grid-cols-3`}>
           {[1, 2, 3].map((n) => (
-            <Toggle key={n} active={results.length === n} onClick={() => setCount(n)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{n}</Toggle>
+            <Toggle key={n} active={results.length === n} onClick={() => setCount(n)} activeClass={SEGMENT_BRAND}>{n}</Toggle>
           ))}
         </div>
       </> : <p className="text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('basket.andOneHint')}</p>}
@@ -273,9 +274,9 @@ function FreeThrowLine({ fixed, onBack, onValidate }: {
         {results.map((ok, i) => (
           <li key={i} className="flex items-center gap-3">
             <span className="w-14 shrink-0 text-sm font-black">{translate('ft.attempt', { n: i + 1 })}</span>
-            <div role="group" aria-label={translate('ft.attempt', { n: i + 1 })} className="grid flex-1 grid-cols-2 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
-              <Toggle active={ok} onClick={() => setResults((r) => r.map((v, j) => (j === i ? true : v)))} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{translate('action.made')}</Toggle>
-              <Toggle active={!ok} onClick={() => setResults((r) => r.map((v, j) => (j === i ? false : v)))} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">{translate('action.missed')}</Toggle>
+            <div role="group" aria-label={translate('ft.attempt', { n: i + 1 })} className={`${SEGMENTS} flex-1 grid-cols-2`}>
+              <Toggle active={ok} onClick={() => setResults((r) => r.map((v, j) => (j === i ? true : v)))} activeClass={SEGMENT_BRAND}>{translate('action.made')}</Toggle>
+              <Toggle active={!ok} onClick={() => setResults((r) => r.map((v, j) => (j === i ? false : v)))} activeClass={SEGMENT_PLAIN}>{translate('action.missed')}</Toggle>
             </div>
           </li>
         ))}
@@ -310,7 +311,7 @@ function Section({ label, danger, children }: { label: string; danger?: boolean;
 function Toggle({ active, activeClass, onClick, children }: { active: boolean; activeClass: string; onClick: () => void; children: React.ReactNode }) {
   return (
     <button onClick={onClick} aria-pressed={active}
-      className={`h-11 rounded-lg text-sm font-bold transition ${active ? activeClass : 'text-[var(--c-muted)] hover:text-[var(--c-text)]'}`}>
+      className={`${SEGMENT} ${active ? activeClass : SEGMENT_OFF}`}>
       {children}
     </button>
   )

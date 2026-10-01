@@ -71,7 +71,7 @@ describe('useMatch', () => {
     await act(async () => {
       ids = await result.current.rewrite([{ type: 'STAT', team: 'A', playerId: 'p1', stat: 'reb_def', period: 1, gameClock: 500 }], { id: block.id, mode: 'replace' })
     })
-    await act(async () => { await result.current.remove(timeout.id) })
+    await act(async () => { await result.current.remove([timeout.id]) })
     const saved = doc<Match>('match', 'm1')!.events
     expect(saved.map((e) => e.type)).toEqual(['PERIOD_START', 'CLOCK_START', 'STAT'])
     expect(saved[2]).toMatchObject({ id: ids[0], stat: 'reb_def', gameClock: 500 })

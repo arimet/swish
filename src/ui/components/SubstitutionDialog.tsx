@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import type { Player } from '../../domain/types'
 import { useT } from '../../i18n'
+import { BTN, PRIMARY, SECONDARY } from './buttons'
 
 /**
  * The substitution dialog: the players going off, the players coming on, one
@@ -33,13 +34,13 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>{translate('panel.substitution')}</DialogTitle></DialogHeader>
+      <DialogContent className="border-none bg-[var(--c-card)] p-5 text-[var(--c-text)] sm:max-w-md">
+        <DialogHeader><DialogTitle className="text-lg font-extrabold">{translate('panel.substitution')}</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <PickGroup title={translate('sub.out')} accent="text-[var(--c-danger)]" players={onCourtPlayers}
-            selected={outs} onSelect={toggle(setOuts)} activeClass="border-transparent bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]" />
+            selected={outs} onSelect={toggle(setOuts)} activeClass="bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]" />
           <PickGroup title={translate('sub.in')} accent="text-[var(--c-green)]" players={benchPlayers}
-            selected={ins} onSelect={toggle(setIns)} activeClass="border-transparent bg-[var(--c-green-fill)] text-[var(--c-on-green)]" />
+            selected={ins} onSelect={toggle(setIns)} activeClass="bg-[var(--c-green-fill)] text-[var(--c-on-green)]" />
         </div>
         <DialogFooter className="flex-col gap-2 sm:flex-col">
           {(outs.length > 0 || ins.length > 0) && !ready && (
@@ -48,7 +49,7 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
           <button
             disabled={!ready}
             onClick={submit}
-            className="w-full rounded-2xl bg-primary py-3 text-sm font-bold text-primary-foreground transition enabled:hover:brightness-110 disabled:opacity-40"
+            className={`${BTN} ${PRIMARY} w-full`}
           >
             {translate('sub.confirm')}
           </button>
@@ -72,9 +73,7 @@ function PickGroup({ title, accent, players, selected, onSelect, activeClass }: 
             key={p.id}
             aria-pressed={selected.includes(p.id)}
             onClick={() => onSelect(p.id)}
-            className={`rounded-xl border px-3 py-2.5 text-sm font-bold transition active:scale-95 ${
-              selected.includes(p.id) ? activeClass : 'border-border/60 bg-background hover:bg-muted'
-            }`}
+            className={`${BTN} truncate ${selected.includes(p.id) ? activeClass : SECONDARY}`}
           >
             {p.number} {p.lastName}
           </button>

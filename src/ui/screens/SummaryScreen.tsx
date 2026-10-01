@@ -6,7 +6,7 @@ import { ProgressionChart } from '../../export/ProgressionChart'
 import { printSummary } from '../../export/print'
 import { MatchMetaDialog } from '../components/MatchMetaDialog'
 import { PlayerActionDialog } from '../components/PlayerActionDialog'
-import { HistoryDialog, isEntry, playerOf, useDescribe, whenOf } from '../components/HistoryDialog'
+import { HistoryDialog, isEntry, playerOf, useDescribe, whenOf, type EntryItem } from '../components/HistoryDialog'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { saveSheet } from '../../persistence/repositories'
@@ -70,11 +70,11 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const addEvents = (list: EventInput[]) =>
     persist({ ...match, events: [...match.events, ...list.map((e) => ({ ...e, id: newId(), wallClock: Date.now() }) as GameEvent)] })
   const addEvent = (e: EventInput) => addEvents([e])
-  const lastEntryOf = (playerId: string) => {
-    const e = [...match.events].reverse().find((x) => isEntry(x) && playerOf(x) === playerId)
-    return e ? { id: e.id, label: `${describe(e).what} · ${whenOf(e)}` } : null
-  }
-  const removeEvent = (id: string) => persist({ ...match, events: match.events.filter((e) => e.id !== id) })
+  /** A player's entries, latest first, worded for the player dialog's own history. */
+  const entriesOf = (playerId: string): EntryItem[] =>
+    match.events.filter((x) => isEntry(x) && playerOf(x) === playerId).reverse()
+      .map((e) => ({ id: e.id, when: whenOf(e), what: describe(e).what }))
+  const removeEvents = (ids: string[]) => persist({ ...match, events: match.events.filter((e) => !ids.includes(e.id)) })
   // Stats correction only touches our roster (side A): the opposition has no players
   // recorded.
   const addScore = (playerId: string, kind: ScoreKind, shot?: ShotSpot) => addEvent({ type: 'SCORE', team: 'A', playerId, kind, shot, period: ls.period, gameClock: 0 })
@@ -142,7 +142,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         teammates={match.roster.filter((id) => id !== pick?.id && players[id]).map((id) => ({ id, name: `${players[id].number} ${players[id].lastName}` }))}
         onAssist={(playerId) => addStat(playerId, 'assist')}
         shots={pick ? shotsOf([match], pick.id) : undefined}
-        lastEntry={pick ? lastEntryOf(pick.id) : null} onUndo={removeEvent}
+        entries={pick ? entriesOf(pick.id) : []} onUndo={removeEvents}
         onClose={() => setPick(null)}
         onScore={(k, shot) => pick && addScore(pick.id, k, shot)}
         onFoul={() => pick && addFoul(pick.id)}
@@ -153,7 +153,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
       />
       <HistoryDialog open={history} events={match.events} players={players} teamNames={teamNames}
         roster={match.roster.map((id) => players[id]).filter(Boolean)}
-        onClose={() => setHistory(false)} onDelete={removeEvent} />
+        onClose={() => setHistory(false)} onDelete={removeEvents} />
 
       {/* FINAL SCOREBOARD */}
       <div className="overflow-hidden rounded-3xl" style={{ background: C.frame, border: bd }}>
