@@ -240,7 +240,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
       {/* OPPOSITION SCORE: a total, with no players. One row — the "total score, no
           player detail" note explained at every game a fact you learn at the first,
           and the third row it forced on a phone was taken out of the roster. */}
-      <div className="mx-auto mt-2 flex w-full max-w-4xl shrink-0 items-center gap-2 rounded-2xl border border-border bg-card px-3 py-2 sm:mt-4 sm:px-4">
+      <div className="mx-auto mt-2 flex w-full max-w-4xl shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 sm:mt-4 sm:px-4">
         <span className="min-w-0 truncate text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
         {/* Their team fouls: the only fouls of theirs entered are the and-ones', but
             they count towards the bonus all the same. */}

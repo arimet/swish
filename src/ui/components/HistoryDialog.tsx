@@ -142,7 +142,7 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
   const close = () => { setSelected([]); setWho(null); setConfirming(false); onClose() }
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="flex max-h-[88vh] flex-col gap-0 border-none bg-[var(--c-card)] p-5 text-[var(--c-text)] sm:max-w-lg">
+      <DialogContent className="rounded-lg flex max-h-[88vh] flex-col gap-0 border-none bg-[var(--c-card)] p-5 text-[var(--c-text)] sm:max-w-lg">
         <DialogHeader><DialogTitle className="text-lg font-extrabold">{translate(who && chosen ? 'history.modifyTitle' : 'history.title')}</DialogTitle></DialogHeader>
 
         {who && chosen && onModify ? (

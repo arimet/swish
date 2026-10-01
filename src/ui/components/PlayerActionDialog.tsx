@@ -127,7 +127,7 @@ export function PlayerActionDialog({
           `mt-*` of every block below — two stacked spacings, a hundred-odd pixels lost.
           The blocks' own margins are enough. Overflow stays bounded as a last resort:
           a short window. */}
-      <DialogContent className="sm:max-w-3xl max-h-[92vh] gap-0 overflow-y-auto border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
+      <DialogContent className="rounded-lg sm:max-w-3xl max-h-[92vh] gap-0 overflow-y-auto border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2.5 text-xl font-extrabold">
             <span className="h-3.5 w-3.5 rounded-full ring-2 ring-[var(--c-border)]" style={{ background: color }} />

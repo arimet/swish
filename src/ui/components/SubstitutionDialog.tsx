@@ -34,7 +34,7 @@ export function SubstitutionDialog({ open, onClose, onCourtPlayers, benchPlayers
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="border-none bg-[var(--c-card)] p-5 text-[var(--c-text)] sm:max-w-md">
+      <DialogContent className="rounded-lg border-none bg-[var(--c-card)] p-5 text-[var(--c-text)] sm:max-w-md">
         <DialogHeader><DialogTitle className="text-lg font-extrabold">{translate('panel.substitution')}</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <PickGroup title={translate('sub.out')} accent="text-[var(--c-muted)]" players={onCourtPlayers}

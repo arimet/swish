@@ -30,7 +30,7 @@ export function TeamPanel({
   // card halfway to its background, which cancelled precisely the lightness gap
   // between the two planes. In the dark theme, the screen became a single charcoal.
   return (
-    <section className="flex min-h-0 flex-1 flex-col rounded-3xl border border-border bg-card p-2.5 sm:p-4" style={{ boxShadow: `inset 0 3px 0 0 ${color}` }}>
+    <section className="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-card p-2.5 sm:p-4" style={{ boxShadow: `inset 0 3px 0 0 ${color}` }}>
       {/* "On court", and not the team's name: the scoreboard just above already gives
           it in large type, and the repetition pushed the header onto two lines on a
           phone. The label now says something the screen said nowhere — that these five
@@ -77,9 +77,9 @@ export function TeamPanel({
                right. Stacked under the name, they made cards a hundred and twenty
                pixels tall — three players out of five fitted on a phone screen, and you
                had to scroll the roster in the middle of a possession. */
-            <div key={p.id} className={`flex items-center gap-1.5 rounded-2xl border border-border/60 bg-background p-2 ${out ? 'opacity-40' : ''}`}>
+            <div key={p.id} className={`flex items-center gap-1.5 rounded-lg border border-border/60 bg-background p-2 ${out ? 'opacity-40' : ''}`}>
               <button disabled={out} onClick={() => onPick(p.id, `${p.number} ${p.lastName}`)} className="flex min-w-0 flex-1 items-center gap-2.5 py-1 text-left">
-                <span className="nums grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--c-card2)] text-base font-extrabold text-[var(--c-text)]" style={{ boxShadow: `inset 0 0 0 2px ${color}` }}>
+                <span className="nums grid h-10 w-10 shrink-0 place-items-center rounded-md bg-[var(--c-card2)] text-base font-extrabold text-[var(--c-text)]" style={{ boxShadow: `inset 0 0 0 2px ${color}` }}>
                   {p.number}
                 </span>
                 <span className="min-w-0 flex-1">
