@@ -9,8 +9,9 @@
  */
 export const BTN = 'inline-flex h-12 min-w-0 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition-[background-color,color,box-shadow,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-muted)] disabled:pointer-events-none'
 
-/** The one action a screen is for: outlined in green. Disabled, the line goes grey. */
-export const PRIMARY = 'bg-[var(--c-accent-bg)] font-bold text-[var(--c-accent)] ring-2 ring-inset ring-[var(--c-brand)] hover:bg-[var(--c-accent-bd)] disabled:bg-transparent disabled:text-[var(--c-faint)] disabled:ring-1 disabled:ring-[var(--c-border)]'
+/** The one action a screen is for: a green line, nothing filled. Disabled, the line
+ *  goes grey. */
+export const PRIMARY = 'bg-transparent font-bold text-[var(--c-accent)] ring-2 ring-inset ring-[var(--c-brand)] hover:bg-[var(--c-hover)] disabled:text-[var(--c-faint)] disabled:ring-1 disabled:ring-[var(--c-border)]'
 
 /** An ordinary entry: a flat surface, a shade lighter on hover. */
 export const SECONDARY = 'bg-[var(--c-card2)] text-[var(--c-text)] hover:bg-[var(--c-border)] disabled:opacity-40'
@@ -28,7 +29,7 @@ export const DANGER_FILLED = 'bg-[var(--c-danger-fill)] font-bold text-[var(--c-
 export const SEGMENTS = 'grid gap-1 rounded-lg bg-[var(--c-card2)] p-1'
 export const SEGMENT = 'h-11 rounded-md text-sm font-semibold transition-[background-color,color,box-shadow] duration-150'
 export const SEGMENT_OFF = 'text-[var(--c-muted)] hover:text-[var(--c-text)]'
-/** The face chosen: raised on its track, outlined in green. */
-export const SEGMENT_ON = 'bg-[var(--c-card)] font-bold text-[var(--c-accent)] shadow-sm ring-2 ring-inset ring-[var(--c-brand)]'
+/** The face chosen: outlined in green on its track. */
+export const SEGMENT_ON = 'bg-transparent font-bold text-[var(--c-accent)] ring-2 ring-inset ring-[var(--c-brand)]'
 /** A chosen item outside a track (a player picked): outlined in green too. */
-export const PICKED = 'bg-[var(--c-accent-bg)] font-bold text-[var(--c-accent)] ring-2 ring-inset ring-[var(--c-brand)]'
+export const PICKED = 'bg-transparent font-bold text-[var(--c-accent)] ring-2 ring-inset ring-[var(--c-brand)]'
