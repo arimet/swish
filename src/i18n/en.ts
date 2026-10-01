@@ -60,7 +60,6 @@ export const en: Record<string, string> = {
   'access.needsCode': 'This action requires that access code.',
   'access.wrongCode': '{role} code required.',
   'role.visitor': 'Visitor',
-  'role.scorer': 'Scorer’s table',
   'role.admin': 'Administrator',
 
   // ── Language ──────────────────────────────────────────────────────────────
@@ -73,6 +72,8 @@ export const en: Record<string, string> = {
   'teams.none': 'No teams yet.',
   'gate.title': '{role} access required',
   'gate.explanation': 'The {role} code is required to score this game.',
+  'gate.viewExplanation': 'The {role} code is required to see the roster, the players and the plays.',
+  'role.staff': 'Staff',
   'gate.spectatorView': 'Spectator view',
   'gate.home': '← Home',
   'five.leave': '← Leave',

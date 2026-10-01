@@ -21,11 +21,13 @@ import { useClub } from '../../app/club'
 const NAV_TOP = [
   { icon: ICON.trophy, label: 'nav.dashboard', to: '/', end: true },
 ]
+/* `staff`: the club's inside — rosters, players, plays — which a visitor does not see:
+   a visitor follows the live games, the results and the calendar. */
 const NAV_REST = [
   { icon: ICON.cal, label: 'nav.calendar', to: '/calendrier', end: false },
   { icon: ICON.trophy, label: 'nav.standings', to: '/championnat', end: false },
-  { icon: ICON.users, label: 'nav.teams', to: '/teams', end: false },
-  { icon: ICON.matches, label: 'nav.plays', to: '/schemas', end: false },
+  { icon: ICON.users, label: 'nav.teams', to: '/teams', end: false, staff: true },
+  { icon: ICON.matches, label: 'nav.plays', to: '/schemas', end: false, staff: true },
 ]
 /* The bottom bar holds four entries, and the plays are one of them: the play viewer
    is made for the time-out, hence for a phone — it was the one screen of the
@@ -38,7 +40,7 @@ const NAV_MOBILE = [
      and keeps the full name. */
   { icon: ICON.trophy, label: 'nav.home', to: '/', end: true },
   { icon: ICON.cal, label: 'nav.calendar', to: '/calendrier', end: false },
-  { icon: ICON.matches, label: 'nav.plays', to: '/schemas', end: false },
+  { icon: ICON.matches, label: 'nav.plays', to: '/schemas', end: false, staff: true },
 ]
 // "My team" targets `/teams/<clubId>`: without a club set it would be a link to
 // `/teams/undefined` — the entry is only added once the club is known.
@@ -224,9 +226,13 @@ function AccessMenu({ players, compact = false }: { players: Player[]; compact?:
 function MobileNav() {
   const translate = useT()
   const { clubId } = useClub()
-  const items = clubId
-    ? [...NAV_MOBILE, { icon: ICON.users, label: 'nav.myTeam', to: `/teams/${clubId}`, end: true }]
-    : [...NAV_MOBILE, { icon: ICON.users, label: 'nav.teams', to: '/teams', end: false }]
+  const { can } = useAuth()
+  // A visitor's bar: home, calendar, standings — the three things they follow.
+  const items = !can('view')
+    ? [...NAV_MOBILE.filter((n) => !n.staff), { icon: ICON.trophy, label: 'nav.standings', to: '/championnat', end: false }]
+    : clubId
+      ? [...NAV_MOBILE, { icon: ICON.users, label: 'nav.myTeam', to: `/teams/${clubId}`, end: true }]
+      : [...NAV_MOBILE, { icon: ICON.users, label: 'nav.teams', to: '/teams', end: false }]
   return (
     <nav className="flex shrink-0 items-stretch justify-around gap-1 border-t px-1 pb-[env(safe-area-inset-bottom)] pt-1 lg:hidden" style={{ borderColor: C.border, background: C.panel }}>
       {items.map((n) => (
@@ -279,13 +285,13 @@ function Sidebar({ players }: { players: Player[] }) {
 
       <p className="mt-6 px-2 text-[12px] font-bold uppercase tracking-wider" style={{ color: C.faint }}>{translate('nav.myClub')}</p>
       <NavGroup items={NAV_TOP} />
-      {clubId && (
+      {clubId && can('view') && (
         <NavLink to={`/teams/${clubId}`} end
           className={({ isActive }) => `${BTN_CORE} mt-0.5 h-11 justify-start gap-3 px-3 text-sm ${isActive ? PICKED : SEGMENT_OFF}`}>
           <Ic d={ICON.users} />{translate('nav.myTeam')}
         </NavLink>
       )}
-      <NavGroup items={NAV_REST} mutedOn={clubId ? `/teams/${clubId}` : undefined} />
+      <NavGroup items={NAV_REST.filter((n) => can('view') || !n.staff)} mutedOn={clubId ? `/teams/${clubId}` : undefined} />
 
       {/* The roster is no longer in the menu: thirteen names pushed the navigation off
           screen and made the bar scroll. It belongs on the team record, which is where
@@ -300,7 +306,7 @@ function Sidebar({ players }: { players: Player[] }) {
         {/* Data cleanup, under access and only for the administrator: a visitor has no
             business seeing a door they cannot open. The entry appears as soon as the
             admin code is entered, in the dialog just above. */}
-        {can('manage') && (
+        {can('admin') && (
           <NavLink to="/admin"
             className={({ isActive }) => `${BTN_CORE} h-11 w-full justify-start gap-2 px-3 text-sm ${isActive ? PICKED : SECONDARY}`}>
             <Eraser className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />

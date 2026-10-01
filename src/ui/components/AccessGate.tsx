@@ -6,12 +6,12 @@ import { C } from '../olive/kit'
 import { BTN, PRIMARY, SECONDARY } from './buttons'
 
 /**
- * Lock screen: recording the game is reserved for whoever holds the required
- * access, spectators go through /watch (read-only). The label names the missing
- * access, so that a volunteer understands they need a different code rather than
- * believing theirs is broken.
+ * Lock screen: recording the game, or reading the club's inside (rosters, plays), is
+ * reserved for whoever holds the required access. On a game, spectators go through
+ * /watch (read-only). The label names the missing access, so that a volunteer
+ * understands they need a different code rather than believing theirs is broken.
  */
-export function AccessGate({ ability, matchId, onUnlock, onExit }: { ability: Ability; matchId: string; onUnlock: () => void; onExit: () => void }) {
+export function AccessGate({ ability, matchId, onUnlock, onExit }: { ability: Ability; matchId?: string; onUnlock: () => void; onExit: () => void }) {
   const translate = useT()
   const accessName = translate(`role.${REQUIRED[ability]}`)
   return (
@@ -23,16 +23,16 @@ export function AccessGate({ ability, matchId, onUnlock, onExit }: { ability: Ab
         <Lock className="h-7 w-7" strokeWidth={1.8} />
       </span>
       <h2 className="text-2xl font-extrabold tracking-tight">{translate('gate.title', { role: accessName })}</h2>
-      <p className="max-w-sm text-sm text-muted-foreground">{translate('gate.explanation', { role: accessName.toLowerCase() })}</p>
+      <p className="max-w-sm text-sm text-muted-foreground">{translate(ability === 'score' ? 'gate.explanation' : 'gate.viewExplanation', { role: accessName.toLowerCase() })}</p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
         <button onClick={onUnlock} className={`${BTN} px-6 ${PRIMARY}`}>
           <LockOpen className="h-4 w-4" strokeWidth={2} />
           {translate('access.unlock')}
         </button>
-        <Link to={`/match/${matchId}/watch`} className={`${BTN} px-5 ${SECONDARY}`}>
+        {matchId && <Link to={`/match/${matchId}/watch`} className={`${BTN} px-5 ${SECONDARY}`}>
           <Eye className="h-4 w-4" strokeWidth={2} />
           {translate('gate.spectatorView')}
-        </Link>
+        </Link>}
       </div>
       <button onClick={onExit} className="mt-1 text-xs font-semibold text-muted-foreground hover:text-foreground">{translate('gate.home')}</button>
     </div>

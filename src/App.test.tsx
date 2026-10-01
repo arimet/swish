@@ -129,3 +129,20 @@ describe('an unreachable database', () => {
       .toHaveAttribute('title', expect.stringMatching(/serveur ne répond pas/i))
   })
 })
+
+describe('App — what a visitor reaches', () => {
+  it('a link to the club\'s inside lands on the staff code prompt, and the code opens it', async () => {
+    // A visitor follows the live games, the results and the calendar. A roster or a
+    // play reached by a link asks for the staff code instead of showing — or of
+    // silently bouncing home, which reads as a broken link.
+    window.history.pushState({}, '', '/teams')
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Accès Staff requis' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /déverrouiller/i }))
+    await userEvent.type(await screen.findByPlaceholderText('Code'), 'marque')
+    await userEvent.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Accès Staff requis' })).not.toBeInTheDocument())
+    expect(await screen.findByText('CLUB TEST')).toBeInTheDocument()
+    window.history.pushState({}, '', '/')
+  })
+})

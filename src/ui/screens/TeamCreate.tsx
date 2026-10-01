@@ -108,7 +108,7 @@ export function TeamCreate() {
           second team on, the gate goes back to work. */}
       <div className="mt-6 flex justify-end gap-3">
         <Link to="/teams" className={`${BTN} px-5 ${SECONDARY}`}>{translate('common.cancel')}</Link>
-        <button onClick={() => (founding ? create() : guard('manage', create))} disabled={!name.trim()} className={`${BTN} px-6 ${PRIMARY}`}>
+        <button onClick={() => (founding ? create() : guard('admin', create))} disabled={!name.trim()} className={`${BTN} px-6 ${PRIMARY}`}>
           {founding ? translate('create.createMyTeam') : translate('create.createTeam')}
         </button>
       </div>

@@ -63,7 +63,7 @@ describe('Dashboard', () => {
   it('puts the live game at the top', async () => {
     // The shortcut to the scorer's table is reserved for whoever keeps it: this test
     // stands on their side, the visitor's case is checked just below.
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+    sessionStorage.setItem(ROLE_KEY, 'staff')
     await saveSheet(null, { ...finished('m2', 6, 4), id: 'm2', status: 'live' })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
@@ -175,7 +175,7 @@ describe('Dashboard', () => {
     // nothing, since `nextFixture` ignores a past date like '2026-01-10' anyway.
     // No fixture other than the live game: the block must invite planning rather than
     // repeat the opposition already shown in the banner.
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+    sessionStorage.setItem(ROLE_KEY, 'staff')
     await saveSheet(null, { ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(0), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
     expect(await screen.findByRole('link', { name: /table de marque/i })).toBeInTheDocument()
@@ -187,7 +187,7 @@ describe('Dashboard', () => {
     // mistake): both must stay out of the upcoming fixtures, otherwise the second would
     // be announced as the "next fixture" although it
     // a déjà commencé.
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+    sessionStorage.setItem(ROLE_KEY, 'staff')
     await saveSheet(null, { ...finished('m2', 6, 4), id: 'm2', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(0), clubId: 'ta', opponentId: 'tb' } })
     await saveSheet(null, { ...finished('m5', 2, 1), id: 'm5', status: 'live', meta: { championshipLabel: 'Poule A', date: inNDays(1), clubId: 'ta', opponentId: 'tb' } })
     renderDash()
@@ -368,8 +368,8 @@ describe('Dashboard — the message to the team', () => {
     expect(await getMessage('ta')).toBeUndefined()
   })
 
-  it('writing is administrative: the scorer\'s table does not see the button, and nothing is saved', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('writing the message is the staff\'s: a visitor does not see the button, and nothing is saved', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     renderDash()
     await screen.findByText('VIGNOT')
 
@@ -381,12 +381,12 @@ describe('Dashboard — the message to the team', () => {
     expect(await getMessage('ta')).toBeUndefined()
   })
 
-  it('erasing is administrative: the scorer\'s table does not see the button, and the message stays', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('erasing the message is the staff\'s: a visitor does not see the button, and the message stays', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     await saveMessage({ clubId: 'ta', text: 'Maillot blanc samedi.', writtenAt: new Date().toISOString() })
     renderDash()
 
-    // It reads the message — it is one for the whole team — but neither "Edit" nor
+    // A visitor reads the message — it is one for the whole team — but neither "Edit" nor
     // "Erase" is offered to it.
     expect(await screen.findByText('Maillot blanc samedi.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /effacer/i })).not.toBeInTheDocument()

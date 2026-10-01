@@ -44,8 +44,8 @@ describe('MatchSetup', () => {
 })
 
 describe('MatchSetup — rights', () => {
-  it('planning a game is administrative: the scorer\'s table does not see the form, and nothing is saved', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('planning a game is the admin\'s: the staff does not see the form, and nothing is saved', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'staff')
     const onCreated = vi.fn()
     render(
       <MemoryRouter initialEntries={['/match/new']}>

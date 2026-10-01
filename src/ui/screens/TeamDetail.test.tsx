@@ -85,12 +85,12 @@ describe('TeamDetail — the player details', () => {
 })
 
 describe('TeamDetail — rights', () => {
-  it('editing the roster is administrative: the scorer\'s table sees none of its buttons, and nothing is written', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('editing the roster is the staff\'s: a visitor sees none of its buttons, and nothing is written', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     renderTeam()
     await screen.findByText(/MARTIN/)
 
-    // It reads the whole record — record, scorers, roster — with no write action
+    // A visitor reads the whole record — record, scorers, roster — with no write action
     // offered to it, hence no code prompt on a click.
     expect(screen.queryByRole('button', { name: /ajouter un joueur/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^supprimer$/i })).not.toBeInTheDocument()
@@ -99,6 +99,30 @@ describe('TeamDetail — rights', () => {
     expect(screen.queryByPlaceholderText('N°')).not.toBeInTheDocument()
     // What matters: the roster has not moved.
     expect(await listPlayers('ta')).toHaveLength(1) // MARTIN alone, DUPONT was not added
+  })
+
+  it('staff adds a player and edits the coach, but cannot remove a player nor delete the team; the admin can', async () => {
+    // Writing the roster is the staff's; deleting what carries history is the admin's.
+    sessionStorage.setItem(ROLE_KEY, 'staff')
+    const { unmount } = renderTeam()
+    await userEvent.click(await screen.findByRole('button', { name: /ajouter un joueur/i }))
+    await userEvent.type(await screen.findByPlaceholderText('N°'), '9')
+    await userEvent.type(screen.getByPlaceholderText('Nom'), 'DUPONT')
+    await userEvent.click(screen.getByRole('button', { name: /ajouter le joueur/i }))
+    await waitFor(async () => expect(await listPlayers('ta')).toHaveLength(2))
+
+    const coach = screen.getByLabelText(/entraîneur/i)
+    await userEvent.type(coach, 'Mme Durand{Enter}')
+    await waitFor(async () => expect((await getTeam('ta'))?.coach).toBe('Mme Durand'))
+
+    expect(screen.queryByRole('button', { name: /retirer/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^supprimer$/i })).not.toBeInTheDocument()
+    unmount()
+
+    sessionStorage.setItem(ROLE_KEY, 'admin')
+    renderTeam()
+    expect((await screen.findAllByRole('button', { name: /retirer/i })).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: /^supprimer$/i })).toBeInTheDocument()
   })
 
   it('removes a player only after confirmation', async () => {
@@ -126,12 +150,12 @@ describe('TeamDetail — rights', () => {
     expect(await screen.findByPlaceholderText('N°')).toBeInTheDocument()
   })
 
-  it('does not let anyone type a coach the right will not let them save', async () => {
+  it('does not let a visitor type a coach the right will not let them save', async () => {
     // The same requirement as on the standings' score field: what the screen shows and
     // what the store holds must say the same thing. The field therefore does not show
     // at all without the right, rather than opening to typing only to be refused on
     // submit.
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+    sessionStorage.removeItem(ROLE_KEY)
     renderTeam()
     await screen.findByText(/MARTIN/)
 

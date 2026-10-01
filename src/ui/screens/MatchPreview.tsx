@@ -196,8 +196,8 @@ export function MatchPreview({ matchId }: { matchId: string }) {
             mid-action, and `LiveMatch` re-evaluates `can()` on every render because
             recording a game lasts two hours, not because the other screens forgot
             to. */}
-        {manages && (
-          <button onClick={() => guard('manage', () => setAskDelete(true))} className={`${BTN} ${SECONDARY} mr-auto px-4`}>
+        {can('admin') && (
+          <button onClick={() => guard('admin', () => setAskDelete(true))} className={`${BTN} ${SECONDARY} mr-auto px-4`}>
             {translate('common.delete')}
           </button>
         )}

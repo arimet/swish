@@ -92,10 +92,10 @@ describe('SummaryScreen — rights', () => {
   const renderSummary = () =>
     render(<AuthProvider><MemoryRouter><SummaryScreen matchId={MATCH_ID} onHome={vi.fn()} /></MemoryRouter></AuthProvider>)
 
-  it('post-game correction is refused to the scorer\'s table: no button, no correction mode', async () => {
-    // Correcting a closed sheet is not the Saturday volunteer's job: neither correction
-    // button is offered to them, and the mode does not open.
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('post-game correction is refused to a visitor: no button, no correction mode', async () => {
+    // Correcting a closed sheet is the staff's job: neither correction
+    // button is offered to a visitor, and the mode does not open.
+    sessionStorage.removeItem(ROLE_KEY)
     renderSummary()
     await screen.findByText('Visiteurs · VERDUN')
 

@@ -59,7 +59,7 @@ export function Admin() {
 
   // Guard first, mutate second: the scorer's table does not see a confirmation dialog
   // open that it would have no right to confirm.
-  const ask = (op: Operation) => guard('manage', () => setPending(op))
+  const ask = (op: Operation) => guard('admin', () => setPending(op))
   /* No reload after the operation. Every one of them empties something through
      `mutate` or, for the sheets, `writeEvents`, and `WriteBridge` invalidates what each
      names — which is what makes this screen's counters fall to zero as soon as the
@@ -85,7 +85,7 @@ export function Admin() {
   // follows the same rule. This screen is nothing but a board of destructive buttons:
   // without the right, all that would be left is counts under buttons demanding a
   // code. The guards on each operation stay in place behind this redirect.
-  if (!can('manage')) return <Navigate to="/" replace />
+  if (!can('admin')) return <Navigate to="/" replace />
   /* Nothing is announced until all four lists are in. Every row here says how much a
      button is about to destroy, and each count comes from a different query: drawn as
      they arrive, a row reads "0 plays — Delete" next to a library that holds three.

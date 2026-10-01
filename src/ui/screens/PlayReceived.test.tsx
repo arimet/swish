@@ -117,14 +117,14 @@ describe('SchemaRecu — the play that arrived by link', () => {
     expect(await screen.findByText('fiche')).toBeInTheDocument()
   })
 
-  it('adding is administrative: the scorer\'s table is asked for the code, and nothing is written', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('adding is the staff\'s: a visitor is asked for the code, and nothing is written', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     open(await encode(twoSteps()))
     await screen.findByRole('img', { name: /tableau tactique/ })
 
     await userEvent.click(screen.getByRole('button', { name: /Ajouter à ma bibliothèque/ }))
 
-    expect(await screen.findByRole('heading', { name: /Accès Administrateur requis/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Accès Staff requis/ })).toBeInTheDocument()
     expect(await listPlays('ta')).toHaveLength(0)
     expect(screen.queryByText('fiche')).not.toBeInTheDocument()
   })

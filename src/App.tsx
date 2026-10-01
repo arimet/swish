@@ -11,7 +11,8 @@ import { TeamDetail } from './ui/screens/TeamDetail'
 import { PlayerDetail } from './ui/screens/PlayerDetail'
 import { MatchSetup } from './ui/screens/MatchSetup'
 import { MatchPreview } from './ui/screens/MatchPreview'
-import { AuthProvider } from './app/auth'
+import { AuthProvider, useAuth } from './app/auth'
+import { AccessGate } from './ui/components/AccessGate'
 import { ClubProvider, useClub } from './app/club'
 import { Welcome } from './ui/screens/Welcome'
 import { useT } from './i18n'
@@ -35,6 +36,16 @@ const Admin = lazy(() => import('./ui/screens/Admin').then((m) => ({ default: m.
 const LiveMatch = lazy(() => import('./ui/screens/LiveMatch').then((m) => ({ default: m.LiveMatch })))
 
 const Padded = ({ children }: { children: ReactNode }) => <div className="p-6">{children}</div>
+
+/** The club's inside — rosters, players, plays — is the staff's: a visitor follows the
+ *  live games, the results and the calendar. A link to it lands on the code prompt
+ *  rather than on a page that vanishes. */
+function StaffOnly({ children }: { children: ReactNode }) {
+  const { can, guard } = useAuth()
+  const navigate = useNavigate()
+  if (can('view')) return <>{children}</>
+  return <AccessGate ability="view" onUnlock={() => guard('view', () => {})} onExit={() => navigate('/')} />
+}
 
 function MatchSetupRoute() {
   const navigate = useNavigate()
@@ -129,7 +140,7 @@ export default function App() {
             <Route path="/match/:id/live" element={<LiveRoute />} />
             {/* The time-out viewer: full screen, outside the shell and outside the club
                 gate — a player opens the play at home. */}
-            <Route path="/schemas/:id/lecteur" element={<PlayViewer />} />
+            <Route path="/schemas/:id/lecteur" element={<StaffOnly><PlayViewer /></StaffOnly>} />
             {/* A play received by link: outside the shell and outside the club gate,
                 since the whole play is in the URL's fragment — whoever receives the
                 link may never have opened the application. */}
@@ -142,14 +153,14 @@ export default function App() {
               <Route index element={<Dashboard />} />
               <Route path="/calendrier" element={<Calendar />} />
               <Route path="/championnat" element={<Standings />} />
-              <Route path="/teams" element={<Padded><TeamsList /></Padded>} />
-              <Route path="/teams/:id" element={<TeamDetail />} />
-              <Route path="/players/:id" element={<PlayerDetail />} />
+              <Route path="/teams" element={<StaffOnly><Padded><TeamsList /></Padded></StaffOnly>} />
+              <Route path="/teams/:id" element={<StaffOnly><TeamDetail /></StaffOnly>} />
+              <Route path="/players/:id" element={<StaffOnly><PlayerDetail /></StaffOnly>} />
               {/* The playbook: the library, the reading screen (ungated), then the
                   editor — the most specific route first. */}
-              <Route path="/schemas" element={<PlayList />} />
-              <Route path="/schemas/:id/edit" element={<PlayEdit />} />
-              <Route path="/schemas/:id" element={<PlayView />} />
+              <Route path="/schemas" element={<StaffOnly><PlayList /></StaffOnly>} />
+              <Route path="/schemas/:id/edit" element={<StaffOnly><PlayEdit /></StaffOnly>} />
+              <Route path="/schemas/:id" element={<StaffOnly><PlayView /></StaffOnly>} />
               {/* Data cleanup: inside the shell, every operation guarded by the
                   administrator code. */}
               <Route path="/admin" element={<Admin />} />

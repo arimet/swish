@@ -34,13 +34,13 @@ describe('TeamCreate', () => {
 })
 
 describe('TeamCreate — rights', () => {
-  it('creating a team is administrative: the scorer\'s table is asked for the admin code', async () => {
+  it('creating a team is the admin\'s: the staff is asked for the admin code', async () => {
     // A team already exists, and that premise carries the test: the rule "creating a
     // team is administrative" protects data, so it only applies from the moment there
     // is some. On an empty database, creation is the founding of the club and asks for
     // nothing — see the test just below.
     await saveTeam({ id: 'deja', name: 'DÉJÀ LÀ' })
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+    sessionStorage.setItem(ROLE_KEY, 'staff')
     render(<MemoryRouter><ClubProvider><AuthProvider><TeamCreate /></AuthProvider></ClubProvider></MemoryRouter>)
 
     await userEvent.type(screen.getByLabelText(/nom de l.équipe/i), 'VIGNOT')

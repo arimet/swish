@@ -58,8 +58,8 @@ describe('SchemaList — the playbook', () => {
     expect(screen.queryByText('Combinaison de Metz')).not.toBeInTheDocument()
   })
 
-  it('creating a play is administrative: the scorer\'s table sees no create button', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('creating a play is the staff\'s: a visitor sees no create button', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     renderList()
     await screen.findByText(/la bibliothèque est vide/i)
 
@@ -93,8 +93,8 @@ describe('SchemaList — the playbook', () => {
     expect(names).toEqual(['Pick and roll haut', 'Pick and roll haut (copie)'])
   })
 
-  it('duplicating and deleting are administrative: the scorer\'s table only gets "Play", and nothing is written', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('duplicating and deleting are the staff\'s: a visitor only gets "Play", and nothing is written', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     await savePlay(play('s1', 'Pick and roll haut'))
     renderList()
     const card = (await screen.findAllByRole('article'))[0]
@@ -210,8 +210,8 @@ describe('SchemaList — filing the library', () => {
       .toBeInTheDocument()
   })
 
-  it('changing the folder is administrative: the scorer\'s table reads it without being able to change it', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('changing the folder is the staff\'s: a visitor reads it without being able to change it', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     await savePlay(play('s1', 'Pick and roll haut', { folder: 'Attaque placée' }))
     renderList()
     const card = (await screen.findAllByRole('article'))[0]

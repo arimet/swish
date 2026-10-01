@@ -122,9 +122,10 @@ export function Calendar() {
               className={`${BTN_BASE} h-11 px-4 text-sm ${SECONDARY}`}>
               {translate('calendar.newTraining')}
             </button>
-            <Link to="/match/new" className={`${BTN_BASE} h-11 px-4 text-sm ${PRIMARY}`}>
+            {/* Creating a game is the administrator's; planning a session, the staff's. */}
+            {can('admin') && <Link to="/match/new" className={`${BTN_BASE} h-11 px-4 text-sm ${PRIMARY}`}>
               {translate('calendar.newGame')}
-            </Link>
+            </Link>}
           </div>
         )}
       />

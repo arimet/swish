@@ -1,7 +1,7 @@
 import { render, screen } from '../test/render'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { AuthProvider, useAuth } from './auth'
+import { AuthProvider, ROLE_KEY, useAuth } from './auth'
 
 function Probe({ onGuardedManage }: { onGuardedManage?: () => void }) {
   const { role, playerId, can, guard, setPlayer } = useAuth()
@@ -9,8 +9,10 @@ function Probe({ onGuardedManage }: { onGuardedManage?: () => void }) {
     <div>
       <p>rôle : {role}</p>
       <p>joueur : {playerId ?? 'aucun'}</p>
+      <p>view : {can('view') ? 'oui' : 'non'}</p>
       <p>score : {can('score') ? 'oui' : 'non'}</p>
       <p>manage : {can('manage') ? 'oui' : 'non'}</p>
+      <p>admin : {can('admin') ? 'oui' : 'non'}</p>
       <button onClick={() => guard('manage', () => onGuardedManage?.())}>Action gérée</button>
       <button onClick={() => setPlayer('p1')}>Choisir p1</button>
     </div>
@@ -31,28 +33,40 @@ beforeEach(() => {
 })
 
 describe('the rights table', () => {
-  it('a visitor can neither record nor manage', async () => {
+  it('a visitor holds no right at all', async () => {
     renderProbe()
-    expect(await screen.findByText('score : non')).toBeInTheDocument()
+    expect(await screen.findByText('view : non')).toBeInTheDocument()
+    expect(screen.getByText('score : non')).toBeInTheDocument()
     expect(screen.getByText('manage : non')).toBeInTheDocument()
+    expect(screen.getByText('admin : non')).toBeInTheDocument()
   })
 
-  it('the scorer\'s table records but does not manage', async () => {
+  it('the staff views, records and manages, but is not the administrator', async () => {
     renderProbe()
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('marque')
-    expect(await screen.findByText('rôle : scorer')).toBeInTheDocument()
+    expect(await screen.findByText('rôle : staff')).toBeInTheDocument()
+    expect(screen.getByText('view : oui')).toBeInTheDocument()
     expect(screen.getByText('score : oui')).toBeInTheDocument()
-    expect(screen.getByText('manage : non')).toBeInTheDocument()
+    expect(screen.getByText('manage : oui')).toBeInTheDocument()
+    expect(screen.getByText('admin : non')).toBeInTheDocument()
   })
 
-  it("the administrator records and manages", async () => {
+  it('the administrator holds all four rights', async () => {
     renderProbe()
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('admin')
     expect(await screen.findByText('rôle : admin')).toBeInTheDocument()
+    expect(screen.getByText('view : oui')).toBeInTheDocument()
     expect(screen.getByText('score : oui')).toBeInTheDocument()
     expect(screen.getByText('manage : oui')).toBeInTheDocument()
+    expect(screen.getByText('admin : oui')).toBeInTheDocument()
+  })
+
+  it('a role stored under its former name "scorer" is still read as staff', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'scorer')
+    renderProbe()
+    expect(await screen.findByText('rôle : staff')).toBeInTheDocument()
   })
 })
 
@@ -62,7 +76,7 @@ describe('an unknown code', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Action gérée' }))
     await saisirCode('n-importe-quoi')
     // The dialog stays open, with a message naming the access required.
-    expect(await screen.findByText(/Code Administrateur requis/)).toBeInTheDocument()
+    expect(await screen.findByText(/Code Staff requis/)).toBeInTheDocument()
     expect(screen.getByText('rôle : visitor')).toBeInTheDocument()
   })
 })

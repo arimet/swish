@@ -336,9 +336,9 @@ describe('the full run', () => {
 })
 
 describe('LiveMatch — rights', () => {
-  it('the scorer\'s table records the game without being asked for any code', async () => {
+  it('the staff records the game without being asked for any code', async () => {
     // The heart of the model: the volunteer keeps the sheet without holding the admin code.
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+    sessionStorage.setItem(ROLE_KEY, 'staff')
     renderLive()
     await userEvent.click(await screen.findByRole('button', { name: 'Ajouter 2 points à VERDUN' }))
 
@@ -349,10 +349,10 @@ describe('LiveMatch — rights', () => {
     })
   })
 
-  it('a visitor records nothing: the screen announces the scorer\'s-table access instead of the sheet', async () => {
+  it('a visitor records nothing: the screen announces the staff access instead of the sheet', async () => {
     sessionStorage.removeItem(ROLE_KEY)
     renderLive()
-    expect(await screen.findByRole('heading', { name: /Accès Table de marque requis/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Accès Staff requis/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Ajouter 2 points à VERDUN' })).not.toBeInTheDocument()
   })
 })

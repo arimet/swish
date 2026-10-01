@@ -5,29 +5,43 @@ import { BTN, PRIMARY, SECONDARY } from '../ui/components/buttons'
 import { useT } from '../i18n'
 import { Lock } from 'lucide-react'
 
-/** What one may write in the application. A visitor changes nothing, the scorer's
- *  table records the game, the administrator runs the club. */
-export type Role = 'visitor' | 'scorer' | 'admin'
+/**
+ * Who uses the application.
+ *
+ * A **visitor** follows the club: the live games, the results, the calendar — and
+ * changes nothing. The **staff** runs the season: keeps the scorer's table, edits the
+ * data (rosters, call-ups, results, trainings, the message to the team, a game's
+ * stats) and draws the plays. The **administrator** does all of it, and is the only
+ * one who creates games and teams, deletes anything that carries history (a game, a
+ * team, a player), and reaches the cleanup screen.
+ */
+export type Role = 'visitor' | 'staff' | 'admin'
 
-/** The right an action demands. */
-export type Ability = 'score' | 'manage'
+/**
+ * The right an action demands.
+ * - `view`: reading the club's inside — rosters, players, plays.
+ * - `score`: keeping the scorer's table.
+ * - `manage`: editing the season's data and the plays.
+ * - `admin`: creating games and teams, deleting what carries history, cleanup.
+ */
+export type Ability = 'view' | 'score' | 'manage' | 'admin'
 
-/** Who may do what. An administrator also keeps the scorer's table: that is the
- *  common case of the coach recording the game for want of a volunteer. The
- *  converse is false. */
+const STAFF: Ability[] = ['view', 'score', 'manage']
 const RIGHTS: Record<Role, Ability[]> = {
   visitor: [],
-  scorer: ['score'],
-  admin: ['score', 'manage'],
+  staff: STAFF,
+  admin: [...STAFF, 'admin'],
 }
 
 /** The minimum access that grants each right. It is what names the code to ask for. */
-export const REQUIRED: Record<Ability, Role> = { score: 'scorer', manage: 'admin' }
+export const REQUIRED: Record<Ability, Role> = { view: 'staff', score: 'staff', manage: 'staff', admin: 'admin' }
 
 /** Only the roles one acquires have a code: "visitor" is the default state, not
  *  something you unlock. */
 const CODES: Record<Exclude<Role, 'visitor'>, string> = {
-  scorer: (import.meta.env.VITE_SCORER_PASSWORD as string | undefined)?.trim() || 'marque',
+  // The staff took over the scorer's table's code — and its variable, so a deployment
+  // changes nothing on Vercel.
+  staff: (import.meta.env.VITE_SCORER_PASSWORD as string | undefined)?.trim() || 'marque',
   admin: (import.meta.env.VITE_ADMIN_PASSWORD as string | undefined)?.trim() || 'admin',
 }
 /** The player code grants no write right: it opens the choice of a name in the
@@ -42,7 +56,9 @@ export const ROLE_KEY = 'swish-role'
  *  you" at every opening, unlike the role. */
 export const PLAYER_ID_KEY = 'swish-player-id'
 
-const isRole = (v: string | null): v is Role => v === 'scorer' || v === 'admin'
+/** The role stored for the tab. `scorer` is the staff's former name: a tab opened
+ *  before the change keeps its access instead of falling back to visitor mid-game. */
+const storedRole = (v: string | null): Role => (v === 'staff' || v === 'scorer' ? 'staff' : v === 'admin' ? 'admin' : 'visitor')
 
 interface AuthCtx {
   role: Role
@@ -80,8 +96,7 @@ const Ctx = createContext<AuthCtx | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const translate = useT()
   const [role, setRole] = useState<Role>(() => {
-    const stored = sessionStorage.getItem(ROLE_KEY)
-    return isRole(stored) ? stored : 'visitor'
+    return storedRole(sessionStorage.getItem(ROLE_KEY))
   })
   const [playerId, setPlayerId] = useState<string | null>(() => localStorage.getItem(PLAYER_ID_KEY))
   const [pending, setPending] = useState<{ ability: Ability; action: () => void } | null>(null)

@@ -75,7 +75,7 @@ describe('the translation catalogue', () => {
   it('the computed families are complete', () => {
     // These keys are built at run time (`t(\`role.${role}\`)`): the test cannot read
     // them from the sources, so it enumerates the domain's possible values.
-    for (const role of ['visitor', 'scorer', 'admin']) expect(fr).toHaveProperty(`role.${role}`)
+    for (const role of ['visitor', 'staff', 'admin']) expect(fr).toHaveProperty(`role.${role}`)
   })
 
   it('English never falls back to the key itself', () => {

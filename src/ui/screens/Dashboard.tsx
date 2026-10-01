@@ -132,7 +132,7 @@ export function Dashboard() {
 
         {!onlySettingUp && (
           <>
-            <Banner live={live} next={next} teams={teams} manages={manages} keepsScore={can('score')} />
+            <Banner live={live} next={next} teams={teams} administers={can('admin')} keepsScore={can('score')} />
             <NextFixture fixture={fixture} teams={teams} players={players} convocation={convocation ?? null} plays={plays} manages={manages} />
           </>
         )}
@@ -164,7 +164,7 @@ export function Dashboard() {
             )}
           </>
         ) : settingUp ? (
-          <GettingStarted roster={players.length} otherTeams={otherTeams} clubId={clubId} manages={manages} />
+          <GettingStarted roster={players.length} otherTeams={otherTeams} clubId={clubId} manages={can('admin')} />
         ) : null}
 
         <div className={`${hasPlayed ? 'mt-6' : 'mt-5'} grid gap-5 lg:grid-cols-[1fr_420px] [&>*]:min-w-0`}>
@@ -311,7 +311,7 @@ function CoachMessage({ clubId }: { clubId: string }) {
 
 // `live` and `next` both come from `mine`, already filtered on
 // `meta.clubId === clubId`: our club is therefore always side A.
-function Banner({ live, next, teams, manages, keepsScore }: { live?: Match; next?: Match; teams: Record<string, Team>; manages: boolean; keepsScore: boolean }) {
+function Banner({ live, next, teams, administers, keepsScore }: { live?: Match; next?: Match; teams: Record<string, Team>; administers: boolean; keepsScore: boolean }) {
   const translate = useT()
   const opponent = (m: Match) => teams[m.meta.opponentId]?.name ?? translate('dashboard.opponent')
   if (live) {
@@ -355,8 +355,8 @@ function Banner({ live, next, teams, manages, keepsScore }: { live?: Match; next
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
       <span className="text-sm" style={{ color: C.muted }}>{translate('dashboard.noGameScheduled')}</span>
-      {/* Planning writes: the shortcut only shows to whoever manages the club. */}
-      {manages && <Link to="/match/new" className={`ml-auto ${BTN_BASE} h-11 px-4 text-sm ${PRIMARY}`}>{translate('dashboard.planGame')}</Link>}
+      {/* Creating a game is the administrator's: the shortcut only shows to them. */}
+      {administers && <Link to="/match/new" className={`ml-auto ${BTN_BASE} h-11 px-4 text-sm ${PRIMARY}`}>{translate('dashboard.planGame')}</Link>}
     </div>
   )
 }

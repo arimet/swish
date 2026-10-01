@@ -204,8 +204,8 @@ describe('SchemaEdit — the playbook editor', () => {
     expect(f.points[0]).toEqual({ x: 0.5, y: 0.62 })
   })
 
-  it('the scorer\'s table does not open the editor: it is redirected to the reading screen, writing nothing', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('a visitor does not open the editor: it is redirected to the reading screen, writing nothing', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     const { container } = render(
       <MemoryRouter initialEntries={['/schemas/s1/edit']}>
         <AuthProvider>

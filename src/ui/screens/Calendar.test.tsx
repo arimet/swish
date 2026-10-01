@@ -203,8 +203,8 @@ describe('Calendar — the session\'s plays', () => {
     expect([...(await listTrainings())[0].playIds!].sort()).toEqual(['s1', 's2'])
   })
 
-  it('attaching a play is administrative: the scorer\'s table gets no checkbox, and nothing is saved', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('attaching a play is the staff\'s: a visitor gets no checkbox, and nothing is saved', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     await saveTraining({ id: 't1', clubId: 'ta', date: '2026-01-10', theme: 'Défense sur écran', playIds: ['s1'] })
     await savePlay(play('s1', 'Pick and roll haut'))
     await savePlay(play('s2', 'Corner pour le 4'))
@@ -223,8 +223,8 @@ describe('Calendar — the session\'s plays', () => {
 })
 
 describe('Calendar — rights', () => {
-  it('planning is administrative: the scorer\'s table sees neither button nor form, and nothing is saved', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('planning is the staff\'s: a visitor sees neither button nor form, and nothing is saved', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     renderCal()
     await screen.findByText(/VERDUN/)
 

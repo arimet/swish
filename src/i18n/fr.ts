@@ -59,7 +59,6 @@ export const fr: Record<string, string> = {
   'access.needsCode': 'Cette action nécessite ce code d’accès.',
   'access.wrongCode': 'Code {role} requis.',
   'role.visitor': 'Visiteur',
-  'role.scorer': 'Table de marque',
   'role.admin': 'Administrateur',
 
   // ── Langue ────────────────────────────────────────────────────────────────
@@ -72,6 +71,8 @@ export const fr: Record<string, string> = {
   'teams.none': 'Aucune équipe pour l’instant.',
   'gate.title': 'Accès {role} requis',
   'gate.explanation': 'Le code {role} est requis pour saisir la rencontre.',
+  'gate.viewExplanation': 'Le code {role} est requis pour voir l’effectif, les joueurs et les schémas.',
+  'role.staff': 'Staff',
   'gate.spectatorView': 'Suivi spectateur',
   'gate.home': '← Accueil',
   'five.leave': '← Quitter',

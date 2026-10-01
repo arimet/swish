@@ -19,14 +19,14 @@ export function TeamsList() {
       {/* Creating a team is a write: the button only renders for whoever has the
           right, rather than demanding a code from whoever presses it. */}
       <PageTitle
-        action={can('manage') && <Link to="/teams/new" className={`${BTN} px-4 ${PRIMARY}`}>{translate('teams.new')}</Link>} />
+        action={can('admin') && <Link to="/teams/new" className={`${BTN} px-4 ${PRIMARY}`}>{translate('teams.new')}</Link>} />
 
       {teams === undefined ? (
         <div className="h-24 animate-pulse rounded-2xl" style={{ background: C.card }} />
       ) : teams.length === 0 ? (
         <div className="rounded-2xl py-16 text-center" style={{ border: `1px dashed ${C.border}` }}>
           <p className="text-sm" style={{ color: C.muted }}>{translate('teams.none')}</p>
-          {can('manage') && <Link to="/teams/new" className={`${BTN} mt-4 px-5 ${PRIMARY}`}>{translate('welcome.firstTeam')}</Link>}
+          {can('admin') && <Link to="/teams/new" className={`${BTN} mt-4 px-5 ${PRIMARY}`}>{translate('welcome.firstTeam')}</Link>}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

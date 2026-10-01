@@ -150,10 +150,10 @@ describe('MatchPreview — the call-up', () => {
 })
 
 describe('MatchPreview — rights', () => {
-  it('the scorer\'s table starts the game without being asked for any code', async () => {
+  it('the staff starts the game without being asked for any code', async () => {
     // The Saturday volunteer must be able to start the game they are about to keep:
-    // starting belongs to the scorer's table, not to club administration.
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+    // starting belongs to the staff, not to club administration.
+    sessionStorage.setItem(ROLE_KEY, 'staff')
     renderAvecSaisie()
     await userEvent.click(await screen.findByRole('button', { name: /démarrer la rencontre/i }))
 
@@ -161,13 +161,13 @@ describe('MatchPreview — rights', () => {
     expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
   })
 
-  it('the call-up stays administrative: the scorer\'s table has neither boxes nor button, and nothing is saved', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('the call-up is the staff\'s: a visitor has neither boxes nor button, and nothing is saved', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     renderPreview()
     await screen.findByText(/convocation/i)
 
-    // No checkboxes, no meeting-point fields, no save: nothing demands the
-    // administrator code any more from someone who only keeps the score.
+    // No checkboxes, no meeting-point fields, no save: nothing demands a
+    // code any more from someone who only follows the club.
     expect(screen.queryByRole('button', { name: /enregistrer la convocation/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/ANTOINE/i)).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/heure de rendez-vous/i)).not.toBeInTheDocument()
@@ -175,9 +175,19 @@ describe('MatchPreview — rights', () => {
     expect(await getConvocation('m1')).toBeUndefined()
   })
 
-  it('the scorer\'s table reads who is called up without being able to change it', async () => {
+  it('the staff changes the call-up', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'staff')
+    renderPreview()
+    await userEvent.click(await screen.findByLabelText(/ANTOINE/i))
+    await userEvent.click(screen.getByRole('button', { name: /enregistrer la convocation/i }))
+
+    await waitFor(async () => expect((await getConvocation('m1'))?.playerIds).toEqual(['p1']))
+    expect(screen.queryByPlaceholderText('Code')).not.toBeInTheDocument()
+  })
+
+  it('a visitor reads who is called up without being able to change it', async () => {
     // Knowing who is called up is not writing: the list stays, spelled out.
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+    sessionStorage.removeItem(ROLE_KEY)
     await saveConvocation({ matchId: 'm1', playerIds: ['p1'], meetTime: '18:00', meetPlace: 'Gymnase' })
     renderPreview()
 
@@ -186,16 +196,16 @@ describe('MatchPreview — rights', () => {
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
   })
 
-  it('deleting the game is administrative: the scorer\'s table does not see the button', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('deleting the game is the admin\'s: the staff does not see the button', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'staff')
     renderPreview()
-    await screen.findByText(/convocation/i)
+    await screen.findByRole('heading', { name: 'Convocation' })
 
     expect(screen.queryByRole('button', { name: /^supprimer$/i })).not.toBeInTheDocument()
   })
 
   it('a visitor is offered neither a start nor a deletion', async () => {
-    // Starting belongs to the scorer's table, deleting to administration: the visitor
+    // Starting belongs to the staff, deleting to the administrator: the visitor
     // reads the record, and nothing more.
     sessionStorage.removeItem(ROLE_KEY)
     renderPreview()

@@ -58,7 +58,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
   // for anyone who does not manage the club, and the direct URL sends them back to
   // the calendar rather than presenting a form with no submit. The gate on creation
   // stays in place behind that redirect.
-  if (!can('manage')) return <Navigate to="/calendrier" replace />
+  if (!can('admin')) return <Navigate to="/calendrier" replace />
 
   if (!ready || teams === undefined) {
     return (
@@ -114,7 +114,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
 
       <div className="mt-6 flex justify-end gap-3">
         <Link to="/" className={`${BTN} ${SECONDARY} px-5`}>{translate('common.cancel')}</Link>
-        <button onClick={() => guard('manage', create)} disabled={!canCreate} className={`${BTN} ${PRIMARY} px-6`}>{translate('match.plan')}</button>
+        <button onClick={() => guard('admin', create)} disabled={!canCreate} className={`${BTN} ${PRIMARY} px-6`}>{translate('match.plan')}</button>
       </div>
     </div>
   )

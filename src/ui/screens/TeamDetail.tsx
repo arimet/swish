@@ -31,6 +31,8 @@ export function TeamDetail() {
   // Keeping the roster belongs to the club: nothing that writes it shows to anyone
   // who does not manage it. The record itself reads in full.
   const manages = can('manage')
+  // Deleting carries history away — a team's games, a player's shots: the administrator's.
+  const administers = can('admin')
   const { clubId, clear } = useClub()
   const [askDelete, setAskDelete] = useState(false)
   // The player themselves and not a boolean: the dialog must be able to name them,
@@ -86,7 +88,7 @@ export function TeamDetail() {
    * That is checked in the repository, not assumed.
    */
   const removePlayer = () => { const p = toRemove; if (!p) return
-    guard('manage', async () => { await deletePlayer(p.id); setToRemove(null) }) }
+    guard('admin', async () => { await deletePlayer(p.id); setToRemove(null) }) }
   const startEdit = (p: Player) => { setEditingId(p.id); setEditBirth(p.birthDate ?? ''); setEditHeight(p.height ? String(p.height) : '') }
   // The player's id survives an edit: it is what carries their whole history of shots
   // and statistics, and recreating them would lose it.
@@ -124,7 +126,7 @@ export function TeamDetail() {
             opens, not re-derived afterwards. Accepted — locking yourself out between
             the opening and the confirmation only happens by handing the device over
             mid-action. */}
-        {manages && <button onClick={() => guard('manage', () => setAskDelete(true))} className={`${BTN_BASE} h-11 px-4 text-sm ${DANGER}`}>{translate('common.delete')}</button>}
+        {administers && <button onClick={() => guard('admin', () => setAskDelete(true))} className={`${BTN_BASE} h-11 px-4 text-sm ${DANGER}`}>{translate('common.delete')}</button>}
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
         title={translate('team.deleteTitle')} message={translate('team.deleteText', { name: team.name })} confirmLabel={translate('common.delete')} danger />
@@ -227,8 +229,8 @@ export function TeamDetail() {
                             "edit", and stood twenty-four pixels tall. A destruction is not
                             signalled with the colour of ordinary buttons, and is not aimed
                             at with the barely tolerable minimum. */}
-                        <button onClick={() => setToRemove(p)} aria-label={translate('team.removeNamedPlayer', { name: `${p.lastName} ${p.firstName}` })}
-                          className={`${BTN_BASE} h-9 px-2.5 text-xs ${DANGER}`}>{translate('team.remove')}</button>
+                        {administers && <button onClick={() => setToRemove(p)} aria-label={translate('team.removeNamedPlayer', { name: `${p.lastName} ${p.firstName}` })}
+                          className={`${BTN_BASE} h-9 px-2.5 text-xs ${DANGER}`}>{translate('team.remove')}</button>}
                       </>
                     )}
                   </div>

@@ -115,8 +115,8 @@ describe('Standings', () => {
 })
 
 describe('Standings — rights', () => {
-  it('entering a result is administrative: the scorer\'s table sees neither button nor fields, and nothing is saved', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('entering a result is the staff\'s: a visitor sees neither button nor fields, and nothing is saved', async () => {
+    sessionStorage.removeItem(ROLE_KEY)
     renderChamp()
     await screen.findByText(/aucun résultat saisi/i)
 
@@ -136,12 +136,12 @@ describe('Standings — rights', () => {
     expect(screen.getByLabelText('Équipe reçue')).toBeInTheDocument()
   })
 
-  it('leaves no corrected score on screen that the right does not allow: the scorer\'s table gets no field', async () => {
+  it('leaves no corrected score on screen that the right does not allow: a visitor gets no field', async () => {
     // The field is uncontrolled: React does not reset it on its own. If it opened to
     // typing without the right, a refusal would leave on screen a value the store does
     // not have — and the standings just above would keep counting the old one. The
     // score is therefore shown as plain text, with no field to type into.
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+    sessionStorage.removeItem(ROLE_KEY)
     await saveResult({ id: 'r1', championshipLabel: 'Poule A', date: '2026-01-10', homeId: 'tb', awayId: 'tc', homeScore: 70, awayScore: 60 })
     renderChamp()
     await screen.findByRole('table')

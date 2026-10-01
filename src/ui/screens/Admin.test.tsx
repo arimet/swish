@@ -169,8 +169,8 @@ describe('Administration — erase everything', () => {
 })
 
 describe('Administration — rights', () => {
-  it('shows the scorer\'s table no operation, and touches nothing', async () => {
-    sessionStorage.setItem(ROLE_KEY, 'scorer')
+  it('shows the staff no operation, and touches nothing', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'staff')
     renderAdmin()
 
     // The screen is nothing but a board of destructive buttons: without the right it

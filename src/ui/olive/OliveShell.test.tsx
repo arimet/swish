@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { OliveShell } from './OliveShell'
-import { AuthProvider, PLAYER_ID_KEY } from '../../app/auth'
+import { AuthProvider, PLAYER_ID_KEY, ROLE_KEY } from '../../app/auth'
 import { ClubProvider } from '../../app/club'
 import { savePlayer, saveTeam } from '../../persistence/repositories'
 
@@ -59,10 +59,10 @@ describe('the access entry point', () => {
     await saisirLeCode('marque')
     // The code accepted, the dialog closes by itself: the button shows the new role.
     await waitFor(() => expect(screen.queryByLabelText(/code d.accès/i)).not.toBeInTheDocument())
-    expect(screen.getAllByRole('button', { name: /accès · table de marque/i }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: /accès · staff/i }).length).toBeGreaterThan(0)
 
     await openAccess()
-    expect(await screen.findByText(/accès en cours : table de marque/i)).toBeInTheDocument()
+    expect(await screen.findByText(/accès en cours : staff/i)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /se verrouiller/i }))
     expect(await screen.findByText(/accès en cours : visiteur/i)).toBeInTheDocument()
   })
@@ -85,8 +85,25 @@ describe('the access entry point', () => {
   })
 })
 
+describe('the sidebar\'s links to the club\'s inside', () => {
+  const links = ['Équipes', 'Schémas', 'Mon équipe']
+
+  it('a visitor sees no Teams, no Plays and no My team link', async () => {
+    renderShell()
+    const aside = await screen.findByRole('complementary')
+    for (const name of links) expect(within(aside).queryByRole('link', { name })).not.toBeInTheDocument()
+  })
+
+  it('the staff has them', async () => {
+    sessionStorage.setItem(ROLE_KEY, 'staff')
+    renderShell()
+    const aside = await screen.findByRole('complementary')
+    for (const name of links) expect(await within(aside).findByRole('link', { name })).toBeInTheDocument()
+  })
+})
+
 describe('the administration entry', () => {
-  it('stays invisible to a visitor and to the scorer\'s table', async () => {
+  it('stays invisible to a visitor and to the staff', async () => {
     // A door you cannot open has no business showing: data cleanup is reserved for the
     // administrator.
     renderShell()
