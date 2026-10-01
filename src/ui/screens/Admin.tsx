@@ -20,6 +20,7 @@ import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { C, bd, useLeagueLabel } from '../olive/kit'
+import { BTN_BASE, DANGER } from '../components/buttons'
 import { WriteToken } from '../components/WriteToken'
 
 /** A cleanup operation ready to be confirmed: what it announces, and what it does.
@@ -229,8 +230,7 @@ function Row({ label, count, action, aria, disabled, onClick }: {
       <span className="shrink-0 text-[12px] font-semibold tabular-nums" style={{ color: C.muted }}>{count}</span>
       <button
         onClick={onClick} disabled={disabled} aria-label={aria}
-        className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40"
-        style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}
+        className={`${BTN_BASE} h-11 px-4 text-sm ${DANGER}`}
       >
         {action}
       </button>

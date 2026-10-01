@@ -1,6 +1,7 @@
 import type { Player } from '../../domain/types'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
+import { BTN, PICKED, PRIMARY, SECONDARY } from './buttons'
 
 /* The brand, as on the scorer's table: `--team-a` was a near-black in the light
    theme, hence black rings and hairlines on this screen. */
@@ -46,7 +47,7 @@ export function StartingFiveGate({
           <button
             disabled={!canStart}
             onClick={onStart}
-            className="rounded-2xl bg-primary px-8 py-4 text-base font-bold text-primary-foreground shadow-xl shadow-primary/25 transition enabled:hover:brightness-110 enabled:active:scale-95 disabled:opacity-40"
+            className={`${BTN} px-8 ${PRIMARY}`}
           >
             {translate('five.start')}
           </button>
@@ -81,8 +82,7 @@ function StartingFivePanel({ title, color, players, required, chosen, onToggle }
               key={p.id}
               disabled={disabled}
               onClick={() => onToggle(p.id)}
-              className="flex items-center gap-2.5 rounded-2xl border border-border/60 bg-background p-2.5 text-left transition hover:bg-muted active:scale-[0.98] disabled:opacity-35"
-              style={isChosen ? { boxShadow: `inset 0 0 0 2px ${color}`, borderColor: 'transparent' } : undefined}
+              className={`flex items-center gap-2.5 rounded-lg p-2.5 text-left transition active:scale-[0.98] disabled:opacity-35 ${isChosen ? PICKED : SECONDARY}`}
             >
               <span
                 className="nums grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[var(--c-card2)] text-sm font-extrabold text-[var(--c-text)]"

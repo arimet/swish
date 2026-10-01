@@ -7,6 +7,7 @@ import type { Match, Team, Training } from '../../domain/types'
 import type { Play } from '../../domain/plays'
 import { isoDay, nextFixture } from '../../domain/fixtures'
 import { C, bd, Ic, ICON, MatchCard, PageTitle, fmtDate } from '../olive/kit'
+import { BTN_BASE, DANGER, PRIMARY, SECONDARY } from '../components/buttons'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { useClub } from '../../app/club'
 import { currentLang, useT } from '../../i18n'
@@ -118,11 +119,10 @@ export function Calendar() {
         action={manages && (
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => guard('manage', () => setFormOpen(true))}
-              className="rounded-xl px-4 py-2.5 text-sm font-bold"
-              style={{ background: TRAINING_BG, color: TRAINING_INK, border: `1px solid ${TRAINING_INK}55` }}>
+              className={`${BTN_BASE} h-11 px-4 text-sm ${SECONDARY}`}>
               {translate('calendar.newTraining')}
             </button>
-            <Link to="/match/new" className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+            <Link to="/match/new" className={`${BTN_BASE} h-11 px-4 text-sm ${PRIMARY}`}>
               {translate('calendar.newGame')}
             </Link>
           </div>
@@ -133,7 +133,7 @@ export function Calendar() {
         <section className="mb-6 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${TRAINING_INK}44` }}>
           <div className="mb-4 flex items-center gap-3">
             <p className="text-xs font-bold uppercase tracking-wide" style={{ color: TRAINING_INK }}>{translate('calendar.trainingTitle')}</p>
-            <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('common.closeShort')}</button>
+            <button onClick={() => setFormOpen(false)} className={`ml-auto ${BTN_BASE} h-9 px-3 text-xs ${SECONDARY}`}>{translate('common.closeShort')}</button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="entr-date" label={translate('calendar.trainingDate')} type="date" value={date} onChange={setDate} />
@@ -141,7 +141,7 @@ export function Calendar() {
             <Field id="entr-place" label={translate('match.venue')} value={place} onChange={setPlace} />
             <Field id="entr-theme" label={translate('calendar.focus')} value={theme} onChange={setTheme} />
           </div>
-          <button onClick={add} disabled={!date || !clubId} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40" style={{ background: TRAINING_INK }}>
+          <button onClick={add} disabled={!date || !clubId} className={`mt-4 ${BTN_BASE} h-11 px-5 text-sm ${PRIMARY}`}>
             {translate('calendar.addTraining')}
           </button>
         </section>
@@ -257,8 +257,7 @@ function GameCard({ m, teams, manages }: { m: Match; teams: Record<string, Team>
       {/* Calling up writes: the shortcut is the coach's. The card leads to the game's
           record, where the call-up reads for everyone. */}
       {manages && m.status === 'setup' && (
-        <Link to={`/match/${m.id}#convocation`} className="rounded-xl px-3 py-1.5 text-center text-[12px] font-bold"
-          style={{ background: C.accentBg, color: C.accent }}>
+        <Link to={`/match/${m.id}#convocation`} className={`${BTN_BASE} h-9 px-3 text-[12px] ${SECONDARY}`}>
           {translate('calendar.callUp')}
         </Link>
       )}
@@ -357,7 +356,7 @@ function TrainingCard({ t, plays, manages, onToggleSchema, onDelete }: { t: Trai
           {/* `grid h-9 w-9` and not `px-1.5 py-0.5`: the target was 26 × 18, under the
               twenty-four-pixel minimum — and it is a **deletion**, the most unfortunate
               combination of a target you miss and a gesture you cannot undo. */}
-          {manages && <button onClick={onDelete} aria-label={translate('calendar.deleteTraining')} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg font-black transition hover:bg-[var(--c-danger-bg)] hover:text-[var(--c-danger)]" style={{ color: C.accent }}><X className="h-4 w-4" strokeWidth={2.5} /></button>}
+          {manages && <button onClick={onDelete} aria-label={translate('calendar.deleteTraining')} className={`${BTN_BASE} h-9 w-9 ${DANGER}`}><X className="h-4 w-4" strokeWidth={2.5} /></button>}
         </div>
       </div>
     </div>

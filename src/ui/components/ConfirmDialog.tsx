@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
+import { BTN, DANGER_FILLED, PRIMARY, SECONDARY } from './buttons'
 
 /** An in-app confirmation (replaces window.confirm).
  *
@@ -40,10 +41,10 @@ export function ConfirmDialog({ open, title, message, confirmLabel, cancelLabel,
           </>
         )}
         <div className="mt-3 flex gap-2">
-          <button onClick={close} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{cancelText}</button>
+          <button onClick={close} className={`${BTN} flex-1 ${SECONDARY}`}>{cancelText}</button>
           <button
             onClick={() => { onConfirm(); close() }} disabled={blocked}
-            className={`flex-1 rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110 disabled:opacity-40 disabled:hover:brightness-100 ${danger ? 'bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]' : 'bg-[var(--c-brand)]'}`}
+            className={`${BTN} flex-1 ${danger ? `${DANGER_FILLED} disabled:opacity-40` : PRIMARY}`}
           >
             {confirmText}
           </button>

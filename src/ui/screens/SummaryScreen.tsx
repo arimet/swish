@@ -21,6 +21,7 @@ import { teamTotals } from '../../domain/totals'
 import { matchRatios, scoreProgression } from '../../domain/progression'
 import { fmt } from '../components/GameClock'
 import { C, bd, TeamBadge, fmtDate , useLeagueLabel } from '../olive/kit'
+import { BTN_BASE, PRIMARY, PICKED, SECONDARY } from '../components/buttons'
 import type { GameEvent, Match, Player, ScoreKind, ShotSpot, StatKind, TeamSide } from '../../domain/types'
 import { Check, Download, Eye, Pencil } from 'lucide-react'
 
@@ -100,15 +101,15 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   return (
     <div className="p-6">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <button onClick={onHome} className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('gate.home')}</button>
+        <button onClick={onHome} className={`${BTN_BASE} ${SECONDARY} h-11 px-4 text-sm`}>{translate('gate.home')}</button>
         <div className="flex flex-wrap items-center gap-2.5">
-          <Link to={`/match/${match.id}/watch`} target="_blank" className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.muted }}><Eye className="h-4 w-4" strokeWidth={2} />{translate('summary.spectatorView')}</Link>
+          <Link to={`/match/${match.id}/watch`} target="_blank" className={`${BTN_BASE} ${SECONDARY} h-11 px-4 text-sm`}><Eye className="h-4 w-4" strokeWidth={2} />{translate('summary.spectatorView')}</Link>
           {/* Correcting the details or the stats after the fact belongs to
               administration: both buttons render only for it. Reading the sheet,
               following it and exporting it stay ungated for everyone. */}
           {can('manage') && (
             <>
-              <button onClick={() => guard('manage', () => setShowEdit(true))} className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}><Pencil className="h-4 w-4" strokeWidth={2} />{translate('summary.details')}</button>
+              <button onClick={() => guard('manage', () => setShowEdit(true))} className={`${BTN_BASE} ${SECONDARY} h-11 px-4 text-sm`}><Pencil className="h-4 w-4" strokeWidth={2} />{translate('summary.details')}</button>
               {/* The right is checked when correction mode opens, not re-derived
                   afterwards: an administrator who opens "Correct stats" and then locks
                   themselves out keeps a writing correction mode until they leave it.
@@ -117,14 +118,14 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
                   because recording a game lasts two hours and changes hands, not because
                   this screen forgot to. */}
               <button onClick={() => (editStats ? setEditStats(false) : guard('manage', () => setEditStats(true)))}
-                className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold" style={editStats ? { background: C.brand, color: C.onBrand } : { border: bd, color: C.text }}>
+                className={`${BTN_BASE} h-11 px-4 text-sm ${editStats ? PICKED : SECONDARY}`}>
                 {editStats
                   ? <><Check className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('summary.done')}</>
                   : <><Pencil className="h-4 w-4 shrink-0" strokeWidth={2} />{translate('summary.correctStats')}</>}
               </button>
             </>
           )}
-          <button onClick={printSummary} className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}><Download className="h-4 w-4" strokeWidth={2} />{translate('summary.exportPdf')}</button>
+          <button onClick={printSummary} className={`${BTN_BASE} ${PRIMARY} h-11 px-5 text-sm`}><Download className="h-4 w-4" strokeWidth={2} />{translate('summary.exportPdf')}</button>
         </div>
       </div>
       {editStats && (
@@ -132,7 +133,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
           <span className="min-w-0 flex-1">{translate('summary.correctionMode')}</span>
           {/* What the player dialog's "Correct" used to take back — a miss, a foul of a
               given type — is deleted here, like at the table. */}
-          <button onClick={() => setHistory(true)} className="shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-bold" style={{ border: `1px solid ${C.accentBd}` }}>{translate('history.title')}</button>
+          <button onClick={() => setHistory(true)} className={`${BTN_BASE} ${SECONDARY} px-3 py-1.5 text-[13px]`}>{translate('history.title')}</button>
         </div>
       )}
       <MatchMetaDialog open={showEdit} meta={match.meta} onClose={() => setShowEdit(false)} onSave={saveMeta} />

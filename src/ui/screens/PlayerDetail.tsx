@@ -9,6 +9,7 @@ import { ShotChart } from '../components/ShotCourt'
 import { fmt } from '../components/GameClock'
 import { useT } from '../../i18n'
 import { C, NumBadge, Panel, TeamBadge, bd, fmtDate , useLeagueLabel } from '../olive/kit'
+import { BTN_BASE, SECONDARY } from '../components/buttons'
 import { useAuth } from '../../app/auth'
 import type { Match } from '../../domain/types'
 
@@ -57,7 +58,7 @@ export function PlayerDetail() {
 
   return (
     <div className="p-6">
-      <Link to={team ? `/teams/${team.id}` : '/teams'} className="inline-block rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>
+      <Link to={team ? `/teams/${team.id}` : '/teams'} className={`${BTN_BASE} h-11 px-4 text-sm ${SECONDARY}`}>
         ← {team?.name ?? translate('nav.teams')}
       </Link>
 

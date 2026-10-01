@@ -6,6 +6,7 @@ import { useMatches, usePlayers, useTeam, useTeamsById } from '../../persistence
 import { teamRecord, teamMatches, teamScorers, type TeamMatchLine } from '../../domain/teamRecord'
 import type { Player, Team } from '../../domain/types'
 import { C, NumBadge, Panel, TeamBadge, bd, fmtDate } from '../olive/kit'
+import { BTN, BTN_BASE, DANGER, PRIMARY, SECONDARY } from '../components/buttons'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { useClub } from '../../app/club'
@@ -112,7 +113,7 @@ export function TeamDetail() {
 
   return (
     <div className="p-6">
-      <Link to="/teams" className="inline-block rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('team.backToTeams')}</Link>
+      <Link to="/teams" className={`${BTN_BASE} h-11 px-4 text-sm ${SECONDARY}`}>{translate('team.backToTeams')}</Link>
       <div className="mb-6 mt-4 flex items-center gap-3">
         <TeamBadge id={id} name={team.name} size="h-12 w-12 text-base" />
         <div className="min-w-0 flex-1">
@@ -123,7 +124,7 @@ export function TeamDetail() {
             opens, not re-derived afterwards. Accepted — locking yourself out between
             the opening and the confirmation only happens by handing the device over
             mid-action. */}
-        {manages && <button onClick={() => guard('manage', () => setAskDelete(true))} className="shrink-0 rounded-xl px-4 py-2 text-sm font-bold" style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}>{translate('common.delete')}</button>}
+        {manages && <button onClick={() => guard('manage', () => setAskDelete(true))} className={`${BTN_BASE} h-11 px-4 text-sm ${DANGER}`}>{translate('common.delete')}</button>}
       </div>
       <ConfirmDialog open={askDelete} onClose={() => setAskDelete(false)} onConfirm={removeTeam}
         title={translate('team.deleteTitle')} message={translate('team.deleteText', { name: team.name })} confirmLabel={translate('common.delete')} danger />
@@ -217,7 +218,7 @@ export function TeamDetail() {
                     {manages && (
                       <>
                         <button aria-label={translate(editingId === p.id ? 'team.closePlayer' : 'team.editPlayer', { name: p.lastName })}
-                          onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold" style={{ color: C.muted }}>
+                          onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))} className={`${BTN_BASE} h-9 px-2.5 text-xs ${SECONDARY}`}>
                           {translate(editingId === p.id ? 'common.close' : 'common.edit')}
                         </button>
                         {/* Removal stays outside the expanded area: it is a destructive
@@ -227,7 +228,7 @@ export function TeamDetail() {
                             signalled with the colour of ordinary buttons, and is not aimed
                             at with the barely tolerable minimum. */}
                         <button onClick={() => setToRemove(p)} aria-label={translate('team.removeNamedPlayer', { name: `${p.lastName} ${p.firstName}` })}
-                          className="shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold transition hover:bg-[var(--c-danger-bg)]" style={{ color: C.danger }}>{translate('team.remove')}</button>
+                          className={`${BTN_BASE} h-9 px-2.5 text-xs ${DANGER}`}>{translate('team.remove')}</button>
                       </>
                     )}
                   </div>
@@ -241,7 +242,7 @@ export function TeamDetail() {
                         <label htmlFor={`edit-height-${p.id}`} className="mb-1 block text-[12px] font-bold uppercase tracking-wide" style={miniLabel}>{translate('team.playerHeight')}</label>
                         <input id={`edit-height-${p.id}`} type="number" inputMode="numeric" value={editHeight} onChange={(e) => setEditHeight(e.target.value)} style={{ ...field, width: '100%' }} />
                       </div>
-                      <button onClick={() => saveEdit(p)} className="col-span-2 rounded-xl py-2 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('common.save')}</button>
+                      <button onClick={() => saveEdit(p)} className={`col-span-2 ${BTN} ${PRIMARY}`}>{translate('common.save')}</button>
                     </div>
                   )}
                 </li>
@@ -252,14 +253,14 @@ export function TeamDetail() {
                 right. Opening the form is already a write, so the guard stays here and
                 not only at save time. */}
             {!manages ? null : !addingPlayer ? (
-              <button onClick={() => guard('manage', () => setAddingPlayer(true))} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+              <button onClick={() => guard('manage', () => setAddingPlayer(true))} className={`w-full ${BTN} ${PRIMARY}`}>
                 {translate('team.addPlayer')}
               </button>
             ) : (
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <p className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('team.newPlayer')}</p>
-                <button onClick={() => setAddingPlayer(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('common.closeShort')}</button>
+                <button onClick={() => setAddingPlayer(false)} className={`ml-auto ${BTN_BASE} h-9 px-3 text-xs ${SECONDARY}`}>{translate('common.closeShort')}</button>
               </div>
               <div className="grid grid-cols-[56px_1fr] gap-2">
                 <input placeholder={translate('team.number')} value={num} onChange={(e) => setNum(e.target.value)} inputMode="numeric" style={{ ...field, textAlign: 'center' }} />
@@ -276,7 +277,7 @@ export function TeamDetail() {
                   <input id="add-height" type="number" inputMode="numeric" value={height} onChange={(e) => setHeight(e.target.value)} style={{ ...field, width: '100%' }} />
                 </div>
               </div>
-              <button onClick={addPlayer} className="w-full rounded-xl py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('team.addThisPlayer')}</button>
+              <button onClick={addPlayer} className={`w-full ${BTN} ${PRIMARY}`}>{translate('team.addThisPlayer')}</button>
             </div>
             )}
           </Panel>

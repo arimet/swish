@@ -9,7 +9,10 @@
  */
 /** Everything but the size: the match screen's buttons are a notch smaller (44 px)
  *  than the dialogs' (48 px), and two heights in one class list would be a coin toss. */
-export const BTN_BASE = 'inline-flex min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg font-semibold transition-[background-color,color,box-shadow,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-muted)] disabled:pointer-events-none'
+export const BTN_CORE = 'inline-flex min-w-0 shrink-0 items-center rounded-lg font-semibold transition-[background-color,color,box-shadow,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-muted)] disabled:pointer-events-none'
+/** Centred, the common case. Without it (`BTN_CORE`), a row that lays its content out
+ *  itself — a menu item, a list row — sets its own alignment and gap. */
+export const BTN_BASE = `${BTN_CORE} justify-center gap-2`
 export const BTN = `${BTN_BASE} h-12 px-3 text-sm`
 export const BTN_SM = `${BTN_BASE} h-11 px-3 text-xs`
 

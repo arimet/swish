@@ -6,6 +6,7 @@ import { saveResult, deleteResult } from '../../persistence/repositories'
 import { useMatches, useResults } from '../../persistence/queries'
 import type { ReportedResult } from '../../domain/types'
 import { C, bd, leagueLabel, SectionTitle, TeamBadge } from '../olive/kit'
+import { BTN_BASE, DANGER, PRIMARY, SECONDARY } from '../components/buttons'
 import { useAuth } from '../../app/auth'
 import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
@@ -250,14 +251,14 @@ export function Standings() {
       {canCorrect && (
       <section className={formOpen ? 'mt-8 rounded-2xl p-5' : 'mt-6'} style={formOpen ? { background: C.card, border: bd } : undefined}>
         {!formOpen ? (
-          <button onClick={() => guard('manage', () => setFormOpen(true))} className="rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+          <button onClick={() => guard('manage', () => setFormOpen(true))} className={`${BTN_BASE} h-11 px-5 text-sm ${PRIMARY}`}>
             {translate('standings.enterResult')}
           </button>
         ) : (
         <>
         <div className="mb-4 flex items-center gap-3">
           <SectionTitle>{translate('standings.enterTitle')}</SectionTitle>
-          <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('common.closeShort')}</button>
+          <button onClick={() => setFormOpen(false)} className={`ml-auto ${BTN_BASE} h-9 px-3 text-xs ${SECONDARY}`}>{translate('common.closeShort')}</button>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Picker id="champ-home" label={translate('standings.homeTeam')} value={homeId} onChange={changeHomeId} teams={teams} />
@@ -279,7 +280,7 @@ export function Standings() {
           <p className="mt-3 rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: C.dangerBg, color: C.danger }}>{error}</p>
         )}
 
-        <button onClick={add} disabled={!canAdd} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
+        <button onClick={add} disabled={!canAdd} className={`mt-4 ${BTN_BASE} h-11 px-5 text-sm ${PRIMARY}`}>
           {translate('standings.addResult')}
         </button>
         </>
@@ -337,7 +338,7 @@ export function Standings() {
                 </div>
                 {canCorrect && (
                   <button onClick={() => remove(r.id)} aria-label={translate('standings.deleteResult')}
-                    className="shrink-0 rounded-lg p-1.5" style={{ color: C.danger }}>
+                    className={`${BTN_BASE} h-9 w-9 ${DANGER}`}>
                     <X className="h-4 w-4" strokeWidth={2.5} />
                   </button>
                 )}

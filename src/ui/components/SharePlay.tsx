@@ -21,6 +21,7 @@ import { snapshot, transitions } from '../../domain/anim'
 import { LINK_LIMIT, encode } from '../../domain/share'
 import type { Play, Step } from '../../domain/plays'
 import { C, bd } from '../olive/kit'
+import { BTN, BTN_BASE, PRIMARY, SECONDARY } from './buttons'
 import { useT, type Translate } from '../../i18n'
 import { PlayBoard } from './PlayBoard'
 import { D, W } from './ShotCourt'
@@ -451,8 +452,7 @@ export function SharePlay({ play, stepIndex = 0, open, onClose }: {
             />
             <button
               onClick={copy}
-              className="flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-black text-[var(--c-on-brand)] transition hover:brightness-110"
-              style={{ background: C.brand }}
+              className={`${BTN} ${PRIMARY}`}
             >
               <Link2 className="h-4 w-4 shrink-0" strokeWidth={2} />
               {translate('share.copyLink')}
@@ -488,8 +488,7 @@ function FileButton({ label, what, onClick, disabled }: { label: string; what: s
   return (
     <button
       onClick={onClick} disabled={disabled} aria-label={label}
-      className="flex flex-col items-center gap-0.5 rounded-xl px-1 py-2.5 transition hover:brightness-125 disabled:opacity-40"
-      style={{ background: C.card2, border: bd, color: C.text }}
+      className={`${BTN_BASE} ${SECONDARY} flex-col px-1 py-2.5`}
     >
       <span className="text-[13px] font-bold">{label}</span>
       <span className="text-[12px] font-semibold" style={{ color: C.muted }}>{what}</span>

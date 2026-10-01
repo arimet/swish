@@ -10,6 +10,7 @@ import { since, nextFixture, type Fixture } from '../../domain/fixtures'
 import { liveState } from '../../rules/ffbb'
 import { ShotChart } from '../components/ShotCourt'
 import { C, Panel, TeamBadge, You, bd, displayClock, fmtDate } from '../olive/kit'
+import { BTN_BASE, DANGER, PICKED, PRIMARY, SECONDARY } from '../components/buttons'
 import type { Convocation, Match, Player, Team } from '../../domain/types'
 import type { Play } from '../../domain/plays'
 import { Check } from 'lucide-react'
@@ -121,7 +122,7 @@ export function Dashboard() {
             </p>
           </div>
           {me && (
-            <Link to={`/players/${me.id}`} className="ml-auto shrink-0 rounded-xl px-3 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>
+            <Link to={`/players/${me.id}`} className={`ml-auto ${BTN_BASE} h-11 px-4 text-sm ${SECONDARY}`}>
               {translate('dashboard.myRecord')}
             </Link>
           )}
@@ -261,12 +262,12 @@ function CoachMessage({ clubId }: { clubId: string }) {
       <section className="mb-5 rounded-2xl p-5" style={{ background: C.card, border: `1px solid ${C.accentBd}` }}>
         <div className="mb-3 flex items-center gap-3">
           <label htmlFor="message-team" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.accent }}>{translate('dashboard.teamMessage')}</label>
-          <button onClick={() => setFormOpen(false)} className="ml-auto rounded-lg px-2 py-1 text-xs font-bold" style={{ color: C.muted }}>{translate('common.closeShort')}</button>
+          <button onClick={() => setFormOpen(false)} className={`ml-auto ${BTN_BASE} h-9 px-3 text-xs ${SECONDARY}`}>{translate('common.closeShort')}</button>
         </div>
         <textarea id="message-team" rows={3} value={text} onChange={(e) => setText(e.target.value)}
           placeholder={translate('dashboard.messagePlaceholder')}
           className="w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
-        <button onClick={publish} disabled={!text.trim()} className="mt-3 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>
+        <button onClick={publish} disabled={!text.trim()} className={`mt-3 ${BTN_BASE} h-11 px-5 text-sm ${PRIMARY}`}>
           {translate('dashboard.publishMessage')}
         </button>
         {/* Like the call-ups, the trainings and the plays: worded the same way, so as
@@ -280,7 +281,7 @@ function CoachMessage({ clubId }: { clubId: string }) {
   if (!shown) {
     if (!manages) return null
     return (
-      <button onClick={openForm} className="mb-5 rounded-xl px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>
+      <button onClick={openForm} className={`mb-5 ${BTN_BASE} h-9 px-3 text-[12px] ${SECONDARY}`}>
         {translate('dashboard.addMessage')}
       </button>
     )
@@ -297,8 +298,8 @@ function CoachMessage({ clubId }: { clubId: string }) {
         </span>
         {manages && (
           <>
-            <button onClick={openForm} className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.muted }}>{translate('common.editCaps')}</button>
-            <button onClick={erase} className="rounded-lg px-3 py-1.5 text-[12px] font-bold" style={{ border: bd, color: C.accent }}>{translate('common.erase')}</button>
+            <button onClick={openForm} className={`ml-auto ${BTN_BASE} h-9 px-3 text-[12px] ${SECONDARY}`}>{translate('common.editCaps')}</button>
+            <button onClick={erase} className={`${BTN_BASE} h-9 px-3 text-[12px] ${DANGER}`}>{translate('common.erase')}</button>
           </>
         )}
       </div>
@@ -329,11 +330,11 @@ function Banner({ live, next, teams, manages, keepsScore }: { live?: Match; next
             asking — the banner already says what is happening, and the button is
             what says "show me". */}
         {keepsScore ? (
-          <Link to={`/match/${live.id}/live`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+          <Link to={`/match/${live.id}/live`} className={`ml-auto ${BTN_BASE} h-11 px-4 text-sm ${PRIMARY}`}>
             {translate('dashboard.openScorersTable')}
           </Link>
         ) : (
-          <Link to={`/match/${live.id}/watch`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+          <Link to={`/match/${live.id}/watch`} className={`ml-auto ${BTN_BASE} h-11 px-4 text-sm ${PRIMARY}`}>
             {translate('gate.spectatorView')}
           </Link>
         )}
@@ -347,7 +348,7 @@ function Banner({ live, next, teams, manages, keepsScore }: { live?: Match; next
         <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('dashboard.nextGame')}</span>
         <span className="text-sm font-bold">{translate('dashboard.versus', { team: opponent(next) })}</span>
         <span className="text-sm" style={{ color: C.muted }}>{[f.long, next.meta.time, next.meta.venue].filter(Boolean).join(' · ')}</span>
-        <Link to={`/match/${next.id}`} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-semibold" style={{ border: bd, color: C.text }}>{translate('dashboard.viewRecord')}</Link>
+        <Link to={`/match/${next.id}`} className={`ml-auto ${BTN_BASE} h-11 px-4 text-sm ${SECONDARY}`}>{translate('dashboard.viewRecord')}</Link>
       </div>
     )
   }
@@ -355,7 +356,7 @@ function Banner({ live, next, teams, manages, keepsScore }: { live?: Match; next
     <div className="flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
       <span className="text-sm" style={{ color: C.muted }}>{translate('dashboard.noGameScheduled')}</span>
       {/* Planning writes: the shortcut only shows to whoever manages the club. */}
-      {manages && <Link to="/match/new" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('dashboard.planGame')}</Link>}
+      {manages && <Link to="/match/new" className={`ml-auto ${BTN_BASE} h-11 px-4 text-sm ${PRIMARY}`}>{translate('dashboard.planGame')}</Link>}
     </div>
   )
 }
@@ -370,7 +371,7 @@ function NextFixture({ fixture, teams, players, convocation, plays, manages }: {
       <div className="mt-4 flex flex-wrap items-center gap-4 rounded-2xl p-5" style={{ background: C.card, border: bd }}>
         <span className="text-[12px] font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('dashboard.nextFixture')}</span>
         <span className="text-sm" style={{ color: C.muted }}>{translate('dashboard.nothingPlanned')}</span>
-        {manages && <Link to="/calendrier" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('dashboard.plan')}</Link>}
+        {manages && <Link to="/calendrier" className={`ml-auto ${BTN_BASE} h-11 px-4 text-sm ${PRIMARY}`}>{translate('dashboard.plan')}</Link>}
       </div>
     )
   }
@@ -394,8 +395,7 @@ function NextFixture({ fixture, teams, players, convocation, plays, manages }: {
             <p className="text-sm font-bold">{translate('dashboard.onTheProgramme')}</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {upcoming.map((s) => (
-                <Link key={s.id} to={`/schemas/${s.id}/lecteur`} className="rounded-lg px-2.5 py-1 text-[12px] font-bold"
-                  style={{ background: C.accentBg, color: C.accent }}>
+                <Link key={s.id} to={`/schemas/${s.id}/lecteur`} className={`${BTN_BASE} h-9 px-2.5 text-[12px] ${SECONDARY}`}>
                   ▶ {s.name}
                 </Link>
               ))}
@@ -442,8 +442,7 @@ function NextFixture({ fixture, teams, players, convocation, plays, manages }: {
         {/* Calling up writes: the shortcut is the coach's. The count and the names just
             to the left stay readable by the whole team. */}
         {manages && (
-          <Link to={`/match/${m.id}#convocation`} className="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold"
-            style={calledUp.length === 0 ? { background: C.brand, color: C.onBrand } : { border: bd, color: C.text }}>
+          <Link to={`/match/${m.id}#convocation`} className={`${BTN_BASE} h-11 px-4 text-sm ${calledUp.length === 0 ? PRIMARY : SECONDARY}`}>
             {calledUp.length === 0 ? translate('dashboard.callUpTeam') : translate('dashboard.editCallUp')}
           </Link>
         )}
@@ -541,7 +540,7 @@ function GettingStarted({ roster, otherTeams, clubId, manages }: { roster: numbe
             {/* The action only shows on the current step: three buttons at once would
                 let someone pick an order that does not work. */}
             {manages && i === current && (
-              <Link to={e.to} className="shrink-0 rounded-xl px-3.5 py-2.5 text-center text-[13px] font-bold text-[var(--c-on-brand)] sm:ml-auto" style={{ background: C.brand }}>
+              <Link to={e.to} className={`${BTN_BASE} h-11 px-3.5 text-[13px] sm:ml-auto ${PRIMARY}`}>
                 {e.action} →
               </Link>
             )}
@@ -563,8 +562,7 @@ function Stat({ label, value, hint, accent }: { label: string; value: string; hi
 }
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button onClick={onClick} className="rounded-lg px-2.5 py-1 text-[12px] font-bold transition"
-      style={active ? { background: C.brand, color: C.onBrand } : { background: C.card2, color: C.muted, border: bd }}>
+    <button onClick={onClick} className={`${BTN_BASE} h-9 px-2.5 text-[12px] ${active ? PICKED : SECONDARY}`}>
       {children}
     </button>
   )

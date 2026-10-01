@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import type { MatchMeta } from '../../domain/types'
 import { useT } from '../../i18n'
+import { BTN, PRIMARY, SECONDARY } from './buttons'
 
 type Editable = Pick<MatchMeta, 'championshipLabel' | 'matchNumber' | 'date' | 'time' | 'venue' | 'referee1' | 'referee2'>
 
@@ -29,8 +30,8 @@ export function MatchMetaDialog({ open, meta, onClose, onSave }: {
           <Field label={translate('meta.referee2')}><input value={v.referee2 ?? ''} onChange={set('referee2')} className={cls} /></Field>
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-xl bg-[var(--c-card2)] px-4 py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{translate('common.cancel')}</button>
-          <button onClick={() => { onSave(v); onClose() }} className="rounded-xl bg-[var(--c-brand)] px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">{translate('common.save')}</button>
+          <button onClick={onClose} className={`${BTN} px-4 ${SECONDARY}`}>{translate('common.cancel')}</button>
+          <button onClick={() => { onSave(v); onClose() }} className={`${BTN} px-5 ${PRIMARY}`}>{translate('common.save')}</button>
         </div>
       </DialogContent>
     </Dialog>

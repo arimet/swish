@@ -21,6 +21,7 @@ import { snapshot } from '../../domain/anim'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { D, W } from '../components/ShotCourt'
 import { C, bd, Ic } from '../olive/kit'
+import { BTN_BASE, BTN_SM, PRIMARY, PICKED, SECONDARY, DANGER, SEGMENT_ON, SEGMENT_OFF } from '../components/buttons'
 import { Pause, Play as PlayIcon, Pencil, X } from 'lucide-react'
 
 type Tool = 'move' | Stroke | 'brush' | 'ball' | 'place' | 'eraser'
@@ -466,7 +467,7 @@ export function PlayEdit() {
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Link to="/schemas" aria-label={translate('edit.backToPlays')} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
+        <Link to="/schemas" aria-label={translate('edit.backToPlays')} className={`${BTN_BASE} ${SECONDARY} h-11 w-11 px-0 text-lg`}>←</Link>
         <input
           aria-label={translate('edit.playName')} value={name} onChange={(e) => setName(e.target.value)}
           onBlur={saveName}
@@ -474,14 +475,13 @@ export function PlayEdit() {
           style={{ ...field, flex: '1 1 180px', minWidth: 0, fontWeight: 800 }}
         />
         {/* Seeing what you have just drawn means playing it — and playing it here,
-            on the board already in front of you. Tinted with the accent as everywhere
+            on the board already in front of you. Outlined in green as everywhere
             else: the same gesture on all four screens. */}
         <button
           // Entering, the reading starts on the step being drawn; leaving, the drawing
           // resumes on the step left on screen. Either way the eye keeps its place.
           onClick={() => { setPlaying(false); if (reading) setStepIndex(current); else setPos(index); setReading((r) => !r) }}
-          className="flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold"
-          style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}
+          className={`${BTN_BASE} ${PRIMARY} h-11 px-4 text-sm`}
         >
           {reading
             ? <><Pencil className="h-4 w-4 shrink-0" strokeWidth={2} />{translate('common.editCaps')}</>
@@ -540,8 +540,7 @@ export function PlayEdit() {
                 button of the confirmation dialogs. */}
             <button
               onClick={undoLast} disabled={!undoStack[index]?.length} aria-label={translate('edit.undoLast')}
-              className="ml-auto flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-bold disabled:opacity-40 lg:order-7 lg:ml-0 lg:w-full"
-              style={{ background: C.card, border: bd, color: C.text }}
+              className={`${BTN_SM} ${SECONDARY} ml-auto lg:order-7 lg:ml-0 lg:w-full`}
             >
               <span className="text-base leading-none">↩</span> {translate('common.cancel')}
             </button>
@@ -554,10 +553,7 @@ export function PlayEdit() {
               {SHAPES.map((f) => (
                 <button
                   key={f.key} onClick={() => setShape(f.key)} aria-pressed={shape === f.key}
-                  className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
-                  style={shape === f.key
-                    ? { background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }
-                    : { background: C.card, border: bd, color: C.muted }}
+                  className={`${BTN_BASE} px-3 py-1.5 text-[12px] ${shape === f.key ? PICKED : SECONDARY}`}
                 >
                   {translate(f.label)}
                 </button>
@@ -575,8 +571,7 @@ export function PlayEdit() {
                   <button
                     key={o.key} onClick={() => setPlacing(o.key)} aria-pressed={placing === o.key && !full} disabled={full}
                     title={full ? translate('edit.sideFull', { max: MAX_PER_SIDE }) : undefined}
-                    className="rounded-lg px-3 py-1.5 text-[12px] font-bold disabled:opacity-35"
-                    style={placing === o.key && !full ? { background: C.amberBg, color: C.amber, border: `1px solid ${C.amber}` } : { background: C.card, border: bd, color: C.muted }}
+                    className={`${BTN_BASE} px-3 py-1.5 text-[12px] ${placing === o.key && !full ? PICKED : SECONDARY}`}
                   >
                     {translate(o.label)}
                   </button>
@@ -651,8 +646,7 @@ export function PlayEdit() {
               <button
                 onClick={() => (playing ? setPlaying(false) : start())} disabled={last === 0}
                 aria-label={translate(playing ? 'play.pause' : 'play.playback')}
-                className="flex h-11 shrink-0 items-center gap-2 rounded-xl px-5 text-sm font-black text-[var(--c-on-brand)] disabled:opacity-40"
-                style={{ background: C.brand }}
+                className={`${BTN_BASE} ${PRIMARY} h-11 px-5 text-sm`}
               >
                 {playing
                   ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('play.pause')}</>
@@ -693,7 +687,7 @@ export function PlayEdit() {
                 // Reading, a thumbnail is a seek and not a selection — and it moves the
                 // edited step with it, so leaving playback lands on what was on screen.
                 onClick={() => { setStepIndex(i); if (reading) { setPlaying(false); setPos(i) } }}
-                className="w-20 shrink-0 rounded-xl p-1"
+                className="w-20 shrink-0 rounded-lg p-1"
                 style={{ background: C.card, border: i === (reading ? current : index) ? `2px solid ${C.accent}` : bd }}
               >
                 <PlayBoard play={play} stepIndex={i} preview />
@@ -703,7 +697,7 @@ export function PlayEdit() {
             <button
               hidden={reading}
               onClick={addStep} aria-label={translate('edit.addStep')}
-              className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-xl text-[12px] font-bold"
+              className="flex w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-lg text-[12px] font-bold"
               style={{ background: C.card, border: `1px dashed ${C.border}`, color: C.muted }}
             >
               <span className="text-lg leading-none" style={{ color: C.accent }}>+</span>
@@ -723,8 +717,7 @@ export function PlayEdit() {
               {(['half', 'full'] as Court[]).map((t) => (
                 <button
                   key={t} onClick={() => changeCourt(t)} aria-pressed={play.court === t}
-                  className="min-w-0 flex-1 rounded-xl py-2 text-xs font-bold"
-                  style={play.court === t ? { background: C.brand, color: C.onBrand } : { background: C.panel, border: bd, color: C.text }}
+                  className={`${BTN_BASE} flex-1 py-2 text-xs ${play.court === t ? PICKED : SECONDARY}`}
                 >
                   {translate(t === 'half' ? 'play.halfCourt' : 'play.fullCourt')}
                 </button>
@@ -772,7 +765,7 @@ export function PlayEdit() {
  *  in a hedge. */
 function ToolGroup({ title, order, children }: { title: string; order: string; children: ReactNode }) {
   return (
-    <div role="group" aria-label={title} className={`flex shrink-0 items-center gap-1 rounded-2xl p-1 lg:flex-col lg:items-stretch lg:gap-1.5 lg:p-2 ${order}`} style={{ background: C.panel, border: bd }}>
+    <div role="group" aria-label={title} className={`flex shrink-0 items-center gap-1 rounded-lg p-1 lg:flex-col lg:items-stretch lg:gap-1.5 lg:p-2 ${order}`} style={{ background: C.panel, border: bd }}>
       <span className="hidden text-[12px] font-black uppercase tracking-wider lg:block lg:px-1" style={{ color: C.faint }}>{title}</span>
       <div className="flex items-center gap-1">{children}</div>
     </div>
@@ -786,8 +779,7 @@ function ToolButton({ label, active, onClick, children }: { label: string; activ
   return (
     <button
       onClick={onClick} aria-label={label} title={label} aria-pressed={active}
-      className="grid h-10 min-w-10 place-items-center rounded-xl px-1.5 transition"
-      style={active ? { background: C.brand, color: C.onBrand } : { background: 'transparent', color: C.muted }}
+      className={`inline-flex h-10 min-w-10 items-center justify-center rounded-md px-1.5 transition-[background-color,color,box-shadow] duration-150 ${active ? SEGMENT_ON : SEGMENT_OFF}`}
     >
       {children}
     </button>
@@ -798,7 +790,7 @@ function ToolButton({ label, active, onClick, children }: { label: string; activ
  *  seen on the court, the cone its amber triangle. A generic outline read as "globe";
  *  here the button shows its effect literally. */
 function PlaceGlyph({ what, active }: { what: Tool; active: boolean }) {
-  const tint = active ? C.onBrand : C.amber
+  const tint = active ? C.accent : C.amber
   return (
     <svg viewBox="0 0 24 24" className="h-[19px] w-[19px]">
       {what === 'ball'
@@ -829,16 +821,15 @@ function StrokeGlyph({ stroke }: { stroke: Stroke }) {
   )
 }
 
-/** One control of the step strip: square, thumb-sized, and danger alone outlined in
- *  the accent — the rest of the repo does no differently. */
+/** One control of the step strip: square, thumb-sized, and danger alone in the soft
+ *  red — the rest of the repo does no differently. */
 function StepControl({ label, onClick, disabled, danger, children }: {
   label: string; onClick: () => void; disabled: boolean; danger?: boolean; children: ReactNode
 }) {
   return (
     <button
       onClick={onClick} disabled={disabled} aria-label={label} title={label}
-      className="grid h-10 w-10 place-items-center rounded-xl text-xs font-black disabled:opacity-30"
-      style={danger ? { border: `1px solid ${C.accentBd}`, color: C.accent } : { background: C.card, border: bd, color: C.text }}
+      className={`${BTN_BASE} h-10 w-10 px-0 text-xs ${danger ? DANGER : SECONDARY}`}
     >
       {children}
     </button>

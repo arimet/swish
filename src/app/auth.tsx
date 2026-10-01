@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { C } from '../ui/olive/kit'
+import { BTN, PRIMARY, SECONDARY } from '../ui/components/buttons'
 import { useT } from '../i18n'
 import { Lock } from 'lucide-react'
 
@@ -149,8 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           />
           {error && <p className="text-xs font-semibold text-[var(--c-danger)]">{error}</p>}
           <div className="mt-2 flex gap-2">
-            <button onClick={close} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{translate('common.cancel')}</button>
-            <button onClick={submit} className="flex-1 rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">{translate('access.unlock')}</button>
+            <button onClick={close} className={`flex-1 ${BTN} ${SECONDARY}`}>{translate('common.cancel')}</button>
+            <button onClick={submit} className={`flex-1 ${BTN} ${PRIMARY}`}>{translate('access.unlock')}</button>
           </div>
         </DialogContent>
       </Dialog>

@@ -11,7 +11,8 @@ import { usePlay } from '../../persistence/queries'
 import { SharePlay } from '../components/SharePlay'
 import { courtWidth, PlayBoard } from '../components/PlayBoard'
 import { usePlayback } from '../components/usePlayback'
-import { C, bd } from '../olive/kit'
+import { C } from '../olive/kit'
+import { BTN_BASE, PRIMARY, PICKED, SECONDARY } from '../components/buttons'
 import { useT } from '../../i18n'
 import { Pause, Play as PlayIcon, X } from 'lucide-react'
 
@@ -66,12 +67,12 @@ export function PlayViewer() {
       <div className="flex min-h-dvh flex-col gap-2 p-3">
         {/* The header does not contend with the court for room: the way out is a
             square on the left, where the thumb looks for it, the name takes all the
-            rest, and "Share" stays outlined — the viewer's only filled button is
+            rest, and "Share" stays a neutral surface — the viewer's only filled button is
             "Play", at the bottom. */}
         <div className="flex shrink-0 items-center gap-2">
           <Link
             to={`/schemas/${id}`} aria-label={translate('play.leaveViewer')} title={translate('play.leaveViewer')}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-base font-black" style={{ border: bd, color: C.muted }}
+            className={`${BTN_BASE} ${SECONDARY} h-10 w-10 px-0`}
           >
             <X className="h-4 w-4" strokeWidth={2.5} />
           </Link>
@@ -80,7 +81,7 @@ export function PlayViewer() {
               are in the middle of leaving. */}
           <button
             onClick={() => { setPlaying(false); setSharing(true) }}
-            className="h-10 shrink-0 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}
+            className={`${BTN_BASE} ${SECONDARY} h-10 px-4 text-sm`}
           >
             {translate('play.share')}
           </button>
@@ -117,8 +118,7 @@ export function PlayViewer() {
           <button
             onClick={() => (playing ? setPlaying(false) : startPlayback())} disabled={last === 0}
             aria-label={translate(playing ? 'play.pause' : 'play.playback')}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-base font-black text-[var(--c-on-brand)] disabled:opacity-40"
-            style={{ background: C.brand }}
+            className={`${BTN_BASE} ${PRIMARY} w-full py-4 text-base`}
           >
             {playing
               ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('play.pause')}</>
@@ -168,8 +168,7 @@ function Toggle({ label, active, onClick }: { label: string; active: boolean; on
   return (
     <button
       onClick={onClick} aria-pressed={active}
-      className="rounded-2xl px-2 py-4 text-sm font-bold"
-      style={{ border: bd, background: active ? C.accentBg : C.card, color: active ? C.accent : C.muted }}
+      className={`${BTN_BASE} px-2 py-4 text-sm ${active ? PICKED : SECONDARY}`}
     >
       {label}
     </button>

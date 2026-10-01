@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useNavigate, useParams, Navigate } from 'react-router-dom'
 import { Suspense, lazy, type ReactNode } from 'react'
 import { OliveShell } from './ui/olive/OliveShell'
+import { BTN_BASE, PRIMARY } from './ui/components/buttons'
 import { Dashboard } from './ui/screens/Dashboard'
 import { Calendar } from './ui/screens/Calendar'
 import { Standings } from './ui/screens/Standings'
@@ -80,8 +81,7 @@ function Unreachable() {
         <p className="text-lg font-extrabold tracking-tight">{translate('connection.lost')}</p>
         <p className="mt-2 text-sm" style={{ color: 'var(--c-muted)' }}>{translate('connection.lostDetail')}</p>
         <button onClick={() => window.location.reload()}
-          className="mt-6 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]"
-          style={{ background: 'var(--c-brand)' }}>
+          className={`mt-6 ${BTN_BASE} h-12 px-5 text-sm ${PRIMARY}`}>
           {translate('common.retry')}
         </button>
       </div>

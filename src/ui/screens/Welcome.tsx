@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useClub } from '../../app/club'
-import { C, bd, Ic, ICON, TeamBadge } from '../olive/kit'
+import { C, Ic, ICON, TeamBadge } from '../olive/kit'
+import { BTN_BASE, BTN_CORE, PRIMARY, SECONDARY } from '../components/buttons'
 import { WriteToken } from '../components/WriteToken'
 import { useT } from '../../i18n'
 
@@ -31,7 +32,7 @@ export function Welcome() {
         {teams.length === 0 ? (
           <div className="rounded-2xl p-8 text-center" style={{ border: `1px dashed ${C.border}` }}>
             <p className="text-sm" style={{ color: C.muted }}>{translate('welcome.noTeam')}</p>
-            <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+            <Link to="/teams/new" className={`mt-4 ${BTN_BASE} h-12 px-5 text-sm ${PRIMARY}`}>
               {translate('welcome.firstTeam')}
             </Link>
           </div>
@@ -40,8 +41,7 @@ export function Welcome() {
             {teams.map((t) => (
               <li key={t.id}>
                 <button onClick={() => setClub(t.id)}
-                  className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:brightness-125"
-                  style={{ background: C.card, border: bd }}>
+                  className={`${BTN_CORE} h-14 w-full justify-start gap-3 text-left text-sm ${SECONDARY}`}>
                   <TeamBadge id={t.id} name={t.name} size="h-9 w-9 text-[12px]" />
                   <span className="min-w-0 flex-1 truncate text-sm font-bold">{t.name}</span>
                   <span style={{ color: C.faint }}>→</span>

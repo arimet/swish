@@ -12,6 +12,7 @@ import { useT } from '../../i18n'
 import { SharePlay } from '../components/SharePlay'
 import { courtWidth, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
+import { BTN_BASE, PRIMARY, SECONDARY } from '../components/buttons'
 
 export function PlayView() {
   const translate = useT()
@@ -42,7 +43,7 @@ export function PlayView() {
   return (
     <div className="p-6">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <Link to="/schemas" aria-label={translate('play.backToPlays')} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-lg font-bold" style={{ border: bd, color: C.muted }}>←</Link>
+        <Link to="/schemas" aria-label={translate('play.backToPlays')} className={`${BTN_BASE} ${SECONDARY} h-11 w-11 px-0 text-lg`}>←</Link>
         <div className="min-w-0 flex-1 basis-40">
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{play.name}</h1>
           {/* The same marks as on the library card: you recognise at a glance the
@@ -57,13 +58,13 @@ export function PlayView() {
         </div>
         {/* One filled button per screen: "Play", which is what you come to the
             sideline for, and it is ungated. Sharing is too — nothing is modified, a
-            player must be able to send the play to a team-mate; it stays outlined,
-            like Edit — which keeps its administrator code and only renders for
+            player must be able to send the play to a team-mate; it stays a neutral
+            surface, like Edit — which keeps its administrator code and only renders for
             whoever holds it. */}
         <div className="flex shrink-0 items-center gap-2">
-          <button onClick={() => setSharing(true)} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>{translate('play.share')}</button>
-          {can('manage') && <button onClick={edit} className="h-11 rounded-xl px-4 text-sm font-bold" style={{ border: bd, color: C.text }}>{translate('common.editCaps')}</button>}
-          <Link to={`/schemas/${id}/lecteur`} className="flex h-11 items-center rounded-xl px-4 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('play.play')}</Link>
+          <button onClick={() => setSharing(true)} className={`${BTN_BASE} ${SECONDARY} h-11 px-4 text-sm`}>{translate('play.share')}</button>
+          {can('manage') && <button onClick={edit} className={`${BTN_BASE} ${SECONDARY} h-11 px-4 text-sm`}>{translate('common.editCaps')}</button>}
+          <Link to={`/schemas/${id}/lecteur`} className={`${BTN_BASE} ${PRIMARY} h-11 px-4 text-sm`}>{translate('play.play')}</Link>
         </div>
       </div>
 
@@ -85,14 +86,14 @@ export function PlayView() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => go(-1)} aria-label={translate('viewer.previous')} disabled={index === 0}
-            className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-sm font-black disabled:opacity-30" style={{ background: C.card, border: bd, color: C.text }}
+            className={`${BTN_BASE} ${SECONDARY} h-12 w-12 px-0 text-sm`}
           >
             ◀
           </button>
           <span className="flex-1 text-center text-sm font-extrabold">{translate('play.step', { n: index + 1, total: play.steps.length })}</span>
           <button
             onClick={() => go(1)} aria-label={translate('viewer.next')} disabled={index === last}
-            className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-sm font-black disabled:opacity-30" style={{ background: C.card, border: bd, color: C.text }}
+            className={`${BTN_BASE} ${SECONDARY} h-12 w-12 px-0 text-sm`}
           >
             ▶
           </button>

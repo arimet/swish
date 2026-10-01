@@ -3,6 +3,7 @@ import { Eye, Lock, LockOpen } from 'lucide-react'
 import { REQUIRED, type Ability } from '../../app/auth'
 import { useT } from '../../i18n'
 import { C } from '../olive/kit'
+import { BTN, PRIMARY, SECONDARY } from './buttons'
 
 /**
  * Lock screen: recording the game is reserved for whoever holds the required
@@ -24,11 +25,11 @@ export function AccessGate({ ability, matchId, onUnlock, onExit }: { ability: Ab
       <h2 className="text-2xl font-extrabold tracking-tight">{translate('gate.title', { role: accessName })}</h2>
       <p className="max-w-sm text-sm text-muted-foreground">{translate('gate.explanation', { role: accessName.toLowerCase() })}</p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
-        <button onClick={onUnlock} className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition hover:brightness-110">
+        <button onClick={onUnlock} className={`${BTN} px-6 ${PRIMARY}`}>
           <LockOpen className="h-4 w-4" strokeWidth={2} />
           {translate('access.unlock')}
         </button>
-        <Link to={`/match/${matchId}/watch`} className="flex items-center gap-2 rounded-xl border border-border/70 px-5 py-3 text-sm font-semibold text-muted-foreground transition hover:bg-muted">
+        <Link to={`/match/${matchId}/watch`} className={`${BTN} px-5 ${SECONDARY}`}>
           <Eye className="h-4 w-4" strokeWidth={2} />
           {translate('gate.spectatorView')}
         </Link>

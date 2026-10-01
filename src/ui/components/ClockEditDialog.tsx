@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { fmt } from './GameClock'
 import { useT } from '../../i18n'
+import { BTN, PRIMARY, SECONDARY } from './buttons'
 
 /** Manual clock entry (MM:SS format or raw seconds), bounded by `max`. */
 export function parseClock(text: string): number | null {
@@ -42,13 +43,13 @@ export function ClockEditDialog({ open, seconds, max, onClose, onSubmit }: {
         />
         <p className="mt-1.5 text-center text-xs text-[var(--c-muted)]">{translate('clock.format', { max: fmt(max) })}</p>
         <div className="mt-4 flex gap-2">
-          <button onClick={onClose} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">
+          <button onClick={onClose} className={`${BTN} flex-1 ${SECONDARY}`}>
             {translate('common.cancel')}
           </button>
           <button
             disabled={!valid}
             onClick={submit}
-            className="flex-1 rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110 disabled:opacity-40"
+            className={`${BTN} flex-1 ${PRIMARY}`}
           >
             {translate('clock.confirm')}
           </button>

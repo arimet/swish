@@ -19,6 +19,7 @@ import { useT } from '../../i18n'
 import { PlayBoard } from '../components/PlayBoard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { C, bd, Ic, ICON, PageTitle } from '../olive/kit'
+import { BTN, BTN_BASE, PRIMARY, PICKED, SECONDARY, DANGER } from '../components/buttons'
 
 /** The two card actions that are not "Play": drawn, not written. A word the same
  *  size as "Play" gave them the same weight, while one copies and the other
@@ -105,7 +106,7 @@ export function PlayList() {
     <div className="p-6">
       <PageTitle
         action={manages && (
-          <button onClick={create} className="rounded-xl px-4 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+          <button onClick={create} className={`${BTN} ${PRIMARY} px-4`}>
             {translate('play.new')}
           </button>
         )}
@@ -129,7 +130,7 @@ export function PlayList() {
               <p className="mx-auto mt-1 max-w-md text-sm" style={{ color: C.muted }}>
                 {translate('play.emptyManager')}
               </p>
-              <button onClick={create} className="mt-5 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+              <button onClick={create} className={`${BTN} ${PRIMARY} mt-5 px-5`}>
                 {translate('play.drawFirst')}
               </button>
             </>
@@ -220,12 +221,12 @@ export function PlayList() {
                           placeholder={translate('play.folderName')} className="min-w-0 flex-1 rounded-lg px-2 py-1 text-[12px] font-semibold"
                           style={{ background: C.panel, border: bd, color: C.text }}
                         />
-                        <button type="submit" className="rounded-lg px-2 py-1.5" style={{ color: C.accent }}>{translate('play.file')}</button>
+                        <button type="submit" className={`${BTN_BASE} ${SECONDARY} px-2 py-1.5`} style={{ color: C.accent }}>{translate('play.file')}</button>
                       </form>
                     ) : (
                       <button
                         onClick={() => openFolderPicker(s)} aria-label={translate('play.folderOf', { name: s.name })}
-                        className="rounded-md px-2 py-1.5" style={{ background: C.card2, color: s.folder ? C.accent : C.faint }}
+                        className={`${BTN_BASE} ${SECONDARY} px-2 py-1.5`} style={{ color: s.folder ? C.accent : C.faint }}
                       >
                         {s.folder || translate('play.unfiled')}
                       </button>
@@ -235,14 +236,13 @@ export function PlayList() {
                   {/* Three weights, three shapes: "Play" — what you come to do at the
                       sideline, without going through the record — takes the row and
                       carries the accent; duplicate and delete withdraw into squares,
-                      destruction alone outlined in the accent. Their accessible names stay
+                      destruction alone in the soft red. Their accessible names stay
                       whole: it is the word that goes, not the label. Both squares write:
                       without the right, "Play" holds the row alone. */}
                   <div className="mt-2.5 flex items-center gap-2 border-t pt-2.5" style={{ borderColor: C.border }}>
                     <Link
                       to={`/schemas/${s.id}/lecteur`}
-                      className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl text-[13px] font-black"
-                      style={{ background: C.accentBg, color: C.accent, border: `1px solid ${C.accentBd}` }}
+                      className={`${BTN_BASE} ${PRIMARY} h-10 flex-1 text-[13px]`}
                     >
                       {translate('play.play')}
                     </Link>
@@ -250,15 +250,13 @@ export function PlayList() {
                       <>
                         <button
                           onClick={() => duplicate(s)} aria-label={translate('play.duplicate')} title={translate('play.duplicate')}
-                          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-                          style={{ background: C.card2, border: bd, color: C.muted }}
+                          className={`${BTN_BASE} ${SECONDARY} h-10 w-10 px-0`}
                         >
                           <Ic d={ICON_COPY} className="h-[17px] w-[17px]" />
                         </button>
                         <button
                           onClick={() => guard('manage', () => setToDelete(s))} aria-label={translate('common.delete')} title={translate('common.delete')}
-                          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl"
-                          style={{ border: `1px solid ${C.accentBd}`, color: C.accent }}
+                          className={`${BTN_BASE} ${DANGER} h-10 w-10 px-0`}
                         >
                           <Ic d={ICON_TRASH} className="h-[17px] w-[17px]" />
                         </button>
@@ -287,8 +285,7 @@ function Tab({ active, onClick, children }: { active: boolean; onClick: () => vo
   return (
     <button
       onClick={onClick} aria-pressed={active}
-      className="rounded-lg px-3 py-1.5 text-[12px] font-bold"
-      style={active ? { background: C.brand, color: C.onBrand } : { background: C.card2, color: C.muted, border: bd }}
+      className={`${BTN_BASE} px-3 py-1.5 text-[12px] ${active ? PICKED : SECONDARY}`}
     >
       {children}
     </button>

@@ -8,6 +8,7 @@ import { C, bd, TeamBadge } from '../olive/kit'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { useClub } from '../../app/club'
+import { BTN, PRIMARY, SECONDARY } from '../components/buttons'
 
 const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
@@ -76,7 +77,7 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
         <h1 className="text-2xl font-extrabold tracking-tight">{translate('match.new')}</h1>
         <div className="mt-6 rounded-2xl p-10 text-center" style={{ border: `1px dashed ${C.border}` }}>
           <p className="text-sm" style={{ color: C.muted }}>{translate('match.needTeamBefore')}<strong style={{ color: C.text }}>{translate('match.needTeamStrong')}</strong>{translate('match.needTeamAfter')}</p>
-          <Link to="/teams/new" className="mt-4 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('match.createTeam')}</Link>
+          <Link to="/teams/new" className={`${BTN} ${PRIMARY} mt-4 px-5`}>{translate('match.createTeam')}</Link>
         </div>
       </div>
     )
@@ -112,8 +113,8 @@ export function MatchSetup({ onCreated }: { onCreated: (id: string) => void }) {
       </div>
 
       <div className="mt-6 flex justify-end gap-3">
-        <Link to="/" className="rounded-xl px-5 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('common.cancel')}</Link>
-        <button onClick={() => guard('manage', create)} disabled={!canCreate} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40" style={{ background: C.brand }}>{translate('match.plan')}</button>
+        <Link to="/" className={`${BTN} ${SECONDARY} px-5`}>{translate('common.cancel')}</Link>
+        <button onClick={() => guard('manage', create)} disabled={!canCreate} className={`${BTN} ${PRIMARY} px-6`}>{translate('match.plan')}</button>
       </div>
     </div>
   )

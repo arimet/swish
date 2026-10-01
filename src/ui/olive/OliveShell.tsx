@@ -4,7 +4,8 @@ import { Eraser, Lock, LockOpen } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { usePlayers } from '../../persistence/queries'
 import type { Player } from '../../domain/types'
-import { C, bd, Ic, ICON } from './kit'
+import { C, Ic, ICON } from './kit'
+import { BTN, BTN_CORE, PICKED, PRIMARY, SECONDARY, SEGMENT_OFF } from '../components/buttons'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { LangSwitcher } from '../../i18n/LangSwitcher'
 import { useT } from '../../i18n'
@@ -153,10 +154,8 @@ function AccessMenu({ players, compact = false }: { players: Player[]; compact?:
         onClick={open_}
         aria-label={`${translate('access.title')} · ${translate(`role.${role}`)}`}
         title={`${translate('access.title')} · ${translate(`role.${role}`)}`}
-        className={compact
-          ? 'grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm lg:hidden'
-          : 'flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition'}
-        style={{ background: C.card, border: bd, color: locked ? C.muted : C.green }}
+        className={`${BTN_CORE} ${SECONDARY} ${compact ? 'h-9 w-9 justify-center lg:hidden' : 'h-11 w-full justify-start gap-2 px-3 text-sm'}`}
+        style={{ color: locked ? C.muted : C.green }}
       >
         {/* A drawn glyph, not a coloured padlock: the emoji ignored the tint set just
             above, so it stayed yellow while the state said "green, unlocked" — and it
@@ -183,7 +182,7 @@ function AccessMenu({ players, compact = false }: { players: Player[]; compact?:
                   <li key={p.id}>
                     <button
                       onClick={() => { setPlayer(p.id); setPicking(false); setOpen(false) }}
-                      className="flex w-full items-center gap-2.5 rounded-xl bg-[var(--c-card2)] px-2.5 py-2 text-left text-sm font-medium transition hover:bg-[var(--c-card2)]"
+                      className={`${BTN_CORE} ${SECONDARY} h-11 w-full justify-start gap-2 px-2.5 text-left text-sm`}
                     >
                       <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg text-[12px] font-extrabold" style={{ background: C.accentBg, color: C.accent }}>{p.number}</span>
                       <span className="truncate">{p.lastName} {p.firstName}</span>
@@ -202,16 +201,16 @@ function AccessMenu({ players, compact = false }: { players: Player[]; compact?:
                 className={`w-full rounded-xl border bg-[var(--c-card2)] px-4 py-3 text-sm outline-none transition ${error ? 'border-[var(--c-danger)]' : 'border-[var(--c-border)] focus:border-[var(--c-accent)]'}`}
               />
               {error && <p className="text-xs font-semibold text-[var(--c-danger)]">{error}</p>}
-              <button onClick={submit} className="rounded-xl bg-[var(--c-brand)] py-2.5 text-sm font-bold text-[var(--c-on-brand)] transition hover:brightness-110">{translate('access.unlock')}</button>
+              <button onClick={submit} className={`${BTN} ${PRIMARY}`}>{translate('access.unlock')}</button>
             </>
           )}
 
           <div className="flex gap-2">
             {me && !picking && (
-              <button onClick={() => setPlayer(null)} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{translate('access.forgetMe')}</button>
+              <button onClick={() => setPlayer(null)} className={`flex-1 ${BTN} ${SECONDARY}`}>{translate('access.forgetMe')}</button>
             )}
             {!locked && (
-              <button onClick={lock} className="flex-1 rounded-xl bg-[var(--c-card2)] py-2.5 text-sm font-bold transition hover:bg-[var(--c-border)]">{translate('access.lock')}</button>
+              <button onClick={lock} className={`flex-1 ${BTN} ${SECONDARY}`}>{translate('access.lock')}</button>
             )}
           </div>
         </DialogContent>
@@ -232,8 +231,7 @@ function MobileNav() {
     <nav className="flex shrink-0 items-stretch justify-around gap-1 border-t px-1 pb-[env(safe-area-inset-bottom)] pt-1 lg:hidden" style={{ borderColor: C.border, background: C.panel }}>
       {items.map((n) => (
         <NavLink key={n.label} to={n.to} end={n.end}
-          className="flex flex-1 flex-col items-center gap-0.5 rounded-lg py-1.5 text-[12px] font-bold transition"
-          style={({ isActive }) => ({ color: isActive ? C.accent : C.muted, background: isActive ? C.card2 : 'transparent' })}>
+          className={({ isActive }) => `${BTN_CORE} flex-1 flex-col justify-center gap-0.5 py-1.5 text-[12px] ${isActive ? PICKED : SEGMENT_OFF}`}>
           <Ic d={n.icon} className="h-5 w-5" />
           {translate(n.label)}
         </NavLink>
@@ -255,9 +253,8 @@ function NavGroup({ items, mutedOn }: { items: { icon: string; label: string; to
     <nav className="mt-1.5 flex flex-col gap-0.5">
       {items.map((n) => (
         <NavLink key={n.label} to={n.to} end={n.end}
-          className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
-          style={({ isActive }) => ({ background: active(isActive, n.to) ? C.card2 : 'transparent', color: active(isActive, n.to) ? C.accent : C.muted })}>
-          {({ isActive }) => (<>{active(isActive, n.to) && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.brand }} />}<Ic d={n.icon} />{translate(n.label)}</>)}
+          className={({ isActive }) => `${BTN_CORE} h-11 justify-start gap-3 px-3 text-sm ${active(isActive, n.to) ? PICKED : SEGMENT_OFF}`}>
+          <Ic d={n.icon} />{translate(n.label)}
         </NavLink>
       ))}
     </nav>
@@ -284,9 +281,8 @@ function Sidebar({ players }: { players: Player[] }) {
       <NavGroup items={NAV_TOP} />
       {clubId && (
         <NavLink to={`/teams/${clubId}`} end
-          className="relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition"
-          style={({ isActive }) => ({ background: isActive ? C.card2 : 'transparent', color: isActive ? C.accent : C.muted })}>
-          {({ isActive }) => (<>{isActive && <span className="absolute left-0 top-1/2 h-5 -translate-y-1/2 rounded-r-full" style={{ width: 3, background: C.brand }} />}<Ic d={ICON.users} />{translate('nav.myTeam')}</>)}
+          className={({ isActive }) => `${BTN_CORE} mt-0.5 h-11 justify-start gap-3 px-3 text-sm ${isActive ? PICKED : SEGMENT_OFF}`}>
+          <Ic d={ICON.users} />{translate('nav.myTeam')}
         </NavLink>
       )}
       <NavGroup items={NAV_REST} mutedOn={clubId ? `/teams/${clubId}` : undefined} />
@@ -306,8 +302,7 @@ function Sidebar({ players }: { players: Player[] }) {
             admin code is entered, in the dialog just above. */}
         {can('manage') && (
           <NavLink to="/admin"
-            className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-bold transition"
-            style={({ isActive }) => ({ background: C.card, border: bd, color: isActive ? C.accent : C.muted })}>
+            className={({ isActive }) => `${BTN_CORE} h-11 w-full justify-start gap-2 px-3 text-sm ${isActive ? PICKED : SECONDARY}`}>
             <Eraser className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
             {translate('nav.administration')}
           </NavLink>

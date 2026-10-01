@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { checkToken, token, setToken, type State } from '../../persistence/api'
 import { useT } from '../../i18n'
 import { C, bd } from '../olive/kit'
+import { BTN, PRIMARY } from './buttons'
 
 /**
  * The write token, entered once per device.
@@ -55,8 +56,7 @@ export function WriteToken() {
           style={{ background: C.panel, border: bd, color: C.text }}
         />
         <button onClick={verify} disabled={trying}
-          className="rounded-xl px-5 py-3 text-sm font-bold text-[var(--c-on-brand)] disabled:opacity-40"
-          style={{ background: C.brand }}>
+          className={`${BTN} px-5 ${PRIMARY}`}>
           {translate('admin.checkToken')}
         </button>
       </div>

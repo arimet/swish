@@ -7,6 +7,7 @@ import { C, bd, PageTitle, SectionTitle, TeamBadge, fmtDate , useLeagueLabel } f
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { BTN, PRIMARY, SECONDARY } from '../components/buttons'
 import { Eye } from 'lucide-react'
 
 const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
@@ -104,7 +105,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageTitle action={<Link to="/calendrier" className="rounded-xl px-4 py-2 text-sm font-semibold" style={{ border: bd, color: C.muted }}>{translate('preview.backToCalendar')}</Link>} />
+      <PageTitle action={<Link to="/calendrier" className={`${BTN} ${SECONDARY} px-4`}>{translate('preview.backToCalendar')}</Link>} />
 
       <div className="rounded-2xl p-6" style={{ background: C.card, border: bd }}>
         {/* The league is a fact about the game, not the page's subtitle: it belongs in
@@ -162,7 +163,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
                 className="mt-1.5 w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
             </div>
 
-            <button onClick={saveCallUp} className="mt-4 rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+            <button onClick={saveCallUp} className={`${BTN} ${PRIMARY} mt-4 px-5`}>
               {translate('preview.saveCallUp')}
             </button>
           </>
@@ -196,19 +197,19 @@ export function MatchPreview({ matchId }: { matchId: string }) {
             recording a game lasts two hours, not because the other screens forgot
             to. */}
         {manages && (
-          <button onClick={() => guard('manage', () => setAskDelete(true))} className="mr-auto rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: `1px solid ${C.border}`, color: C.muted }}>
+          <button onClick={() => guard('manage', () => setAskDelete(true))} className={`${BTN} ${SECONDARY} mr-auto px-4`}>
             {translate('common.delete')}
           </button>
         )}
         <div className="flex flex-wrap items-center gap-3">
-          <Link to={`/match/${match.id}/watch`} target="_blank" className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold" style={{ border: bd, color: C.muted }}><Eye className="h-4 w-4" strokeWidth={2} />{translate('gate.spectatorView')}</Link>
+          <Link to={`/match/${match.id}/watch`} target="_blank" className={`${BTN} ${SECONDARY} px-4`}><Eye className="h-4 w-4" strokeWidth={2} />{translate('gate.spectatorView')}</Link>
           {match.status === 'finished' ? (
-            <Link to={`/match/${match.id}/summary`} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>{translate('preview.viewSummary')}</Link>
+            <Link to={`/match/${match.id}/summary`} className={`${BTN} ${PRIMARY} px-6`}>{translate('preview.viewSummary')}</Link>
           ) : (
             // Starting or resuming is the scorer's table's gesture: the button is
             // theirs, and does not appear to a visitor reading the record.
             keepsScore && (
-              <button onClick={start} className="rounded-xl px-6 py-3 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+              <button onClick={start} className={`${BTN} ${PRIMARY} px-6`}>
                 {translate(match.status === 'live' ? 'preview.resumeGame' : 'preview.startGame')}
               </button>
             )

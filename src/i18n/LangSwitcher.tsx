@@ -1,4 +1,5 @@
 import { LANGS, useLang, useT } from './index'
+import { BTN_BASE, SECONDARY } from '../ui/components/buttons'
 
 /**
  * The language switcher, twin of the theme switcher and placed next to it.
@@ -23,7 +24,7 @@ export function LangSwitcher() {
       onClick={() => setLang(next.code)}
       aria-label={`${translate('lang.switch')} — ${next.name}`}
       title={next.name}
-      className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-[12px] font-black uppercase tracking-tight text-foreground transition hover:bg-muted active:scale-95"
+      className={`${BTN_BASE} h-9 w-9 text-[12px] font-black uppercase tracking-tight ${SECONDARY}`}
     >
       {lang}
     </button>

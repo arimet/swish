@@ -1,5 +1,6 @@
 import { useTheme } from './ThemeProvider'
 import { useT } from '../../i18n'
+import { BTN_BASE, SECONDARY } from '../components/buttons'
 
 /** The theme toggle, twin of the language switcher and placed next to it. Two
  *  themes, so a toggle: the icon shows what the click leads *to*, and the
@@ -14,7 +15,7 @@ export function ThemeSwitcher() {
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       aria-label={translate(isDark ? 'theme.switchToLight' : 'theme.switchToDark')}
       title={translate(isDark ? 'theme.light' : 'theme.dark')}
-      className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-foreground transition hover:bg-muted active:scale-95"
+      className={`${BTN_BASE} h-9 w-9 ${SECONDARY}`}
     >
       {isDark ? (
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

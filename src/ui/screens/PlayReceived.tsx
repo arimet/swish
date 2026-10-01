@@ -25,6 +25,7 @@ import type { Play } from '../../domain/plays'
 import { savePlay } from '../../persistence/repositories'
 import { courtWidth, PlayBoard } from '../components/PlayBoard'
 import { C, bd } from '../olive/kit'
+import { BTN_BASE, PRIMARY, SECONDARY } from '../components/buttons'
 
 export function PlayReceived() {
   const translate = useT()
@@ -53,7 +54,7 @@ export function PlayReceived() {
           <p className="mt-2 text-sm" style={{ color: C.muted }}>
             {translate('received.brokenLinkHint')}
           </p>
-          <Link to="/" className="mt-5 inline-block rounded-xl px-5 py-2.5 text-sm font-bold text-[var(--c-on-brand)]" style={{ background: C.brand }}>
+          <Link to="/" className={`${BTN_BASE} ${PRIMARY} mt-5 px-5 py-2.5 text-sm`}>
             {translate('received.openSwish')}
           </Link>
         </div>
@@ -104,11 +105,11 @@ export function PlayReceived() {
         {/* Until the teams are loaded we do not know whether a club is set: offering
             one or the other too early would make the screen flicker. */}
         {ready && (clubId ? (
-          <button onClick={add} className="rounded-2xl py-3.5 text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: boardWidth }}>
+          <button onClick={add} className={`${BTN_BASE} ${PRIMARY} py-3.5 text-sm`} style={{ maxWidth: boardWidth }}>
             {translate('received.add')}
           </button>
         ) : (
-          <Link to="/" className="rounded-2xl py-3.5 text-center text-sm font-black text-[var(--c-on-brand)]" style={{ background: C.brand, maxWidth: boardWidth }}>
+          <Link to="/" className={`${BTN_BASE} ${PRIMARY} py-3.5 text-sm`} style={{ maxWidth: boardWidth }}>
             {translate('received.chooseClub')}
           </Link>
         ))}
@@ -133,8 +134,7 @@ function StepButton({ label, onClick, disabled, children }: {
   return (
     <button
       onClick={onClick} aria-label={label} disabled={disabled}
-      className="rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-40"
-      style={{ background: C.card, border: bd, color: C.text }}
+      className={`${BTN_BASE} ${SECONDARY} px-4 py-2 text-sm`}
     >
       {children}
     </button>
