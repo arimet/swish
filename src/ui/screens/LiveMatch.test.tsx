@@ -134,8 +134,8 @@ describe('LiveMatch', () => {
     renderLive()
     await userEvent.click(await screen.findByRole('button', { name: 'Annuler' }))
     const history = await screen.findByRole('dialog')
-    await userEvent.click(within(history).getByRole('checkbox', { name: /Temps mort/ }))
-    await userEvent.click(within(history).getByRole('button', { name: 'Modifier' }))
+    // Straight from the row's pencil: no ticking first to find the button.
+    await userEvent.click(within(history).getByRole('button', { name: 'Modifier : Temps mort' }))
     await userEvent.click(within(history).getByRole('radio', { name: 'VERDUN' }))
     const clock = within(history).getByRole('textbox', { name: 'Chrono' })
     await userEvent.clear(clock)

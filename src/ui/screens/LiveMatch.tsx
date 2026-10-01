@@ -233,30 +233,30 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
 
       {error && <div className="shrink-0 bg-[var(--c-danger-bg)] py-1.5 text-center text-sm font-semibold text-[var(--c-danger)]">{error}</div>}
 
-      {/* OPPOSITION SCORE: a total, with no players. One row — the "total score, no
-          player detail" note explained at every game a fact you learn at the first,
-          and the third row it forced on a phone was taken out of the roster. */}
-      <div className="mx-auto mt-2 flex w-full max-w-4xl shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 sm:mt-4 sm:px-4">
-        <span className="min-w-0 truncate text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
-        {/* Their team fouls: the only fouls of theirs entered are the and-ones', but
-            they count towards the bonus all the same. */}
-        {ls.teamFoulsThisPeriod.B > 0 && (
-          <FoulCounter fouls={ls.teamFoulsThisPeriod.B} bonus={ls.bonus.B} team={teamNames.B} />
-        )}
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          {OPP_POINTS.map(({ k, n }) => (
-            <button key={k} onClick={() => oppScore(k)} aria-label={translate('live.addPoints', { count: n, team: teamNames.B })}
-              className={`${BTN_SM} ${SECONDARY} nums min-w-11 text-sm font-bold`}>
-              +{n}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* `min-h-0`: without it, a flex child refuses to be squeezed below its
           content's size and the roster would push the scoreboard off the screen
           instead of scrolling in its own box. */}
       <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col p-2 sm:p-4">
+        {/* OPPOSITION SCORE: a total, with no players. One row — the "total score, no
+            player detail" note explained at every game a fact you learn at the first,
+            and the third row it forced on a phone was taken out of the roster. Inside
+            the roster's box, so the two share their edges. */}
+        <div className="mb-2 flex w-full shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 sm:mb-4 sm:px-4">
+          <span className="min-w-0 truncate text-sm font-extrabold uppercase tracking-tight">{teamNames.B}</span>
+          {/* Their team fouls: the only fouls of theirs entered are the and-ones', but
+              they count towards the bonus all the same. */}
+          {ls.teamFoulsThisPeriod.B > 0 && (
+            <FoulCounter fouls={ls.teamFoulsThisPeriod.B} bonus={ls.bonus.B} team={teamNames.B} />
+          )}
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            {OPP_POINTS.map(({ k, n }) => (
+              <button key={k} onClick={() => oppScore(k)} aria-label={translate('live.addPoints', { count: n, team: teamNames.B })}
+                className={`${BTN_SM} ${SECONDARY} nums min-w-11 text-sm font-bold`}>
+                +{n}
+              </button>
+            ))}
+          </div>
+        </div>
         <TeamPanel
           title={teamNames.A.toUpperCase()} color={TEAM_A} players={onCourt()}
           statsByPlayer={statsByPlayer()} teamFouls={ls.teamFoulsThisPeriod.A}

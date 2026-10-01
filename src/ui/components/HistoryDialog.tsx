@@ -5,7 +5,7 @@ import { fmt } from './GameClock'
 import { BTN, DANGER, DANGER_FILLED, PICKED, PRIMARY, SECONDARY, SEGMENT, SEGMENT_OFF, SEGMENT_ON, SEGMENTS } from './buttons'
 import { parseClock } from './ClockEditDialog'
 import { periodLength } from '../../domain/ids'
-import { Check } from 'lucide-react'
+import { Check, Pencil } from 'lucide-react'
 import type { FoulType, GameEvent, Player, ScoreKind, StatKind, TeamSide } from '../../domain/types'
 
 /** What the history lists: what the table enters. The clock, the periods and the
@@ -72,7 +72,7 @@ export function useDescribe(players: Record<string, Player>, teamNames: Record<T
 }
 
 /** One row of an entry list, already worded. */
-export interface EntryItem { id: string; when: string; what: string; who?: string }
+export interface EntryItem { id: string; when: string; what: string; who?: string; editable?: boolean }
 
 /**
  * A list of entries to tick, the latest on top. Ticking rather than one row at a time,
@@ -80,17 +80,21 @@ export interface EntryItem { id: string; when: string; what: string; who?: strin
  * trip — and taking them back one dialog after the other is how the table falls
  * behind the game.
  */
-export function EntryList({ items, selected, onToggle, label }: {
+export function EntryList({ items, selected, onToggle, label, onEdit }: {
   items: EntryItem[]; selected: string[]; onToggle: (id: string) => void; label: string
+  /** A pencil at the end of the rows that can be put right — in plain sight, rather
+   *  than a button that only appears once a single row is ticked. */
+  onEdit?: (id: string) => void
 }) {
+  const translate = useT()
   return (
     <ul aria-label={label} className="space-y-1">
       {items.map((it) => {
         const on = selected.includes(it.id)
         return (
-          <li key={it.id}>
+          <li key={it.id} className={`flex items-center gap-1 rounded-lg transition-colors ${on ? 'bg-[var(--c-card2)]' : 'hover:bg-[var(--c-hover)]'}`}>
             <button role="checkbox" aria-checked={on} onClick={() => onToggle(it.id)}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${on ? 'bg-[var(--c-card2)]' : 'hover:bg-[var(--c-hover)]'}`}>
+              className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left">
               <span aria-hidden className={`grid h-5 w-5 shrink-0 place-items-center rounded transition-colors ${on ? 'text-[var(--c-accent)] ring-2 ring-inset ring-[var(--c-brand)]' : 'ring-1 ring-inset ring-[var(--c-muted)]'}`}>
                 {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
               </span>
@@ -100,6 +104,12 @@ export function EntryList({ items, selected, onToggle, label }: {
                 {it.who && <span className="block truncate text-[12px] text-[var(--c-muted)]">{it.who}</span>}
               </span>
             </button>
+            {onEdit && it.editable && (
+              <button onClick={() => onEdit(it.id)} aria-label={translate('history.modifyOne', { what: it.what })} title={translate('history.modify')}
+                className="mr-1 grid h-10 w-10 shrink-0 place-items-center rounded-lg text-[var(--c-muted)] transition-colors hover:bg-[var(--c-border)] hover:text-[var(--c-text)]">
+                <Pencil className="h-4 w-4" strokeWidth={2.2} />
+              </button>
+            )}
           </li>
         )
       })}
@@ -145,7 +155,15 @@ export function HistoryDialog({ open, events, players, teamNames, roster, period
   const [confirming, setConfirming] = useState(false)
   const listed = events.filter(isEntry).reverse()
   const chosen = selected.length === 1 ? listed.find((e) => e.id === selected[0]) ?? null : null
-  const items = listed.map((e): EntryItem => ({ id: e.id, when: whenOf(e), ...describe(e) }))
+  const editable = (e: GameEvent) => (!!onModify && modifiable(e)) || (!!onRetime && e.type === 'TIMEOUT')
+  const items = listed.map((e): EntryItem => ({ id: e.id, when: whenOf(e), ...describe(e), editable: editable(e) }))
+  /** Straight to putting one entry right, from its own pencil. */
+  const edit = (id: string) => {
+    const e = listed.find((x) => x.id === id)
+    if (!e) return
+    setSelected([id]); setConfirming(false)
+    if (e.type === 'TIMEOUT') setRetiming(true); else setWho(playerOf(e) ?? roster[0]?.id ?? null)
+  }
 
   const toggle = (id: string) => { setConfirming(false); setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id])) }
   const close = () => { setSelected([]); setWho(null); setRetiming(false); setConfirming(false); onClose() }
@@ -180,7 +198,7 @@ export function HistoryDialog({ open, events, players, teamNames, roster, period
         ) : (
           <>
             <div className="-mx-2 mt-3 min-h-0 flex-1 overflow-y-auto px-2">
-              <EntryList items={items} selected={selected} onToggle={toggle} label={translate('history.title')} />
+              <EntryList items={items} selected={selected} onToggle={toggle} onEdit={edit} label={translate('history.title')} />
             </div>
             {/* The actions stay under the list, never scrolled away with it. */}
             <div className="mt-3 border-t border-[var(--c-border)] pt-3">
@@ -197,7 +215,7 @@ export function HistoryDialog({ open, events, players, teamNames, roster, period
               ) : (
                 <div className={`grid gap-2 ${canEdit ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   {canEdit && (
-                    <button onClick={() => (retimable ? setRetiming(true) : setWho(playerOf(chosen!) ?? roster[0]?.id ?? null))} className={`${BTN} ${SECONDARY}`}>{translate('history.modify')}</button>
+                    <button onClick={() => edit(chosen!.id)} className={`${BTN} ${SECONDARY}`}>{translate('history.modify')}</button>
                   )}
                   <button onClick={() => setConfirming(true)} className={`${BTN} ${DANGER}`}>{translate('history.delete', { count: selected.length })}</button>
                 </div>
