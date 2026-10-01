@@ -10,7 +10,7 @@ import { useT } from '../../i18n'
 import { useClub } from '../../app/club'
 import { BTN, PRIMARY, SECONDARY } from '../components/buttons'
 
-const input = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
+const input = { height: 44, borderRadius: 8, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
 /** Planning a game: our club (the one this device follows) is fixed in advance,
  *  only the opposition is chosen here — they have no roster to break down, their

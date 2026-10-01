@@ -10,7 +10,7 @@ import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
 
 type Draft = Omit<Player, 'id' | 'teamId'>
-const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
+const field: CSSProperties = { height: 44, borderRadius: 8, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
 const Label = ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) => <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{children}</label>
 
 export function TeamCreate() {

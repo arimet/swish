@@ -12,7 +12,7 @@ import { useClub } from '../../app/club'
 import { useT } from '../../i18n'
 import { X } from 'lucide-react'
 
-const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
+const field = { height: 44, borderRadius: 8, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
 /**
  * One team of an entered result: crest, name, score on the right.

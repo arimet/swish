@@ -12,7 +12,7 @@ import { useT } from '../../i18n'
 import { useClub } from '../../app/club'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
-const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
+const field: CSSProperties = { height: 44, borderRadius: 8, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
 const miniLabel: CSSProperties = { color: C.faint }
 
 // An empty string becomes `undefined`, never an empty string and never a `NaN`: a

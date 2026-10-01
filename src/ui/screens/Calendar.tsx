@@ -24,7 +24,7 @@ const TRAINING_BG = C.infoBg
 // French calendar must say "août" on a machine set to English.
 const longMonth = (d: Date) => new Intl.DateTimeFormat(currentLang(), { month: 'long' }).format(d)
 
-const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
+const field = { height: 44, borderRadius: 8, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
 type CalItem = { key: string; time: string } & ({ kind: 'match'; match: Match } | { kind: 'training'; training: Training })
 

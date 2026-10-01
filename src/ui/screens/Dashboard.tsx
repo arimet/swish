@@ -266,7 +266,7 @@ function CoachMessage({ clubId }: { clubId: string }) {
         </div>
         <textarea id="message-team" rows={3} value={text} onChange={(e) => setText(e.target.value)}
           placeholder={translate('dashboard.messagePlaceholder')}
-          className="w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
+          className="w-full rounded-lg p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
         <button onClick={publish} disabled={!text.trim()} className={`mt-3 ${BTN_BASE} h-11 px-5 text-sm ${PRIMARY}`}>
           {translate('dashboard.publishMessage')}
         </button>

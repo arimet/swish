@@ -144,7 +144,7 @@
   --chart-3: var(--c-amber);
   --chart-4: oklch(0.5500 0.010 265);
   --chart-5: var(--c-green);
-  --radius: 0.85rem;
+  --radius: 0.5rem; /* 8 px: buttons, cards, dialogs — one corner for the whole app */
   --sidebar: var(--c-panel);
   --sidebar-foreground: oklch(0.18 0.008 265);
   --sidebar-primary: var(--c-brand);

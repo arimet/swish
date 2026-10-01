@@ -180,8 +180,10 @@ export function ShotPicker({ onPick, confirmation, shots, made = true, idle }: {
           offset keeps it clear of the court's own drawn frame — hugging it, the two
           lines read as one doubled edge. */}
       <div
-        className="mx-auto w-full max-w-[240px] rounded-2xl sm:max-w-none"
-        style={{ outline: `1px solid ${made ? C.accent : C.border}`, outlineOffset: 3 }}
+        className="mx-auto w-full max-w-[240px] sm:max-w-none"
+        // The outline follows the drawn court's own corner (RAYON, in court units)
+        // rather than a theme radius, at any size.
+        style={{ outline: `1px solid ${made ? C.accent : C.border}`, outlineOffset: 3, borderRadius: `${(RAYON / W) * 100}% / ${(RAYON / D) * 100}%` }}
       >
         <Court label={translate('shot.entryCourt')} onClick={pickFromEvent}>
           {shots?.map((s, i) => (

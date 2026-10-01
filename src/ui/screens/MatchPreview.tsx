@@ -10,7 +10,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { BTN, PRIMARY, SECONDARY } from '../components/buttons'
 import { Eye } from 'lucide-react'
 
-const field = { height: 44, borderRadius: 10, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
+const field = { height: 44, borderRadius: 8, background: C.panel, border: bd, color: C.text, padding: '0 12px', outline: 'none' } as const
 
 /** The record of a planned game (status 'setup'): an Olive-style summary with
  * starting and deletion. Live and finished games go to their own screens. */
@@ -160,7 +160,7 @@ export function MatchPreview({ matchId }: { matchId: string }) {
             <div className="mt-4">
               <label htmlFor="convoc-note" className="text-xs font-bold uppercase tracking-wide" style={{ color: C.faint }}>{translate('preview.instructions')}</label>
               <textarea id="convoc-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)}
-                className="mt-1.5 w-full rounded-[10px] p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
+                className="mt-1.5 w-full rounded-lg p-3 text-sm" style={{ background: C.panel, border: bd, color: C.text }} />
             </div>
 
             <button onClick={saveCallUp} className={`${BTN} ${PRIMARY} mt-4 px-5`}>

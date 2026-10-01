@@ -181,7 +181,7 @@ const PLACEABLES: { key: Placeable; label: string }[] = [
   { key: 'ladder', label: 'tool.ladder' },
 ]
 
-const field: CSSProperties = { height: 44, borderRadius: 12, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
+const field: CSSProperties = { height: 44, borderRadius: 8, background: C.panel, border: bd, color: C.text, padding: '0 14px', outline: 'none', fontSize: 14 }
 
 export function PlayEdit() {
   const translate = useT()
