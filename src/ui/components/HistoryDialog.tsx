@@ -89,7 +89,7 @@ export function EntryList({ items, selected, onToggle, label }: {
           <li key={it.id}>
             <button role="checkbox" aria-checked={on} onClick={() => onToggle(it.id)}
               className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${on ? 'bg-[var(--c-card2)]' : 'hover:bg-[var(--c-hover)]'}`}>
-              <span aria-hidden className={`grid h-5 w-5 shrink-0 place-items-center rounded transition-colors ${on ? 'bg-[var(--c-text)] text-[var(--c-card)]' : 'ring-1 ring-inset ring-[var(--c-muted)]'}`}>
+              <span aria-hidden className={`grid h-5 w-5 shrink-0 place-items-center rounded transition-colors ${on ? 'text-[var(--c-accent)] ring-2 ring-inset ring-[var(--c-brand)]' : 'ring-1 ring-inset ring-[var(--c-muted)]'}`}>
                 {on && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
               </span>
               <span className="nums w-[4.5rem] shrink-0 text-[12px] font-bold text-[var(--c-muted)]">{it.when}</span>

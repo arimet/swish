@@ -143,7 +143,7 @@ export function PlayerActionDialog({
         )}
         {step === 'basket' && basket && (
           <div className="mt-3">
-            <p role="status" className="rounded-lg bg-[var(--c-card2)] px-3 py-2.5 text-center text-[13px] font-bold uppercase tracking-wide text-[var(--c-text)]">
+            <p role="status" className="rounded-lg px-3 py-2.5 text-center text-[13px] font-bold uppercase tracking-wide text-[var(--c-accent)] ring-1 ring-inset ring-[var(--c-accent-bd)]">
               {translate('basket.recorded', { points: pointsForKind(basket) })}
             </p>
             {teammates.length > 0 && <>
