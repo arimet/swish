@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import type { Period } from '../../domain/types'
+import { BTN_SM, DANGER, SECONDARY } from './buttons'
 
 /** A period strip in the "date strip" manner: Q1→Q4 then overtimes, the current one
  *  highlighted. */
@@ -17,7 +18,7 @@ export function PeriodStrip({ current }: { current: Period }) {
         return (
           <span key={period}
             className={`nums rounded-lg px-2.5 py-1 text-[12px] font-black uppercase tracking-wide ${
-              isCurrent ? 'bg-[var(--c-brand)] text-[var(--c-on-brand)]'
+              isCurrent ? 'text-[var(--c-accent)] ring-2 ring-inset ring-[var(--c-brand)]'
                 : isPast ? 'bg-[var(--c-card2)] text-[var(--c-muted)]' : 'bg-[var(--c-hover)] text-[var(--c-faint)]'}`}>
             {label}
           </span>
@@ -81,7 +82,7 @@ export function ScoreSide({ align, color, name, score, lead }: {
 export function ClockAdjust({ children, onClick, gap }: { children: ReactNode; onClick: () => void; gap?: boolean }) {
   return (
     <button onClick={onClick}
-      className={`nums h-11 min-w-11 rounded-lg bg-[var(--c-card2)] px-2.5 text-[13px] font-bold tabular-nums text-[var(--c-muted)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90 ${gap ? 'ml-2' : ''}`}>
+      className={`${BTN_SM} ${SECONDARY} nums min-w-11 px-2.5 text-[13px] tabular-nums ${gap ? 'ml-2' : ''}`}>
       {children}
     </button>
   )
@@ -90,9 +91,7 @@ export function ClockAdjust({ children, onClick, gap }: { children: ReactNode; o
 export function SbButton({ children, onClick, title, danger }: { children: ReactNode; onClick: () => void; title?: string; danger?: boolean }) {
   return (
     <button onClick={onClick} title={title}
-      className={`h-11 shrink-0 rounded-full px-4 text-xs font-bold transition active:scale-95 ${
-        danger ? 'bg-[var(--c-danger-bg)] text-[var(--c-danger)] hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)]'
-          : 'bg-[var(--c-card2)] text-[var(--c-text)] hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]'}`}>
+      className={`${BTN_SM} px-4 ${danger ? DANGER : SECONDARY}`}>
       {children}
     </button>
   )

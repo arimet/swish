@@ -2,6 +2,7 @@ import type { Player, ScoreKind } from '../../domain/types'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
 import { ArrowLeftRight } from 'lucide-react'
+import { BTN_SM, DANGER, PRIMARY, SECONDARY } from './buttons'
 
 type Stat = { points: number; fouls: number }
 
@@ -52,14 +53,15 @@ export function TeamPanel({
             onClick={onTimeout}
             disabled={timeoutsRemaining <= 0}
             title={translate('panel.timeout')}
-            className="flex h-11 items-center gap-1 rounded-lg bg-muted px-3 text-xs font-bold text-muted-foreground transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] disabled:opacity-40"
+            className={`${BTN_SM} ${SECONDARY} gap-1`}
           >
             TM<span className="nums text-foreground">{timeoutsRemaining}</span>
           </button>
-          {/* Named and in the brand colour: a grey "⇄" with no word was the one control
-              the table kept looking for, on the gesture made a dozen times a quarter. */}
+          {/* Named and outlined in the brand colour: a grey "⇄" with no word was the one
+              control the table kept looking for, on the gesture made a dozen times a
+              quarter. */}
           <button onClick={onSub} title={translate('panel.substitution')} aria-label={translate('panel.substitutionFor', { team: title })}
-            className="flex h-11 items-center gap-1.5 rounded-lg bg-[var(--c-brand)] px-3 text-xs font-black text-[var(--c-on-brand)] transition hover:brightness-110 active:scale-95">
+            className={`${BTN_SM} ${PRIMARY} gap-1.5`}>
             <ArrowLeftRight className="h-4 w-4 shrink-0" strokeWidth={2.5} />
             {translate('panel.substitution')}
           </button>
@@ -111,9 +113,7 @@ function Quick({ label, onClick, foul, disabled }: { label: string; onClick: () 
     <button
       disabled={disabled}
       onClick={(e) => { e.stopPropagation(); onClick() }}
-      className={`h-11 w-11 shrink-0 rounded-lg text-sm font-black transition active:scale-90 disabled:opacity-40 ${
-        foul ? 'bg-[var(--c-danger-bg)] text-[var(--c-danger)] hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)]' : 'bg-[var(--c-card2)] text-[var(--c-text)] hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]'
-      }`}
+      className={`${BTN_SM} w-11 px-0 text-sm font-bold ${foul ? DANGER : SECONDARY}`}
     >
       {label}
     </button>

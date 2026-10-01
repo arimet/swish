@@ -7,7 +7,11 @@
  * "this one" — the primary, the face chosen, the player picked — without flooding.
  * Everything else is a neutral surface.
  */
-export const BTN = 'inline-flex h-12 min-w-0 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition-[background-color,color,box-shadow,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-muted)] disabled:pointer-events-none'
+/** Everything but the size: the match screen's buttons are a notch smaller (44 px)
+ *  than the dialogs' (48 px), and two heights in one class list would be a coin toss. */
+export const BTN_BASE = 'inline-flex min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg font-semibold transition-[background-color,color,box-shadow,transform] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--c-muted)] disabled:pointer-events-none'
+export const BTN = `${BTN_BASE} h-12 px-3 text-sm`
+export const BTN_SM = `${BTN_BASE} h-11 px-3 text-xs`
 
 /** The one action a screen is for: a green line, nothing filled. Disabled, the line
  *  goes grey. */
@@ -21,6 +25,9 @@ export const OUTLINE = 'bg-transparent text-[var(--c-text)] ring-1 ring-inset ri
 
 /** A foul, or anything that takes away. */
 export const DANGER = 'bg-[var(--c-danger-bg)] text-[var(--c-danger)] hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)] disabled:opacity-40'
+
+/** What stops or ends, outlined like the primary: the clock's "Stop". */
+export const DANGER_OUTLINE = 'bg-transparent font-bold text-[var(--c-danger)] ring-2 ring-inset ring-[var(--c-danger-fill)] hover:bg-[var(--c-hover)]'
 
 /** The yes of a deletion. */
 export const DANGER_FILLED = 'bg-[var(--c-danger-fill)] font-bold text-[var(--c-on-danger)] hover:brightness-110'

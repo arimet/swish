@@ -8,6 +8,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { StartingFiveGate } from '../components/StartingFiveGate'
 import { AccessGate } from '../components/AccessGate'
 import { SubstitutionDialog } from '../components/SubstitutionDialog'
+import { BTN_SM, SECONDARY } from '../components/buttons'
 import { HistoryDialog, isEntry, playerOf, useDescribe, whenOf, type EntryItem } from '../components/HistoryDialog'
 import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
 import { C } from '../olive/kit'
@@ -195,14 +196,14 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
                 nothing about an interrupted share. */}
             <ConnectionState compact />
             <Link to={`/match/${match.id}`} aria-label={translate('live.leave')} title={translate('live.leave')}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><X className="h-5 w-5" strokeWidth={2.5} /></Link>
+              className={`${BTN_SM} ${SECONDARY} w-11 px-0`}><X className="h-5 w-5" strokeWidth={2.5} /></Link>
             <PeriodStrip current={ls.period} />
           </div>
           {/* `flex-wrap`: five finger-wide controls do not fit on one phone row. They
               wrap rather than push the last of them — "Finish" — off the screen. */}
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Link to={`/match/${match.id}/watch`} target="_blank" aria-label={translate('live.spectatorView')} title={translate('live.spectatorView')}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--c-card2)] text-base text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)]"><Eye className="h-[18px] w-[18px]" strokeWidth={2} /></Link>
+              className={`${BTN_SM} ${SECONDARY} w-11 px-0`}><Eye className="h-[18px] w-[18px]" strokeWidth={2} /></Link>
             <SbButton onClick={() => setHistory(true)} title={translate('live.undoTitle')}>{translate('live.undo')}</SbButton>
             <SbButton onClick={() => setAskPeriod(true)} title={translate('live.periodTitle')}>{translate('live.period')}</SbButton>
             {/* A gap before the irreversible. "Finish" freezes the score; it sat eight
@@ -251,7 +252,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {OPP_POINTS.map(({ k, n }) => (
             <button key={k} onClick={() => oppScore(k)} aria-label={translate('live.addPoints', { count: n, team: teamNames.B })}
-              className="nums h-11 min-w-11 rounded-lg bg-[var(--c-card2)] px-3 text-sm font-black text-[var(--c-text)] transition hover:bg-[var(--c-brand)] hover:text-[var(--c-on-brand)] active:scale-90">
+              className={`${BTN_SM} ${SECONDARY} nums min-w-11 text-sm font-bold`}>
               +{n}
             </button>
           ))}

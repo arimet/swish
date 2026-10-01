@@ -1,5 +1,6 @@
 import { Pause, Play } from 'lucide-react'
 import { useT } from '../../i18n'
+import { BTN_BASE, DANGER_OUTLINE, PRIMARY } from './buttons'
 
 export function fmt(seconds: number): string {
   const m = Math.floor(seconds / 60), s = seconds % 60
@@ -34,11 +35,7 @@ export function GameClock({ running, seconds, onToggle }: {
            a dark background. On the light banner it read as a smudge under the button.
            This button needs no elevation to be seen — it is the most saturated flat
            area on the screen. */
-        className={`flex h-11 min-w-32 items-center justify-center gap-2 rounded-full px-5 text-xs font-bold uppercase tracking-wide transition active:scale-95 sm:min-w-36 sm:px-6 sm:text-sm ${
-          running
-            ? 'bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]'
-            : 'bg-[var(--c-green-fill)] text-[var(--c-on-green)]'
-        } hover:brightness-110`}
+        className={`${BTN_BASE} h-11 min-w-32 px-5 text-xs uppercase tracking-wide sm:min-w-36 sm:px-6 sm:text-sm ${running ? DANGER_OUTLINE : PRIMARY}`}
       >
         {running
           ? <><Pause className="h-4 w-4 shrink-0" strokeWidth={2.5} />{translate('clock.stop')}</>
