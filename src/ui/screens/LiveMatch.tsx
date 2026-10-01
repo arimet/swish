@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { GameClock, fmt } from '../components/GameClock'
-import { TeamPanel } from '../components/TeamPanel'
+import { FoulCounter, TeamPanel } from '../components/TeamPanel'
 import { PlayerActionDialog } from '../components/PlayerActionDialog'
 import { ClockEditDialog } from '../components/ClockEditDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -109,11 +109,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   const toggleClock = () =>
     dispatch({ type: ls.clockRunning ? 'CLOCK_STOP' : 'CLOCK_START', period: ls.period, gameClock: seconds })
 
-  const statsByPlayer = () => {
-    const map = new Map<string, { points: number; fouls: number }>()
-    for (const s of playerStats(match)) map.set(s.playerId, { points: s.points, fouls: s.fouls })
-    return map
-  }
+  const statsByPlayer = () => new Map(playerStats(match).map((s) => [s.playerId, s]))
   /** When the player dialog's entries happen: now, or when the action being modified did. */
   const when = () => editing ? { period: editing.period, gameClock: editing.gameClock } : { period: ls.period, gameClock: seconds }
   /** Everything the player dialog enters goes through here: one write, at the end of
@@ -245,9 +241,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         {/* Their team fouls: the only fouls of theirs entered are the and-ones', but
             they count towards the bonus all the same. */}
         {ls.teamFoulsThisPeriod.B > 0 && (
-          <span className={`shrink-0 rounded-lg px-2 py-1 text-[12px] font-bold ${ls.bonus.B ? 'bg-[var(--c-danger-fill)] text-[var(--c-on-danger)]' : 'bg-muted text-muted-foreground'}`}>
-            {ls.bonus.B ? translate('panel.bonus') : translate('panel.fouls')} <span className="nums">{ls.teamFoulsThisPeriod.B}</span>
-          </span>
+          <FoulCounter fouls={ls.teamFoulsThisPeriod.B} bonus={ls.bonus.B} team={teamNames.B} />
         )}
         <div className="ml-auto flex shrink-0 items-center gap-1.5">
           {OPP_POINTS.map(({ k, n }) => (
@@ -280,12 +274,14 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         teammates={onCourt().filter((p) => p.id !== pick?.id).map((p) => ({ id: p.id, name: `${p.number} ${p.lastName}` }))}
         onAssist={(playerId) => write([{ type: 'STAT', team: 'A', playerId, stat: 'assist', ...when() }])}
         shots={pick ? shotsOf([match], pick.id) : undefined}
+        stats={pick ? statsByPlayer().get(pick.id) : undefined}
         entries={pick && !editing ? entriesOf(pick.id) : []} onUndo={remove}
         onClose={() => { setPick(null); setEditing(null) }} onScore={score} onMiss={miss} onFreeThrows={freeThrows} onAndOne={andOne} onFoul={foul}
         onStat={(kind) => pick && write([{ type: 'STAT', team: 'A', playerId: pick.id, stat: kind, ...when() }])}
       />
       <HistoryDialog open={history} events={match.events} players={players} teamNames={teamNames} roster={rosterPlayers}
-        onClose={() => setHistory(false)} onDelete={remove} onModify={modify} />
+        period={ls.period} onClose={() => setHistory(false)} onDelete={remove} onModify={modify}
+        onRetime={(e, at) => rewrite([{ type: 'TIMEOUT', ...at }], { id: e.id, mode: 'replace' })} />
       <ClockEditDialog open={editClock} seconds={seconds} max={periodLength(ls.period)}
         onClose={() => setEditClock(false)} onSubmit={(s) => setSeconds(clampClock(s))} />
       {/* We only leave the game if it really is closed: `finish()` reports whether the

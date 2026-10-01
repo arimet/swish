@@ -1,10 +1,10 @@
 import type { Player, ScoreKind } from '../../domain/types'
+import type { PlayerStat } from '../../domain/boxscore'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
 import { ArrowLeftRight } from 'lucide-react'
 import { BTN_SM, DANGER, PRIMARY, SECONDARY } from './buttons'
 
-type Stat = { points: number; fouls: number }
 
 /** A team column: header (fouls/bonus/timeouts), player cards with free-throw and
  * foul shortcuts; a tap on the name opens the dialog with the shot chart. */
@@ -15,7 +15,7 @@ export function TeamPanel({
   title: string
   color: string
   players: Player[]
-  statsByPlayer: Map<string, Stat>
+  statsByPlayer: Map<string, PlayerStat>
   teamFouls: number
   bonus: boolean
   timeoutsRemaining: number
@@ -43,10 +43,9 @@ export function TeamPanel({
               foul (`TEAM_FOUL_BONUS`) the opposition shoots free throws — that is not a
               counter ticking up, it is the game's rule changing, and it deserves more
               than a pill appearing in silence. */}
-          {bonus && <span className="bonus-in rounded-md bg-[var(--c-danger-fill)] px-1.5 py-0.5 text-[12px] font-black uppercase text-[var(--c-on-danger)]">{translate('panel.bonus')}</span>}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <Chip label={translate('panel.fouls')} value={teamFouls} warn={teamFouls >= 4} />
+          <FoulCounter fouls={teamFouls} bonus={bonus} team={title} />
           {/* Timeout and substitution: controls a finger tall, in a gym, under a thumb.
               A timeout taken by mistake is deleted from the history, like any entry. */}
           <button
@@ -70,8 +69,10 @@ export function TeamPanel({
 
       <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-1 gap-2 overflow-y-auto no-scrollbar sm:grid-cols-2">
         {players.map((p) => {
-          const st = statsByPlayer.get(p.id) ?? { points: 0, fouls: 0 }
-          const out = st.fouls >= 5
+          const st = statsByPlayer.get(p.id)
+          const points = st?.points ?? 0, fouls = st?.fouls ?? 0
+          const rebounds = (st?.offRebounds ?? 0) + (st?.defRebounds ?? 0), assists = st?.assists ?? 0
+          const out = fouls >= 5
           return (
             /* One row per player: the name on the left, the two shortcuts on the
                right. Stacked under the name, they made cards a hundred and twenty
@@ -90,10 +91,18 @@ export function TeamPanel({
                         and the panel's inset line, but writes at 1.77:1 on a light row.
                         The dark theme did not show it, lemon being legible everywhere
                         there; it was the light-theme pass that found it. */}
-                    <span className="nums whitespace-nowrap text-xs font-black" style={{ color: C.accent }}>{st.points} pts</span>
+                    <span className="nums whitespace-nowrap text-xs font-black" style={{ color: C.accent }}>{points} pts</span>
                     <span className="flex items-center gap-0.5">
-                      {[0, 1, 2, 3, 4].map((i) => <span key={i} className={`h-1.5 w-1.5 rounded-full ${i < st.fouls ? 'bg-[var(--c-danger-fill)]' : 'bg-muted-foreground/25'}`} />)}
+                      {[0, 1, 2, 3, 4].map((i) => <span key={i} className={`h-1.5 w-1.5 rounded-full ${i < fouls ? 'bg-[var(--c-danger-fill)]' : 'bg-muted-foreground/25'}`} />)}
                     </span>
+                    {/* The rest of the line, only once there is something to say: a
+                        "0 rb · 0 pd" on ten cards is noise at the one glance the table
+                        has between two possessions. */}
+                    {(rebounds > 0 || assists > 0) && (
+                      <span className="nums truncate text-[11px] font-semibold text-muted-foreground">
+                        {[rebounds > 0 && translate('panel.rebounds', { n: rebounds }), assists > 0 && translate('panel.assists', { n: assists })].filter(Boolean).join(' · ')}
+                      </span>
+                    )}
                   </span>
                 </span>
               </button>
@@ -120,10 +129,23 @@ function Quick({ label, onClick, foul, disabled }: { label: string; onClick: () 
   )
 }
 
-function Chip({ label, value, warn }: { label: string; value: number; warn?: boolean }) {
+/**
+ * A team's fouls this period, beside the timeout and substitution buttons and shaped
+ * like them — same height, same corners — but outlined rather than filled, because it
+ * is read, not pressed. Amber on the fourth, red with "Bonus" from the fifth
+ * (`TEAM_FOUL_BONUS`): from there the other side shoots free throws, which is the
+ * game's rule changing rather than a counter ticking up — hence `bonus-in`, once.
+ */
+export function FoulCounter({ fouls, bonus, team }: { fouls: number; bonus: boolean; team: string }) {
+  const translate = useT()
+  const tone = bonus
+    ? 'bonus-in text-[var(--c-danger)] ring-2 ring-[var(--c-danger-fill)]'
+    : fouls >= 4 ? 'text-[var(--c-amber)] ring-2 ring-[var(--c-amber-bd)]' : 'text-[var(--c-muted)] ring-1 ring-[var(--c-border)]'
   return (
-    <span className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-bold ${warn ? 'bg-[var(--c-amber-bg)] text-[var(--c-amber)]' : 'bg-muted text-muted-foreground'}`}>
-      {label}<span className="nums text-foreground">{value}</span>
+    <span role="status" aria-label={translate('panel.foulsOf', { team, n: fouls })}
+      className={`inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold ring-inset ${tone}`}>
+      {bonus ? <b className="font-black uppercase">{translate('panel.bonus')}</b> : translate('panel.fouls')}
+      <span className="nums text-sm font-black text-[var(--c-text)]">{fouls}</span>
     </span>
   )
 }

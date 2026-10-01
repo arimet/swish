@@ -4,7 +4,7 @@ import { fmt } from './GameClock'
 import { useT } from '../../i18n'
 
 /** Manual clock entry (MM:SS format or raw seconds), bounded by `max`. */
-function parseClock(text: string): number | null {
+export function parseClock(text: string): number | null {
   const t = text.trim()
   const mmss = t.match(/^(\d{1,3}):([0-5]?\d)$/)
   if (mmss) return Number(mmss[1]) * 60 + Number(mmss[2])

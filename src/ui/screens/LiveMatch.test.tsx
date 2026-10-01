@@ -125,6 +125,31 @@ describe('LiveMatch', () => {
     })
   })
 
+  it('puts a timeout right — its team and its clock — where it stood', async () => {
+    const m = (await getMatch(MATCH_ID))!
+    await saveSheet(m, { ...m, events: [...m.events,
+      { id: 't1', wallClock: 2, period: 1, gameClock: 300, type: 'TIMEOUT', team: 'A' },
+      { id: 'x1', wallClock: 3, period: 1, gameClock: 200, type: 'SCORE', team: 'B', kind: '2int' },
+    ] })
+    renderLive()
+    await userEvent.click(await screen.findByRole('button', { name: 'Annuler' }))
+    const history = await screen.findByRole('dialog')
+    await userEvent.click(within(history).getByRole('checkbox', { name: /Temps mort/ }))
+    await userEvent.click(within(history).getByRole('button', { name: 'Modifier' }))
+    await userEvent.click(within(history).getByRole('radio', { name: 'VERDUN' }))
+    const clock = within(history).getByRole('textbox', { name: 'Chrono' })
+    await userEvent.clear(clock)
+    await userEvent.type(clock, '04:30')
+    await userEvent.click(within(history).getByRole('button', { name: 'Enregistrer' }))
+    await waitFor(async () => {
+      const events = (await getMatch(MATCH_ID))!.events
+      const at = events.findIndex((e) => e.type === 'TIMEOUT')
+      expect(events[at]).toMatchObject({ team: 'B', period: 1, gameClock: 270 })
+      expect(events.some((e) => e.id === 't1')).toBe(false)
+      expect(events[at + 1].id).toBe('x1')
+    })
+  })
+
   it('modifies a player\'s action: another player, another action, same place, same clock', async () => {
     await savePlayer({ id: 'p2', teamId: 'ta', number: 7, lastName: 'DURAND', firstName: 'Théo' })
     const m = (await getMatch(MATCH_ID))!
@@ -183,7 +208,9 @@ describe('LiveMatch', () => {
       expect(saved.events.filter((e) => e.type === 'FOUL')).toEqual([expect.objectContaining({ team: 'B', target: { kind: 'team' } })])
     })
     // Their team fouls show, one of them, next to ours.
-    await waitFor(() => expect(screen.getAllByText('Fautes')).toHaveLength(2))
+    await userEvent.click(screen.getByRole('button', { name: 'Terminé' }))
+    expect(await screen.findByRole('status', { name: 'Fautes d’équipe VERDUN : 1' })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Fautes d’équipe VIGNOT : 0' })).toBeInTheDocument()
   })
 })
 

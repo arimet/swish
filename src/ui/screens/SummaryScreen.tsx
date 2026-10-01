@@ -142,6 +142,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         teammates={match.roster.filter((id) => id !== pick?.id && players[id]).map((id) => ({ id, name: `${players[id].number} ${players[id].lastName}` }))}
         onAssist={(playerId) => addStat(playerId, 'assist')}
         shots={pick ? shotsOf([match], pick.id) : undefined}
+        stats={pick ? playerStats(match).find((st) => st.playerId === pick.id) : undefined}
         entries={pick ? entriesOf(pick.id) : []} onUndo={removeEvents}
         onClose={() => setPick(null)}
         onScore={(k, shot) => pick && addScore(pick.id, k, shot)}

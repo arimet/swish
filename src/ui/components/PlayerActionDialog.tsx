@@ -6,7 +6,7 @@ import { useT } from '../../i18n'
 import { kindAt, ZONE_LABELS, zoneAt } from '../../domain/shotzones'
 import type { Shot } from '../../domain/shotchart'
 import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types'
-import { pointsForKind } from '../../domain/boxscore'
+import { pointsForKind, type PlayerStat } from '../../domain/boxscore'
 import { TriangleAlert } from 'lucide-react'
 import { EntryList, type EntryItem } from './HistoryDialog'
 import { BTN, DANGER, DANGER_FILLED, OUTLINE, PRIMARY, SECONDARY, SEGMENT, SEGMENT_OFF, SEGMENT_ON, SEGMENTS } from './buttons'
@@ -50,13 +50,15 @@ const QUICK: { k: ScoreKind; label: string; aria: string }[] = [
 const POINTS_LABEL: Record<'2int' | '2ext' | '3', string> = { '2int': '2 PTS', '2ext': '2 PTS', '3': '3 PTS' }
 
 export function PlayerActionDialog({
-  open, playerName, color = C.text, teammates = [], shots, entries = [],
+  open, playerName, color = C.text, teammates = [], shots, stats, entries = [],
   onClose, onScore, onMiss, onFreeThrows, onAndOne, onAssist, onFoul, onStat, onUndo,
 }: {
   open: boolean; playerName: string; color?: string
   /** Who can have given the pass: the others on the court. */
   teammates?: { id: string; name: string }[]
   shots?: Shot[]
+  /** The player's game so far, read at a glance in the header. */
+  stats?: PlayerStat
   /** This player's entries, latest first: what the dialog's own history can take back. */
   entries?: EntryItem[]
   onClose: () => void
@@ -134,6 +136,7 @@ export function PlayerActionDialog({
             {playerName}
           </DialogTitle>
         </DialogHeader>
+        {stats && <StatLine stats={stats} />}
 
         {step === 'ft' && (
           <FreeThrowLine onBack={() => setStep('main')} onValidate={(results) => { onFreeThrows(results); close() }} />
@@ -288,6 +291,38 @@ function FreeThrowLine({ fixed, onBack, onValidate }: {
         </button>
       </div>
     </div>
+  )
+}
+
+/**
+ * The player's game so far, under their name: what the table is asked across the
+ * bench mid-game — "how many has he got?", "is he on four fouls?" — without leaving
+ * the dialog for the box score.
+ */
+function StatLine({ stats: s }: { stats: PlayerStat }) {
+  const translate = useT()
+  const ratio = (made: number, missed: number) => (missed ? `${made}/${made + missed}` : String(made))
+  const cells: [string, string, boolean?][] = [
+    [translate('statLine.points'), String(s.points)],
+    [translate('statLine.shots'), ratio(s.fieldGoalsMade, s.misses)],
+    [translate('statLine.threes'), String(s.threes)],
+    [translate('statLine.freeThrows'), ratio(s.freeThrows, s.freeThrowsMissed)],
+    [translate('statLine.rebounds'), String(s.offRebounds + s.defRebounds)],
+    [translate('statLine.assists'), String(s.assists)],
+    [translate('statLine.blocks'), String(s.blocks)],
+    [translate('statLine.fouls'), String(s.fouls), s.fouls >= 4],
+  ]
+  return (
+    // The hairline below parts what the player *has done* from what is about to be
+    // entered: without it the stat cells read as one more row of buttons.
+    <dl aria-label={translate('statLine.label')} className="mt-2 mb-4 grid grid-cols-4 gap-1 border-b border-[var(--c-border)] pb-4 sm:grid-cols-8">
+      {cells.map(([label, value, warn]) => (
+        <div key={label} className="rounded-md bg-[var(--c-card2)] px-2 py-1.5 text-center">
+          <dt className="text-[10px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{label}</dt>
+          <dd className={`nums text-base font-black tabular-nums ${warn ? 'text-[var(--c-danger)]' : ''}`}>{value}</dd>
+        </div>
+      ))}
+    </dl>
   )
 }
 

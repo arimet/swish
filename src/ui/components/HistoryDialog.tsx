@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useT } from '../../i18n'
 import { fmt } from './GameClock'
-import { BTN, DANGER, DANGER_FILLED, PICKED, PRIMARY, SECONDARY } from './buttons'
+import { BTN, DANGER, DANGER_FILLED, PICKED, PRIMARY, SECONDARY, SEGMENT, SEGMENT_OFF, SEGMENT_ON, SEGMENTS } from './buttons'
+import { parseClock } from './ClockEditDialog'
+import { periodLength } from '../../domain/ids'
 import { Check } from 'lucide-react'
 import type { FoulType, GameEvent, Player, ScoreKind, StatKind, TeamSide } from '../../domain/types'
 
@@ -115,7 +117,7 @@ export function EntryList({ items, selected, onToggle, label }: {
  * player's action can be modified: another player, another action, or both, at its
  * period and game clock.
  */
-export function HistoryDialog({ open, events, players, teamNames, roster, onClose, onDelete, onModify }: {
+export function HistoryDialog({ open, events, players, teamNames, roster, period = 1, onClose, onDelete, onModify, onRetime }: {
   open: boolean
   events: GameEvent[]
   players: Record<string, Player>
@@ -126,12 +128,19 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
   onDelete: (ids: string[]) => void
   /** Absent where an action cannot be re-entered (after the game). */
   onModify?: (event: GameEvent, playerId: string) => void
+  /** The game's current period: a timeout can be moved to it or any before. */
+  period?: number
+  /** A timeout put right: its team, its period, its clock. */
+  onRetime?: (event: GameEvent, at: { team: TeamSide; period: number; gameClock: number }) => void
 }) {
   const translate = useT()
   const describe = useDescribe(players, teamNames)
   const [selected, setSelected] = useState<string[]>([])
   /** Modifying: the player the action goes to, preselected on the current one. */
   const [who, setWho] = useState<string | null>(null)
+  /** Putting a timeout right, rather than deleting and re-taking it — which would
+   *  stamp it with the clock of now and not of when it was called. */
+  const [retiming, setRetiming] = useState(false)
   /** Deleting asks once: entries gone take points or fouls with them. */
   const [confirming, setConfirming] = useState(false)
   const listed = events.filter(isEntry).reverse()
@@ -139,13 +148,18 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
   const items = listed.map((e): EntryItem => ({ id: e.id, when: whenOf(e), ...describe(e) }))
 
   const toggle = (id: string) => { setConfirming(false); setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id])) }
-  const close = () => { setSelected([]); setWho(null); setConfirming(false); onClose() }
+  const close = () => { setSelected([]); setWho(null); setRetiming(false); setConfirming(false); onClose() }
+  const retimable = !!onRetime && chosen?.type === 'TIMEOUT'
+  const canEdit = (onModify && chosen && modifiable(chosen)) || retimable
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
       <DialogContent className="rounded-lg flex max-h-[88vh] flex-col gap-0 border-none bg-[var(--c-card)] p-5 text-[var(--c-text)] sm:max-w-lg">
-        <DialogHeader><DialogTitle className="text-lg font-extrabold">{translate(who && chosen ? 'history.modifyTitle' : 'history.title')}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle className="text-lg font-extrabold">{translate((who || retiming) && chosen ? 'history.modifyTitle' : 'history.title')}</DialogTitle></DialogHeader>
 
-        {who && chosen && onModify ? (
+        {retiming && chosen?.type === 'TIMEOUT' && onRetime ? (
+          <TimeoutEdit event={chosen} teamNames={teamNames} period={period}
+            onBack={() => setRetiming(false)} onSave={(at) => { onRetime(chosen, at); close() }} />
+        ) : who && chosen && onModify ? (
           <div className="mt-3 overflow-y-auto">
             <p className="text-[13px] font-semibold text-[var(--c-muted)]">{translate('history.whoNow', { what: describe(chosen).what.toLowerCase() })}</p>
             <div role="radiogroup" aria-label={translate('history.whoNowLabel')} className="mt-2 grid grid-cols-2 gap-2">
@@ -181,9 +195,9 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
                   </div>
                 </>
               ) : (
-                <div className={`grid gap-2 ${onModify && chosen && modifiable(chosen) ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                  {onModify && chosen && modifiable(chosen) && (
-                    <button onClick={() => setWho(playerOf(chosen) ?? roster[0]?.id ?? null)} className={`${BTN} ${SECONDARY}`}>{translate('history.modify')}</button>
+                <div className={`grid gap-2 ${canEdit ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {canEdit && (
+                    <button onClick={() => (retimable ? setRetiming(true) : setWho(playerOf(chosen!) ?? roster[0]?.id ?? null))} className={`${BTN} ${SECONDARY}`}>{translate('history.modify')}</button>
                   )}
                   <button onClick={() => setConfirming(true)} className={`${BTN} ${DANGER}`}>{translate('history.delete', { count: selected.length })}</button>
                 </div>
@@ -193,5 +207,50 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
         )}
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** A timeout's team, period and game clock, each put right in place. */
+function TimeoutEdit({ event, teamNames, period, onBack, onSave }: {
+  event: GameEvent; teamNames: Record<TeamSide, string>; period: number
+  onBack: () => void; onSave: (at: { team: TeamSide; period: number; gameClock: number }) => void
+}) {
+  const translate = useT()
+  const [team, setTeam] = useState<TeamSide>(event.type === 'TIMEOUT' ? event.team : 'A')
+  const [at, setAt] = useState(event.period)
+  const [clock, setClock] = useState(fmt(event.gameClock))
+  const seconds = parseClock(clock)
+  const valid = seconds !== null && seconds >= 0 && seconds <= periodLength(at)
+  const periods = Array.from({ length: Math.max(period, event.period) }, (_, i) => i + 1)
+  return (
+    <div className="mt-3 space-y-4 overflow-y-auto">
+      <div>
+        <p className="mb-1.5 text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('history.timeoutTeam')}</p>
+        <div role="radiogroup" aria-label={translate('history.timeoutTeam')} className={`${SEGMENTS} grid-cols-2`}>
+          {(['A', 'B'] as const).map((side) => (
+            <button key={side} role="radio" aria-checked={team === side} onClick={() => setTeam(side)}
+              className={`${SEGMENT} truncate px-2 ${team === side ? SEGMENT_ON : SEGMENT_OFF}`}>{teamNames[side]}</button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="mb-1.5 text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('history.timeoutPeriod')}</p>
+        <div role="radiogroup" aria-label={translate('history.timeoutPeriod')} className={`${SEGMENTS}`} style={{ gridTemplateColumns: `repeat(${periods.length}, minmax(0, 1fr))` }}>
+          {periods.map((p) => (
+            <button key={p} role="radio" aria-checked={at === p} onClick={() => setAt(p)}
+              className={`${SEGMENT} ${at === p ? SEGMENT_ON : SEGMENT_OFF}`}>{p <= 4 ? `Q${p}` : `P${p - 4}`}</button>
+          ))}
+        </div>
+      </div>
+      <label className="block">
+        <span className="mb-1.5 block text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('history.timeoutClock')}</span>
+        <input value={clock} onChange={(e) => setClock(e.target.value)} inputMode="numeric" placeholder="MM:SS"
+          className={`h-12 w-full rounded-lg bg-[var(--c-card2)] px-4 text-center text-2xl font-black tabular-nums outline-none ring-inset ${valid ? 'focus:ring-2 focus:ring-[var(--c-brand)]' : 'ring-2 ring-[var(--c-danger-fill)]'}`} />
+      </label>
+      <div className="grid grid-cols-[auto_1fr] gap-2">
+        <button onClick={onBack} className={`${BTN} ${SECONDARY} px-5`}>{translate('ft.back')}</button>
+        <button disabled={!valid} onClick={() => onSave({ team, period: at, gameClock: seconds! })} className={`${BTN} ${PRIMARY}`}>{translate('history.save')}</button>
+      </div>
+    </div>
   )
 }
