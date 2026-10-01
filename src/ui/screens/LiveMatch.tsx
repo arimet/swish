@@ -8,7 +8,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { StartingFiveGate } from '../components/StartingFiveGate'
 import { AccessGate } from '../components/AccessGate'
 import { SubstitutionDialog } from '../components/SubstitutionDialog'
-import { HistoryDialog } from '../components/HistoryDialog'
+import { HistoryDialog, isEntry, playerOf, useDescribe, whenOf } from '../components/HistoryDialog'
 import { ClockAdjust, PeriodStrip, ScoreSide, SbButton } from '../components/Scoreboard'
 import { C } from '../olive/kit'
 import { useT } from '../../i18n'
@@ -51,6 +51,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
     A: byId[match?.meta.clubId ?? '']?.name ?? translate('nav.myTeam'),
     B: byId[match?.meta.opponentId ?? '']?.name ?? translate('match.opponent'),
   }
+  const describe = useDescribe(players, teamNames)
   const [seconds, setSeconds] = useState(600)
   const [pick, setPick] = useState<{ id: string; name: string } | null>(null)
   const [starters, setStarters] = useState<string[]>([])
@@ -139,6 +140,12 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
   // An opposition basket: no player named, only the score counts.
   const oppScore = (kind: ScoreKind) =>
     dispatch({ type: 'SCORE', team: 'B', kind, period: ls.period, gameClock: seconds })
+
+  /** A player's latest entry, named for the player dialog's undo. */
+  const lastEntryOf = (playerId: string) => {
+    const e = [...match.events].reverse().find((x) => isEntry(x) && playerOf(x) === playerId)
+    return e ? { id: e.id, label: `${describe(e).what} · ${whenOf(e)}` } : null
+  }
 
   /** The history's "Modify": the dialog of the player chosen, whose entry replaces the
    *  action at its period and clock. */
@@ -273,6 +280,7 @@ export function LiveMatch({ matchId, onFinish }: { matchId: string; onFinish: ()
         teammates={onCourt().filter((p) => p.id !== pick?.id).map((p) => ({ id: p.id, name: `${p.number} ${p.lastName}` }))}
         onAssist={(playerId) => write([{ type: 'STAT', team: 'A', playerId, stat: 'assist', ...when() }])}
         shots={pick ? shotsOf([match], pick.id) : undefined}
+        lastEntry={pick && !editing ? lastEntryOf(pick.id) : null} onUndo={remove}
         onClose={() => { setPick(null); setEditing(null) }} onScore={score} onMiss={miss} onFreeThrows={freeThrows} onAndOne={andOne} onFoul={foul}
         onStat={(kind) => pick && write([{ type: 'STAT', team: 'A', playerId: pick.id, stat: kind, ...when() }])}
       />

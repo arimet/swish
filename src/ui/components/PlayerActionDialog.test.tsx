@@ -210,6 +210,9 @@ describe('PlayerActionDialog — missed mode', () => {
   it('shows nothing but the court, and brings everything back on "Made"', () => {
     renderDialog()
     fireEvent.click(screen.getByRole('button', { name: 'Manqué' }))
+    // Hidden, not removed: the column keeps its room, so the court does not resize
+    // and nothing jumps when switching modes.
+    expect(screen.getByText('Points sans position').closest('[aria-hidden="true"]')).toHaveClass('sm:invisible')
     for (const name of ['Ajouter 2 points', 'Lancer franc', 'Faute offensive', 'Contre'])
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
     expect(court()).toBeInTheDocument()
@@ -219,10 +222,19 @@ describe('PlayerActionDialog — missed mode', () => {
   })
 })
 
-describe('PlayerActionDialog — no corrections of its own', () => {
-  it('takes nothing back: that is the history\'s job', () => {
-    renderDialog()
-    expect(screen.queryByText(/corriger/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /retirer/i })).not.toBeInTheDocument()
+describe('PlayerActionDialog — undoing this player\'s last entry', () => {
+  it('names what it takes back, asks once, then takes it back', () => {
+    const onUndo = vi.fn()
+    const { onClose } = renderDialog({ lastEntry: { id: 'e9', label: '3 points · Q1 · 09:25' }, onUndo })
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler : 3 points · Q1 · 09:25' }))
+    expect(onUndo).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Oui, annuler' }))
+    expect(onUndo).toHaveBeenCalledWith('e9')
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('is absent while the player has nothing to take back', () => {
+    renderDialog({ lastEntry: null, onUndo: vi.fn() })
+    expect(screen.queryByRole('button', { name: /^Annuler :/ })).not.toBeInTheDocument()
   })
 })

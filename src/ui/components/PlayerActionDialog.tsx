@@ -7,7 +7,7 @@ import { kindAt, ZONE_LABELS, zoneAt } from '../../domain/shotzones'
 import type { Shot } from '../../domain/shotchart'
 import type { ScoreKind, FoulType, StatKind, ShotSpot } from '../../domain/types'
 import { pointsForKind } from '../../domain/boxscore'
-import { TriangleAlert } from 'lucide-react'
+import { TriangleAlert, Undo2 } from 'lucide-react'
 
 /** The stats entered from the grid. Not the assist: it is asked for right after the
  *  basket it led to, from the passer's side — a separate button meant reopening the
@@ -45,16 +45,26 @@ const QUICK: { k: ScoreKind; label: string; aria: string }[] = [
   { k: '3', label: '+3', aria: 'action.addThree' },
 ]
 
+/** One size for every button of the dialog — a finger tall, 48 px — and four looks:
+ *  the one primary action, the ordinary entries, the fouls, and the destructive yes. */
+const BTN = 'h-12 rounded-xl text-sm font-bold transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-35'
+const PRIMARY = 'bg-[var(--c-brand)] text-[var(--c-on-brand)] font-black hover:brightness-110'
+const SECONDARY = 'border border-[var(--c-border)] bg-[var(--c-card2)] text-[var(--c-text)] hover:border-[var(--c-accent)] hover:bg-[var(--c-panel)]'
+const DANGER = 'bg-[var(--c-danger-bg)] text-[var(--c-danger)] hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)]'
+const DANGER_FILLED = 'bg-[var(--c-danger-fill)] text-[var(--c-on-danger)] font-black'
+
 const POINTS_LABEL: Record<'2int' | '2ext' | '3', string> = { '2int': '2 PTS', '2ext': '2 PTS', '3': '3 PTS' }
 
 export function PlayerActionDialog({
-  open, playerName, color = C.text, teammates = [], shots,
-  onClose, onScore, onMiss, onFreeThrows, onAndOne, onAssist, onFoul, onStat,
+  open, playerName, color = C.text, teammates = [], shots, lastEntry,
+  onClose, onScore, onMiss, onFreeThrows, onAndOne, onAssist, onFoul, onStat, onUndo,
 }: {
   open: boolean; playerName: string; color?: string
   /** Who can have given the pass: the others on the court. */
   teammates?: { id: string; name: string }[]
   shots?: Shot[]
+  /** This player's latest entry, named — what the undo button takes back. */
+  lastEntry?: { id: string; label: string } | null
   onClose: () => void
   onScore: (kind: ScoreKind, shot?: ShotSpot) => void
   onMiss: (kind: ScoreKind, shot: ShotSpot) => void
@@ -64,6 +74,7 @@ export function PlayerActionDialog({
   onAndOne: (made: boolean) => void
   onAssist: (playerId: string) => void
   onFoul: (type: FoulType) => void; onStat: (kind: StatKind) => void
+  onUndo?: (id: string) => void
 }) {
   const translate = useT()
   const [made, setMade] = useState(true)
@@ -78,6 +89,8 @@ export function PlayerActionDialog({
   /** The basket just recorded, named back on the step that follows it. */
   const [basket, setBasket] = useState<ScoreKind | null>(null)
   const [andOneDone, setAndOneDone] = useState(false)
+  /** The undo asks once, in place: it names what goes, and nothing brings it back. */
+  const [undoing, setUndoing] = useState(false)
 
   // The mode returns to "Made" on every close: that is the common case. A shot placed
   // and never validated goes with the dialog — closing records nothing.
@@ -87,6 +100,7 @@ export function PlayerActionDialog({
     setStep('main')
     setBasket(null)
     setAndOneDone(false)
+    setUndoing(false)
     onClose()
   }
 
@@ -139,22 +153,19 @@ export function PlayerActionDialog({
               <p className="mt-4 text-[12px] font-bold uppercase tracking-wide text-[var(--c-muted)]">{translate('basket.assistFrom')}</p>
               <div className="mt-1.5 grid grid-cols-2 gap-2">
                 {teammates.map((t) => (
-                  <button key={t.id} onClick={() => { onAssist(t.id); close() }}
-                    className="truncate rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] px-3 py-3.5 text-sm font-bold transition hover:border-[var(--c-green)] hover:bg-[var(--c-panel)] active:scale-[0.97]">
+                  <button key={t.id} onClick={() => { onAssist(t.id); close() }} className={`${BTN} ${SECONDARY} truncate px-3`}>
                     {t.name}
                   </button>
                 ))}
               </div>
             </>}
-            <button onClick={close}
-              className="mt-2 w-full rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] py-3 text-sm font-bold transition hover:bg-[var(--c-panel)]">
+            <button onClick={close} className={`${BTN} ${SECONDARY} mt-2 w-full`}>
               {translate(teammates.length > 0 ? 'basket.noAssist' : 'basket.done')}
             </button>
             {/* After the pass, because the pass is asked on every basket and the and-one
                 on one in ten: the frequent answer goes where the thumb already is. */}
             {!andOneDone && (
-              <button onClick={() => setStep('andOne')}
-                className="mt-4 w-full rounded-2xl py-3 text-sm font-black transition hover:brightness-110 active:scale-[0.98]"
+              <button onClick={() => setStep('andOne')} className={`${BTN} mt-4 w-full border border-[var(--c-accent-bd)] font-black`}
                 style={{ background: C.accentBg, color: C.accent }}>
                 {translate('basket.andOne')}
               </button>
@@ -162,87 +173,74 @@ export function PlayerActionDialog({
           </div>
         )}
         {/* Two columns from `sm`, one below it — and the source order is the phone's,
-            so the breakpoint reshuffles nothing.
-            The split follows the gesture, not the taxonomy: on the left what is
-            *aimed at*, on the right what is *named*. Stacked in a single 448-pixel
-            column on a laptop, the fouls sat six hundred pixels below the header and
-            the corrections took a scroll to reach at all — on a screen with eight
-            hundred wasted pixels either side. Side by side, the whole dialog is one
-            screenful and the court gains eighty pixels to be aimed at. */}
-        {step === 'main' && <>
-        {/* A miss is only ever aimed: in "Missed" mode the named actions go, and the
-            court stands alone — nothing left to tap by mistake but the spot. */}
-        <div className={made ? 'grid gap-x-5 sm:grid-cols-2' : 'mx-auto w-full sm:max-w-sm'}>
+            so the breakpoint reshuffles nothing. On the left what is *aimed at* (the
+            shot, and its validation right under the court, where the eye already is);
+            on the right what is *named*.
+            The layout is the same in both modes. "Missed" only hides the right column —
+            `invisible` beside the court, so the court keeps its size and nothing moves;
+            gone below it on a phone, where it comes after the validation anyway. */}
+        {step === 'main' && (
+        <div className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
           <div>
-            {/* SHOT: made or missed, then the spot on the court. */}
-            <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl bg-[var(--c-card2)] p-1">
+            <div role="group" aria-label={translate('action.shot')} className="grid grid-cols-2 gap-1 rounded-xl bg-[var(--c-card2)] p-1">
               <Toggle active={made} onClick={() => setMade(true)} activeClass="bg-[var(--c-brand)] text-[var(--c-on-brand)]">{translate('action.made')}</Toggle>
-              <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-border)] text-[var(--c-text)]">{translate('action.missed')}</Toggle>
+              <Toggle active={!made} onClick={() => setMade(false)} activeClass="bg-[var(--c-text)] text-[var(--c-card)]">{translate('action.missed')}</Toggle>
             </div>
-            <p className="mt-2 text-[12px] font-semibold text-[var(--c-muted)]">
-              {made ? translate('action.madeHint') : translate('action.missedHint')}
-            </p>
-            <div className="mt-2"><ShotPicker onPick={setPlaced} confirmation={confirmation} shots={shots} made={made} /></div>
+            <div className="mt-3">
+              <ShotPicker onPick={setPlaced} confirmation={confirmation} shots={shots} made={made}
+                idle={translate(made ? 'action.madeHint' : 'action.missedHint')} />
+            </div>
+            <button onClick={validate} disabled={!placed} className={`${BTN} mt-2 w-full ${PRIMARY}`}>
+              {translate('action.validateShot')}
+            </button>
           </div>
 
-          {made && <div className="flex flex-col">
-            {/* THE POINTS, named rather than aimed — the whole reason this column
-                exists. Two ordinary baskets and the free throw, in that order.
-                The two and the three are the way out when nobody saw where the shot
-                came from: the court records the same points *and* the spot, which is
-                what every chart downstream reads, so they stay lighter than it — a
-                fallback must not outrank the thing it falls back from. The free throw
-                is the one that fills, because for it there is no court to aim at at
-                all. */}
-            <div className="mt-3 grid grid-cols-2 gap-2.5 sm:mt-1">
+          <div className={made ? 'flex flex-col' : 'max-sm:hidden sm:invisible'} aria-hidden={!made}>
+            {/* Points with no spot: the way out when nobody saw where the shot came
+                from. Lighter than the court, which records the spot as well — and the
+                free throw with them, since it is points too and has no spot at all. */}
+            <Section label={translate('action.noSpot')}>
               {QUICK.map((q) => (
-                <button key={q.label} aria-label={translate(q.aria)} onClick={() => scored(q.k)}
-                  className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] py-3 text-lg font-black tabular-nums transition hover:border-[var(--c-accent)] hover:bg-[var(--c-panel)] active:scale-[0.97]"
-                  style={{ color: C.accent }}>
+                <button key={q.label} aria-label={translate(q.aria)} onClick={() => scored(q.k)} className={`${BTN} ${SECONDARY} text-base font-black tabular-nums`} style={{ color: C.accent }}>
                   {q.label}
                 </button>
               ))}
-            </div>
-            <button onClick={() => setStep('ft')}
-              className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[15px] font-black transition hover:brightness-110 active:scale-[0.98]"
-              style={{ background: C.brand, color: C.onBrand }}>
-              {translate('action.freeThrow')}
-            </button>
-
-            {/* OTHER STATS */}
-            <div className="mt-2.5 grid grid-cols-3 gap-2">
-              {GRID_STATS.map((s) => (
-                <button key={s.k} onClick={() => { onStat(s.k); close() }}
-                  className="rounded-xl border border-[var(--c-border)] bg-[var(--c-card2)] px-2 py-3 text-center text-[13px] font-semibold text-[var(--c-text)] transition hover:border-[var(--c-green)] hover:bg-[var(--c-panel)] active:scale-[0.97]">
-                  {translate(s.label)}
-                </button>
+              <button onClick={() => setStep('ft')} className={`${BTN} ${SECONDARY}`}>{translate('action.freeThrow')}</button>
+            </Section>
+            <Section label={translate('action.stats')}>
+              {GRID_STATS.map((st) => (
+                <button key={st.k} onClick={() => { onStat(st.k); close() }} className={`${BTN} ${SECONDARY}`}>{translate(st.label)}</button>
               ))}
-            </div>
-
-            {/* FOUL — its side of the ball, one tap each. */}
-            <p className="mt-4 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide text-[var(--c-danger)]">
-              <TriangleAlert className="h-[14px] w-[14px] shrink-0" strokeWidth={2.2} />
-              {translate('action.foul')}
-            </p>
-            <div className="mt-1.5 grid grid-cols-3 gap-2">
+            </Section>
+            {/* Its side of the ball, one tap each. */}
+            <Section label={translate('action.foul')} danger>
               {FOULS.map((f) => (
-                <button key={f.k} aria-label={translate(f.aria)} onClick={() => { onFoul(f.k); close() }}
-                  className="rounded-2xl bg-[var(--c-danger-bg)] py-3.5 text-[13px] font-bold text-[var(--c-danger)] transition hover:bg-[var(--c-danger-fill)] hover:text-[var(--c-on-danger)] active:scale-[0.97]">
+                <button key={f.k} aria-label={translate(f.aria)} onClick={() => { onFoul(f.k); close() }} className={`${BTN} ${DANGER}`}>
                   {translate(f.label)}
                 </button>
               ))}
-            </div>
-
-          </div>}
+            </Section>
+            {/* The undo sinks to the bottom: recording is what this dialog is opened for,
+                taking back is the exception — and it names what it takes back, so a tap
+                does not undo blind. The full history stays under the header's "Undo". */}
+            {lastEntry && onUndo && (
+              <div className="mt-5 border-t border-[var(--c-border)] pt-4 sm:mt-auto">
+                {undoing ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={() => setUndoing(false)} className={`${BTN} ${SECONDARY}`}>{translate('common.cancel')}</button>
+                    <button onClick={() => { onUndo(lastEntry.id); close() }} className={`${BTN} ${DANGER_FILLED}`}>{translate('action.undoYes')}</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setUndoing(true)} className={`${BTN} ${SECONDARY} flex w-full items-center justify-center gap-2 px-3`}>
+                    <Undo2 className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+                    <span className="truncate">{translate('action.undoLast', { what: lastEntry.label })}</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-        {/* At the very bottom, under both columns: the last thing the eye reaches after
-            aiming, and greyed until there is something to validate. */}
-        <button onClick={validate} disabled={!placed}
-          className="mt-4 w-full rounded-2xl py-3.5 text-[15px] font-black transition hover:brightness-110 active:scale-[0.98] disabled:opacity-35 disabled:hover:brightness-100"
-          style={{ background: C.brand, color: C.onBrand }}>
-          {translate('action.validateShot')}
-        </button>
-        </>}
+        )}
       </DialogContent>
     </Dialog>
   )
@@ -283,12 +281,25 @@ function FreeThrowLine({ fixed, onBack, onValidate }: {
         ))}
       </ul>
       <div className="mt-4 grid grid-cols-[auto_1fr] gap-2">
-        <button onClick={onBack} className="rounded-2xl border border-[var(--c-border)] bg-[var(--c-card2)] px-5 py-3.5 text-sm font-bold transition hover:bg-[var(--c-panel)]">{translate('ft.back')}</button>
-        <button onClick={() => onValidate(results)} className="rounded-2xl py-3.5 text-[15px] font-black transition hover:brightness-110 active:scale-[0.98]" style={{ background: C.brand, color: C.onBrand }}>
+        <button onClick={onBack} className={`${BTN} ${SECONDARY} px-5`}>{translate('ft.back')}</button>
+        <button onClick={() => onValidate(results)} className={`${BTN} ${PRIMARY}`}>
           {translate('ft.validate')}
         </button>
       </div>
     </div>
+  )
+}
+
+/** A labelled row of three buttons: the right column reads as three short lists. */
+function Section({ label, danger, children }: { label: string; danger?: boolean; children: React.ReactNode }) {
+  return (
+    <section className="mb-4 last:mb-0">
+      <h3 className={`mb-1.5 flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wide ${danger ? 'text-[var(--c-danger)]' : 'text-[var(--c-muted)]'}`}>
+        {danger && <TriangleAlert className="h-[14px] w-[14px] shrink-0" strokeWidth={2.2} />}
+        {label}
+      </h3>
+      <div className="grid grid-cols-3 gap-2">{children}</div>
+    </section>
   )
 }
 

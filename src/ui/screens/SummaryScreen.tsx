@@ -6,7 +6,7 @@ import { ProgressionChart } from '../../export/ProgressionChart'
 import { printSummary } from '../../export/print'
 import { MatchMetaDialog } from '../components/MatchMetaDialog'
 import { PlayerActionDialog } from '../components/PlayerActionDialog'
-import { HistoryDialog } from '../components/HistoryDialog'
+import { HistoryDialog, isEntry, playerOf, useDescribe, whenOf } from '../components/HistoryDialog'
 import { useAuth } from '../../app/auth'
 import { useT } from '../../i18n'
 import { saveSheet } from '../../persistence/repositories'
@@ -44,7 +44,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const [editStats, setEditStats] = useState(false)
   const [pick, setPick] = useState<{ id: string; name: string } | null>(null)
   const [history, setHistory] = useState(false)
-
+  const describe = useDescribe(players, teamNames)
 
   if (match === undefined) return <div className="p-6"><div className="h-40 animate-pulse rounded-2xl" style={{ background: C.card }} /></div>
   if (match === null) return <div className="p-6"><p className="py-16 text-center text-sm" style={{ color: C.muted }}>{translate('preview.notFound')}</p></div>
@@ -70,6 +70,10 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
   const addEvents = (list: EventInput[]) =>
     persist({ ...match, events: [...match.events, ...list.map((e) => ({ ...e, id: newId(), wallClock: Date.now() }) as GameEvent)] })
   const addEvent = (e: EventInput) => addEvents([e])
+  const lastEntryOf = (playerId: string) => {
+    const e = [...match.events].reverse().find((x) => isEntry(x) && playerOf(x) === playerId)
+    return e ? { id: e.id, label: `${describe(e).what} · ${whenOf(e)}` } : null
+  }
   const removeEvent = (id: string) => persist({ ...match, events: match.events.filter((e) => e.id !== id) })
   // Stats correction only touches our roster (side A): the opposition has no players
   // recorded.
@@ -138,6 +142,7 @@ export function SummaryScreen({ matchId, onHome }: { matchId: string; onHome: ()
         teammates={match.roster.filter((id) => id !== pick?.id && players[id]).map((id) => ({ id, name: `${players[id].number} ${players[id].lastName}` }))}
         onAssist={(playerId) => addStat(playerId, 'assist')}
         shots={pick ? shotsOf([match], pick.id) : undefined}
+        lastEntry={pick ? lastEntryOf(pick.id) : null} onUndo={removeEvent}
         onClose={() => setPick(null)}
         onScore={(k, shot) => pick && addScore(pick.id, k, shot)}
         onFoul={() => pick && addFoul(pick.id)}

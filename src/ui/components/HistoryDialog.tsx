@@ -35,6 +35,38 @@ export const playerOf = (e: GameEvent): string | undefined =>
     : e.type === 'FOUL' && e.target.kind === 'player' ? e.target.playerId
       : undefined
 
+/** An entry of the table's, as opposed to the game's frame (clock, periods, five). */
+export const isEntry = (e: GameEvent): boolean => LISTED.includes(e.type)
+
+/** Where an entry happened, as the scoreboard says it: `Q2 · 07:32`. */
+export const whenOf = (e: GameEvent): string => `${e.period <= 4 ? `Q${e.period}` : `P${e.period - 4}`} · ${fmt(e.gameClock)}`
+
+/** Names an entry back to the table: who, and what. One wording for the history and
+ *  for the player dialog's undo, so an action reads the same in both places. */
+export function useDescribe(players: Record<string, Player>, teamNames: Record<TeamSide, string>) {
+  const translate = useT()
+  const name = (id?: string) => {
+    const p = id ? players[id] : undefined
+    return p ? `${p.number} ${p.lastName}` : translate('common.playerWord')
+  }
+  return (e: GameEvent): { who: string; what: string } => {
+    switch (e.type) {
+      case 'SCORE': return e.playerId
+        ? { who: name(e.playerId), what: translate(SCORE_LABEL[e.kind]) }
+        : { who: teamNames[e.team], what: translate('history.teamBasket', { n: e.kind === 'lf' ? 1 : e.kind === '3' ? 3 : 2 }) }
+      case 'MISS': return { who: name(e.playerId), what: translate(e.kind === 'lf' ? 'history.ftMissed' : 'history.missed') }
+      case 'FOUL': return {
+        who: e.target.kind === 'player' ? name(e.target.playerId) : teamNames[e.team],
+        what: e.target.kind === 'player' ? translate(FOUL_LABEL[e.foulType]) : translate(TARGET_LABEL[e.target.kind]),
+      }
+      case 'STAT': return { who: name(e.playerId), what: translate(STAT_LABEL[e.stat]) }
+      case 'TIMEOUT': return { who: teamNames[e.team], what: translate('history.timeout') }
+      case 'SUBSTITUTION': return { who: teamNames[e.team], what: translate('history.substitution', { in: name(e.playerInId), out: name(e.playerOutId) }) }
+      default: return { who: '', what: e.type }
+    }
+  }
+}
+
 /**
  * Every entry of the game, the latest on top, and the one place to take one back.
  *
@@ -57,36 +89,16 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
   onModify?: (event: GameEvent, playerId: string) => void
 }) {
   const translate = useT()
+  const describe = useDescribe(players, teamNames)
   const [selected, setSelected] = useState<string | null>(null)
   /** Modifying: the player the action goes to, preselected on the current one. */
   const [who, setWho] = useState<string | null>(null)
   /** Deleting asks once, on the row itself: an entry gone takes points or a foul with it. */
   const [confirming, setConfirming] = useState(false)
-  const listed = events.filter((e) => LISTED.includes(e.type)).reverse()
+  const listed = events.filter(isEntry).reverse()
   const chosen = listed.find((e) => e.id === selected) ?? null
 
   const close = () => { setSelected(null); setWho(null); setConfirming(false); onClose() }
-  const name = (id?: string) => {
-    const p = id ? players[id] : undefined
-    return p ? `${p.number} ${p.lastName}` : translate('common.playerWord')
-  }
-  const describe = (e: GameEvent): { who: string; what: string } => {
-    switch (e.type) {
-      case 'SCORE': return e.playerId
-        ? { who: name(e.playerId), what: translate(SCORE_LABEL[e.kind]) }
-        : { who: teamNames[e.team], what: translate('history.teamBasket', { n: e.kind === 'lf' ? 1 : e.kind === '3' ? 3 : 2 }) }
-      case 'MISS': return { who: name(e.playerId), what: translate(e.kind === 'lf' ? 'history.ftMissed' : 'history.missed') }
-      case 'FOUL': return {
-        who: e.target.kind === 'player' ? name(e.target.playerId) : teamNames[e.team],
-        what: e.target.kind === 'player' ? translate(FOUL_LABEL[e.foulType]) : translate(TARGET_LABEL[e.target.kind]),
-      }
-      case 'STAT': return { who: name(e.playerId), what: translate(STAT_LABEL[e.stat]) }
-      case 'TIMEOUT': return { who: teamNames[e.team], what: translate('history.timeout') }
-      case 'SUBSTITUTION': return { who: teamNames[e.team], what: translate('history.substitution', { in: name(e.playerInId), out: name(e.playerOutId) }) }
-      default: return { who: '', what: e.type }
-    }
-  }
-
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
       <DialogContent className="sm:max-w-lg max-h-[88vh] gap-0 overflow-y-auto border-none bg-[var(--c-card)] p-5 text-[var(--c-text)]">
@@ -119,7 +131,7 @@ export function HistoryDialog({ open, events, players, teamNames, roster, onClos
                 <li key={e.id} className="rounded-xl" style={{ background: on ? 'var(--c-panel)' : 'var(--c-card2)' }}>
                   <button onClick={() => { setSelected(on ? null : e.id); setConfirming(false) }} aria-expanded={on}
                     className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
-                    <span className="nums w-16 shrink-0 text-[12px] font-bold text-[var(--c-muted)]">{e.period <= 4 ? `Q${e.period}` : `P${e.period - 4}`} · {fmt(e.gameClock)}</span>
+                    <span className="nums w-16 shrink-0 text-[12px] font-bold text-[var(--c-muted)]">{whenOf(e)}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-bold">{d.what}</span>
                       <span className="block truncate text-[12px] text-[var(--c-muted)]">{d.who}</span>

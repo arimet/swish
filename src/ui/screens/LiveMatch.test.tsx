@@ -70,6 +70,22 @@ describe('LiveMatch', () => {
     })
   })
 
+  it('the player dialog undoes that player\'s last entry, and only theirs', async () => {
+    renderLive()
+    await userEvent.click(await screen.findByRole('button', { name: 'Ajouter 2 points à VERDUN' }))
+    await userEvent.click(screen.getByRole('button', { name: /MARTIN/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Faute défensive' }))
+    await userEvent.click(screen.getByRole('button', { name: /MARTIN/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /^Annuler : Faute défensive/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Oui, annuler' }))
+    await waitFor(async () => {
+      const events = (await getMatch(MATCH_ID))!.events
+      expect(events.some((e) => e.type === 'FOUL')).toBe(false)
+      // The opposition's basket, entered after nothing of MARTIN's, stays.
+      expect(events.some((e) => e.type === 'SCORE' && e.team === 'B')).toBe(true)
+    })
+  })
+
   it('asks before moving on to the next period, and says what it resets', async () => {
     renderLive()
     await userEvent.click(await screen.findByRole('button', { name: 'Période →' }))

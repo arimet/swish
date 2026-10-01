@@ -142,8 +142,11 @@ function buzz(): void {
  * There are no zone buttons under it any more: the table found them redundant with the
  * court. Without a pointer, the dialog's +2 and +3 record the points with no spot.
  */
-export function ShotPicker({ onPick, confirmation, shots, made = true }: {
+export function ShotPicker({ onPick, confirmation, shots, made = true, idle }: {
   onPick: (spot: ShotSpot) => void
+  /** What the line under the court says before a shot is placed: the instruction, in
+   *  the room the shot's label will take — nothing below it moves when it arrives. */
+  idle?: string
   confirmation?: { spot: ShotSpot; label: string; made: boolean } | null
   shots?: Shot[]
   /** Whether the next tap records a basket or a miss. The court wears it: the toggle
@@ -199,13 +202,13 @@ export function ShotPicker({ onPick, confirmation, shots, made = true }: {
       {/* Always rendered (empty content without a shot placed): the pill must never
           appear or disappear, otherwise everything after it shifts under a finger
           already on its way to it. */}
-      <p role="status" className="mt-2 rounded-lg px-3 py-1.5 text-center text-[13px] font-black uppercase tracking-wide"
+      <p role="status" className={`mt-2 truncate rounded-lg px-3 py-1.5 text-center text-[13px] ${confirmation ? 'font-black uppercase tracking-wide' : 'font-semibold'}`}
         style={{
-          visibility: confirmation ? 'visible' : 'hidden',
-          background: confirmation && !confirmation.made ? C.card2 : C.accentBg,
-          color: confirmation && !confirmation.made ? C.muted : C.accent,
+          visibility: confirmation || idle ? 'visible' : 'hidden',
+          background: confirmation?.made ? C.accentBg : C.card2,
+          color: confirmation?.made ? C.accent : C.muted,
         }}>
-        {confirmation?.label ?? ' '}
+        {confirmation?.label ?? idle ?? ' '}
       </p>
     </div>
   )
